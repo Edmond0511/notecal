@@ -37,6 +37,21 @@ export const calculateNutritionForQuantity = (
   };
 };
 
+export const calculateNutritionForGrams = (
+  baseNutrition: NutritionInfo, // nutrition per 100g
+  grams: number
+): NutritionInfo => {
+  const ratio = grams / 100; // API data is per 100g
+  return {
+    calories: Math.round(baseNutrition.calories * ratio),
+    protein: Math.round((baseNutrition.protein * ratio) * 10) / 10,
+    carbs: Math.round((baseNutrition.carbs * ratio) * 10) / 10,
+    fat: Math.round((baseNutrition.fat * ratio) * 10) / 10,
+    fiber: baseNutrition.fiber ? Math.round((baseNutrition.fiber * ratio) * 10) / 10 : undefined,
+    sugar: baseNutrition.sugar ? Math.round((baseNutrition.sugar * ratio) * 10) / 10 : undefined,
+  };
+};
+
 export const formatNumber = (num: number, decimals: number = 0): string => {
   return num.toFixed(decimals);
 };

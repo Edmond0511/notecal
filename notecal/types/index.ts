@@ -33,6 +33,7 @@ export interface FoodSearchResult {
   nf_total_fat: number;
   nf_dietary_fiber?: number;
   nf_sugars?: number;
+  nf_fiber?: number;
 }
 
 export interface AppState {

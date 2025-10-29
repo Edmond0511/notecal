@@ -5,8 +5,6 @@ import { FoodSearchResult } from '../types';
 const OPEN_FOOD_FACTS_API = 'https://world.openfoodfacts.org/api/v2/search';
 
 export const searchFoods = async (query: string): Promise<FoodSearchResult[]> => {
-  if (!query.trim()) return [];
-
   try {
     const response = await axios.get(OPEN_FOOD_FACTS_API, {
       params: {
@@ -40,60 +38,4 @@ export const searchFoods = async (query: string): Promise<FoodSearchResult[]> =>
     console.error('Error searching foods:', error);
     return [];
   }
-};
-
-// Fallback common foods database for offline functionality
-export const getCommonFoods = (): FoodSearchResult[] => {
-  return [
-    {
-      food_name: 'Apple',
-      serving_qty: 100,
-      serving_unit: 'g',
-      nf_calories: 52,
-      nf_protein: 0.3,
-      nf_carbohydrates: 14,
-      nf_total_fat: 0.2,
-      nf_fiber: 2.4,
-      nf_sugars: 10.4,
-    },
-    {
-      food_name: 'Banana',
-      serving_qty: 100,
-      serving_unit: 'g',
-      nf_calories: 89,
-      nf_protein: 1.1,
-      nf_carbohydrates: 23,
-      nf_total_fat: 0.3,
-      nf_fiber: 2.6,
-      nf_sugars: 12.2,
-    },
-    {
-      food_name: 'Chicken Breast',
-      serving_qty: 100,
-      serving_unit: 'g',
-      nf_calories: 165,
-      nf_protein: 31,
-      nf_carbohydrates: 0,
-      nf_total_fat: 3.6,
-    },
-    {
-      food_name: 'White Rice',
-      serving_qty: 100,
-      serving_unit: 'g',
-      nf_calories: 130,
-      nf_protein: 2.7,
-      nf_carbohydrates: 28,
-      nf_total_fat: 0.3,
-    },
-    {
-      food_name: 'Whole Wheat Bread',
-      serving_qty: 100,
-      serving_unit: 'g',
-      nf_calories: 247,
-      nf_protein: 13,
-      nf_carbohydrates: 41,
-      nf_total_fat: 3.4,
-      nf_fiber: 7,
-    },
-  ];
 };

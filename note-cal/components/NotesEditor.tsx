@@ -110,11 +110,15 @@ export function NotesEditor({ entries, onAddEntry, onUpdateEntry, onDeleteEntry 
       {/* Document editor - full screen */}
       <TextInput
         ref={textInputRef}
-        style={styles.documentInput}
+        style={[styles.documentInput, {
+          borderWidth: 0,
+          borderColor: 'transparent',
+          backgroundColor: 'transparent',
+        }]}
         value={documentText}
         onChangeText={handleTextChange}
-        placeholder={entries.length === 0
-          ? "Start your food journal...\n\nEnter food items starting with '- ' (dash + space)\n\nExamples:\n- oats, 50g\n- 2 eggs\n- banana\n- chicken breast, 150g"
+        placeholder={entries.length == 0
+          ? "Enter food items starting with '- ' (dash + space)\n\nExamples:\n- oats, 50g\n- 2 eggs\n- banana\n- chicken breast, 150g"
           : "Continue writing..."
         }
         placeholderTextColor="#ccc"
@@ -125,6 +129,11 @@ export function NotesEditor({ entries, onAddEntry, onUpdateEntry, onDeleteEntry 
         autoCapitalize="sentences"
         spellCheck={false}
         underlineColorAndroid="transparent"
+        selectionColor="#007AFF"
+        blurOnSubmit={false}
+        contextMenuHidden={false}
+        selectTextOnFocus={false}
+        clearTextOnFocus={false}
       />
 
       {/* Overlay for inline nutrition indicators */}
@@ -143,7 +152,7 @@ export function NotesEditor({ entries, onAddEntry, onUpdateEntry, onDeleteEntry 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff'
   },
   documentInput: {
     flex: 1,
@@ -154,6 +163,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100, // Extra padding at bottom
     color: '#333',
     fontFamily: 'System', // Use system font
+    outlineStyle: 'none' as any
   },
   overlay: {
     position: 'absolute',

@@ -54,25 +54,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  logoContainer: {
-    marginRight: 12,
-    position: 'relative',
-  },
-  logo: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-  },
-  logoAccent: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 12,
-    height: 12,
-    backgroundColor: '#FF3B30',
-    borderRadius: 6,
-  },
   title: {
     fontSize: 24,
     fontWeight: '700',

@@ -186,23 +186,25 @@ export const FoodInput: React.FC<FoodInputProps> = ({ onFoodAdded, currentDate }
 
   return (
     <View style={styles.container}>
-      <View style={styles.inputContainer}>
+      <View style={styles.documentContainer}>
         <TextInput
-          style={styles.input}
-          placeholder="Type food (e.g., '150g chicken')"
+          style={styles.documentInput}
           value={query}
           onChangeText={setQuery}
           onSubmitEditing={addFoodFromQuery}
           returnKeyType="done"
+          multiline
           autoFocus
+          textAlignVertical="top"
         />
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={addFoodFromQuery}
-          disabled={!query.trim()}
-        >
-          <Ionicons name="add" size={24} color="#ffffff" />
-        </TouchableOpacity>
+        {!!query.trim() && (
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={addFoodFromQuery}
+          >
+            <Ionicons name="checkmark" size={20} color="#ffffff" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {showResults && (
@@ -245,6 +247,29 @@ export const FoodInput: React.FC<FoodInputProps> = ({ onFoodAdded, currentDate }
 const styles = StyleSheet.create({
   container: {
     marginBottom: 20,
+    
+  },
+  documentContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    minHeight: 200,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  documentInput: {
+    flex: 1,
+    fontSize: 18,
+    color: '#333',
+    padding: 20,
+    minHeight: 160,
+    lineHeight: 24,
+    fontWeight: '400',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -265,24 +290,32 @@ const styles = StyleSheet.create({
   addButton: {
     backgroundColor: '#007AFF',
     borderRadius: 20,
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   resultsContainer: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    marginTop: 8,
+    borderRadius: 16,
+    marginTop: 12,
     borderWidth: 1,
     borderColor: '#e9ecef',
-    maxHeight: 200,
-    elevation: 2,
+    maxHeight: 240,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    zIndex: 10,
   },
   loadingContainer: {
     padding: 20,
@@ -298,26 +331,30 @@ const styles = StyleSheet.create({
   resultItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#f5f5f5',
+    backgroundColor: '#ffffff',
   },
   resultContent: {
     flex: 1,
   },
   foodName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '500',
-    color: '#333',
-    marginBottom: 2,
+    color: '#1d1d1f',
+    marginBottom: 4,
+    lineHeight: 22,
   },
   brandName: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
+    fontSize: 14,
+    color: '#86868b',
+    marginBottom: 4,
+    fontWeight: '400',
   },
   nutritionInfo: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 13,
+    color: '#86868b',
+    fontWeight: '400',
   },
 });

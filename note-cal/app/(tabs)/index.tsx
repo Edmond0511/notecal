@@ -21,10 +21,6 @@ export default function HomeScreen() {
 
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.title}>NoteCal</Text>
-            <Text style={styles.subtitle}>Nutrition Tracking</Text>
-          </View>
         </View>
       </View>
 
@@ -48,7 +44,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: '#fff'
   },
   headerContent: {
     flexDirection: 'row',

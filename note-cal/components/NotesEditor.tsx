@@ -25,7 +25,7 @@ export function NotesEditor({ entries, onAddEntry, onUpdateEntry, onDeleteEntry 
       const documentContent = entries.map(entry => entry.rawText).join('\n\n');
       setDocumentText(documentContent);
     }
-  }, []);
+  }, [entries]);
 
   // Parse document text to find lines that start with "-"
   const parseDocumentForFoodEntries = useCallback((text: string): string[] => {
@@ -110,14 +110,17 @@ export function NotesEditor({ entries, onAddEntry, onUpdateEntry, onDeleteEntry 
       {/* Document editor - full screen */}
       <TextInput
         ref={textInputRef}
-        style={[styles.documentInput, {
-          borderWidth: 0,
-          borderColor: 'transparent',
-          backgroundColor: 'transparent',
-        }]}
+        style={[
+          styles.documentInput,
+          {
+            borderWidth: 0,
+            borderColor: 'transparent',
+            backgroundColor: 'transparent',
+          }
+        ]}
         value={documentText}
         onChangeText={handleTextChange}
-        placeholder={entries.length == 0
+        placeholder={entries.length === 0
           ? "Enter food items starting with '- ' (dash + space)\n\nExamples:\n- oats, 50g\n- 2 eggs\n- banana\n- chicken breast, 150g"
           : "Continue writing..."
         }
@@ -130,7 +133,6 @@ export function NotesEditor({ entries, onAddEntry, onUpdateEntry, onDeleteEntry 
         spellCheck={false}
         underlineColorAndroid="transparent"
         selectionColor="#007AFF"
-        blurOnSubmit={false}
         contextMenuHidden={false}
         selectTextOnFocus={false}
         clearTextOnFocus={false}
@@ -159,10 +161,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     padding: 20,
-    paddingTop: 40, // Extra padding at top
-    paddingBottom: 100, // Extra padding at bottom
+    paddingTop: 40,
+    paddingBottom: 100,
     color: '#333',
-    fontFamily: 'System', // Use system font
+    fontFamily: 'System',
+    borderWidth: 0,
+    borderColor: 'transparent',
+    borderRadius: 0,
+    backgroundColor: 'transparent',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
     outlineStyle: 'none' as any
   },
   overlay: {
@@ -171,7 +182,6 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     bottom: 100,
-    pointerEvents: 'none',
   },
   overlayContent: {
     flexGrow: 1,
@@ -186,7 +196,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     lineHeight: 24,
-    color: 'transparent', // Make text transparent so input text shows through
+    color: 'transparent',
   },
   inlineCalories: {
     flexDirection: 'row',

@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 0,
     paddingBottom: 100,
     color: '#333',
     fontFamily: 'System',

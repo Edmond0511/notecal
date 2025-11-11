@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   dateNavigationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#fafaf8ff',
     borderRadius: 25,
     paddingHorizontal: 8,
     paddingVertical: 4,

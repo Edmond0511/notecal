@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, StatusBar, SafeAreaView, TouchableOpacity } fro
 import { NotesEditor } from '@/components/NotesEditor';
 import { useAppStore } from '@/store/app-store';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function HomeScreen() {
   const {
@@ -11,20 +12,26 @@ export default function HomeScreen() {
     addEntry,
     updateEntry,
     deleteEntry,
-    isLoading,
     setCurrentDate
   } = useAppStore();
 
   const entries = getEntriesForDate(currentDate);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDate, setTempDate] = useState(new Date());
+
+  // Convert YYYYMMDD string to Date object
+  const stringToDate = (dateString: string): Date => {
+    return new Date(
+      Number.parseInt(dateString.substring(0, 4)),
+      Number.parseInt(dateString.substring(4, 6)) - 1,
+      Number.parseInt(dateString.substring(6, 8))
+    );
+  };
 
   // Date navigation functions
   const formatDateDisplay = (dateString: string) => {
     const today = new Date();
-    const date = new Date(
-      parseInt(dateString.substring(0, 4)),
-      parseInt(dateString.substring(4, 6)) - 1,
-      parseInt(dateString.substring(6, 8))
-    );
+    const date = stringToDate(dateString);
 
     // Check if it's today
     if (date.toDateString() === today.toDateString()) {
@@ -41,11 +48,7 @@ export default function HomeScreen() {
   };
 
   const navigateDate = (direction: 'prev' | 'next') => {
-    const current = new Date(
-      parseInt(currentDate.substring(0, 4)),
-      parseInt(currentDate.substring(4, 6)) - 1,
-      parseInt(currentDate.substring(6, 8))
-    );
+    const current = stringToDate(currentDate);
 
     const newDate = new Date(current);
     if (direction === 'prev') {
@@ -61,12 +64,21 @@ export default function HomeScreen() {
     setCurrentDate(newDateString);
   };
 
-  const goToToday = () => {
-    const today = new Date();
-    const todayString = today.getFullYear().toString() +
-      (today.getMonth() + 1).toString().padStart(2, '0') +
-      today.getDate().toString().padStart(2, '0');
-    setCurrentDate(todayString);
+  // Calendar picker function
+  const openDatePicker = () => {
+    setTempDate(stringToDate(currentDate));
+    setShowDatePicker(true);
+  };
+
+  // Handle iOS date picker change
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    if (event.type === 'set' && selectedDate) {
+      const newDateString = selectedDate.getFullYear().toString() +
+        (selectedDate.getMonth() + 1).toString().padStart(2, '0') +
+        selectedDate.getDate().toString().padStart(2, '0');
+      setCurrentDate(newDateString);
+    }
+    setShowDatePicker(false);
   };
 
   return (
@@ -83,10 +95,12 @@ export default function HomeScreen() {
             <Ionicons name="chevron-back" size={20} color="#333" />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={goToToday} style={styles.dateButtonCompact}>
-            <Text style={styles.dateText}>
-              {formatDateDisplay(currentDate)}
-            </Text>
+          <TouchableOpacity onPress={openDatePicker} style={styles.dateButtonCompact}>
+            <View style={styles.dateButtonContent}>
+              <Text style={styles.dateText}>
+                {formatDateDisplay(currentDate)}
+              </Text>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -105,6 +119,17 @@ export default function HomeScreen() {
         onUpdateEntry={updateEntry}
         onDeleteEntry={deleteEntry}
       />
+
+      {/* DateTimePicker - iOS calendar */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={tempDate}
+          mode="date"
+          display="calendar"
+          onChange={onDateChange}
+          style={styles.datePicker}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -154,5 +179,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     textAlign: 'center',
+  },
+  dateButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  calendarIcon: {
+    marginRight: 4,
+  },
+  datePicker: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
   },
 });

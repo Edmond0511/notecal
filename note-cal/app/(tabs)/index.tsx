@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, StatusBar, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import { NotesEditor } from '@/components/NotesEditor';
 import { useAppStore } from '@/store/app-store';
 import { Ionicons } from '@expo/vector-icons';

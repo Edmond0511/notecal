@@ -1,0 +1,37 @@
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["/Applications/Supabase.app/Contents/MacOS/postgresql", "/usr/local/bin"]
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
+
+[ingest]
+enabled = false
+
+[analytics]
+enabled = false
+
+[logs]
+query_log_level = "info"
+
+[auth]
+site_url = "http://localhost:8081"
+additional_redirect_urls = ["exp://127.0.0.1:8081"]
+jwt_expiry = 3600
+
+[storage]
+file_size_limit = "50MiB"
+
+[edge_runtime]
+enabled = true
+port = 9001
+inspector_port = 8083

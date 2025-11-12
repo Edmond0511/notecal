@@ -2,10 +2,11 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document } from '@/types';
-import { mockResolveLine } from '@/services/mockApi';
+import { resolveNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
+import { supabase } from '@/lib/supabase';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-const USE_MOCK_API = true; // Set to false when real API is ready
+const USE_AI_API = true; // Use AI-powered nutrition API
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -27,28 +28,33 @@ export const useAppStore = create<AppState>()(
 
       const textLine = rawText.trim().substring(1).trim(); // Remove "- " prefix
 
-      // Call API to resolve nutrition
+      // Call AI API to resolve nutrition
       let nutritionData: NutritionResolveResponse;
 
-      if (USE_MOCK_API) {
-        nutritionData = await mockResolveLine(textLine, 'en-US');
-      } else {
-        const response = await fetch(`${API_BASE_URL}/resolve_line`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            textLine,
-            locale: 'en-US', // Default to US, can be made configurable
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to resolve nutrition');
+      if (USE_AI_API) {
+        try {
+          nutritionData = await resolveNutrition(textLine, {
+            // Get current user ID if available (from auth state)
+            userId: supabase.auth.getUser().then(({ data }) => data.user?.id).catch(() => undefined)
+          });
+        } catch (error) {
+          if (error instanceof NutritionQuotaExceededError) {
+            // Handle quota exceeded with user-friendly message
+            console.warn('Quota exceeded:', error.message);
+            throw new Error('Monthly quota exceeded. Please upgrade your plan or try again next month.');
+          } else if (error instanceof NutritionRateLimitError) {
+            // Handle rate limiting with retry suggestion
+            console.warn('Rate limited:', error.message);
+            throw new Error('Too many requests. Please try again in a moment.');
+          } else {
+            // Handle other API errors
+            console.error('AI API error:', error);
+            throw new Error('Unable to process nutrition data. Please try again.');
+          }
         }
-
-        nutritionData = await response.json();
+      } else {
+        // Fallback to a simple estimation (you could keep mockResolveLine as fallback)
+        throw new Error('AI API is disabled. Please enable AI-powered nutrition analysis.');
       }
 
       // Create new entry

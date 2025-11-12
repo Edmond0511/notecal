@@ -96,7 +96,7 @@ export default function HomeScreen() {
             <Ionicons name="chevron-back" size={20} color="#333" />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={openDatePicker} style={styles.dateButtonCompact}>
+          <TouchableOpacity onPress={openDatePicker}>
             <View style={styles.dateButtonContent}>
               <Text style={styles.dateText}>
                 {formatDateDisplay(currentDate)}
@@ -121,15 +121,31 @@ export default function HomeScreen() {
         onDeleteEntry={deleteEntry}
       />
 
-      {/* DateTimePicker - iOS calendar */}
+      {/* DateTimePicker - iOS calendar with overlay */}
       {showDatePicker && (
-        <DateTimePicker
-          value={tempDate}
-          mode="date"
-          display="calendar"
-          onChange={onDateChange}
-          style={styles.datePicker}
-        />
+        <View style={styles.datePickerOverlay}>
+          <View style={styles.datePickerContainer}>
+            <View style={styles.datePickerHeader}>
+              <Text style={styles.datePickerTitle}>Select Date</Text>
+              <TouchableOpacity
+                onPress={() => setShowDatePicker(false)}
+                style={styles.datePickerCloseButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close" size={24} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
+            <DateTimePicker
+              value={tempDate}
+              mode="date"
+              display="inline"
+              onChange={onDateChange}
+              style={styles.datePicker}
+              textColor="#000000"
+              accentColor="#007AFF"
+            />
+          </View>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -166,15 +182,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
   },
-  dateButtonCompact: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'transparent',
-    marginHorizontal: 8,
-    minWidth: 100,
-    alignItems: 'center',
-  },
   dateText: {
     fontSize: 16,
     fontWeight: '600',
@@ -189,11 +196,54 @@ const styles = StyleSheet.create({
   calendarIcon: {
     marginRight: 4,
   },
-  datePicker: {
+  datePickerOverlay: {
     position: 'absolute',
-    bottom: 0,
+    top: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  datePickerContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 12,
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+  },
+  datePickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  datePickerCloseButton: {
+    padding: 4,
+    borderRadius: 16,
+    backgroundColor: '#F0F8FF',
+  },
+  datePicker: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
   },
 });

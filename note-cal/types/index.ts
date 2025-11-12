@@ -53,8 +53,15 @@ export interface NutritionResolveResponse {
   errors?: string[];
 }
 
+export interface Document {
+  date: string; // YYYYMMDD format
+  content: string; // Complete document text including non-food content
+  lastModified: Date;
+}
+
 export interface AppState {
   entries: Entry[];
+  documents: Document[];
   currentDate: string;
   isLoading: boolean;
   // Actions
@@ -64,4 +71,9 @@ export interface AppState {
   setCurrentDate: (date: string) => void;
   getEntriesForDate: (date: string) => Entry[];
   getDailyTotals: (date: string) => DailyTotals;
+  // Document actions
+  saveDocument: (date: string, content: string) => void;
+  getDocument: (date: string) => Document | undefined;
+  getAllDocuments: () => Document[];
+  deleteDocument: (date: string) => void;
 }

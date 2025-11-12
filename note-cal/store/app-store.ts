@@ -1,5 +1,7 @@
 import { create } from 'zustand';
-import { AppState, Entry, DailyTotals, NutritionResolveResponse } from '@/types';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document } from '@/types';
 import { mockResolveLine } from '@/services/mockApi';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';

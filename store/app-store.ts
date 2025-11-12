@@ -33,9 +33,10 @@ export const useAppStore = create<AppState>()(
 
       if (USE_AI_API) {
         try {
+          // Get current user ID if available (from auth state)
+          const { data: { user } } = await supabase.auth.getUser();
           nutritionData = await resolveNutrition(textLine, {
-            // Get current user ID if available (from auth state)
-            userId: supabase.auth.getUser().then(({ data }) => data.user?.id).catch(() => undefined)
+            userId: user?.id
           });
         } catch (error) {
           if (error instanceof NutritionQuotaExceededError) {
@@ -115,25 +116,27 @@ export const useAppStore = create<AppState>()(
 
         let nutritionData: NutritionResolveResponse;
 
-        if (USE_MOCK_API) {
-          nutritionData = await mockResolveLine(textLine, 'en-US');
-        } else {
-          const response = await fetch(`${API_BASE_URL}/resolve_line`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              textLine,
-              locale: 'en-US',
-            }),
-          });
-
-          if (response.ok) {
-            nutritionData = await response.json();
-          } else {
-            throw new Error('Failed to resolve nutrition');
+        if (USE_AI_API) {
+          try {
+            // Get current user ID if available (from auth state)
+            const { data: { user } } = await supabase.auth.getUser();
+            nutritionData = await resolveNutrition(textLine, {
+              userId: user?.id
+            });
+          } catch (error) {
+            if (error instanceof NutritionQuotaExceededError) {
+              console.warn('Quota exceeded:', error.message);
+              throw new Error('Monthly quota exceeded. Please upgrade your plan or try again next month.');
+            } else if (error instanceof NutritionRateLimitError) {
+              console.warn('Rate limited:', error.message);
+              throw new Error('Too many requests. Please try again in a moment.');
+            } else {
+              console.error('AI API error:', error);
+              throw new Error('Unable to process nutrition data. Please try again.');
+            }
           }
+        } else {
+          throw new Error('AI API is disabled. Please enable AI-powered nutrition analysis.');
         }
 
         updatedEntry.inlineKcal = nutritionData.totals.kcal;

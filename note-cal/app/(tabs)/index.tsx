@@ -13,12 +13,25 @@ export default function HomeScreen() {
     addEntry,
     updateEntry,
     deleteEntry,
-    setCurrentDate
+    setCurrentDate,
+    saveDocument,
+    getDocument
   } = useAppStore();
 
   const entries = getEntriesForDate(currentDate);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
+  const [currentDocumentText, setCurrentDocumentText] = useState('');
+
+  // Load document text for current date
+  React.useEffect(() => {
+    const document = getDocument(currentDate);
+    if (document) {
+      setCurrentDocumentText(document.content);
+    } else {
+      setCurrentDocumentText('');
+    }
+  }, [currentDate, getDocument]);
 
   // Convert YYYYMMDD string to Date object
   const stringToDate = (dateString: string): Date => {
@@ -48,7 +61,17 @@ export default function HomeScreen() {
     });
   };
 
+  // Save current document before navigation
+  const saveCurrentDocument = () => {
+    if (currentDocumentText.trim()) {
+      saveDocument(currentDate, currentDocumentText.trim());
+    }
+  };
+
   const navigateDate = (direction: 'prev' | 'next') => {
+    // Save current document before changing date
+    saveCurrentDocument();
+
     const current = stringToDate(currentDate);
 
     const newDate = new Date(current);
@@ -67,6 +90,8 @@ export default function HomeScreen() {
 
   // Calendar picker function
   const openDatePicker = () => {
+    // Save current document before opening calendar
+    saveCurrentDocument();
     setTempDate(stringToDate(currentDate));
     setShowDatePicker(true);
   };
@@ -80,6 +105,11 @@ export default function HomeScreen() {
       setCurrentDate(newDateString);
     }
     setShowDatePicker(false);
+  };
+
+  // Handle document text changes from NotesEditor
+  const handleDocumentTextChange = (text: string) => {
+    setCurrentDocumentText(text);
   };
 
   return (
@@ -116,9 +146,12 @@ export default function HomeScreen() {
 
       <NotesEditor
         entries={entries}
+        initialDocumentText={currentDocumentText}
+        onDocumentTextChange={handleDocumentTextChange}
         onAddEntry={addEntry}
         onUpdateEntry={updateEntry}
         onDeleteEntry={deleteEntry}
+        currentDate={currentDate}
       />
 
       {/* DateTimePicker - iOS calendar with overlay */}

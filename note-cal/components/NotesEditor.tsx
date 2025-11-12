@@ -10,22 +10,30 @@ import { Entry } from '@/types';
 
 interface NotesEditorProps {
   entries: Entry[];
+  initialDocumentText: string;
+  onDocumentTextChange: (text: string) => void;
   onAddEntry: (text: string) => Promise<void>;
   onUpdateEntry: (id: string, text: string) => Promise<void>;
   onDeleteEntry: (id: string) => void;
+  currentDate: string;
 }
 
-export function NotesEditor({ entries, onAddEntry, onUpdateEntry, onDeleteEntry }: NotesEditorProps) {
-  const [documentText, setDocumentText] = useState('');
+export function NotesEditor({
+  entries,
+  initialDocumentText,
+  onDocumentTextChange,
+  onAddEntry,
+  onUpdateEntry,
+  onDeleteEntry,
+  currentDate
+}: NotesEditorProps) {
+  const [documentText, setDocumentText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
 
-  // Load existing entries into document on mount
+  // Update document text when initialDocumentText changes (date navigation)
   useEffect(() => {
-    if (entries.length > 0) {
-      const documentContent = entries.map(entry => entry.rawText).join('\n\n');
-      setDocumentText(documentContent);
-    }
-  }, [entries]);
+    setDocumentText(initialDocumentText);
+  }, [initialDocumentText]);
 
   // Parse document text to find lines that start with "-"
   const parseDocumentForFoodEntries = useCallback((text: string): string[] => {
@@ -61,13 +69,16 @@ export function NotesEditor({ entries, onAddEntry, onUpdateEntry, onDeleteEntry 
   const handleTextChange = useCallback((newText: string) => {
     setDocumentText(newText);
 
+    // Notify parent of text change for persistence
+    onDocumentTextChange(newText);
+
     // Debounce processing to avoid too many API calls
     const timeoutId = setTimeout(() => {
       processDocumentChanges(newText);
     }, 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [processDocumentChanges]);
+  }, [processDocumentChanges, onDocumentTextChange]);
 
   // Render inline calorie indicators for dash lines
   const renderDocumentWithCalories = () => {

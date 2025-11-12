@@ -7,10 +7,13 @@ import { mockResolveLine } from '@/services/mockApi';
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 const USE_MOCK_API = true; // Set to false when real API is ready
 
-export const useAppStore = create<AppState>((set, get) => ({
-  entries: [],
-  currentDate: new Date().toISOString().split('T')[0].replace(/-/g, ''), // YYYYMMDD
-  isLoading: false,
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      entries: [],
+      documents: [],
+      currentDate: new Date().toISOString().split('T')[0].replace(/-/g, ''), // YYYYMMDD
+      isLoading: false,
 
   addEntry: async (rawText: string) => {
     set({ isLoading: true });
@@ -186,4 +189,59 @@ export const useAppStore = create<AppState>((set, get) => ({
       ...totals,
     };
   },
-}));
+
+  // Document management functions
+  saveDocument: (date: string, content: string) => {
+    const { documents } = get();
+    const existingDocIndex = documents.findIndex(doc => doc.date === date);
+
+    const updatedDocument: Document = {
+      date,
+      content,
+      lastModified: new Date(),
+    };
+
+    if (existingDocIndex >= 0) {
+      // Update existing document
+      set((state) => ({
+        documents: state.documents.map((doc, index) =>
+          index === existingDocIndex ? updatedDocument : doc
+        ),
+      }));
+    } else {
+      // Add new document
+      set((state) => ({
+        documents: [...state.documents, updatedDocument],
+      }));
+    }
+  },
+
+  getDocument: (date: string) => {
+    const { documents } = get();
+    return documents.find(doc => doc.date === date);
+  },
+
+  getAllDocuments: () => {
+    return get().documents;
+  },
+
+  deleteDocument: (date: string) => {
+    set((state) => ({
+      documents: state.documents.filter(doc => doc.date !== date),
+    }));
+  },
+}),
+    {
+      name: 'note-cal-storage', // unique name for the storage
+      storage: createJSONStorage(() => AsyncStorage),
+      // Only persist the data we need (exclude functions and non-serializable data)
+      partialize: (state) => ({
+        entries: state.entries,
+        documents: state.documents,
+        currentDate: state.currentDate,
+      }),
+      // Handle version migrations if needed in the future
+      version: 1,
+    }
+  )
+);

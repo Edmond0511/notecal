@@ -6,7 +6,7 @@ const mockFoodDatabase: Record<string, Partial<FoodItem>> = {
     label: 'Oats',
     source: 'FDC',
     sourceId: '175236',
-    macros: { kcal: 389, protein: 16.9, fat: 6.9 },
+    macros: { kcal: 389, protein: 16.9, fat: 6.9, carbs: 66 },
     confidence: 0.9,
     citations: [{ provider: 'USDA FDC', url: 'https://fdc.nal.usda.gov/fdc-app.html#/food-details/175236/nutrients' }]
   },
@@ -14,7 +14,7 @@ const mockFoodDatabase: Record<string, Partial<FoodItem>> = {
     label: 'Chicken Breast',
     source: 'FDC',
     sourceId: '172180',
-    macros: { kcal: 165, protein: 31, fat: 3.6 },
+    macros: { kcal: 165, protein: 31, fat: 3.6, carbs: 0 },
     confidence: 0.95,
     citations: [{ provider: 'USDA FDC', url: 'https://fdc.nal.usda.gov/fdc-app.html#/food-details/172180/nutrients' }]
   },

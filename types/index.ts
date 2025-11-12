@@ -6,12 +6,13 @@ export interface FoodItem {
   prep?: string;
   qty: number;
   unit: string;
-  source: 'FDC' | 'CNF' | 'OFF';
+  source: 'FDC' | 'CNF' | 'OFF' | 'fallback';
   sourceId: string;
   macros: {
     kcal: number;
     protein: number;
     fat: number;
+    carbs: number;
   };
   confidence: number; // 0-1 scale
   citations: {
@@ -49,6 +50,7 @@ export interface NutritionResolveResponse {
     kcal: number;
     protein: number;
     fat: number;
+    carbs: number;
   };
   errors?: string[];
 }

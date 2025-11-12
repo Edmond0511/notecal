@@ -9,7 +9,7 @@ const corsHeaders = {
 interface NutritionRequest {
   foodText: string
   userId?: string
-  aiProvider?: 'openai' | 'gemini' | 'claude'
+  aiProvider?: 'gemini'
 }
 
 interface FoodItem {
@@ -53,7 +53,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { foodText, userId, aiProvider = 'openai' }: NutritionRequest = await req.json()
+    const { foodText, userId, aiProvider = 'gemini' }: NutritionRequest = await req.json()
 
     if (!foodText || foodText.trim().length === 0) {
       return new Response(
@@ -179,88 +179,42 @@ serve(async (req) => {
 })
 
 async function callAIService(foodText: string, provider: string): Promise<{ data: NutritionData, tokens?: number }> {
-  switch (provider) {
-    case 'openai':
-      return await callOpenAI(foodText)
-    case 'gemini':
-      return await callGemini(foodText)
-    case 'claude':
-      return await callClaude(foodText)
-    default:
-      throw new Error(`Unsupported AI provider: ${provider}`)
-  }
+  // Use Gemini as the single AI provider
+  return await callGemini(foodText)
 }
 
-async function callOpenAI(foodText: string): Promise<{ data: NutritionData, tokens?: number }> {
-  const apiKey = Deno.env.get('OPENAI_API_KEY')
-  if (!apiKey) throw new Error('OpenAI API key not configured')
-
-  const prompt = `Extract food items from this text and calculate nutrition. Return JSON with this format:
-{
-  "items": [
-    {
-      "label": "food name",
-      "qty": 150,
-      "unit": "g",
-      "confidence": 0.9,
-      "macros": {"kcal": 200, "protein": 25, "fat": 8, "carbs": 10}
-    }
-  ],
-  "totals": {"kcal": 200, "protein": 25, "fat": 8, "carbs": 10}
-}
-
-Food text: "${foodText}"`
-
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a nutrition expert. Extract food items and provide accurate nutritional information.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.1,
-      max_tokens: 500
-    })
-  })
-
-  if (!response.ok) {
-    throw new Error(`OpenAI API error: ${response.statusText}`)
-  }
-
-  const data = await response.json()
-  const tokens = data.usage?.total_tokens
-
-  try {
-    const nutritionData = JSON.parse(data.choices[0].message.content)
-    return { data: nutritionData, tokens }
-  } catch (parseError) {
-    throw new Error('Failed to parse OpenAI response')
-  }
-}
 
 async function callGemini(foodText: string): Promise<{ data: NutritionData, tokens?: number }> {
   const apiKey = Deno.env.get('GEMINI_API_KEY')
   if (!apiKey) throw new Error('Gemini API key not configured')
 
-  const prompt = `Analyze this food text and extract food items with nutrition information.
-Return only valid JSON in this format:
+  const prompt = `You are a certified nutritionist. Extract food items from this text and provide accurate macronutrient information.
+
+Rules:
+- Convert all quantities to grams (g) for consistency
+- Use standard portion sizes if not specified
+- Calculate realistic values based on USDA nutrition data
+- Include all 4 macros: calories (kcal), protein (g), fat (g), carbs (g)
+- Set confidence 0.9-1.0 for common foods, 0.6-0.8 for complex preparations
+- Return ONLY valid JSON, no explanations
+
+Format:
 {
-  "items": [{"label": "food", "qty": 100, "unit": "g", "confidence": 0.8, "macros": {"kcal": 150, "protein": 20, "fat": 5, "carbs": 15}}],
-  "totals": {"kcal": 150, "protein": 20, "fat": 5, "carbs": 15}
+  "items": [
+    {
+      "label": "chicken breast",
+      "qty": 150,
+      "unit": "g",
+      "confidence": 0.95,
+      "macros": {"kcal": 165, "protein": 31, "fat": 3.6, "carbs": 0}
+    }
+  ],
+  "totals": {"kcal": 165, "protein": 31, "fat": 3.6, "carbs": 0}
 }
 
-Food text: "${foodText}"`
+Food text: "${foodText}"
+
+JSON:`
 
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
     method: 'POST',
@@ -295,67 +249,12 @@ Food text: "${foodText}"`
   }
 }
 
-async function callClaude(foodText: string): Promise<{ data: NutritionData, tokens?: number }> {
-  const apiKey = Deno.env.get('CLAUDE_API_KEY')
-  if (!apiKey) throw new Error('Claude API key not configured')
-
-  const prompt = `Parse this food text and extract food items with their nutritional information.
-Return JSON with this exact structure:
-{
-  "items": [
-    {
-      "label": "food name",
-      "qty": 120,
-      "unit": "g",
-      "confidence": 0.85,
-      "macros": {"kcal": 180, "protein": 22, "fat": 6, "carbs": 12}
-    }
-  ],
-  "totals": {"kcal": 180, "protein": 22, "fat": 6, "carbs": 12}
-}
-
-Food text: "${foodText}"`
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'Content-Type': 'application/json',
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: 'claude-3-haiku-20240307',
-      max_tokens: 500,
-      messages: [{
-        role: 'user',
-        content: prompt
-      }]
-    })
-  })
-
-  if (!response.ok) {
-    throw new Error(`Claude API error: ${response.statusText}`)
-  }
-
-  const data = await response.json()
-  const tokens = data.usage?.input_tokens + data.usage?.output_tokens
-
-  try {
-    const nutritionData = JSON.parse(data.content[0].text)
-    return { data: nutritionData, tokens }
-  } catch (parseError) {
-    throw new Error('Failed to parse Claude response')
-  }
-}
-
 function calculateCost(tokens: number, provider: string): number {
   const costs = {
-    openai: 0.5, // $0.50 per 1M tokens
     gemini: 0.25, // $0.25 per 1M tokens
-    claude: 0.3 // $0.30 per 1M tokens
   }
 
-  const costPerMillion = costs[provider as keyof typeof costs] || 0.5
+  const costPerMillion = costs[provider as keyof typeof costs] || 0.25
   return Math.ceil((tokens / 1000000) * costPerMillion * 100) // convert to cents
 }
 
@@ -363,25 +262,103 @@ function calculateConfidenceScore(data: NutritionData): number {
   if (!data.items || data.items.length === 0) return 0
 
   const avgConfidence = data.items.reduce((sum, item) => sum + item.confidence, 0) / data.items.length
-  return Math.round(avgConfidence * 100) / 100
+
+  // Apply quality factors
+  let qualityMultiplier = 1.0
+
+  // Penalize very high calorie estimates (likely errors)
+  const totalCalories = data.totals.kcal
+  if (totalCalories > 2000) {
+    qualityMultiplier *= 0.8
+  }
+
+  // Boost confidence for balanced macros
+  const hasProtein = data.totals.protein > 0
+  const hasFat = data.totals.fat > 0
+  const hasCarbs = data.totals.carbs > 0
+  if (hasProtein && hasFat && hasCarbs) {
+    qualityMultiplier *= 1.1
+  }
+
+  // Penalize if all items have the same confidence (suggests generic estimation)
+  const confidences = data.items.map(item => item.confidence)
+  const hasVaryingConfidence = new Set(confidences).size > 1
+  if (!hasVaryingConfidence && avgConfidence === 0.8) {
+    qualityMultiplier *= 0.9
+  }
+
+  return Math.min(1.0, Math.round(avgConfidence * qualityMultiplier * 100) / 100)
 }
 
 function generateFallbackResponse(foodText: string): NutritionData {
-  // Very basic fallback estimation
+  // Enhanced fallback with better nutrition estimation
   const lines = foodText.split('\n').filter(line => line.trim().length > 0)
 
-  const items: FoodItem[] = lines.map((line, index) => ({
-    label: line.trim(),
-    qty: 100, // Default 100g
-    unit: 'g',
-    confidence: 0.3, // Low confidence
-    macros: {
-      kcal: 100 + (index * 20), // Rough estimation
-      protein: 10 + (index * 2),
-      fat: 3 + (index * 1),
-      carbs: 15 + (index * 3)
+  // Basic nutrition database for common foods (per 100g)
+  const nutritionDatabase: Record<string, {kcal: number, protein: number, fat: number, carbs: number}> = {
+    'chicken': { kcal: 165, protein: 31, fat: 3.6, carbs: 0 },
+    'beef': { kcal: 250, protein: 26, fat: 15, carbs: 0 },
+    'rice': { kcal: 130, protein: 2.7, fat: 0.3, carbs: 28 },
+    'pasta': { kcal: 131, protein: 5, fat: 1.1, carbs: 25 },
+    'bread': { kcal: 265, protein: 9, fat: 3.2, carbs: 49 },
+    'egg': { kcal: 155, protein: 13, fat: 11, carbs: 1.1 },
+    'banana': { kcal: 89, protein: 1.1, fat: 0.3, carbs: 23 },
+    'apple': { kcal: 52, protein: 0.3, fat: 0.2, carbs: 14 },
+    'oats': { kcal: 389, protein: 16.9, fat: 6.9, carbs: 66 },
+    'yogurt': { kcal: 59, protein: 10, fat: 0.4, carbs: 3.6 },
+    'cheese': { kcal: 402, protein: 25, fat: 33, carbs: 1.3 },
+    'broccoli': { kcal: 34, protein: 2.8, fat: 0.4, carbs: 7 },
+    'potato': { kcal: 77, protein: 2, fat: 0.1, carbs: 17 },
+    'salmon': { kcal: 208, protein: 25, fat: 12, carbs: 0 },
+    'tuna': { kcal: 132, protein: 28, fat: 1.3, carbs: 0 }
+  }
+
+  const items: FoodItem[] = lines.map((line) => {
+    const foodLine = line.trim().toLowerCase()
+
+    // Extract quantity if specified (e.g., "200g chicken", "2 eggs")
+    const quantityMatch = foodLine.match(/(\d+)\s*([a-z]*)\s*(.+)|(.+)\s*(\d+)\s*([a-z]*)/)
+    let qty = 100 // Default 100g
+    let foodName = foodLine
+
+    if (quantityMatch) {
+      if (quantityMatch[1]) {
+        qty = parseInt(quantityMatch[1])
+        foodName = quantityMatch[3]
+      } else {
+        qty = parseInt(quantityMatch[5])
+        foodName = quantityMatch[4]
+      }
     }
-  }))
+
+    // Find matching nutrition data
+    let nutrition = nutritionDatabase[foodName] || nutritionDatabase['chicken'] // Default fallback
+
+    // Try partial matching
+    if (!nutritionDatabase[foodName]) {
+      const keys = Object.keys(nutritionDatabase)
+      const match = keys.find(key => foodName.includes(key) || key.includes(foodName))
+      if (match) {
+        nutrition = nutritionDatabase[match]
+      }
+    }
+
+    // Calculate nutrition based on quantity
+    const multiplier = qty / 100
+
+    return {
+      label: line.trim(),
+      qty: qty,
+      unit: 'g',
+      confidence: 0.6, // Medium confidence for fallback
+      macros: {
+        kcal: Math.round(nutrition.kcal * multiplier),
+        protein: Math.round(nutrition.protein * multiplier * 10) / 10,
+        fat: Math.round(nutrition.fat * multiplier * 10) / 10,
+        carbs: Math.round(nutrition.carbs * multiplier * 10) / 10
+      }
+    }
+  })
 
   const totals = items.reduce((acc, item) => ({
     kcal: acc.kcal + item.macros.kcal,

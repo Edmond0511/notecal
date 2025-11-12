@@ -3,7 +3,7 @@ import { NutritionResolveResponse } from '@/types';
 
 export interface NutritionApiOptions {
   userId?: string;
-  aiProvider?: 'openai' | 'gemini' | 'claude';
+  aiProvider?: 'gemini';
 }
 
 export class NutritionApiError extends Error {
@@ -41,7 +41,7 @@ export async function resolveNutrition(
   foodText: string,
   options: NutritionApiOptions = {}
 ): Promise<NutritionResolveResponse> {
-  const { userId, aiProvider = 'openai' } = options;
+  const { userId, aiProvider = 'gemini' } = options;
 
   if (!foodText || foodText.trim().length === 0) {
     throw new NutritionApiError('Food text is required');
@@ -74,8 +74,8 @@ export async function resolveNutrition(
     }
 
     // Validate response structure
-    if (!data.items || !Array.isArray(data.items)) {
-      throw new NutritionApiError('Invalid response format: missing items array');
+    if (!data.resolved || !Array.isArray(data.resolved)) {
+      throw new NutritionApiError('Invalid response format: missing resolved items array');
     }
 
     if (!data.totals || typeof data.totals !== 'object') {
@@ -337,7 +337,31 @@ async function checkUserQuota(userId: string) {
 }
 
 function createFallbackResponse(foodText: string): NutritionResolveResponse {
-  // Very basic fallback estimation for failed API calls
+  // Enhanced fallback with basic nutrition database
+  const nutritionDatabase: Record<string, {kcal: number, protein: number, fat: number, carbs: number}> = {
+    'chicken': { kcal: 165, protein: 31, fat: 3.6, carbs: 0 },
+    'beef': { kcal: 250, protein: 26, fat: 15, carbs: 0 },
+    'rice': { kcal: 130, protein: 2.7, fat: 0.3, carbs: 28 },
+    'pasta': { kcal: 131, protein: 5, fat: 1.1, carbs: 25 },
+    'bread': { kcal: 265, protein: 9, fat: 3.2, carbs: 49 },
+    'egg': { kcal: 155, protein: 13, fat: 11, carbs: 1.1 },
+    'banana': { kcal: 89, protein: 1.1, fat: 0.3, carbs: 23 },
+    'apple': { kcal: 52, protein: 0.3, fat: 0.2, carbs: 14 },
+    'oats': { kcal: 389, protein: 16.9, fat: 6.9, carbs: 66 }
+  }
+
+  const foodName = foodText.trim().toLowerCase()
+  let nutrition = nutritionDatabase[foodName] || { kcal: 150, protein: 15, fat: 5, carbs: 20 }
+
+  // Try partial matching
+  if (!nutritionDatabase[foodName]) {
+    const keys = Object.keys(nutritionDatabase)
+    const match = keys.find(key => foodName.includes(key) || key.includes(foodName))
+    if (match) {
+      nutrition = nutritionDatabase[match]
+    }
+  }
+
   return {
     resolved: [{
       id: Date.now().toString(),
@@ -347,19 +371,11 @@ function createFallbackResponse(foodText: string): NutritionResolveResponse {
       unit: 'g',
       source: 'fallback' as const,
       sourceId: 'fallback',
-      macros: {
-        kcal: 150,
-        protein: 15,
-        fat: 5
-      },
-      confidence: 0.1, // Very low confidence
-      citations: []
+      macros: nutrition,
+      confidence: 0.5, // Medium confidence for enhanced fallback
+      citations: [{ provider: 'Fallback Database', url: '#' }]
     }],
-    totals: {
-      kcal: 150,
-      protein: 15,
-      fat: 5
-    },
+    totals: nutrition,
     errors: ['AI service unavailable, showing estimated values']
   };
 }

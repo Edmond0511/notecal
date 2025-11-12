@@ -54,7 +54,7 @@ export interface NutritionCache {
 export interface ApiUsage {
   id: number;
   user_id: string;
-  ai_provider: 'openai' | 'gemini' | 'claude';
+  ai_provider: 'gemini';
   tokens_used: number;
   cost_cents: number;
   created_at: string;
@@ -64,7 +64,7 @@ export interface ApiUsage {
 export interface NutritionResolveRequest {
   foodText: string;
   userId?: string;
-  aiProvider?: 'openai' | 'gemini' | 'claude';
+  aiProvider?: 'gemini';
 }
 
 export interface NutritionResolveResponse {

@@ -64,7 +64,6 @@ export interface ApiUsage {
 export interface NutritionResolveRequest {
   foodText: string;
   userId?: string;
-  aiProvider?: 'gemini';
 }
 
 export interface NutritionResolveResponse {

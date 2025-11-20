@@ -9,7 +9,6 @@ const corsHeaders = {
 interface NutritionRequest {
   foodText: string
   userId?: string
-  aiProvider?: 'gemini'
 }
 
 interface FoodItem {
@@ -53,7 +52,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { foodText, userId, aiProvider = 'gemini' }: NutritionRequest = await req.json()
+    const { foodText, userId }: NutritionRequest = await req.json()
 
     if (!foodText || foodText.trim().length === 0) {
       return new Response(
@@ -90,7 +89,7 @@ serve(async (req) => {
 
       // Log cache hit usage
       if (userId) {
-        await logApiUsage(supabase, userId, aiProvider, 0, 0, 'cache_hit', startTime)
+        await logApiUsage(supabase, userId, 0, 0, 'cache_hit', startTime)
       }
 
       return new Response(
@@ -104,10 +103,10 @@ serve(async (req) => {
 
     // 2. Cache miss - call AI service
     try {
-      const aiResult = await callAIService(foodText, aiProvider)
+      const aiResult = await callAIService(foodText)
       nutritionData = aiResult.data
       tokensUsed = aiResult.tokens || 0
-      costCents = calculateCost(tokensUsed, aiProvider)
+      costCents = calculateCost(tokensUsed)
 
       // 3. Cache the result
       const expiresAt = new Date()
@@ -120,7 +119,7 @@ serve(async (req) => {
           normalized_query: foodText.toLowerCase().trim(),
           nutrition_data: nutritionData,
           confidence_score: calculateConfidenceScore(nutritionData),
-          ai_provider: aiProvider,
+          ai_provider: 'gemini',
           hit_count: 1,
           expires_at: expiresAt.toISOString()
         }, {
@@ -129,7 +128,7 @@ serve(async (req) => {
 
       // 4. Log API usage
       if (userId) {
-        await logApiUsage(supabase, userId, aiProvider, tokensUsed, costCents, 'success', startTime)
+        await logApiUsage(supabase, userId, tokensUsed, costCents, 'success', startTime)
       }
 
       return new Response(
@@ -145,7 +144,7 @@ serve(async (req) => {
 
       // Log error usage
       if (userId) {
-        await logApiUsage(supabase, userId, aiProvider, 0, 0, 'ai_error', startTime, aiError.message)
+        await logApiUsage(supabase, userId, 0, 0, 'ai_error', startTime, aiError.message)
       }
 
       // Return fallback response
@@ -178,7 +177,7 @@ serve(async (req) => {
   }
 })
 
-async function callAIService(foodText: string, provider: string): Promise<{ data: NutritionData, tokens?: number }> {
+async function callAIService(foodText: string): Promise<{ data: NutritionData, tokens?: number }> {
   // Use Gemini as the single AI provider
   return await callGemini(foodText)
 }
@@ -249,12 +248,8 @@ JSON:`
   }
 }
 
-function calculateCost(tokens: number, provider: string): number {
-  const costs = {
-    gemini: 0.25, // $0.25 per 1M tokens
-  }
-
-  const costPerMillion = costs[provider as keyof typeof costs] || 0.25
+function calculateCost(tokens: number): number {
+  const costPerMillion = 0.25 // $0.25 per 1M tokens for Gemini
   return Math.ceil((tokens / 1000000) * costPerMillion * 100) // convert to cents
 }
 
@@ -373,7 +368,6 @@ function generateFallbackResponse(foodText: string): NutritionData {
 async function logApiUsage(
   supabase: any,
   userId: string,
-  provider: string,
   tokens: number,
   costCents: number,
   status: string,
@@ -386,7 +380,7 @@ async function logApiUsage(
     .from('api_usage')
     .insert({
       user_id: userId,
-      ai_provider: provider,
+      ai_provider: 'gemini',
       tokens_used: tokens,
       cost_cents: costCents,
       request_type: 'nutrition',

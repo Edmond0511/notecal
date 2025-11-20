@@ -3,7 +3,6 @@ import { NutritionResolveResponse } from '@/types';
 
 export interface NutritionApiOptions {
   userId?: string;
-  aiProvider?: 'gemini';
 }
 
 export class NutritionApiError extends Error {
@@ -32,16 +31,16 @@ export class NutritionQuotaExceededError extends NutritionApiError {
 }
 
 /**
- * Resolve nutrition information using Supabase Edge Functions with AI
+ * Resolve nutrition information using Supabase Edge Functions with Gemini AI
  * @param foodText The food text to analyze
- * @param options Optional configuration including user ID and AI provider preference
+ * @param options Optional configuration including user ID
  * @returns NutritionResolveResponse with calculated nutrition data
  */
 export async function resolveNutrition(
   foodText: string,
   options: NutritionApiOptions = {}
 ): Promise<NutritionResolveResponse> {
-  const { userId, aiProvider = 'gemini' } = options;
+  const { userId } = options;
 
   if (!foodText || foodText.trim().length === 0) {
     throw new NutritionApiError('Food text is required');
@@ -57,8 +56,7 @@ export async function resolveNutrition(
     const { data, error } = await supabase.functions.invoke<NutritionResolveResponse>('nutrition-resolve', {
       body: {
         foodText: foodText.trim(),
-        userId,
-        aiProvider
+        userId
       }
     });
 

@@ -19,8 +19,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   subscription_tier TEXT DEFAULT 'free',
   -- free, premium, etc.
   -- User preferences
-  preferred_ai_provider TEXT DEFAULT 'gemini',
-  -- gemini only
   dietary_restrictions TEXT [],
   -- e.g., ['vegetarian', 'gluten-free']
   preferred_units TEXT DEFAULT 'metric',
@@ -40,8 +38,6 @@ CREATE TABLE IF NOT EXISTS public.nutrition_cache (
     confidence_score >= 0
     AND confidence_score <= 1
   ),
-  ai_provider TEXT,
-  -- which AI provider generated this
   hit_count INTEGER DEFAULT 0,
   -- how many times this cache entry was used
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -58,7 +54,6 @@ CREATE TABLE IF NOT EXISTS public.nutrition_cache (
 CREATE TABLE IF NOT EXISTS public.api_usage (
   id SERIAL PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  ai_provider TEXT NOT NULL,
   tokens_used INTEGER DEFAULT 0 CHECK (tokens_used >= 0),
   cost_cents INTEGER DEFAULT 0 CHECK (cost_cents >= 0),
   request_type TEXT DEFAULT 'nutrition',
@@ -98,11 +93,9 @@ CREATE TABLE IF NOT EXISTS public.food_history (
   CONSTRAINT check_portion_qty CHECK (portion_qty >= 0)
 );
 
--- AI prompts and templates for different providers
+-- AI prompts and templates for nutrition analysis
 CREATE TABLE IF NOT EXISTS public.ai_prompts (
   id SERIAL PRIMARY KEY,
-  provider TEXT NOT NULL,
-  -- gemini only
   prompt_type TEXT NOT NULL,
   -- food_extraction, nutrition_estimation, etc.
   template TEXT NOT NULL,
@@ -129,10 +122,9 @@ CREATE TABLE IF NOT EXISTS public.nutrition_feedback (
 
 -- Insert default AI prompts
 INSERT INTO
-  public.ai_prompts (provider, prompt_type, template)
+  public.ai_prompts (prompt_type, template)
 VALUES
   (
-    'gemini',
     'food_extraction',
     'You are a certified nutritionist. Extract food items and provide accurate macronutrients.
 Rules: Convert to grams, use standard portions, calculate realistic USDA-based values.
@@ -303,8 +295,7 @@ SELECT
   food_query,
   nutrition_data,
   confidence_score,
-  hit_count,
-  ai_provider
+  hit_count
 FROM
   public.nutrition_cache
 WHERE

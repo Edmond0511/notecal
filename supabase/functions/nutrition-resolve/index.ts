@@ -7,7 +7,8 @@ const corsHeaders = {
 }
 
 interface NutritionRequest {
-  foodText: string
+  textLine: string
+  locale?: 'en-CA' | 'en-US'
   userId?: string
 }
 
@@ -36,7 +37,13 @@ interface NutritionData {
 }
 
 interface ApiResponse {
-  data?: NutritionData
+  resolved?: FoodItem[]
+  totals?: {
+    kcal: number
+    protein: number
+    fat: number
+    carbs: number
+  }
   error?: string
 }
 
@@ -52,9 +59,9 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { foodText, userId }: NutritionRequest = await req.json()
+    const { textLine, locale = 'en-US', userId }: NutritionRequest = await req.json()
 
-    if (!foodText || foodText.trim().length === 0) {
+    if (!textLine || textLine.trim().length === 0) {
       return new Response(
         JSON.stringify({ error: 'Food text is required' } as ApiResponse),
         {
@@ -63,6 +70,8 @@ serve(async (req) => {
         }
       )
     }
+
+    const foodText = textLine.trim()
 
     const startTime = Date.now()
     let tokensUsed = 0
@@ -93,7 +102,10 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ data: nutritionData } as ApiResponse),
+        JSON.stringify({
+          resolved: nutritionData.items,
+          totals: nutritionData.totals
+        } as ApiResponse),
         {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -119,7 +131,6 @@ serve(async (req) => {
           normalized_query: foodText.toLowerCase().trim(),
           nutrition_data: nutritionData,
           confidence_score: calculateConfidenceScore(nutritionData),
-          ai_provider: 'gemini',
           hit_count: 1,
           expires_at: expiresAt.toISOString()
         }, {
@@ -132,7 +143,10 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ data: nutritionData } as ApiResponse),
+        JSON.stringify({
+          resolved: nutritionData.items,
+          totals: nutritionData.totals
+        } as ApiResponse),
         {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -152,7 +166,8 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          data: fallbackData,
+          resolved: fallbackData.items,
+          totals: fallbackData.totals,
           error: 'AI service unavailable, showing estimated values'
         } as ApiResponse),
         {
@@ -380,7 +395,6 @@ async function logApiUsage(
     .from('api_usage')
     .insert({
       user_id: userId,
-      ai_provider: 'gemini',
       tokens_used: tokens,
       cost_cents: costCents,
       request_type: 'nutrition',

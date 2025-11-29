@@ -7,7 +7,8 @@ const corsHeaders = {
 }
 
 interface NutritionRequest {
-  textLine: string
+  textLine?: string
+  foodText?: string  // Keep for backward compatibility
   locale?: 'en-CA' | 'en-US'
   userId?: string
 }
@@ -59,9 +60,12 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { textLine, locale = 'en-US', userId }: NutritionRequest = await req.json()
+    const { textLine, foodText: foodTextFromRequest, locale = 'en-US', userId }: NutritionRequest = await req.json()
 
-    if (!textLine || textLine.trim().length === 0) {
+    // Support both textLine and foodText for backward compatibility
+    const foodText = (textLine || foodTextFromRequest || '').trim()
+
+    if (!foodText || foodText.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Food text is required' } as ApiResponse),
         {
@@ -70,8 +74,6 @@ serve(async (req) => {
         }
       )
     }
-
-    const foodText = textLine.trim()
 
     const startTime = Date.now()
     let tokensUsed = 0
@@ -156,15 +158,19 @@ serve(async (req) => {
     } catch (aiError) {
       console.error('AI service error:', aiError)
       let errorMessage = 'AI service unavailable, showing estimated values'
+      let errorDetails = 'Unknown error'
 
       // Check if it's a missing API key error
-      if (aiError.message === 'GEMINI_API_KEY_NOT_CONFIGURED') {
-        errorMessage = 'AI service not configured, showing estimated values'
+      if (aiError instanceof Error) {
+        errorDetails = aiError.message
+        if (aiError.message === 'GEMINI_API_KEY_NOT_CONFIGURED') {
+          errorMessage = 'AI service not configured, showing estimated values'
+        }
       }
 
       // Log error usage
       if (userId) {
-        await logApiUsage(supabase, userId, 0, 0, 'ai_error', startTime, aiError.message)
+        await logApiUsage(supabase, userId, 0, 0, 'ai_error', startTime, errorDetails)
       }
 
       // Return fallback response
@@ -185,10 +191,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Function error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error'
 
     return new Response(
       JSON.stringify({
-        error: error.message || 'Internal server error'
+        error: errorMessage
       } as ApiResponse),
       {
         status: 500,

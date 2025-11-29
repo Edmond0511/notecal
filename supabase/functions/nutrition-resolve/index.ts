@@ -155,6 +155,12 @@ serve(async (req) => {
 
     } catch (aiError) {
       console.error('AI service error:', aiError)
+      let errorMessage = 'AI service unavailable, showing estimated values'
+
+      // Check if it's a missing API key error
+      if (aiError.message === 'GEMINI_API_KEY_NOT_CONFIGURED') {
+        errorMessage = 'AI service not configured, showing estimated values'
+      }
 
       // Log error usage
       if (userId) {
@@ -168,7 +174,7 @@ serve(async (req) => {
         JSON.stringify({
           resolved: fallbackData.items,
           totals: fallbackData.totals,
-          error: 'AI service unavailable, showing estimated values'
+          error: errorMessage
         } as ApiResponse),
         {
           status: 200,
@@ -200,7 +206,10 @@ async function callAIService(foodText: string): Promise<{ data: NutritionData, t
 
 async function callGemini(foodText: string): Promise<{ data: NutritionData, tokens?: number }> {
   const apiKey = Deno.env.get('GEMINI_API_KEY')
-  if (!apiKey) throw new Error('Gemini API key not configured')
+  if (!apiKey) {
+    console.log('Gemini API key not configured, using fallback')
+    throw new Error('GEMINI_API_KEY_NOT_CONFIGURED')
+  }
 
   const prompt = `You are a certified nutritionist. Extract food items from this text and provide accurate macronutrient information.
 

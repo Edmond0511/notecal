@@ -246,7 +246,7 @@ Food text: "${foodText}"
 
 JSON:`
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -261,7 +261,9 @@ JSON:`
   })
 
   if (!response.ok) {
-    throw new Error(`Gemini API error: ${response.statusText}`)
+    const errorText = await response.text()
+    console.error('Gemini API response:', errorText)
+    throw new Error(`Gemini API error: ${response.status} ${response.statusText}`)
   }
 
   const data = await response.json()

@@ -35,9 +35,11 @@ export const useAppStore = create<AppState>()(
         try {
           // Get current user ID if available (from auth state)
           const { data: { user } } = await supabase.auth.getUser();
+          console.log('🔍 Calling nutrition API for:', textLine);
           nutritionData = await resolveNutrition(textLine, {
             userId: user?.id
           });
+          console.log('✅ Nutrition API response:', nutritionData);
         } catch (error) {
           if (error instanceof NutritionQuotaExceededError) {
             // Handle quota exceeded with user-friendly message
@@ -70,10 +72,23 @@ export const useAppStore = create<AppState>()(
         updatedAt: new Date(),
       };
 
-      set((state) => ({
-        entries: [...state.entries, newEntry],
-        isLoading: false,
-      }));
+      console.log('📝 Created new entry:', {
+        id: newEntry.id,
+        rawText: newEntry.rawText,
+        status: newEntry.status,
+        inlineKcal: newEntry.inlineKcal,
+        itemsCount: newEntry.items.length,
+        totals: nutritionData.totals
+      });
+
+      set((state) => {
+        const updatedEntries = [...state.entries, newEntry];
+        console.log('📝 Adding to entries. Total entries now:', updatedEntries.length);
+        return {
+          entries: updatedEntries,
+          isLoading: false,
+        };
+      });
     } catch (error) {
       console.error('Error adding entry:', error);
 

@@ -17,17 +17,35 @@ export const useAppStore = create<AppState>()(
       isLoading: false,
 
   addEntry: async (rawText: string) => {
-    set({ isLoading: true });
+    // Only process lines that start with "- "
+    if (!rawText.trim().startsWith('-')) {
+      return;
+    }
+
+    const entryId = Date.now().toString();
+    const textLine = rawText.trim().substring(1).trim(); // Remove "- " prefix
+
+    // Create entry with pending status immediately (for UI loading indicator)
+    const pendingEntry: Entry = {
+      id: entryId,
+      date: get().currentDate,
+      rawText,
+      inlineKcal: null,
+      status: 'pending',
+      items: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Add pending entry to state immediately
+    set((state) => ({
+      entries: [...state.entries, pendingEntry],
+      isLoading: true,
+    }));
+
+    console.log('⏳ Created pending entry:', entryId, 'for:', textLine);
 
     try {
-      // Only process lines that start with "- "
-      if (!rawText.trim().startsWith('-')) {
-        set({ isLoading: false });
-        return;
-      }
-
-      const textLine = rawText.trim().substring(1).trim(); // Remove "- " prefix
-
       // Call AI API to resolve nutrition
       let nutritionData: NutritionResolveResponse;
 
@@ -60,52 +78,43 @@ export const useAppStore = create<AppState>()(
         throw new Error('AI API is disabled. Please enable AI-powered nutrition analysis.');
       }
 
-      // Create new entry
-      const newEntry: Entry = {
-        id: Date.now().toString(),
-        date: get().currentDate,
-        rawText,
+      // Update entry with resolved nutrition data
+      console.log('📝 Updating entry to ok:', {
+        id: entryId,
+        rawText: rawText,
         inlineKcal: nutritionData.totals.kcal,
-        status: nutritionData.errors ? 'error' : 'ok',
-        items: nutritionData.resolved,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      console.log('📝 Created new entry:', {
-        id: newEntry.id,
-        rawText: newEntry.rawText,
-        status: newEntry.status,
-        inlineKcal: newEntry.inlineKcal,
-        itemsCount: newEntry.items.length,
+        itemsCount: nutritionData.resolved.length,
         totals: nutritionData.totals
       });
 
-      set((state) => {
-        const updatedEntries = [...state.entries, newEntry];
-        console.log('📝 Adding to entries. Total entries now:', updatedEntries.length);
-        return {
-          entries: updatedEntries,
-          isLoading: false,
-        };
-      });
-    } catch (error) {
-      console.error('Error adding entry:', error);
-
-      // Create entry with error status
-      const errorEntry: Entry = {
-        id: Date.now().toString(),
-        date: get().currentDate,
-        rawText,
-        inlineKcal: null,
-        status: 'error',
-        items: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
       set((state) => ({
-        entries: [...state.entries, errorEntry],
+        entries: state.entries.map(entry =>
+          entry.id === entryId
+            ? {
+                ...entry,
+                inlineKcal: nutritionData.totals.kcal,
+                status: nutritionData.errors ? 'error' : 'ok',
+                items: nutritionData.resolved,
+                updatedAt: new Date(),
+              }
+            : entry
+        ),
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('Error resolving entry:', error);
+
+      // Update entry to error status
+      set((state) => ({
+        entries: state.entries.map(entry =>
+          entry.id === entryId
+            ? {
+                ...entry,
+                status: 'error',
+                updatedAt: new Date(),
+              }
+            : entry
+        ),
         isLoading: false,
       }));
     }

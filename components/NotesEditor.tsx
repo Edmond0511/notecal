@@ -7,6 +7,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Entry } from '@/types';
+import { ThinkingIndicator } from './ThinkingIndicator';
 
 interface NotesEditorProps {
   entries: Entry[];
@@ -95,11 +96,16 @@ export function NotesEditor({
         <View key={`line-${index}-${line.slice(0, 10)}`} style={styles.lineContainer}>
           <Text style={styles.documentLine}>{line || '\n'}</Text>
 
+          {/* Show thinking indicator for pending entries */}
+          {isFoodLine && matchingEntry?.status === 'pending' && (
+            <ThinkingIndicator />
+          )}
+
           {/* Show inline calories for resolved food lines */}
           {isFoodLine && matchingEntry?.status === 'ok' && matchingEntry.inlineKcal && (
             <View style={styles.inlineCalories}>
               <Text style={styles.caloriesText}>
-                {matchingEntry.inlineKcal} kcal
+                {matchingEntry.inlineKcal} cal
               </Text>
               {matchingEntry.items.some(item => item.confidence < 0.8) && (
                 <Text style={styles.lowConfidenceIndicator}>~</Text>
@@ -189,7 +195,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     position: 'absolute',
-    top: 40,
+    top: 0,
     left: 20,
     right: 20,
     bottom: 100,

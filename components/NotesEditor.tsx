@@ -4,7 +4,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
 } from 'react-native';
 import { Entry } from '@/types';
 import { ThinkingIndicator } from './ThinkingIndicator';
@@ -14,9 +13,9 @@ interface NotesEditorProps {
   initialDocumentText: string;
   onDocumentTextChange: (text: string) => void;
   onAddEntry: (text: string) => Promise<void>;
-  onUpdateEntry: (id: string, text: string) => Promise<void>;
+  onUpdateEntry?: (id: string, text: string) => Promise<void>;
   onDeleteEntry: (id: string) => void;
-  currentDate: string;
+  currentDate?: string;
 }
 
 export function NotesEditor({
@@ -24,13 +23,11 @@ export function NotesEditor({
   initialDocumentText,
   onDocumentTextChange,
   onAddEntry,
-  onUpdateEntry,
   onDeleteEntry,
-  currentDate
 }: NotesEditorProps) {
   const [documentText, setDocumentText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Update document text when initialDocumentText changes (date navigation)
   useEffect(() => {
@@ -94,42 +91,56 @@ export function NotesEditor({
     }, 1500); // Wait 1.5 seconds after user stops typing
   }, [processDocumentChanges, onDocumentTextChange]);
 
+  // Get indicator for a specific line
+  const getIndicatorForLine = (line: string) => {
+    const trimmedLine = line.trim();
+    const isFoodLine = trimmedLine.startsWith('- ');
+
+    if (!isFoodLine) return null;
+
+    const matchingEntry = entries.find(entry => entry.rawText === trimmedLine);
+
+    if (matchingEntry?.status === 'pending') {
+      return <ThinkingIndicator />;
+    }
+
+    if (matchingEntry?.status === 'ok' && matchingEntry.inlineKcal != null) {
+      return (
+        <View style={styles.inlineCalories}>
+          <Text style={styles.caloriesText}>
+            {matchingEntry.inlineKcal} cal
+          </Text>
+          {matchingEntry.items.some(item => item.confidence < 0.8) && (
+            <Text style={styles.lowConfidenceIndicator}>~</Text>
+          )}
+        </View>
+      );
+    }
+
+    if (matchingEntry?.status === 'error') {
+      return <Text style={styles.errorIndicator}>⚠️</Text>;
+    }
+
+    return null;
+  };
+
   // Render inline calorie indicators for dash lines
   const renderDocumentWithCalories = () => {
     const lines = documentText.split('\n');
 
     return lines.map((line, index) => {
-      const trimmedLine = line.trim();
-      const isFoodLine = trimmedLine.startsWith('- ');
-
-      // Find matching entry for this line
-      const matchingEntry = entries.find(entry => entry.rawText === trimmedLine);
+      const indicator = getIndicatorForLine(line);
 
       return (
-        <View key={`line-${index}-${line.slice(0, 10)}`} style={styles.lineContainer}>
-          <Text style={styles.documentLine}>{line || '\n'}</Text>
-
-          {/* Show thinking indicator for pending entries */}
-          {isFoodLine && matchingEntry?.status === 'pending' && (
-            <ThinkingIndicator />
-          )}
-
-          {/* Show inline calories for resolved food lines */}
-          {isFoodLine && matchingEntry?.status === 'ok' && matchingEntry.inlineKcal != null && (
-            <View style={styles.inlineCalories}>
-              <Text style={styles.caloriesText}>
-                {matchingEntry.inlineKcal} cal
-              </Text>
-              {matchingEntry.items.some(item => item.confidence < 0.8) && (
-                <Text style={styles.lowConfidenceIndicator}>~</Text>
-              )}
-            </View>
-          )}
-
-          {/* Show error indicator for failed resolutions */}
-          {isFoodLine && matchingEntry?.status === 'error' && (
-            <Text style={styles.errorIndicator}>⚠️</Text>
-          )}
+        <View key={`line-${index}`} style={styles.lineContainer}>
+          {/* Render line text with same styling as TextInput */}
+          <Text
+            style={styles.documentLine}
+            numberOfLines={1}
+          >
+            {line || ' '}
+          </Text>
+          {indicator}
         </View>
       );
     });
@@ -140,14 +151,7 @@ export function NotesEditor({
       {/* Document editor - full screen */}
       <TextInput
         ref={textInputRef}
-        style={[
-          styles.documentInput,
-          {
-            borderWidth: 0,
-            borderColor: 'transparent',
-            backgroundColor: 'transparent',
-          }
-        ]}
+        style={styles.documentInput}
         value={documentText}
         onChangeText={handleTextChange}
         placeholder={entries.length === 0
@@ -169,17 +173,17 @@ export function NotesEditor({
       />
 
       {/* Overlay for inline nutrition indicators */}
-      <ScrollView
+      <View
         style={styles.overlay}
         pointerEvents="none"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.overlayContent}
       >
         {renderDocumentWithCalories()}
-      </ScrollView>
+      </View>
     </View>
   );
 }
+
+const LINE_HEIGHT = 24;
 
 const styles = StyleSheet.create({
   container: {
@@ -189,22 +193,12 @@ const styles = StyleSheet.create({
   documentInput: {
     flex: 1,
     fontSize: 16,
-    lineHeight: 24,
-    padding: 20,
+    lineHeight: LINE_HEIGHT,
+    paddingHorizontal: 20,
     paddingTop: 0,
     paddingBottom: 100,
     color: '#333',
     fontFamily: 'System',
-    borderWidth: 0,
-    borderColor: 'transparent',
-    borderRadius: 0,
-    backgroundColor: 'transparent',
-    shadowColor: 'transparent',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-    outlineStyle: 'none' as any
   },
   overlay: {
     position: 'absolute',
@@ -213,20 +207,17 @@ const styles = StyleSheet.create({
     right: 20,
     bottom: 100,
   },
-  overlayContent: {
-    flexGrow: 1,
-  },
   lineContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    minHeight: 24,
-    marginBottom: 2,
+    alignItems: 'center',
+    height: LINE_HEIGHT,
   },
   documentLine: {
     flex: 1,
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: LINE_HEIGHT,
     color: 'transparent',
+    fontFamily: 'System',
   },
   inlineCalories: {
     flexDirection: 'row',
@@ -235,8 +226,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
-    marginLeft: 12,
-    alignSelf: 'center',
+    marginLeft: 8,
   },
   caloriesText: {
     fontSize: 12,
@@ -250,7 +240,6 @@ const styles = StyleSheet.create({
   },
   errorIndicator: {
     fontSize: 16,
-    marginLeft: 12,
-    alignSelf: 'center',
+    marginLeft: 8,
   },
 });

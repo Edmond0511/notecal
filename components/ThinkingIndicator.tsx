@@ -133,7 +133,7 @@ export const ThinkingIndicator: React.FC = () => {
 
       {/* Content */}
       <View style={styles.content}>
-        <Text style={styles.text}>thinking</Text>
+        <Text style={styles.text}>calculating</Text>
 
         {/* Animated dots */}
         <View style={styles.dotsContainer}>
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 12,
     marginLeft: 12,
-    alignSelf: 'center',
+    alignSelf: 'flex-start',
     overflow: 'hidden',
     paddingHorizontal: 10,
     paddingVertical: 3,

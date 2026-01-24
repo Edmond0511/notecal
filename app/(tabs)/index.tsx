@@ -7,18 +7,18 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function HomeScreen() {
-  const {
-    getEntriesForDate,
-    currentDate,
-    addEntry,
-    updateEntry,
-    deleteEntry,
-    setCurrentDate,
-    saveDocument,
-    getDocument
-  } = useAppStore();
+  // Get all entries and currentDate from store - single subscription
+  const allEntries = useAppStore(state => state.entries);
+  const currentDate = useAppStore(state => state.currentDate);
+  const addEntry = useAppStore(state => state.addEntry);
+  const updateEntry = useAppStore(state => state.updateEntry);
+  const deleteEntry = useAppStore(state => state.deleteEntry);
+  const setCurrentDate = useAppStore(state => state.setCurrentDate);
+  const saveDocument = useAppStore(state => state.saveDocument);
+  const getDocument = useAppStore(state => state.getDocument);
 
-  const entries = getEntriesForDate(currentDate);
+  // Filter entries for current date in render (ensures fresh data)
+  const entries = allEntries.filter(entry => entry.date === currentDate);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
   const [currentDocumentText, setCurrentDocumentText] = useState('');

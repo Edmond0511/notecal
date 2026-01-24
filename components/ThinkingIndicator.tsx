@@ -21,13 +21,13 @@ export const ThinkingIndicator: React.FC = () => {
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 1200,
-          easing: Easing.inOut(Easing.sine),
+          easing: Easing.linear,
           useNativeDriver: false,
         }),
         Animated.timing(pulseAnim, {
           toValue: 0,
           duration: 1200,
-          easing: Easing.inOut(Easing.sine),
+          easing: Easing.linear,
           useNativeDriver: false,
         }),
       ])
@@ -39,13 +39,13 @@ export const ThinkingIndicator: React.FC = () => {
         Animated.timing(dotOpacity, {
           toValue: 1,
           duration: 400,
-          easing: Easing.inOut(Easing.ease),
+          easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(dotOpacity, {
           toValue: 0.3,
           duration: 400,
-          easing: Easing.inOut(Easing.ease),
+          easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
       ]);
@@ -64,7 +64,7 @@ export const ThinkingIndicator: React.FC = () => {
         Animated.timing(shimmerPosition, {
           toValue: 2,
           duration: 2000,
-          easing: Easing.inOut(Easing.ease),
+          easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.delay(1000),

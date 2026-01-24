@@ -30,11 +30,21 @@ export function NotesEditor({
 }: NotesEditorProps) {
   const [documentText, setDocumentText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update document text when initialDocumentText changes (date navigation)
   useEffect(() => {
     setDocumentText(initialDocumentText);
   }, [initialDocumentText]);
+
+  // Cleanup debounce timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Parse document text to find lines that start with "-"
   const parseDocumentForFoodEntries = useCallback((text: string): string[] => {
@@ -73,12 +83,15 @@ export function NotesEditor({
     // Notify parent of text change for persistence
     onDocumentTextChange(newText);
 
-    // Debounce processing to avoid too many API calls
-    const timeoutId = setTimeout(() => {
-      processDocumentChanges(newText);
-    }, 1000);
+    // Clear previous timeout to properly debounce
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
 
-    return () => clearTimeout(timeoutId);
+    // Debounce processing to avoid too many API calls
+    debounceTimeoutRef.current = setTimeout(() => {
+      processDocumentChanges(newText);
+    }, 1500); // Wait 1.5 seconds after user stops typing
   }, [processDocumentChanges, onDocumentTextChange]);
 
   // Render inline calorie indicators for dash lines
@@ -102,7 +115,7 @@ export function NotesEditor({
           )}
 
           {/* Show inline calories for resolved food lines */}
-          {isFoodLine && matchingEntry?.status === 'ok' && matchingEntry.inlineKcal && (
+          {isFoodLine && matchingEntry?.status === 'ok' && matchingEntry.inlineKcal != null && (
             <View style={styles.inlineCalories}>
               <Text style={styles.caloriesText}>
                 {matchingEntry.inlineKcal} cal

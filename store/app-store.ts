@@ -43,8 +43,6 @@ export const useAppStore = create<AppState>()(
       isLoading: true,
     }));
 
-    console.log('⏳ Created pending entry:', entryId, 'for:', textLine);
-
     try {
       // Call AI API to resolve nutrition
       let nutritionData: NutritionResolveResponse;

@@ -169,7 +169,6 @@ serve(async (req) => {
         },
       );
     } catch (aiError) {
-      console.error("AI service error:", aiError);
       let errorMessage = "AI service unavailable, showing estimated values";
       let errorDetails = "Unknown error";
 
@@ -180,6 +179,8 @@ serve(async (req) => {
           errorMessage = "AI service not configured, showing estimated values";
         }
       }
+
+      console.error(`[AI Error] Food: "${foodText}" | Error: ${errorDetails}`);
 
       // Log error usage
       if (userId) {
@@ -196,6 +197,7 @@ serve(async (req) => {
 
       // Return fallback response
       const fallbackData = generateFallbackResponse(foodText);
+      console.log(`[Fallback] Returning estimated data: ${fallbackData.totals.kcal} kcal`);
 
       return new Response(
         JSON.stringify({
@@ -238,9 +240,11 @@ async function callGemini(
 ): Promise<{ data: NutritionData; tokens?: number }> {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) {
-    console.log("Gemini API key not configured, using fallback");
+    console.error("[Gemini] API key not configured");
     throw new Error("GEMINI_API_KEY_NOT_CONFIGURED");
   }
+
+  console.log(`[Gemini] Processing: "${foodText}"`);
 
   const prompt = `You are an expert Certified Nutritionist and Data Analyst. Your task is to extract food items from text and return precise macronutrient data.
 
@@ -300,24 +304,49 @@ JSON:`;
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("Gemini API response:", errorText);
+    console.error(`[Gemini] API error ${response.status}: ${errorText}`);
     throw new Error(
-      `Gemini API error: ${response.status} ${response.statusText}`,
+      `Gemini API error: ${response.status} ${response.statusText} - ${errorText.substring(0, 200)}`,
     );
   }
 
   const data = await response.json();
-  const content = data.candidates[0].content.parts[0].text;
+
+  // Check for blocked or empty responses
+  if (!data.candidates || data.candidates.length === 0) {
+    console.error("[Gemini] No candidates in response:", JSON.stringify(data));
+    throw new Error(`Gemini returned no candidates: ${data.promptFeedback?.blockReason || "unknown reason"}`);
+  }
+
+  const candidate = data.candidates[0];
+
+  // Check finish reason
+  if (candidate.finishReason && candidate.finishReason !== "STOP") {
+    console.error(`[Gemini] Unexpected finish reason: ${candidate.finishReason}`);
+  }
+
+  if (!candidate.content?.parts?.[0]?.text) {
+    console.error("[Gemini] No text in response:", JSON.stringify(candidate));
+    throw new Error("Gemini response missing text content");
+  }
+
+  const content = candidate.content.parts[0].text;
+  console.log(`[Gemini] Raw response length: ${content.length} chars`);
 
   try {
     // Extract JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No JSON found in Gemini response");
+    if (!jsonMatch) {
+      console.error("[Gemini] No JSON found in response:", content.substring(0, 500));
+      throw new Error("No JSON found in Gemini response");
+    }
 
     const nutritionData = JSON.parse(jsonMatch[0]);
+    console.log(`[Gemini] Success: ${nutritionData.items?.length || 0} items, ${nutritionData.totals?.kcal || 0} kcal`);
     return { data: nutritionData };
   } catch (parseError) {
-    throw new Error("Failed to parse Gemini response");
+    console.error("[Gemini] Parse error:", parseError, "Content:", content.substring(0, 500));
+    throw new Error(`Failed to parse Gemini response: ${parseError}`);
   }
 }
 

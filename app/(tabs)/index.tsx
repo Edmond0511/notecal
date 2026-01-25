@@ -195,13 +195,13 @@ export default function HomeScreen() {
         <View style={styles.totalDivider} />
         <View style={styles.totalItem}>
           <Text style={styles.totalValue}>
-            {Math.round(dailyTotals.protein)}g
+            {Math.round(dailyTotals.protein)}
           </Text>
           <Text style={styles.totalLabel}>protein</Text>
         </View>
         <View style={styles.totalDivider} />
         <View style={styles.totalItem}>
-          <Text style={styles.totalValue}>{Math.round(dailyTotals.fat)}g</Text>
+          <Text style={styles.totalValue}>{Math.round(dailyTotals.fat)}</Text>
           <Text style={styles.totalLabel}>fat</Text>
         </View>
       </View>

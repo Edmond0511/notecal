@@ -22,8 +22,14 @@ export const useAppStore = create<AppState>()(
       return;
     }
 
-    const entryId = Date.now().toString();
     const textLine = rawText.trim().substring(1).trim(); // Remove "- " prefix
+
+    // Don't create an entry if there's no food text after the dash
+    if (!textLine) {
+      return;
+    }
+
+    const entryId = Date.now().toString();
 
     // Create entry with pending status immediately (for UI loading indicator)
     const pendingEntry: Entry = {
@@ -132,10 +138,12 @@ export const useAppStore = create<AppState>()(
 
       let updatedEntry = { ...entries[entryIndex], rawText, updatedAt: new Date() };
 
-      // Only process if line starts with "- "
-      if (rawText.trim().startsWith('-')) {
-        const textLine = rawText.trim().substring(1).trim();
+      // Only process if line starts with "- " and has food text after the dash
+      const textLine = rawText.trim().startsWith('-')
+        ? rawText.trim().substring(1).trim()
+        : '';
 
+      if (textLine) {
         let nutritionData: NutritionResolveResponse;
 
         if (USE_AI_API) {

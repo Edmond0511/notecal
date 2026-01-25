@@ -1,27 +1,33 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
-import { NotesEditor } from '@/components/NotesEditor';
-import { useAppStore } from '@/store/app-store';
-import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { NotesEditor } from "@/components/NotesEditor";
+import { useAppStore } from "@/store/app-store";
+import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import React, { useState } from "react";
+import {
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   // Get all entries and currentDate from store - single subscription
-  const allEntries = useAppStore(state => state.entries);
-  const currentDate = useAppStore(state => state.currentDate);
-  const addEntry = useAppStore(state => state.addEntry);
-  const updateEntry = useAppStore(state => state.updateEntry);
-  const deleteEntry = useAppStore(state => state.deleteEntry);
-  const setCurrentDate = useAppStore(state => state.setCurrentDate);
-  const saveDocument = useAppStore(state => state.saveDocument);
-  const getDocument = useAppStore(state => state.getDocument);
+  const allEntries = useAppStore((state) => state.entries);
+  const currentDate = useAppStore((state) => state.currentDate);
+  const addEntry = useAppStore((state) => state.addEntry);
+  const updateEntry = useAppStore((state) => state.updateEntry);
+  const deleteEntry = useAppStore((state) => state.deleteEntry);
+  const setCurrentDate = useAppStore((state) => state.setCurrentDate);
+  const saveDocument = useAppStore((state) => state.saveDocument);
+  const getDocument = useAppStore((state) => state.getDocument);
 
   // Filter entries for current date in render (ensures fresh data)
-  const entries = allEntries.filter(entry => entry.date === currentDate);
+  const entries = allEntries.filter((entry) => entry.date === currentDate);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
-  const [currentDocumentText, setCurrentDocumentText] = useState('');
+  const [currentDocumentText, setCurrentDocumentText] = useState("");
 
   // Load document text for current date
   React.useEffect(() => {
@@ -29,7 +35,7 @@ export default function HomeScreen() {
     if (document) {
       setCurrentDocumentText(document.content);
     } else {
-      setCurrentDocumentText('');
+      setCurrentDocumentText("");
     }
   }, [currentDate, getDocument]);
 
@@ -38,7 +44,7 @@ export default function HomeScreen() {
     return new Date(
       Number.parseInt(dateString.substring(0, 4)),
       Number.parseInt(dateString.substring(4, 6)) - 1,
-      Number.parseInt(dateString.substring(6, 8))
+      Number.parseInt(dateString.substring(6, 8)),
     );
   };
 
@@ -49,15 +55,14 @@ export default function HomeScreen() {
 
     // Check if it's today
     if (date.toDateString() === today.toDateString()) {
-      return 'Today';
+      return "Today";
     }
 
- 
     // Otherwise show formatted date
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -68,22 +73,23 @@ export default function HomeScreen() {
     }
   };
 
-  const navigateDate = (direction: 'prev' | 'next') => {
+  const navigateDate = (direction: "prev" | "next") => {
     // Save current document before changing date
     saveCurrentDocument();
 
     const current = stringToDate(currentDate);
 
     const newDate = new Date(current);
-    if (direction === 'prev') {
+    if (direction === "prev") {
       newDate.setDate(newDate.getDate() - 1);
     } else {
       newDate.setDate(newDate.getDate() + 1);
     }
 
-    const newDateString = newDate.getFullYear().toString() +
-      (newDate.getMonth() + 1).toString().padStart(2, '0') +
-      newDate.getDate().toString().padStart(2, '0');
+    const newDateString =
+      newDate.getFullYear().toString() +
+      (newDate.getMonth() + 1).toString().padStart(2, "0") +
+      newDate.getDate().toString().padStart(2, "0");
 
     setCurrentDate(newDateString);
   };
@@ -98,10 +104,11 @@ export default function HomeScreen() {
 
   // Handle iOS date picker change
   const onDateChange = (event: any, selectedDate?: Date) => {
-    if (event.type === 'set' && selectedDate) {
-      const newDateString = selectedDate.getFullYear().toString() +
-        (selectedDate.getMonth() + 1).toString().padStart(2, '0') +
-        selectedDate.getDate().toString().padStart(2, '0');
+    if (event.type === "set" && selectedDate) {
+      const newDateString =
+        selectedDate.getFullYear().toString() +
+        (selectedDate.getMonth() + 1).toString().padStart(2, "0") +
+        selectedDate.getDate().toString().padStart(2, "0");
       setCurrentDate(newDateString);
     }
     setShowDatePicker(false);
@@ -116,9 +123,15 @@ export default function HomeScreen() {
   const dailyTotals = React.useMemo(() => {
     return entries.reduce(
       (acc, entry) => {
-        if (entry.status === 'ok' && entry.items) {
-          const entryProtein = entry.items.reduce((sum, item) => sum + (item.macros?.protein || 0), 0);
-          const entryFat = entry.items.reduce((sum, item) => sum + (item.macros?.fat || 0), 0);
+        if (entry.status === "ok" && entry.items) {
+          const entryProtein = entry.items.reduce(
+            (sum, item) => sum + (item.macros?.protein || 0),
+            0,
+          );
+          const entryFat = entry.items.reduce(
+            (sum, item) => sum + (item.macros?.fat || 0),
+            0,
+          );
           return {
             kcal: acc.kcal + (entry.inlineKcal || 0),
             protein: acc.protein + entryProtein,
@@ -127,7 +140,7 @@ export default function HomeScreen() {
         }
         return acc;
       },
-      { kcal: 0, protein: 0, fat: 0 }
+      { kcal: 0, protein: 0, fat: 0 },
     );
   }, [entries]);
 
@@ -139,7 +152,7 @@ export default function HomeScreen() {
         <View style={styles.dateNavigationContainer}>
           <TouchableOpacity
             style={styles.navButtonCompact}
-            onPress={() => navigateDate('prev')}
+            onPress={() => navigateDate("prev")}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="chevron-back" size={20} color="#333" />
@@ -155,7 +168,7 @@ export default function HomeScreen() {
 
           <TouchableOpacity
             style={styles.navButtonCompact}
-            onPress={() => navigateDate('next')}
+            onPress={() => navigateDate("next")}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="chevron-forward" size={20} color="#333" />
@@ -181,7 +194,9 @@ export default function HomeScreen() {
         </View>
         <View style={styles.totalDivider} />
         <View style={styles.totalItem}>
-          <Text style={styles.totalValue}>{Math.round(dailyTotals.protein)}g</Text>
+          <Text style={styles.totalValue}>
+            {Math.round(dailyTotals.protein)}g
+          </Text>
           <Text style={styles.totalLabel}>protein</Text>
         </View>
         <View style={styles.totalDivider} />
@@ -224,22 +239,22 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderBottomColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
     minHeight: 60,
   },
   dateNavigationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fafaf8ff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fafaf8ff",
     borderRadius: 25,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -247,42 +262,42 @@ const styles = StyleSheet.create({
   navButtonCompact: {
     padding: 8,
     borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     width: 36,
     height: 36,
   },
   dateText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "center",
   },
   dateButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   calendarIcon: {
     marginRight: 4,
   },
   datePickerOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 1000,
   },
   datePickerContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 16,
-    width: '90%',
+    width: "90%",
     maxWidth: 400,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: -2,
@@ -292,57 +307,68 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   datePickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
+    borderBottomColor: "#E9ECEF",
   },
   datePickerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
+    fontWeight: "600",
+    color: "#000000",
   },
   datePickerCloseButton: {
     padding: 4,
     borderRadius: 16,
-    backgroundColor: '#F0F8FF',
+    backgroundColor: "#F0F8FF",
   },
   datePicker: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 16,
   },
   totalsBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fafaf8',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffffcc",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: "#eee",
+    borderRadius: 45,
+    alignSelf: "center",
+    width: "80%",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   totalItem: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   totalValue: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
   },
   totalLabel: {
     fontSize: 12,
-    color: '#888',
+    color: "#888",
     marginTop: 2,
   },
   totalDivider: {
     width: 1,
     height: 30,
-    backgroundColor: '#ddd',
+    backgroundColor: "#ddd",
   },
 });

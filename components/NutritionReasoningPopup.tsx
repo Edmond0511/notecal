@@ -1,17 +1,33 @@
+import { Entry } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React from "react";
 import {
+  Dimensions,
   Modal,
-  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  StatusBar,
 } from "react-native";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Entry } from "@/types";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const DISMISS_THRESHOLD = 150;
 
 interface NutritionReasoningPopupProps {
   visible: boolean;
@@ -25,13 +41,79 @@ export function NutritionReasoningPopup({
   entry,
 }: NutritionReasoningPopupProps) {
   const insets = useSafeAreaInsets();
-
-  if (!entry) return null;
+  const translateY = useSharedValue(0);
+  const scrollOffset = useSharedValue(0);
+  const isScrolledToTop = useSharedValue(true);
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
   };
+
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      // Only allow drag when scrolled to top
+    })
+    .onUpdate((event) => {
+      // Only drag down when at top of scroll, or always allow if pulling down
+      if (isScrolledToTop.value && event.translationY > 0) {
+        translateY.value = event.translationY;
+      }
+    })
+    .onEnd((event) => {
+      if (event.translationY > DISMISS_THRESHOLD) {
+        // Dismiss the modal
+        translateY.value = withSpring(SCREEN_HEIGHT, {
+          damping: 20,
+          stiffness: 200,
+        });
+        runOnJS(handleClose)();
+      } else {
+        // Snap back
+        translateY.value = withSpring(0, {
+          damping: 20,
+          stiffness: 400,
+        });
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
+
+  const backdropStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      translateY.value,
+      [0, SCREEN_HEIGHT * 0.5],
+      [1, 0],
+      Extrapolation.CLAMP,
+    );
+    return {
+      opacity,
+    };
+  });
+
+  const handleScrollBeginDrag = (event: any) => {
+    scrollOffset.value = event.nativeEvent.contentOffset.y;
+    isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
+  };
+
+  const handleScroll = (event: any) => {
+    scrollOffset.value = event.nativeEvent.contentOffset.y;
+    isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
+  };
+
+  // Reset translation when modal opens
+  React.useEffect(() => {
+    if (visible) {
+      translateY.value = 0;
+      isScrolledToTop.value = true;
+    }
+  }, [visible]);
+
+  if (!entry) return null;
 
   return (
     <Modal
@@ -39,138 +121,170 @@ export function NutritionReasoningPopup({
       animationType="slide"
       presentationStyle="fullScreen"
       onRequestClose={onClose}
+      transparent={false}
     >
-      <StatusBar barStyle="dark-content" />
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={handleClose}
-            style={styles.closeButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      <GestureHandlerRootView style={styles.gestureRoot}>
+        <StatusBar barStyle="dark-content" />
+        <Animated.View style={[styles.backdrop, backdropStyle]} />
+        <GestureDetector gesture={panGesture}>
+          <Animated.View
+            style={[
+              styles.container,
+              { paddingTop: insets.top },
+              animatedStyle,
+            ]}
           >
-            <Ionicons name="chevron-down" size={28} color="#1976D2" />
-          </TouchableOpacity>
-          <Text style={styles.title}>Nutrition Details</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+            {/* Drag Indicator */}
+            <View style={styles.dragIndicatorContainer}>
+              <View style={styles.dragIndicator} />
+            </View>
 
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={[
-            styles.contentContainer,
-            { paddingBottom: insets.bottom + 24 },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Original Input */}
-          <Text style={styles.inputText}>
-            {entry.rawText.replace(/^-\s*/, "")}
-          </Text>
+            {/* Header */}
+            <View style={styles.header}>
+              <TouchableOpacity
+                onPress={handleClose}
+                style={styles.closeButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="chevron-down" size={28} color="#1976D2" />
+              </TouchableOpacity>
+              <Text style={styles.title}>Nutrition Details</Text>
+              <View style={styles.headerSpacer} />
+            </View>
 
-          {/* Items */}
-          {entry.items.map((item, index) => (
-            <View key={item.id || index} style={styles.itemCard}>
-              {/* Item Header */}
-              <View style={styles.itemHeader}>
-                <Text style={styles.itemLabel}>{item.label}</Text>
-                <View style={styles.confidenceBadge}>
-                  <Text style={styles.confidenceText}>
-                    {Math.round(item.confidence * 100)}%
-                  </Text>
-                </View>
-              </View>
-
-              {/* Macros */}
-              <View style={styles.macrosRow}>
-                <MacroItem label="Cal" value={item.macros.kcal} unit="" />
-                <MacroItem label="P" value={item.macros.protein} unit="g" />
-                <MacroItem label="F" value={item.macros.fat} unit="g" />
-                <MacroItem label="C" value={item.macros.carbs} unit="g" />
-              </View>
-
-              {/* Portion */}
-              <Text style={styles.portionText}>
-                {item.qty} {item.unit}
+            <Animated.ScrollView
+              style={styles.content}
+              contentContainerStyle={[
+                styles.contentContainer,
+                { paddingBottom: insets.bottom + 24 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              onScrollBeginDrag={handleScrollBeginDrag}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              bounces={true}
+            >
+              {/* Original Input */}
+              <Text style={styles.inputText}>
+                {entry.rawText.replace(/^-\s*/, "")}
               </Text>
 
-              {/* Reasoning Section */}
-              {item.reasoning && (
-                <View style={styles.reasoningSection}>
-                  {/* Interpretation */}
-                  {item.reasoning.interpretation && (
-                    <View style={styles.reasoningRow}>
-                      <Ionicons name="bulb-outline" size={16} color="#666" />
-                      <Text style={styles.reasoningText}>
-                        {item.reasoning.interpretation}
+              {/* Items */}
+              {entry.items.map((item, index) => (
+                <View key={item.id || index} style={styles.itemCard}>
+                  {/* Item Header */}
+                  <View style={styles.itemHeader}>
+                    <Text style={styles.itemLabel}>{item.label}</Text>
+                    <View style={styles.confidenceBadge}>
+                      <Text style={styles.confidenceText}>
+                        {Math.round(item.confidence * 100)}%
                       </Text>
                     </View>
-                  )}
+                  </View>
 
-                  {/* Assumptions */}
-                  {item.reasoning.assumptions?.length > 0 && (
-                    <View style={styles.reasoningRow}>
-                      <Ionicons
-                        name="information-circle-outline"
-                        size={16}
-                        color="#666"
-                      />
-                      <View style={styles.assumptionsList}>
-                        {item.reasoning.assumptions.map((assumption, i) => (
-                          <Text key={i} style={styles.assumptionText}>
-                            {"\u2022"} {assumption}
+                  {/* Macros */}
+                  <View style={styles.macrosRow}>
+                    <MacroItem label="calories" value={item.macros.kcal} unit="" />
+                    <MacroItem label="protein" value={item.macros.protein} unit="g" />
+                    <MacroItem label="fat" value={item.macros.fat} unit="g" />
+                    <MacroItem label="carbs" value={item.macros.carbs} unit="g" />
+                  </View>
+
+                  {/* Portion */}
+                  <Text style={styles.portionText}>
+                    {item.qty} {item.unit}
+                  </Text>
+
+                  {/* Reasoning Section */}
+                  {item.reasoning && (
+                    <View style={styles.reasoningSection}>
+                      {/* Interpretation */}
+                      {item.reasoning.interpretation && (
+                        <View style={styles.reasoningRow}>
+                          <Ionicons
+                            name="bulb-outline"
+                            size={16}
+                            color="#666"
+                          />
+                          <Text style={styles.reasoningText}>
+                            {item.reasoning.interpretation}
                           </Text>
-                        ))}
-                      </View>
-                    </View>
-                  )}
+                        </View>
+                      )}
 
-                  {/* Portion Notes */}
-                  {item.reasoning.portionNotes && (
-                    <View style={styles.reasoningRow}>
-                      <Ionicons name="scale-outline" size={16} color="#666" />
-                      <Text style={styles.reasoningText}>
-                        {item.reasoning.portionNotes}
-                      </Text>
-                    </View>
-                  )}
+                      {/* Assumptions */}
+                      {item.reasoning.assumptions?.length > 0 && (
+                        <View style={styles.reasoningRow}>
+                          <Ionicons
+                            name="information-circle-outline"
+                            size={16}
+                            color="#666"
+                          />
+                          <View style={styles.assumptionsList}>
+                            {item.reasoning.assumptions.map((assumption, i) => (
+                              <Text key={i} style={styles.assumptionText}>
+                                {"\u2022"} {assumption}
+                              </Text>
+                            ))}
+                          </View>
+                        </View>
+                      )}
 
-                  {/* Data Source */}
-                  {item.reasoning.dataSource && (
-                    <View style={styles.reasoningRow}>
-                      <Ionicons name="library-outline" size={16} color="#666" />
-                      <Text style={styles.sourceText}>
-                        {item.reasoning.dataSource}
-                      </Text>
-                    </View>
-                  )}
+                      {/* Portion Notes */}
+                      {item.reasoning.portionNotes && (
+                        <View style={styles.reasoningRow}>
+                          <Ionicons
+                            name="scale-outline"
+                            size={16}
+                            color="#666"
+                          />
+                          <Text style={styles.reasoningText}>
+                            {item.reasoning.portionNotes}
+                          </Text>
+                        </View>
+                      )}
 
-                  {/* Confidence Explanation */}
-                  {item.reasoning.confidenceExplanation && (
-                    <View style={styles.reasoningRow}>
-                      <Ionicons
-                        name="checkmark-circle-outline"
-                        size={16}
-                        color="#666"
-                      />
-                      <Text style={styles.reasoningText}>
-                        {item.reasoning.confidenceExplanation}
-                      </Text>
+                      {/* Data Source */}
+                      {item.reasoning.dataSource && (
+                        <View style={styles.reasoningRow}>
+                          <Ionicons
+                            name="library-outline"
+                            size={16}
+                            color="#666"
+                          />
+                          <Text style={styles.sourceText}>
+                            {item.reasoning.dataSource}
+                          </Text>
+                        </View>
+                      )}
+
+                      {/* Confidence Explanation */}
+                      {item.reasoning.confidenceExplanation && (
+                        <View style={styles.reasoningRow}>
+                          <Ionicons
+                            name="checkmark-circle-outline"
+                            size={16}
+                            color="#666"
+                          />
+                          <Text style={styles.reasoningText}>
+                            {item.reasoning.confidenceExplanation}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   )}
                 </View>
-              )}
+              ))}
 
-            </View>
-          ))}
-
-          {/* Totals */}
-          <View style={styles.totalsSection}>
-            <Text style={styles.totalsLabel}>Total</Text>
-            <Text style={styles.totalsValue}>{entry.inlineKcal} cal</Text>
-          </View>
-        </ScrollView>
-      </View>
+              {/* Totals */}
+              <View style={styles.totalsSection}>
+                <Text style={styles.totalsLabel}>Total</Text>
+                <Text style={styles.totalsValue}>{entry.inlineKcal} cal</Text>
+              </View>
+            </Animated.ScrollView>
+          </Animated.View>
+        </GestureDetector>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -196,23 +310,39 @@ function MacroItem({
 }
 
 const styles = StyleSheet.create({
+  gestureRoot: {
+    flex: 1,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#FAFCFF",
+  },
   container: {
     flex: 1,
-    backgroundColor: "#FAFCFF",
+    backgroundColor: "#ffffff",
+  },
+  dragIndicatorContainer: {
+    alignItems: "center",
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  dragIndicator: {
+    width: 36,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "#D1D5DB",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: "#FAFCFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8F1FC",
+    backgroundColor: "#ffffff",
   },
   title: {
     flex: 1,
     fontSize: 18,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
     color: "#1a1a1a",
     textAlign: "center",
     letterSpacing: -0.3,
@@ -237,7 +367,7 @@ const styles = StyleSheet.create({
   inputText: {
     fontSize: 24,
     color: "#1a1a1a",
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     lineHeight: 32,
     marginBottom: 24,
     letterSpacing: -0.5,
@@ -263,7 +393,7 @@ const styles = StyleSheet.create({
   },
   itemLabel: {
     fontSize: 19,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     color: "#1a1a1a",
     flex: 1,
     marginRight: 12,
@@ -280,7 +410,7 @@ const styles = StyleSheet.create({
   confidenceText: {
     fontSize: 13,
     color: "#1976D2",
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     letterSpacing: 0.5,
   },
   macrosRow: {
@@ -300,14 +430,14 @@ const styles = StyleSheet.create({
   },
   macroValue: {
     fontSize: 20,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     color: "#1976D2",
     marginBottom: 4,
   },
   macroLabel: {
     fontSize: 11,
     color: "#64B5F6",
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -315,7 +445,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#666",
     marginBottom: 16,
-    fontWeight: "500",
+    fontFamily: "Poppins_500Medium",
   },
   reasoningSection: {
     borderTopWidth: 2,
@@ -334,6 +464,7 @@ const styles = StyleSheet.create({
     color: "#4a4a4a",
     flex: 1,
     lineHeight: 22,
+    fontFamily: "Poppins_400Regular",
   },
   assumptionsList: {
     flex: 1,
@@ -343,12 +474,13 @@ const styles = StyleSheet.create({
     color: "#4a4a4a",
     marginBottom: 6,
     lineHeight: 22,
+    fontFamily: "Poppins_400Regular",
   },
   sourceText: {
     fontSize: 14,
     color: "#1976D2",
     flex: 1,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
     lineHeight: 22,
   },
   totalsSection: {
@@ -365,13 +497,13 @@ const styles = StyleSheet.create({
   },
   totalsLabel: {
     fontSize: 18,
-    fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
     color: "#1a1a1a",
     letterSpacing: -0.3,
   },
   totalsValue: {
     fontSize: 28,
-    fontWeight: "800",
+    fontFamily: "Poppins_700Bold",
     color: "#1976D2",
     letterSpacing: -0.5,
   },

@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   },
   baseText: {
     fontSize: 12,
-    fontWeight: "500",
+    fontFamily: "Poppins_500Medium",
     letterSpacing: 0.3,
     color: "#1976D2",
   },

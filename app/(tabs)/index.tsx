@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
     color: "#333",
     textAlign: "center",
   },
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   },
   datePickerTitle: {
     fontSize: 18,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
     color: "#000000",
   },
   datePickerCloseButton: {
@@ -358,13 +358,14 @@ const styles = StyleSheet.create({
   },
   totalValue: {
     fontSize: 18,
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
     color: "#333",
   },
   totalLabel: {
     fontSize: 12,
     color: "#888",
     marginTop: 2,
+    fontFamily: "Poppins_400Regular",
   },
   totalDivider: {
     width: 1,

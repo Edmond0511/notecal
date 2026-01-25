@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 100,
     color: "#333",
-    fontFamily: "System",
+    fontFamily: "Poppins_400Regular",
   },
   overlay: {
     position: "absolute",
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: LINE_HEIGHT,
     color: "transparent",
-    fontFamily: "System",
+    fontFamily: "Poppins_400Regular",
   },
   inlineCalories: {
     flexDirection: "row",
@@ -294,12 +294,13 @@ const styles = StyleSheet.create({
   caloriesText: {
     fontSize: 12,
     color: "#1976D2",
-    fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   lowConfidenceIndicator: {
     fontSize: 12,
     color: "#FF9800",
     marginLeft: 2,
+    fontFamily: "Poppins_500Medium",
   },
   errorIndicator: {
     fontSize: 16,

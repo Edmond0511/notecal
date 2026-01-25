@@ -1,60 +1,93 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  Animated,
-  StyleSheet,
-  Easing,
-} from 'react-native';
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect, useRef } from "react";
+import { Animated, Easing, StyleSheet, Text, View } from "react-native";
+
+// Shimmer dimensions
+const SHIMMER_WIDTH = 50; // Smaller width for subtle shimmer effect
+const TEXT_WIDTH = 70; // Approximate width of "calculating" text
 
 export const ThinkingIndicator: React.FC = () => {
-  const dot1Opacity = useRef(new Animated.Value(0.3)).current;
-  const dot2Opacity = useRef(new Animated.Value(0.3)).current;
-  const dot3Opacity = useRef(new Animated.Value(0.3)).current;
+  const shimmerTranslate = useRef(new Animated.Value(-SHIMMER_WIDTH)).current;
+  const shimmerOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Sequential dot animation (wave effect)
-    const createDotAnimation = (dotOpacity: Animated.Value) =>
+    // Parallel animation for translate and opacity
+    const shimmerAnimation = Animated.loop(
       Animated.sequence([
-        Animated.timing(dotOpacity, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.inOut(Easing.quad),
+        // Sweep across with fade in/out
+        Animated.parallel([
+          Animated.timing(shimmerTranslate, {
+            toValue: TEXT_WIDTH + SHIMMER_WIDTH,
+            duration: 2000,
+            easing: Easing.ease,
+            useNativeDriver: true,
+          }),
+          Animated.sequence([
+            // Fade in during first quarter
+            Animated.timing(shimmerOpacity, {
+              toValue: 0.6,
+              duration: 500,
+              easing: Easing.ease,
+              useNativeDriver: true,
+            }),
+            // Stay visible during middle
+            Animated.delay(1000),
+            // Fade out during last quarter
+            Animated.timing(shimmerOpacity, {
+              toValue: 0,
+              duration: 500,
+              easing: Easing.ease,
+              useNativeDriver: true,
+            }),
+          ]),
+        ]),
+        // Small delay before next loop (avoids instant reset issues)
+        Animated.delay(100),
+        // Reset position (instant but with delay buffer)
+        Animated.timing(shimmerTranslate, {
+          toValue: -SHIMMER_WIDTH,
+          duration: 0,
           useNativeDriver: true,
         }),
-        Animated.timing(dotOpacity, {
-          toValue: 0.3,
-          duration: 400,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]);
-
-    const dotAnimation = Animated.loop(
-      Animated.stagger(200, [
-        createDotAnimation(dot1Opacity),
-        createDotAnimation(dot2Opacity),
-        createDotAnimation(dot3Opacity),
-      ])
+      ]),
     );
 
-    dotAnimation.start();
+    shimmerAnimation.start();
 
     return () => {
-      dotAnimation.stop();
+      shimmerAnimation.stop();
     };
-  }, [dot1Opacity, dot2Opacity, dot3Opacity]);
+  }, [shimmerTranslate, shimmerOpacity]);
 
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.text}>calculating</Text>
+        {/* Two-layer shimmer: base text + animated overlay */}
+        <View style={styles.shimmerContainer}>
+          {/* Base layer: always-visible blue text */}
+          <Text style={styles.baseText}>calculating</Text>
 
-        {/* Animated dots */}
-        <View style={styles.dotsContainer}>
-          <Animated.View style={[styles.dot, { opacity: dot1Opacity }]} />
-          <Animated.View style={[styles.dot, { opacity: dot2Opacity }]} />
-          <Animated.View style={[styles.dot, { opacity: dot3Opacity }]} />
+          {/* Shimmer overlay: animated white highlight */}
+          <Animated.View
+            style={[
+              styles.shimmerOverlay,
+              {
+                transform: [{ translateX: shimmerTranslate }],
+                opacity: shimmerOpacity,
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={[
+                "rgba(255, 255, 255, 0)",
+                "rgba(255, 255, 255, 0.8)",
+                "rgba(255, 255, 255, 0)",
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.gradient}
+            />
+          </Animated.View>
         </View>
       </View>
     </View>
@@ -63,36 +96,42 @@ export const ThinkingIndicator: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E3F2FD',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E3F2FD",
     borderRadius: 12,
     marginLeft: 12,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
   content: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
-  text: {
+  shimmerContainer: {
+    position: "relative",
+    overflow: "hidden",
+    width: TEXT_WIDTH,
+    height: 16,
+  },
+  baseText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
     letterSpacing: 0.3,
-    color: '#1976D2',
+    color: "#1976D2",
   },
-  dotsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 2,
-    gap: 2,
+  shimmerOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: SHIMMER_WIDTH,
+    height: 16,
   },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#1976D2',
+  gradient: {
+    flex: 1,
+    width: SHIMMER_WIDTH,
+    height: 16,
   },
 });
 

@@ -393,93 +393,28 @@ function calculateConfidenceScore(data: NutritionData): number {
 }
 
 function generateFallbackResponse(foodText: string): NutritionData {
-  // Enhanced fallback with better nutrition estimation
+  // Return zeros when AI service is unavailable
   const lines = foodText.split("\n").filter((line) => line.trim().length > 0);
 
-  // Basic nutrition database for common foods (per 100g)
-  const nutritionDatabase: Record<
-    string,
-    { kcal: number; protein: number; fat: number; carbs: number }
-  > = {
-    chicken: { kcal: 165, protein: 31, fat: 3.6, carbs: 0 },
-    beef: { kcal: 250, protein: 26, fat: 15, carbs: 0 },
-    rice: { kcal: 130, protein: 2.7, fat: 0.3, carbs: 28 },
-    pasta: { kcal: 131, protein: 5, fat: 1.1, carbs: 25 },
-    bread: { kcal: 265, protein: 9, fat: 3.2, carbs: 49 },
-    egg: { kcal: 155, protein: 13, fat: 11, carbs: 1.1 },
-    banana: { kcal: 89, protein: 1.1, fat: 0.3, carbs: 23 },
-    apple: { kcal: 52, protein: 0.3, fat: 0.2, carbs: 14 },
-    oats: { kcal: 389, protein: 16.9, fat: 6.9, carbs: 66 },
-    yogurt: { kcal: 59, protein: 10, fat: 0.4, carbs: 3.6 },
-    cheese: { kcal: 402, protein: 25, fat: 33, carbs: 1.3 },
-    broccoli: { kcal: 34, protein: 2.8, fat: 0.4, carbs: 7 },
-    potato: { kcal: 77, protein: 2, fat: 0.1, carbs: 17 },
-    salmon: { kcal: 208, protein: 25, fat: 12, carbs: 0 },
-    tuna: { kcal: 132, protein: 28, fat: 1.3, carbs: 0 },
-  };
-
   const items: FoodItem[] = lines.map((line) => {
-    const foodLine = line.trim().toLowerCase();
-
-    // Extract quantity if specified (e.g., "200g chicken", "2 eggs")
-    const quantityMatch = foodLine.match(
-      /(\d+)\s*([a-z]*)\s*(.+)|(.+)\s*(\d+)\s*([a-z]*)/,
-    );
-    let qty = 100; // Default 100g
-    let foodName = foodLine;
-
-    if (quantityMatch) {
-      if (quantityMatch[1]) {
-        qty = parseInt(quantityMatch[1]);
-        foodName = quantityMatch[3];
-      } else {
-        qty = parseInt(quantityMatch[5]);
-        foodName = quantityMatch[4];
-      }
-    }
-
-    // Find matching nutrition data
-    let nutrition = nutritionDatabase[foodName] || nutritionDatabase["chicken"]; // Default fallback
-
-    // Try partial matching
-    if (!nutritionDatabase[foodName]) {
-      const keys = Object.keys(nutritionDatabase);
-      const match = keys.find(
-        (key) => foodName.includes(key) || key.includes(foodName),
-      );
-      if (match) {
-        nutrition = nutritionDatabase[match];
-      }
-    }
-
-    // Calculate nutrition based on quantity
-    const multiplier = qty / 100;
-
     return {
       label: line.trim(),
-      qty: qty,
+      qty: 0,
       unit: "g",
-      confidence: 0.6, // Medium confidence for fallback
+      confidence: 0,
       macros: {
-        kcal: Math.round(nutrition.kcal * multiplier),
-        protein: Math.round(nutrition.protein * multiplier * 10) / 10,
-        fat: Math.round(nutrition.fat * multiplier * 10) / 10,
-        carbs: Math.round(nutrition.carbs * multiplier * 10) / 10,
+        kcal: 0,
+        protein: 0,
+        fat: 0,
+        carbs: 0,
       },
     };
   });
 
-  const totals = items.reduce(
-    (acc, item) => ({
-      kcal: acc.kcal + item.macros.kcal,
-      protein: acc.protein + item.macros.protein,
-      fat: acc.fat + item.macros.fat,
-      carbs: acc.carbs + item.macros.carbs,
-    }),
-    { kcal: 0, protein: 0, fat: 0, carbs: 0 },
-  );
-
-  return { items, totals };
+  return {
+    items,
+    totals: { kcal: 0, protein: 0, fat: 0, carbs: 0 },
+  };
 }
 
 async function logApiUsage(

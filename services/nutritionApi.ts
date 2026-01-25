@@ -335,45 +335,23 @@ async function checkUserQuota(userId: string) {
 }
 
 function createFallbackResponse(foodText: string): NutritionResolveResponse {
-  // Enhanced fallback with basic nutrition database
-  const nutritionDatabase: Record<string, {kcal: number, protein: number, fat: number, carbs: number}> = {
-    'chicken': { kcal: 165, protein: 31, fat: 3.6, carbs: 0 },
-    'beef': { kcal: 250, protein: 26, fat: 15, carbs: 0 },
-    'rice': { kcal: 130, protein: 2.7, fat: 0.3, carbs: 28 },
-    'pasta': { kcal: 131, protein: 5, fat: 1.1, carbs: 25 },
-    'bread': { kcal: 265, protein: 9, fat: 3.2, carbs: 49 },
-    'egg': { kcal: 155, protein: 13, fat: 11, carbs: 1.1 },
-    'banana': { kcal: 89, protein: 1.1, fat: 0.3, carbs: 23 },
-    'apple': { kcal: 52, protein: 0.3, fat: 0.2, carbs: 14 },
-    'oats': { kcal: 389, protein: 16.9, fat: 6.9, carbs: 66 }
-  }
-
-  const foodName = foodText.trim().toLowerCase()
-  let nutrition = nutritionDatabase[foodName] || { kcal: 150, protein: 15, fat: 5, carbs: 20 }
-
-  // Try partial matching
-  if (!nutritionDatabase[foodName]) {
-    const keys = Object.keys(nutritionDatabase)
-    const match = keys.find(key => foodName.includes(key) || key.includes(foodName))
-    if (match) {
-      nutrition = nutritionDatabase[match]
-    }
-  }
+  // Return zeros when AI service is unavailable
+  const nutrition = { kcal: 0, protein: 0, fat: 0, carbs: 0 };
 
   return {
     resolved: [{
       id: Date.now().toString(),
       entryId: 'fallback',
       label: foodText.trim(),
-      qty: 100,
+      qty: 0,
       unit: 'g',
       source: 'fallback' as const,
       sourceId: 'fallback',
       macros: nutrition,
-      confidence: 0.5, // Medium confidence for enhanced fallback
-      citations: [{ provider: 'Fallback Database', url: '#' }]
+      confidence: 0,
+      citations: []
     }],
     totals: nutrition,
-    errors: ['AI service unavailable, showing estimated values']
+    errors: ['AI service unavailable']
   };
 }

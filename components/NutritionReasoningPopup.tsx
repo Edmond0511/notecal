@@ -161,10 +161,6 @@ export function NutritionReasoningPopup({
                 </View>
               )}
 
-              {/* Source Badge */}
-              <View style={styles.sourceBadge}>
-                <Text style={styles.sourceBadgeText}>{item.source}</Text>
-              </View>
             </View>
           ))}
 
@@ -354,22 +350,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontWeight: "600",
     lineHeight: 22,
-  },
-  sourceBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#E3F2FD",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: "#BBDEFB",
-  },
-  sourceBadgeText: {
-    fontSize: 11,
-    color: "#1976D2",
-    fontWeight: "700",
-    letterSpacing: 0.5,
   },
   totalsSection: {
     flexDirection: "row",

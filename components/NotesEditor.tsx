@@ -54,21 +54,50 @@ export function NotesEditor({
   // Process document changes and update nutrition data
   const processDocumentChanges = useCallback(async (newText: string) => {
     const foodLines = parseDocumentForFoodEntries(newText);
-    const existingEntryLines = new Set(entries.map(e => e.rawText));
 
-    // Find new lines (in document but not in entries)
-    const newLines = foodLines.filter(line => !existingEntryLines.has(line));
+    // Count occurrences of each line in the document
+    const docLineCounts = new Map<string, number>();
+    for (const line of foodLines) {
+      docLineCounts.set(line, (docLineCounts.get(line) || 0) + 1);
+    }
 
-    // Find removed lines (in entries but not in document)
-    const removedEntries = entries.filter(entry => !foodLines.includes(entry.rawText));
+    // Count occurrences of each rawText in entries
+    const entryLineCounts = new Map<string, number>();
+    for (const entry of entries) {
+      entryLineCounts.set(entry.rawText, (entryLineCounts.get(entry.rawText) || 0) + 1);
+    }
+
+    // Find lines that need new entries (doc has more than entries)
+    const linesToAdd: string[] = [];
+    for (const [line, docCount] of docLineCounts) {
+      const entryCount = entryLineCounts.get(line) || 0;
+      const diff = docCount - entryCount;
+      for (let i = 0; i < diff; i++) {
+        linesToAdd.push(line);
+      }
+    }
+
+    // Find entries to remove (entries has more than doc)
+    const entriesToRemove: string[] = [];
+    for (const [line, entryCount] of entryLineCounts) {
+      const docCount = docLineCounts.get(line) || 0;
+      const diff = entryCount - docCount;
+      if (diff > 0) {
+        // Find entries with this rawText and mark excess for removal
+        const matchingEntries = entries.filter(e => e.rawText === line);
+        for (let i = 0; i < diff && i < matchingEntries.length; i++) {
+          entriesToRemove.push(matchingEntries[i].id);
+        }
+      }
+    }
 
     // Delete removed entries
-    for (const entry of removedEntries) {
-      onDeleteEntry(entry.id);
+    for (const entryId of entriesToRemove) {
+      onDeleteEntry(entryId);
     }
 
     // Add new entries
-    for (const line of newLines) {
+    for (const line of linesToAdd) {
       await onAddEntry(line);
     }
   }, [entries, parseDocumentForFoodEntries, onAddEntry, onDeleteEntry]);
@@ -91,33 +120,28 @@ export function NotesEditor({
     }, 1500); // Wait 1.5 seconds after user stops typing
   }, [processDocumentChanges, onDocumentTextChange]);
 
-  // Get indicator for a specific line
-  const getIndicatorForLine = (line: string) => {
-    const trimmedLine = line.trim();
-    const isFoodLine = trimmedLine.startsWith('-');
+  // Render indicator for a matched entry
+  const renderIndicator = (entry: Entry | undefined) => {
+    if (!entry) return null;
 
-    if (!isFoodLine) return null;
-
-    const matchingEntry = entries.find(entry => entry.rawText === trimmedLine);
-
-    if (matchingEntry?.status === 'pending') {
+    if (entry.status === 'pending') {
       return <ThinkingIndicator />;
     }
 
-    if (matchingEntry?.status === 'ok' && matchingEntry.inlineKcal != null) {
+    if (entry.status === 'ok' && entry.inlineKcal != null) {
       return (
         <View style={styles.inlineCalories}>
           <Text style={styles.caloriesText}>
-            {matchingEntry.inlineKcal} cal
+            {entry.inlineKcal} cal
           </Text>
-          {matchingEntry.items.some(item => item.confidence < 0.8) && (
+          {entry.items.some(item => item.confidence < 0.8) && (
             <Text style={styles.lowConfidenceIndicator}>~</Text>
           )}
         </View>
       );
     }
 
-    if (matchingEntry?.status === 'error') {
+    if (entry.status === 'error') {
       return <Text style={styles.errorIndicator}>⚠️</Text>;
     }
 
@@ -128,8 +152,25 @@ export function NotesEditor({
   const renderDocumentWithCalories = () => {
     const lines = documentText.split('\n');
 
+    // Track which entries have been matched to lines (for duplicates)
+    const usedEntryIds = new Set<string>();
+
     return lines.map((line, index) => {
-      const indicator = getIndicatorForLine(line);
+      const trimmedLine = line.trim();
+      const isFoodLine = trimmedLine.startsWith('-');
+
+      let matchedEntry: Entry | undefined;
+      if (isFoodLine) {
+        // Find an entry that matches this line and hasn't been used yet
+        matchedEntry = entries.find(
+          entry => entry.rawText === trimmedLine && !usedEntryIds.has(entry.id)
+        );
+        if (matchedEntry) {
+          usedEntryIds.add(matchedEntry.id);
+        }
+      }
+
+      const indicator = isFoodLine ? renderIndicator(matchedEntry) : null;
 
       return (
         <View key={`line-${index}`} style={styles.lineContainer}>

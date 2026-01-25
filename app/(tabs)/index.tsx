@@ -112,6 +112,25 @@ export default function HomeScreen() {
     setCurrentDocumentText(text);
   };
 
+  // Calculate daily totals from entries
+  const dailyTotals = React.useMemo(() => {
+    return entries.reduce(
+      (acc, entry) => {
+        if (entry.status === 'ok' && entry.items) {
+          const entryProtein = entry.items.reduce((sum, item) => sum + (item.macros?.protein || 0), 0);
+          const entryFat = entry.items.reduce((sum, item) => sum + (item.macros?.fat || 0), 0);
+          return {
+            kcal: acc.kcal + (entry.inlineKcal || 0),
+            protein: acc.protein + entryProtein,
+            fat: acc.fat + entryFat,
+          };
+        }
+        return acc;
+      },
+      { kcal: 0, protein: 0, fat: 0 }
+    );
+  }, [entries]);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -153,6 +172,24 @@ export default function HomeScreen() {
         onDeleteEntry={deleteEntry}
         currentDate={currentDate}
       />
+
+      {/* Daily Totals Bar */}
+      <View style={styles.totalsBar}>
+        <View style={styles.totalItem}>
+          <Text style={styles.totalValue}>{Math.round(dailyTotals.kcal)}</Text>
+          <Text style={styles.totalLabel}>cal</Text>
+        </View>
+        <View style={styles.totalDivider} />
+        <View style={styles.totalItem}>
+          <Text style={styles.totalValue}>{Math.round(dailyTotals.protein)}g</Text>
+          <Text style={styles.totalLabel}>protein</Text>
+        </View>
+        <View style={styles.totalDivider} />
+        <View style={styles.totalItem}>
+          <Text style={styles.totalValue}>{Math.round(dailyTotals.fat)}g</Text>
+          <Text style={styles.totalLabel}>fat</Text>
+        </View>
+      </View>
 
       {/* DateTimePicker - iOS calendar with overlay */}
       {showDatePicker && (
@@ -278,5 +315,34 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: '#ffffff',
     borderRadius: 16,
+  },
+  totalsBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fafaf8',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  totalItem: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  totalValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  totalLabel: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  totalDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#ddd',
   },
 });

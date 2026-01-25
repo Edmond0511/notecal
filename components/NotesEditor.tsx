@@ -1,6 +1,8 @@
 import { Entry } from "@/types";
+import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { NutritionReasoningPopup } from "./NutritionReasoningPopup";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
 interface NotesEditorProps {
@@ -23,6 +25,8 @@ export function NotesEditor({
   const [documentText, setDocumentText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
+  const [showReasoningPopup, setShowReasoningPopup] = useState(false);
 
   // Update document text when initialDocumentText changes (date navigation)
   useEffect(() => {
@@ -124,6 +128,18 @@ export function NotesEditor({
     [processDocumentChanges, onDocumentTextChange],
   );
 
+  // Handle indicator tap
+  const handleIndicatorTap = useCallback((entry: Entry) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedEntry(entry);
+    setShowReasoningPopup(true);
+  }, []);
+
+  const handleClosePopup = useCallback(() => {
+    setShowReasoningPopup(false);
+    setSelectedEntry(null);
+  }, []);
+
   // Render indicator for a matched entry
   const renderIndicator = (entry: Entry | undefined) => {
     if (!entry) return null;
@@ -134,12 +150,16 @@ export function NotesEditor({
 
     if (entry.status === "ok" && entry.inlineKcal != null) {
       return (
-        <View style={styles.inlineCalories}>
+        <TouchableOpacity
+          style={styles.inlineCalories}
+          onPress={() => handleIndicatorTap(entry)}
+          activeOpacity={0.7}
+        >
           <Text style={styles.caloriesText}>{entry.inlineKcal} cal</Text>
           {entry.items.some((item) => item.confidence < 0.8) && (
             <Text style={styles.lowConfidenceIndicator}>~</Text>
           )}
-        </View>
+        </TouchableOpacity>
       );
     }
 
@@ -211,9 +231,16 @@ export function NotesEditor({
       />
 
       {/* Overlay for inline nutrition indicators */}
-      <View style={styles.overlay} pointerEvents="none">
+      <View style={styles.overlay} pointerEvents="box-none">
         {renderDocumentWithCalories()}
       </View>
+
+      {/* Reasoning Popup */}
+      <NutritionReasoningPopup
+        visible={showReasoningPopup}
+        onClose={handleClosePopup}
+        entry={selectedEntry}
+      />
     </View>
   );
 }
@@ -246,6 +273,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     height: LINE_HEIGHT,
+    pointerEvents: "box-none",
   },
   documentLine: {
     flex: 1,

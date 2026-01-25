@@ -1,3 +1,11 @@
+export interface NutritionReasoning {
+  interpretation: string;
+  assumptions: string[];
+  portionNotes?: string;
+  dataSource?: string;
+  confidenceExplanation?: string;
+}
+
 export interface FoodItem {
   id: string;
   entryId: string;
@@ -19,6 +27,7 @@ export interface FoodItem {
     provider: string;
     url: string;
   }[];
+  reasoning?: NutritionReasoning;
 }
 
 export interface Entry {

@@ -184,10 +184,22 @@ export function NutritionReasoningPopup({
 
                   {/* Macros */}
                   <View style={styles.macrosRow}>
-                    <MacroItem label="calories" value={item.macros.kcal} unit="" />
-                    <MacroItem label="protein" value={item.macros.protein} unit="g" />
+                    <MacroItem
+                      label="calories"
+                      value={item.macros.kcal}
+                      unit=""
+                    />
+                    <MacroItem
+                      label="protein"
+                      value={item.macros.protein}
+                      unit="g"
+                    />
                     <MacroItem label="fat" value={item.macros.fat} unit="g" />
-                    <MacroItem label="carbs" value={item.macros.carbs} unit="g" />
+                    <MacroItem
+                      label="carbs"
+                      value={item.macros.carbs}
+                      unit="g"
+                    />
                   </View>
 
                   {/* Portion */}
@@ -417,12 +429,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    backgroundColor: "#F8FBFF",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E3F2FD",
+    paddingVertical: 12,
   },
   macroItem: {
     alignItems: "center",
@@ -489,11 +496,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 20,
     paddingHorizontal: 20,
-    borderTopWidth: 2,
-    borderTopColor: "#E3F2FD",
     marginTop: 12,
-    backgroundColor: "#F8FBFF",
-    borderRadius: 12,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E3F2FD",
+    shadowColor: "#1976D2",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   totalsLabel: {
     fontSize: 18,
@@ -502,7 +514,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   totalsValue: {
-    fontSize: 28,
+    fontSize: 24,
     fontFamily: "Poppins_700Bold",
     color: "#1976D2",
     letterSpacing: -0.5,

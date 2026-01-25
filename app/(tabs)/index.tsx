@@ -132,15 +132,20 @@ export default function HomeScreen() {
             (sum, item) => sum + (item.macros?.fat || 0),
             0,
           );
+          const entryCarbs = entry.items.reduce(
+            (sum, item) => sum + (item.macros?.carbs || 0),
+            0,
+          );
           return {
             kcal: acc.kcal + (entry.inlineKcal || 0),
             protein: acc.protein + entryProtein,
             fat: acc.fat + entryFat,
+            carbs: acc.carbs + entryCarbs,
           };
         }
         return acc;
       },
-      { kcal: 0, protein: 0, fat: 0 },
+      { kcal: 0, protein: 0, fat: 0, carbs: 0 },
     );
   }, [entries]);
 
@@ -197,12 +202,17 @@ export default function HomeScreen() {
           <Text style={styles.totalValue}>
             {Math.round(dailyTotals.protein)}
           </Text>
-          <Text style={styles.totalLabel}>protein</Text>
+          <Text style={styles.totalLabel}>p</Text>
         </View>
         <View style={styles.totalDivider} />
         <View style={styles.totalItem}>
           <Text style={styles.totalValue}>{Math.round(dailyTotals.fat)}</Text>
-          <Text style={styles.totalLabel}>fat</Text>
+          <Text style={styles.totalLabel}>f</Text>
+        </View>
+        <View style={styles.totalDivider} />
+        <View style={styles.totalItem}>
+          <Text style={styles.totalValue}>{Math.round(dailyTotals.carbs)}</Text>
+          <Text style={styles.totalLabel}>c</Text>
         </View>
       </View>
 

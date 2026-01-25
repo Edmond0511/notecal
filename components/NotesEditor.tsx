@@ -261,6 +261,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     color: "#333",
     fontFamily: "Poppins_400Regular",
+    includeFontPadding: false,
   },
   overlay: {
     position: "absolute",
@@ -279,8 +280,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     lineHeight: LINE_HEIGHT,
+    height: LINE_HEIGHT,
     color: "transparent",
     fontFamily: "Poppins_400Regular",
+    includeFontPadding: false,
   },
   inlineCalories: {
     flexDirection: "row",
@@ -290,6 +293,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 10,
     marginLeft: 8,
+    marginTop: 2,
   },
   caloriesText: {
     fontSize: 12,

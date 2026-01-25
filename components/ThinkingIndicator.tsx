@@ -102,8 +102,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginLeft: 12,
     alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
   },
   content: {
     flexDirection: "row",
@@ -114,12 +114,15 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     width: TEXT_WIDTH,
     height: 16,
+    justifyContent: "center",
   },
   baseText: {
     fontSize: 12,
+    lineHeight: 16,
     fontFamily: "Poppins_500Medium",
     letterSpacing: 0.3,
     color: "#1976D2",
+    includeFontPadding: false,
   },
   shimmerOverlay: {
     position: "absolute",

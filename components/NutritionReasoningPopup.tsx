@@ -29,6 +29,36 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
+// Confidence color helper
+function getConfidenceColors(confidence: number): {
+  background: string;
+  border: string;
+  text: string;
+} {
+  if (confidence >= 0.8) {
+    // High confidence - green
+    return {
+      background: "#E8F5E9",
+      border: "#A5D6A7",
+      text: "#2E7D32",
+    };
+  } else if (confidence >= 0.5) {
+    // Medium confidence - amber
+    return {
+      background: "#FFF8E1",
+      border: "#FFD54F",
+      text: "#F57F17",
+    };
+  } else {
+    // Low confidence - red
+    return {
+      background: "#FFEBEE",
+      border: "#EF9A9A",
+      text: "#C62828",
+    };
+  }
+}
+
 interface NutritionReasoningPopupProps {
   visible: boolean;
   onClose: () => void;
@@ -175,8 +205,25 @@ export function NutritionReasoningPopup({
                   {/* Item Header */}
                   <View style={styles.itemHeader}>
                     <Text style={styles.itemLabel}>{item.label}</Text>
-                    <View style={styles.confidenceBadge}>
-                      <Text style={styles.confidenceText}>
+                    <View
+                      style={[
+                        styles.confidenceBadge,
+                        {
+                          backgroundColor: getConfidenceColors(item.confidence)
+                            .background,
+                          borderColor: getConfidenceColors(item.confidence)
+                            .border,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.confidenceText,
+                          {
+                            color: getConfidenceColors(item.confidence).text,
+                          },
+                        ]}
+                      >
                         {Math.round(item.confidence * 100)}%
                       </Text>
                     </View>
@@ -412,16 +459,13 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   confidenceBadge: {
-    backgroundColor: "#E3F2FD",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#BBDEFB",
   },
   confidenceText: {
     fontSize: 13,
-    color: "#1976D2",
     fontFamily: "Poppins_700Bold",
     letterSpacing: 0.5,
   },

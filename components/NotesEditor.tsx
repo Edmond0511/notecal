@@ -48,7 +48,7 @@ export function NotesEditor({
     return text
       .split('\n')
       .map(line => line.trim())
-      .filter(line => line.startsWith('- '));
+      .filter(line => line.startsWith('-'));
   }, []);
 
   // Process document changes and update nutrition data
@@ -94,7 +94,7 @@ export function NotesEditor({
   // Get indicator for a specific line
   const getIndicatorForLine = (line: string) => {
     const trimmedLine = line.trim();
-    const isFoodLine = trimmedLine.startsWith('- ');
+    const isFoodLine = trimmedLine.startsWith('-');
 
     if (!isFoodLine) return null;
 
@@ -155,7 +155,7 @@ export function NotesEditor({
         value={documentText}
         onChangeText={handleTextChange}
         placeholder={entries.length === 0
-          ? "Enter food items starting with '- ' (dash + space)\n\nExamples:\n- oats, 50g\n- 2 eggs\n- banana\n- chicken breast, 150g"
+          ? "Enter food items starting with '-'\n\nExamples:\n- oats, 50g\n- 2 eggs\n- banana\n- chicken breast, 150g"
           : "Continue writing..."
         }
         placeholderTextColor="#ccc"

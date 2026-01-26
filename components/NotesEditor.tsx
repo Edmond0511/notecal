@@ -5,6 +5,7 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-nativ
 import { NutritionReasoningPopup } from "./NutritionReasoningPopup";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
+
 interface NotesEditorProps {
   entries: Entry[];
   initialDocumentText: string;
@@ -27,6 +28,13 @@ export function NotesEditor({
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
+
+  // Store visual line data (including text content for mapping)
+  interface VisualLine {
+    text: string;
+    y: number;
+  }
+  const [visualLines, setVisualLines] = useState<VisualLine[]>([]);
 
   // Update document text when initialDocumentText changes (date navigation)
   useEffect(() => {
@@ -128,6 +136,18 @@ export function NotesEditor({
     [processDocumentChanges, onDocumentTextChange],
   );
 
+  // Handle text layout to get actual line positions
+  const handleTextLayout = useCallback((event: any) => {
+    const { lines } = event.nativeEvent;
+    if (lines && lines.length > 0) {
+      const lineData = lines.map((line: any) => ({
+        text: line.text,
+        y: line.y,
+      }));
+      setVisualLines(lineData);
+    }
+  }, []);
+
   // Handle indicator tap
   const handleIndicatorTap = useCallback((entry: Entry) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -139,6 +159,43 @@ export function NotesEditor({
     setShowReasoningPopup(false);
     setSelectedEntry(null);
   }, []);
+
+  // Map logical lines to their visual line Y positions
+  const getLogicalLineYPositions = useCallback((): number[] => {
+    const logicalLines = documentText.split('\n');
+    const positions: number[] = [];
+
+    let visualIndex = 0;
+
+    for (let logicalIndex = 0; logicalIndex < logicalLines.length; logicalIndex++) {
+      // Record Y position of first visual line for this logical line
+      if (visualIndex < visualLines.length) {
+        positions.push(visualLines[visualIndex].y);
+      } else {
+        // Fallback to estimated position if visual lines not yet measured
+        positions.push(logicalIndex * LINE_HEIGHT);
+      }
+
+      const logicalLineLength = logicalLines[logicalIndex].length;
+
+      // Handle empty lines vs non-empty lines differently
+      if (logicalLineLength === 0) {
+        // Empty line: consume exactly one visual line (the empty line itself)
+        if (visualIndex < visualLines.length) {
+          visualIndex++;
+        }
+      } else {
+        // Non-empty line: consume visual lines until we've covered all the text
+        let consumedLength = 0;
+        while (visualIndex < visualLines.length && consumedLength < logicalLineLength) {
+          consumedLength += visualLines[visualIndex].text.length;
+          visualIndex++;
+        }
+      }
+    }
+
+    return positions;
+  }, [documentText, visualLines]);
 
   // Render indicator for a matched entry
   const renderIndicator = (entry: Entry | undefined) => {
@@ -169,6 +226,7 @@ export function NotesEditor({
   // Render inline calorie indicators for dash lines
   const renderDocumentWithCalories = () => {
     const lines = documentText.split("\n");
+    const logicalYPositions = getLogicalLineYPositions();
 
     // Track which entries have been matched to lines (for duplicates)
     const usedEntryIds = new Set<string>();
@@ -191,15 +249,17 @@ export function NotesEditor({
 
       const indicator = isFoodLine ? renderIndicator(matchedEntry) : null;
 
-      return (
-        <View key={`line-${index}`} style={styles.lineContainer}>
-          {/* Render line text with same styling as TextInput */}
-          <Text style={styles.documentLine} numberOfLines={1}>
-            {line || " "}
-          </Text>
+      // Use mapped logical line Y position + vertical offset to center indicator
+      const yPosition = logicalYPositions[index] + INDICATOR_VERTICAL_OFFSET;
+
+      return indicator ? (
+        <View
+          key={`indicator-${index}`}
+          style={[styles.indicatorWrapper, { top: yPosition }]}
+        >
           {indicator}
         </View>
-      );
+      ) : null;
     });
   };
 
@@ -230,6 +290,14 @@ export function NotesEditor({
         clearTextOnFocus={false}
       />
 
+      {/* Hidden measuring Text component for accurate layout */}
+      <Text
+        style={[styles.documentInput, styles.hiddenMeasure]}
+        onTextLayout={handleTextLayout}
+      >
+        {documentText || " "}
+      </Text>
+
       {/* Overlay for inline nutrition indicators */}
       <View style={styles.overlay} pointerEvents="box-none">
         {renderDocumentWithCalories()}
@@ -245,7 +313,15 @@ export function NotesEditor({
   );
 }
 
-const LINE_HEIGHT = 24;
+const LINE_HEIGHT = 21;
+
+// Indicator dimensions (must match ThinkingIndicator and inlineCalories heights)
+// ThinkingIndicator: paddingVertical(1*2) + shimmerContainer.height(16) = 18px
+// inlineCalories: paddingVertical(1*2) + lineHeight(16) = 18px
+const INDICATOR_HEIGHT = 18;
+
+// Vertical offset to center indicator within text line
+const INDICATOR_VERTICAL_OFFSET = (LINE_HEIGHT - INDICATOR_HEIGHT) / 2;
 
 const styles = StyleSheet.create({
   container: {
@@ -267,25 +343,21 @@ const styles = StyleSheet.create({
   overlay: {
     position: "absolute",
     top: 0,
-    left: 20,
-    right: 20,
+    left: 0,
+    right: 0,
     bottom: 100,
+    pointerEvents: "box-none"
   },
-  lineContainer: {
+  hiddenMeasure: {
+    position: "absolute",
+    opacity: 0,
+    pointerEvents: "none",
+  },
+  indicatorWrapper: {
+    position: "absolute",
+    right: 10,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    height: LINE_HEIGHT,
-    pointerEvents: "box-none",
-  },
-  documentLine: {
-    flex: 1,
-    fontSize: 16,
-    lineHeight: LINE_HEIGHT,
-    height: LINE_HEIGHT,
-    color: "transparent",
-    fontFamily: "Poppins_400Regular",
-    includeFontPadding: false,
   },
   inlineCalories: {
     flexDirection: "row",
@@ -294,7 +366,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 12,
-    marginLeft: 8,
   },
   caloriesText: {
     fontSize: 12,

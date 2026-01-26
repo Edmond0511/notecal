@@ -100,7 +100,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#E3F2FD",
     borderRadius: 12,
-    marginLeft: 12,
     alignSelf: "flex-start",
     paddingHorizontal: 6,
     paddingVertical: 1,

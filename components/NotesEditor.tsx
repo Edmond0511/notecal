@@ -1,10 +1,15 @@
 import { Entry } from "@/types";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { NutritionReasoningPopup } from "./NutritionReasoningPopup";
 import { ThinkingIndicator } from "./ThinkingIndicator";
-
 
 interface NotesEditorProps {
   entries: Entry[];
@@ -28,13 +33,6 @@ export function NotesEditor({
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
-
-  // Store visual line data (including text content for mapping)
-  interface VisualLine {
-    text: string;
-    y: number;
-  }
-  const [visualLines, setVisualLines] = useState<VisualLine[]>([]);
 
   // Update document text when initialDocumentText changes (date navigation)
   useEffect(() => {
@@ -136,18 +134,6 @@ export function NotesEditor({
     [processDocumentChanges, onDocumentTextChange],
   );
 
-  // Handle text layout to get actual line positions
-  const handleTextLayout = useCallback((event: any) => {
-    const { lines } = event.nativeEvent;
-    if (lines && lines.length > 0) {
-      const lineData = lines.map((line: any) => ({
-        text: line.text,
-        y: line.y,
-      }));
-      setVisualLines(lineData);
-    }
-  }, []);
-
   // Handle indicator tap
   const handleIndicatorTap = useCallback((entry: Entry) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -160,42 +146,12 @@ export function NotesEditor({
     setSelectedEntry(null);
   }, []);
 
-  // Map logical lines to their visual line Y positions
-  const getLogicalLineYPositions = useCallback((): number[] => {
-    const logicalLines = documentText.split('\n');
-    const positions: number[] = [];
-
-    let visualIndex = 0;
-
-    for (let logicalIndex = 0; logicalIndex < logicalLines.length; logicalIndex++) {
-      // Record Y position of first visual line for this logical line
-      if (visualIndex < visualLines.length) {
-        positions.push(visualLines[visualIndex].y);
-      } else {
-        // Fallback to estimated position if visual lines not yet measured
-        positions.push(logicalIndex * LINE_HEIGHT);
-      }
-
-      const logicalLineLength = logicalLines[logicalIndex].length;
-
-      // Handle empty lines vs non-empty lines differently
-      if (logicalLineLength === 0) {
-        // Empty line: consume exactly one visual line (the empty line itself)
-        if (visualIndex < visualLines.length) {
-          visualIndex++;
-        }
-      } else {
-        // Non-empty line: consume visual lines until we've covered all the text
-        let consumedLength = 0;
-        while (visualIndex < visualLines.length && consumedLength < logicalLineLength) {
-          consumedLength += visualLines[visualIndex].text.length;
-          visualIndex++;
-        }
-      }
-    }
-
-    return positions;
-  }, [documentText, visualLines]);
+  // Calculate Y position for a logical line index
+  // Simple approach: use line index * LINE_HEIGHT
+  // This is reliable and doesn't depend on onTextLayout which has issues with empty lines
+  const getLineYPosition = useCallback((lineIndex: number): number => {
+    return lineIndex * LINE_HEIGHT;
+  }, []);
 
   // Render indicator for a matched entry
   const renderIndicator = (entry: Entry | undefined) => {
@@ -226,7 +182,6 @@ export function NotesEditor({
   // Render inline calorie indicators for dash lines
   const renderDocumentWithCalories = () => {
     const lines = documentText.split("\n");
-    const logicalYPositions = getLogicalLineYPositions();
 
     // Track which entries have been matched to lines (for duplicates)
     const usedEntryIds = new Set<string>();
@@ -249,8 +204,8 @@ export function NotesEditor({
 
       const indicator = isFoodLine ? renderIndicator(matchedEntry) : null;
 
-      // Use mapped logical line Y position + vertical offset to center indicator
-      const yPosition = logicalYPositions[index] + INDICATOR_VERTICAL_OFFSET;
+      // Calculate Y position directly from line index
+      const yPosition = getLineYPosition(index) + INDICATOR_VERTICAL_OFFSET;
 
       return indicator ? (
         <View
@@ -273,7 +228,7 @@ export function NotesEditor({
         onChangeText={handleTextChange}
         placeholder={
           entries.length === 0
-            ? "Enter food items starting with '-'\n\nExamples:\n- oats, 50g\n- 2 eggs\n- banana\n- chicken breast, 150g"
+            ? "Enter food items starting with '-'"
             : "Continue writing..."
         }
         placeholderTextColor="#ccc"
@@ -289,14 +244,6 @@ export function NotesEditor({
         selectTextOnFocus={false}
         clearTextOnFocus={false}
       />
-
-      {/* Hidden measuring Text component for accurate layout */}
-      <Text
-        style={[styles.documentInput, styles.hiddenMeasure]}
-        onTextLayout={handleTextLayout}
-      >
-        {documentText || " "}
-      </Text>
 
       {/* Overlay for inline nutrition indicators */}
       <View style={styles.overlay} pointerEvents="box-none">
@@ -314,14 +261,13 @@ export function NotesEditor({
 }
 
 const LINE_HEIGHT = 21;
+const TEXT_INPUT_PADDING_TOP = 10;
 
-// Indicator dimensions (must match ThinkingIndicator and inlineCalories heights)
-// ThinkingIndicator: paddingVertical(1*2) + shimmerContainer.height(16) = 18px
-// inlineCalories: paddingVertical(1*2) + lineHeight(16) = 18px
-const INDICATOR_HEIGHT = 18;
+// Font vertical offset to align indicators with text
+const FONT_VERTICAL_OFFSET = 4;
 
-// Vertical offset to center indicator within text line
-const INDICATOR_VERTICAL_OFFSET = (LINE_HEIGHT - INDICATOR_HEIGHT) / 2;
+// Vertical offset to center indicator within line height
+const INDICATOR_VERTICAL_OFFSET = 2;
 
 const styles = StyleSheet.create({
   container: {
@@ -334,24 +280,18 @@ const styles = StyleSheet.create({
     lineHeight: LINE_HEIGHT,
     paddingLeft: 20,
     paddingRight: 90,
-    paddingTop: 0,
-    paddingBottom: 100,
+    paddingTop: 12,
     color: "#333",
-    fontFamily: "Poppins_400Regular",
+    fontFamily: "System", // SF Pro on iOS
     includeFontPadding: false,
   },
   overlay: {
     position: "absolute",
-    top: 0,
+    top: TEXT_INPUT_PADDING_TOP + FONT_VERTICAL_OFFSET,
     left: 0,
     right: 0,
     bottom: 100,
-    pointerEvents: "box-none"
-  },
-  hiddenMeasure: {
-    position: "absolute",
-    opacity: 0,
-    pointerEvents: "none",
+    pointerEvents: "box-none",
   },
   indicatorWrapper: {
     position: "absolute",
@@ -371,7 +311,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     color: "#1976D2",
-    fontFamily: "Poppins_600SemiBold",
+    fontFamily: "System",
+    fontWeight: "600",
     includeFontPadding: false,
   },
   lowConfidenceIndicator: {
@@ -379,7 +320,8 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: "#FF9800",
     marginLeft: 2,
-    fontFamily: "Poppins_500Medium",
+    fontFamily: "System",
+    fontWeight: "500",
     includeFontPadding: false,
   },
   errorIndicator: {

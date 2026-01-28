@@ -118,7 +118,8 @@ const styles = StyleSheet.create({
   baseText: {
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: "Poppins_500Medium",
+    fontFamily: "System",
+    fontWeight: "500",
     letterSpacing: 0.3,
     color: "#1976D2",
     includeFontPadding: false,

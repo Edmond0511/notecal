@@ -33,6 +33,13 @@ export function NotesEditor({
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
+  const [scrollOffset, setScrollOffset] = useState(0);
+
+  // Handle TextInput scroll to sync indicator positions
+  const handleScroll = useCallback((event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    setScrollOffset(offsetY);
+  }, []);
 
   // Update document text when initialDocumentText changes (date navigation)
   useEffect(() => {
@@ -204,13 +211,13 @@ export function NotesEditor({
 
       const indicator = isFoodLine ? renderIndicator(matchedEntry) : null;
 
-      // Calculate Y position directly from line index
-      const yPosition = getLineYPosition(index) + INDICATOR_VERTICAL_OFFSET;
+      // Calculate Y position directly from line index, accounting for scroll
+      const indicatorY = getLineYPosition(index) + INDICATOR_VERTICAL_OFFSET - scrollOffset;
 
       return indicator ? (
         <View
           key={`indicator-${index}`}
-          style={[styles.indicatorWrapper, { top: yPosition }]}
+          style={[styles.indicatorWrapper, { top: indicatorY }]}
         >
           {indicator}
         </View>
@@ -226,6 +233,7 @@ export function NotesEditor({
         style={styles.documentInput}
         value={documentText}
         onChangeText={handleTextChange}
+        onScroll={handleScroll}
         placeholder={
           entries.length === 0
             ? "Enter food items starting with '-'"
@@ -273,6 +281,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+    overflow: "hidden",
   },
   documentInput: {
     flex: 1,

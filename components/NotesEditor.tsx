@@ -176,9 +176,6 @@ export function NotesEditor({
           activeOpacity={0.7}
         >
           <Text style={styles.caloriesText}>{entry.inlineKcal} cal</Text>
-          {entry.items.some((item) => item.confidence < 0.8) && (
-            <Text style={styles.lowConfidenceIndicator}>~</Text>
-          )}
         </TouchableOpacity>
       );
     }
@@ -324,17 +321,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     includeFontPadding: false,
   },
-  lowConfidenceIndicator: {
-    fontSize: 12,
-    lineHeight: 16,
-    color: "#FF9800",
-    marginLeft: 2,
-    fontFamily: "System",
-    fontWeight: "500",
-    includeFontPadding: false,
-  },
   errorIndicator: {
     fontSize: 16,
     marginLeft: 8,
   },
 });
+

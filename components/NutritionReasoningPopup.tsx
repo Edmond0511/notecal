@@ -1,7 +1,7 @@
 import { Entry } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React from "react";
+import React, { useState } from "react";
 import {
   Dimensions,
   Modal,
@@ -59,6 +59,90 @@ function getConfidenceColors(confidence: number): {
   }
 }
 
+// Confidence explanation popup component
+function ConfidencePopup({
+  confidence,
+  explanation,
+  onClose,
+}: {
+  confidence: number;
+  explanation?: string;
+  onClose: () => void;
+}) {
+  const colors = getConfidenceColors(confidence);
+  const confidencePercent = Math.round(confidence * 100);
+
+  const getConfidenceLevel = () => {
+    if (confidence >= 0.8) return "High";
+    if (confidence >= 0.5) return "Medium";
+    return "Low";
+  };
+
+  const getDefaultExplanation = () => {
+    if (confidence >= 0.8) {
+      return "This food item was matched with high certainty using reliable nutrition databases (USDA FDC, CNF, or Open Food Facts).";
+    } else if (confidence >= 0.5) {
+      return "This estimate is based on similar foods or general nutritional data. The portion size or specific variety may affect accuracy.";
+    } else {
+      return "Limited data available for this item. The nutrition values are rough estimates based on similar foods.";
+    }
+  };
+
+  return (
+    <TouchableOpacity
+      style={styles.confidencePopupOverlay}
+      activeOpacity={1}
+      onPress={onClose}
+    >
+      <View style={styles.confidencePopup}>
+        {/* Arrow pointer */}
+        <View style={styles.popupArrow} />
+
+        {/* Header */}
+        <View style={styles.popupHeader}>
+          <View
+            style={[
+              styles.popupConfidenceIndicator,
+              { backgroundColor: colors.background, borderColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.popupConfidenceValue, { color: colors.text }]}>
+              {confidencePercent}%
+            </Text>
+          </View>
+          <Text style={styles.popupTitle}>
+            {getConfidenceLevel()} Confidence
+          </Text>
+        </View>
+
+        {/* Explanation */}
+        <Text style={styles.popupExplanation}>
+          {explanation || getDefaultExplanation()}
+        </Text>
+
+        {/* How it's calculated */}
+        <View style={styles.popupCalculation}>
+          <Text style={styles.popupCalculationTitle}>How it's calculated:</Text>
+          <View style={styles.popupFactorRow}>
+            <Ionicons name="checkmark-circle" size={14} color="#666" />
+            <Text style={styles.popupFactorText}>Database match quality</Text>
+          </View>
+          <View style={styles.popupFactorRow}>
+            <Ionicons name="checkmark-circle" size={14} color="#666" />
+            <Text style={styles.popupFactorText}>Portion size clarity</Text>
+          </View>
+          <View style={styles.popupFactorRow}>
+            <Ionicons name="checkmark-circle" size={14} color="#666" />
+            <Text style={styles.popupFactorText}>Food specificity</Text>
+          </View>
+        </View>
+
+        <Text style={styles.popupHint}>Tap anywhere to close</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 interface NutritionReasoningPopupProps {
   visible: boolean;
   onClose: () => void;
@@ -74,6 +158,7 @@ export function NutritionReasoningPopup({
   const translateY = useSharedValue(0);
   const scrollOffset = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
+  const [activeConfidencePopup, setActiveConfidencePopup] = useState<string | null>(null);
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -135,12 +220,13 @@ export function NutritionReasoningPopup({
     isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
   };
 
-  // Reset translation when modal opens
+  // Reset translation and popup state when modal opens/closes
   React.useEffect(() => {
     if (visible) {
       translateY.value = 0;
       isScrolledToTop.value = true;
     }
+    setActiveConfidencePopup(null);
   }, [visible]);
 
   if (!entry) return null;
@@ -205,27 +291,47 @@ export function NutritionReasoningPopup({
                   {/* Item Header */}
                   <View style={styles.itemHeader}>
                     <Text style={styles.itemLabel}>{item.label}</Text>
-                    <View
-                      style={[
-                        styles.confidenceBadge,
-                        {
-                          backgroundColor: getConfidenceColors(item.confidence)
-                            .background,
-                          borderColor: getConfidenceColors(item.confidence)
-                            .border,
-                        },
-                      ]}
-                    >
-                      <Text
+                    <View>
+                      <TouchableOpacity
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setActiveConfidencePopup(
+                            activeConfidencePopup === (item.id || String(index))
+                              ? null
+                              : (item.id || String(index))
+                          );
+                        }}
                         style={[
-                          styles.confidenceText,
+                          styles.confidenceBadge,
                           {
-                            color: getConfidenceColors(item.confidence).text,
+                            backgroundColor: getConfidenceColors(item.confidence)
+                              .background,
+                            borderColor: getConfidenceColors(item.confidence)
+                              .border,
                           },
                         ]}
+                        activeOpacity={0.7}
                       >
-                        {Math.round(item.confidence * 100)}%
-                      </Text>
+                        <Text
+                          style={[
+                            styles.confidenceText,
+                            {
+                              color: getConfidenceColors(item.confidence).text,
+                            },
+                          ]}
+                        >
+                          {Math.round(item.confidence * 100)}%
+                        </Text>
+                      </TouchableOpacity>
+
+                      {/* Confidence Explanation Popup */}
+                      {activeConfidencePopup === (item.id || String(index)) && (
+                        <ConfidencePopup
+                          confidence={item.confidence}
+                          explanation={item.reasoning?.confidenceExplanation}
+                          onClose={() => setActiveConfidencePopup(null)}
+                        />
+                      )}
                     </View>
                   </View>
 
@@ -574,5 +680,104 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#1976D2",
     letterSpacing: -0.5,
+  },
+  // Confidence popup styles
+  confidencePopupOverlay: {
+    position: "absolute",
+    top: 36,
+    right: 0,
+    zIndex: 1000,
+  },
+  confidencePopup: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    padding: 16,
+    width: 260,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: "#E3F2FD",
+  },
+  popupArrow: {
+    position: "absolute",
+    top: -8,
+    right: 16,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 8,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderBottomColor: "#ffffff",
+  },
+  popupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 10,
+  },
+  popupConfidenceIndicator: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  popupConfidenceValue: {
+    fontSize: 14,
+    fontFamily: "System",
+    fontWeight: "700",
+  },
+  popupTitle: {
+    fontSize: 16,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#1a1a1a",
+  },
+  popupExplanation: {
+    fontSize: 13,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: "#4a4a4a",
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+  popupCalculation: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  popupCalculationTitle: {
+    fontSize: 12,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#666",
+    marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  popupFactorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  popupFactorText: {
+    fontSize: 13,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: "#4a4a4a",
+  },
+  popupHint: {
+    fontSize: 11,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: "#999",
+    textAlign: "center",
+    marginTop: 4,
   },
 });

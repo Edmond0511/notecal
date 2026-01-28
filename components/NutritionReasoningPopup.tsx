@@ -4,12 +4,13 @@ import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
 import {
   Dimensions,
+  Linking,
   Modal,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import {
   Gesture,
@@ -59,14 +60,122 @@ function getConfidenceColors(confidence: number): {
   }
 }
 
+// Parse both markdown [text](url) and HTML <a href="url">text</a> links
+function ParsedText({ text, style }: { text: string; style: any }) {
+  if (!text) return <Text style={style}></Text>;
+
+  // Support both markdown and HTML style links
+  const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const htmlLinkRegex = /<a\s+href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/gi;
+
+  const parts: Array<{ type: "text" | "link"; content: string; url?: string }> =
+    [];
+  let processedText = text;
+  let lastIndex = 0;
+
+  // First, find all links (both markdown and HTML)
+  const allMatches: Array<{
+    index: number;
+    length: number;
+    text: string;
+    url: string;
+  }> = [];
+
+  // Find markdown links
+  let match;
+  while ((match = markdownLinkRegex.exec(text)) !== null) {
+    allMatches.push({
+      index: match.index,
+      length: match[0].length,
+      text: match[1],
+      url: match[2],
+    });
+  }
+
+  // Find HTML links
+  markdownLinkRegex.lastIndex = 0; // Reset
+  while ((match = htmlLinkRegex.exec(text)) !== null) {
+    allMatches.push({
+      index: match.index,
+      length: match[0].length,
+      text: match[2],
+      url: match[1],
+    });
+  }
+
+  // Sort matches by position
+  allMatches.sort((a, b) => a.index - b.index);
+
+  // Build parts array
+  lastIndex = 0;
+  for (const linkMatch of allMatches) {
+    // Add text before the link
+    if (linkMatch.index > lastIndex) {
+      parts.push({
+        type: "text",
+        content: text.substring(lastIndex, linkMatch.index),
+      });
+    }
+
+    // Add the link
+    parts.push({
+      type: "link",
+      content: linkMatch.text,
+      url: linkMatch.url,
+    });
+
+    lastIndex = linkMatch.index + linkMatch.length;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push({
+      type: "text",
+      content: text.substring(lastIndex),
+    });
+  }
+
+  // If no links found, just return the text
+  if (parts.length === 0) {
+    return <Text style={style}>{text}</Text>;
+  }
+
+  return (
+    <Text style={style}>
+      {parts.map((part, index) => {
+        if (part.type === "link") {
+          return (
+            <Text
+              key={index}
+              style={styles.linkText}
+              onPress={() => {
+                if (part.url) {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  Linking.openURL(part.url);
+                }
+              }}
+            >
+              {part.content}
+            </Text>
+          );
+        }
+        return <Text key={index}>{part.content}</Text>;
+      })}
+    </Text>
+  );
+}
+
 // Confidence explanation popup component
 function ConfidencePopup({
   confidence,
-  explanation,
+  reasoning,
   onClose,
 }: {
   confidence: number;
-  explanation?: string;
+  reasoning?: {
+    confidenceExplanation?: string;
+    confidenceAnalysis?: string;
+  };
   onClose: () => void;
 }) {
   const colors = getConfidenceColors(confidence);
@@ -88,6 +197,12 @@ function ConfidencePopup({
     }
   };
 
+  // Use detailed analysis if available, otherwise fall back to simple explanation or default
+  const displayText =
+    reasoning?.confidenceAnalysis ||
+    reasoning?.confidenceExplanation ||
+    getDefaultExplanation();
+
   return (
     <TouchableOpacity
       style={styles.confidencePopupOverlay}
@@ -95,49 +210,28 @@ function ConfidencePopup({
       onPress={onClose}
     >
       <View style={styles.confidencePopup}>
-        {/* Arrow pointer */}
-        <View style={styles.popupArrow} />
-
         {/* Header */}
         <View style={styles.popupHeader}>
           <View
             style={[
               styles.popupConfidenceIndicator,
-              { backgroundColor: colors.background, borderColor: colors.border },
+              {
+                backgroundColor: colors.background,
+                borderColor: colors.border,
+              },
             ]}
           >
             <Text style={[styles.popupConfidenceValue, { color: colors.text }]}>
               {confidencePercent}%
             </Text>
           </View>
-          <Text style={styles.popupTitle}>
+          <Text style={styles.popupTitle} numberOfLines={1}>
             {getConfidenceLevel()} Confidence
           </Text>
         </View>
 
-        {/* Explanation */}
-        <Text style={styles.popupExplanation}>
-          {explanation || getDefaultExplanation()}
-        </Text>
-
-        {/* How it's calculated */}
-        <View style={styles.popupCalculation}>
-          <Text style={styles.popupCalculationTitle}>How it's calculated:</Text>
-          <View style={styles.popupFactorRow}>
-            <Ionicons name="checkmark-circle" size={14} color="#666" />
-            <Text style={styles.popupFactorText}>Database match quality</Text>
-          </View>
-          <View style={styles.popupFactorRow}>
-            <Ionicons name="checkmark-circle" size={14} color="#666" />
-            <Text style={styles.popupFactorText}>Portion size clarity</Text>
-          </View>
-          <View style={styles.popupFactorRow}>
-            <Ionicons name="checkmark-circle" size={14} color="#666" />
-            <Text style={styles.popupFactorText}>Food specificity</Text>
-          </View>
-        </View>
-
-        <Text style={styles.popupHint}>Tap anywhere to close</Text>
+        {/* Explanation Paragraph */}
+        <ParsedText text={displayText} style={styles.popupExplanation} />
       </View>
     </TouchableOpacity>
   );
@@ -158,7 +252,13 @@ export function NutritionReasoningPopup({
   const translateY = useSharedValue(0);
   const scrollOffset = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
-  const [activeConfidencePopup, setActiveConfidencePopup] = useState<string | null>(null);
+  const [activeConfidencePopup, setActiveConfidencePopup] = useState<
+    string | null
+  >(null);
+  const [activePopupData, setActivePopupData] = useState<{
+    confidence: number;
+    reasoning?: any;
+  } | null>(null);
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -227,6 +327,7 @@ export function NutritionReasoningPopup({
       isScrolledToTop.value = true;
     }
     setActiveConfidencePopup(null);
+    setActivePopupData(null);
   }, [visible]);
 
   if (!entry) return null;
@@ -272,7 +373,7 @@ export function NutritionReasoningPopup({
               style={styles.content}
               contentContainerStyle={[
                 styles.contentContainer,
-                { paddingBottom: insets.bottom + 24 },
+                { paddingBottom: insets.bottom + 600 },
               ]}
               showsVerticalScrollIndicator={false}
               onScrollBeginDrag={handleScrollBeginDrag}
@@ -294,44 +395,53 @@ export function NutritionReasoningPopup({
                     <View>
                       <TouchableOpacity
                         onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          setActiveConfidencePopup(
-                            activeConfidencePopup === (item.id || String(index))
-                              ? null
-                              : (item.id || String(index))
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
                           );
+                          const itemKey = item.id || String(index);
+                          if (activeConfidencePopup === itemKey) {
+                            setActiveConfidencePopup(null);
+                            setActivePopupData(null);
+                          } else {
+                            setActiveConfidencePopup(itemKey);
+                            setActivePopupData({
+                              confidence: item.confidence,
+                              reasoning: item.reasoning,
+                            });
+                          }
                         }}
                         style={[
                           styles.confidenceBadge,
                           {
-                            backgroundColor: getConfidenceColors(item.confidence)
-                              .background,
+                            backgroundColor: getConfidenceColors(
+                              item.confidence,
+                            ).background,
                             borderColor: getConfidenceColors(item.confidence)
                               .border,
                           },
                         ]}
                         activeOpacity={0.7}
                       >
-                        <Text
-                          style={[
-                            styles.confidenceText,
-                            {
-                              color: getConfidenceColors(item.confidence).text,
-                            },
-                          ]}
-                        >
-                          {Math.round(item.confidence * 100)}%
-                        </Text>
+                        <View style={styles.confidenceBadgeContent}>
+                          <Text
+                            style={[
+                              styles.confidenceText,
+                              {
+                                color: getConfidenceColors(item.confidence)
+                                  .text,
+                              },
+                            ]}
+                          >
+                            {Math.round(item.confidence * 100)}%
+                          </Text>
+                          <Ionicons
+                            name="information-circle-outline"
+                            size={14}
+                            color={getConfidenceColors(item.confidence).text}
+                            style={{ opacity: 0.6 }}
+                          />
+                        </View>
                       </TouchableOpacity>
-
-                      {/* Confidence Explanation Popup */}
-                      {activeConfidencePopup === (item.id || String(index)) && (
-                        <ConfidencePopup
-                          confidence={item.confidence}
-                          explanation={item.reasoning?.confidenceExplanation}
-                          onClose={() => setActiveConfidencePopup(null)}
-                        />
-                      )}
                     </View>
                   </View>
 
@@ -447,6 +557,18 @@ export function NutritionReasoningPopup({
                 <Text style={styles.totalsValue}>{entry.inlineKcal} cal</Text>
               </View>
             </Animated.ScrollView>
+
+            {/* Render popup outside ScrollView for proper z-index layering */}
+            {activeConfidencePopup && activePopupData && (
+              <ConfidencePopup
+                confidence={activePopupData.confidence}
+                reasoning={activePopupData.reasoning}
+                onClose={() => {
+                  setActiveConfidencePopup(null);
+                  setActivePopupData(null);
+                }}
+              />
+            )}
           </Animated.View>
         </GestureDetector>
       </GestureHandlerRootView>
@@ -573,6 +695,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
+  confidenceBadgeContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   confidenceText: {
     fontSize: 13,
     fontFamily: "System",
@@ -661,11 +788,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "#E3F2FD",
-    shadowColor: "#1976D2",
+    shadowColor: "#020202",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+    zIndex: 1,
   },
   totalsLabel: {
     fontSize: 18,
@@ -684,98 +812,73 @@ const styles = StyleSheet.create({
   // Confidence popup styles
   confidencePopupOverlay: {
     position: "absolute",
-    top: 36,
+    top: 0,
     right: 0,
-    zIndex: 1000,
+    left: 0,
+    bottom: 0,
+    zIndex: 9999,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    elevation: 20,
   },
   confidencePopup: {
     backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 16,
-    width: 260,
+    borderRadius: 16,
+    padding: 20,
+    minWidth: 320,
+    maxWidth: 400,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+    borderWidth: 1.5,
     borderColor: "#E3F2FD",
-  },
-  popupArrow: {
-    position: "absolute",
-    top: -8,
-    right: 16,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderBottomWidth: 8,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderBottomColor: "#ffffff",
   },
   popupHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    gap: 10,
+    marginBottom: 16,
+    gap: 12,
   },
   popupConfidenceIndicator: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1.5,
   },
   popupConfidenceValue: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: "System",
     fontWeight: "700",
+    letterSpacing: 0.3,
   },
   popupTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: "System",
     fontWeight: "600",
     color: "#1a1a1a",
+    letterSpacing: -0.2,
+    flex: 1,
   },
   popupExplanation: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: "System",
     fontWeight: "400",
-    color: "#4a4a4a",
-    lineHeight: 19,
-    marginBottom: 12,
-  },
-  popupCalculation: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-  },
-  popupCalculationTitle: {
-    fontSize: 12,
-    fontFamily: "System",
-    fontWeight: "600",
-    color: "#666",
-    marginBottom: 8,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  popupFactorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    color: "#333",
+    lineHeight: 24,
     marginBottom: 4,
   },
-  popupFactorText: {
-    fontSize: 13,
-    fontFamily: "System",
-    fontWeight: "400",
-    color: "#4a4a4a",
+  linkText: {
+    color: "#1976D2",
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
   popupHint: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "System",
-    fontWeight: "400",
+    fontWeight: "500",
     color: "#999",
     textAlign: "center",
     marginTop: 4,

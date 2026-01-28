@@ -4,6 +4,7 @@ export interface NutritionReasoning {
   portionNotes?: string;
   dataSource?: string;
   confidenceExplanation?: string;
+  confidenceAnalysis?: string; // Detailed paragraph explaining confidence calculation
 }
 
 export interface FoodItem {

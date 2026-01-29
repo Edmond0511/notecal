@@ -63,9 +63,6 @@ const getTodayString = (): string => formatDate(new Date());
 // Check if two date strings are the same day
 const isSameDay = (date1: string, date2: string): boolean => date1 === date2;
 
-// Check if date is today
-const isToday = (dateString: string): boolean =>
-  isSameDay(dateString, getTodayString());
 
 export function Calendar({
   visible,
@@ -149,11 +146,10 @@ export function Calendar({
   );
 
   const goToToday = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const today = new Date();
-    setViewMonth(today.getMonth());
-    setViewYear(today.getFullYear());
-  }, []);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onSelectDate(getTodayString());
+    onClose();
+  }, [onSelectDate, onClose]);
 
   const handleClose = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -172,9 +168,6 @@ export function Calendar({
   if (!visible) return null;
 
   const todayStr = getTodayString();
-  const isViewingCurrentMonth =
-    viewMonth === new Date().getMonth() &&
-    viewYear === new Date().getFullYear();
 
   return (
     <Modal
@@ -279,21 +272,11 @@ export function Calendar({
           {/* Footer with Today button */}
           <View style={styles.footer}>
             <TouchableOpacity
-              style={[
-                styles.todayButton,
-                isViewingCurrentMonth && styles.todayButtonMuted,
-              ]}
+              style={styles.todayButton}
               onPress={goToToday}
               activeOpacity={0.7}
             >
-              <Text
-                style={[
-                  styles.todayButtonText,
-                  isViewingCurrentMonth && styles.todayButtonTextMuted,
-                ]}
-              >
-                Today
-              </Text>
+              <Text style={styles.todayButtonText}>Today</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -443,17 +426,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#fafaf8",
     borderRadius: 20,
   },
-  todayButtonMuted: {
-    backgroundColor: "#f5f5f5",
-  },
   todayButtonText: {
     fontSize: 15,
     fontFamily: "System",
     fontWeight: "600",
     color: "#1976D2",
-  },
-  todayButtonTextMuted: {
-    color: "#aaa",
   },
 });
 

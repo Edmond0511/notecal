@@ -338,19 +338,25 @@ export function NutritionReasoningPopup({
   return (
     <Modal
       visible={visible}
-      animationType="slide"
-      presentationStyle="fullScreen"
+      animationType="fade"
+      transparent
       onRequestClose={onClose}
-      transparent={false}
     >
       <GestureHandlerRootView style={styles.gestureRoot}>
         <StatusBar barStyle="dark-content" />
-        <Animated.View style={[styles.backdrop, backdropStyle]} />
+        {/* Backdrop */}
+        <Animated.View style={[styles.backdrop, backdropStyle]}>
+          <TouchableOpacity
+            style={styles.backdropPressable}
+            onPress={handleClose}
+            activeOpacity={1}
+          />
+        </Animated.View>
         <GestureDetector gesture={panGesture}>
           <Animated.View
             style={[
               styles.container,
-              { paddingTop: insets.top },
+              { marginTop: insets.top + 40 },
               animatedStyle,
             ]}
           >
@@ -361,15 +367,7 @@ export function NutritionReasoningPopup({
 
             {/* Header */}
             <View style={styles.header}>
-              <TouchableOpacity
-                onPress={handleClose}
-                style={styles.closeButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="chevron-down" size={28} color="#1976D2" />
-              </TouchableOpacity>
               <Text style={styles.title}>Nutrition Details</Text>
-              <View style={styles.headerSpacer} />
             </View>
 
             <Animated.ScrollView
@@ -467,11 +465,6 @@ export function NutritionReasoningPopup({
                       unit="g"
                     />
                   </View>
-
-                  {/* Portion */}
-                  <Text style={styles.portionText}>
-                    {item.qty} {item.unit}
-                  </Text>
 
                   {/* Reasoning Section */}
                   {item.reasoning && (
@@ -603,52 +596,50 @@ function MacroItem({
 const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
+    justifyContent: "flex-end",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#FAFCFF",
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+  backdropPressable: {
+    flex: 1,
   },
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: "#888",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 8,
   },
   dragIndicatorContainer: {
     alignItems: "center",
-    paddingTop: 8,
-    paddingBottom: 4,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   dragIndicator: {
     width: 36,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: "#D1D5DB",
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#ddd",
   },
   header: {
-    flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: "#ffffff",
   },
   title: {
-    flex: 1,
     fontSize: 18,
     fontFamily: "System",
     fontWeight: "600",
     color: "#1a1a1a",
     textAlign: "center",
     letterSpacing: -0.3,
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#EDF4FC",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerSpacer: {
-    width: 40,
   },
   content: {
     flex: 1,
@@ -671,8 +662,8 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#E3F2FD",
-    shadowColor: "#1976D2",
+    borderColor: "#cfcfcf14",
+    shadowColor: "#b4b4b4",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -735,13 +726,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  portionText: {
-    fontSize: 15,
-    color: "#666",
-    marginBottom: 16,
-    fontFamily: "System",
-    fontWeight: "500",
-  },
   reasoningSection: {
     borderTopWidth: 2,
     borderTopColor: "#E3F2FD",
@@ -791,8 +775,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E3F2FD",
-    shadowColor: "#020202",
+    borderColor: "#cfcfcf14",
+    shadowColor: "#b4b4b4",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -832,13 +816,13 @@ const styles = StyleSheet.create({
     padding: 20,
     minWidth: 320,
     maxWidth: 400,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
+    shadowColor: "#b4b4b4",
+    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 10,
-    borderWidth: 1.5,
-    borderColor: "#E3F2FD",
+    shadowRadius: 5,
+    elevation: 0,
+    borderWidth: 1,
+    borderColor: "#cfcfcf14",
   },
   popupHeader: {
     flexDirection: "row",

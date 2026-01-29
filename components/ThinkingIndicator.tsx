@@ -6,7 +6,7 @@ import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 const SHIMMER_WIDTH = 50; // Smaller width for subtle shimmer effect
 const TEXT_WIDTH = 70; // Approximate width of "calculating" text
 
-export const ThinkingIndicator: React.FC = () => {
+export const ThinkingIndicator: React.FC = React.memo(() => {
   const shimmerTranslate = useRef(new Animated.Value(-SHIMMER_WIDTH)).current;
   const shimmerOpacity = useRef(new Animated.Value(0)).current;
 
@@ -92,7 +92,8 @@ export const ThinkingIndicator: React.FC = () => {
       </View>
     </View>
   );
-};
+});
+ThinkingIndicator.displayName = 'ThinkingIndicator';
 
 const styles = StyleSheet.create({
   container: {

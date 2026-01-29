@@ -24,8 +24,11 @@ export default function HomeScreen() {
   const saveDocument = useAppStore((state) => state.saveDocument);
   const getDocument = useAppStore((state) => state.getDocument);
 
-  // Filter entries for current date in render (ensures fresh data)
-  const entries = allEntries.filter((entry) => entry.date === currentDate);
+  // Filter entries for current date - memoized to prevent unnecessary re-renders
+  const entries = React.useMemo(
+    () => allEntries.filter((entry) => entry.date === currentDate),
+    [allEntries, currentDate]
+  );
   const [showCalendar, setShowCalendar] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [currentDocumentText, setCurrentDocumentText] = useState("");

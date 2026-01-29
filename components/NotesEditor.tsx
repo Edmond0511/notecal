@@ -1,6 +1,6 @@
 import { Entry } from "@/types";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,6 +10,120 @@ import {
 } from "react-native";
 import { NutritionReasoningPopup } from "./NutritionReasoningPopup";
 import { ThinkingIndicator } from "./ThinkingIndicator";
+
+// Constants
+const LINE_HEIGHT = 21;
+const TEXT_INPUT_PADDING_TOP = 10;
+const FONT_VERTICAL_OFFSET = 4;
+const INDICATOR_VERTICAL_OFFSET = 2;
+
+// Styles defined early so memoized components can reference them
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+    overflow: "hidden",
+  },
+  hiddenMeasureText: {
+    position: "absolute",
+    fontSize: 16,
+    lineHeight: LINE_HEIGHT,
+    paddingLeft: 20,
+    paddingRight: 90,
+    paddingTop: 12,
+    color: "transparent",
+    fontFamily: "System",
+    includeFontPadding: false,
+    left: 0,
+    right: 0,
+    top: 0,
+    opacity: 0,
+    pointerEvents: "none",
+  },
+  documentInput: {
+    flex: 1,
+    fontSize: 16,
+    lineHeight: LINE_HEIGHT,
+    paddingLeft: 20,
+    paddingRight: 90,
+    paddingTop: 12,
+    color: "#333",
+    fontFamily: "System",
+    includeFontPadding: false,
+  },
+  overlay: {
+    position: "absolute",
+    top: TEXT_INPUT_PADDING_TOP + FONT_VERTICAL_OFFSET,
+    left: 0,
+    right: 0,
+    bottom: 100,
+    pointerEvents: "box-none",
+  },
+  indicatorWrapper: {
+    position: "absolute",
+    right: 10,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  inlineCalories: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E3F2FD",
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 12,
+  },
+  caloriesText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: "#1976D2",
+    fontFamily: "System",
+    fontWeight: "600",
+    includeFontPadding: false,
+  },
+});
+
+// Memoized calorie badge - only re-renders when kcal changes
+const CaloriesBadge = React.memo<{
+  kcal: number;
+  onPress: () => void;
+}>(({ kcal, onPress }) => (
+  <TouchableOpacity
+    style={styles.inlineCalories}
+    onPress={onPress}
+    activeOpacity={0.7}
+  >
+    <Text style={styles.caloriesText}>{kcal} cal</Text>
+  </TouchableOpacity>
+));
+CaloriesBadge.displayName = 'CaloriesBadge';
+
+// Memoized indicator row - only re-renders when entry data changes
+const IndicatorRow = React.memo<{
+  entry: Entry;
+  yPosition: number;
+  opacity: number;
+  onTap: (entry: Entry) => void;
+}>(({ entry, yPosition, opacity, onTap }) => {
+  const handlePress = useCallback(() => onTap(entry), [entry, onTap]);
+
+  return (
+    <View style={[styles.indicatorWrapper, { top: yPosition, opacity }]}>
+      {entry.status === 'pending' ? (
+        <ThinkingIndicator />
+      ) : entry.status === 'ok' && entry.inlineKcal != null ? (
+        <CaloriesBadge kcal={entry.inlineKcal} onPress={handlePress} />
+      ) : null}
+    </View>
+  );
+}, (prev, next) => (
+  prev.entry.id === next.entry.id &&
+  prev.entry.status === next.entry.status &&
+  prev.entry.inlineKcal === next.entry.inlineKcal &&
+  prev.yPosition === next.yPosition &&
+  prev.opacity === next.opacity
+));
+IndicatorRow.displayName = 'IndicatorRow';
 
 interface NotesEditorProps {
   entries: Entry[];
@@ -180,87 +294,58 @@ export function NotesEditor({
     setSelectedEntry(null);
   }, []);
 
-  // Track which positions have been used (for handling duplicate entries)
-  const usedPositionCounts = useRef<Map<string, number>>(new Map());
-
-  // Get Y position for an entry by matching its text prefix
-  const getEntryYPosition = useCallback((entryText: string, fallbackIndex: number): number => {
-    const prefix = entryText.trim().substring(0, 20);
-    const positions = entryYMap.get(prefix);
-
-    if (positions?.length) {
-      // Track how many times we've used this prefix (for duplicates)
-      const usedCount = usedPositionCounts.current.get(prefix) || 0;
-      if (usedCount < positions.length) {
-        usedPositionCounts.current.set(prefix, usedCount + 1);
-        return positions[usedCount];
-      }
-    }
-
-    // Fallback to calculated position
-    return fallbackIndex * LINE_HEIGHT;
-  }, [entryYMap]);
-
-  // Render indicator for a matched entry
-  const renderIndicator = (entry: Entry | undefined) => {
-    if (!entry) return null;
-
-    if (entry.status === "pending") {
-      return <ThinkingIndicator />;
-    }
-
-    if (entry.status === "ok" && entry.inlineKcal != null) {
-      return (
-        <TouchableOpacity
-          style={styles.inlineCalories}
-          onPress={() => handleIndicatorTap(entry)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.caloriesText}>{entry.inlineKcal} cal</Text>
-        </TouchableOpacity>
-      );
-    }
-
-    return null;
-  };
-
   // Check if current measurements are fresh (match current text)
   const hasFreshMeasurements = measuredText === documentText;
 
-  // Render inline calorie indicators for dash lines
-  const renderDocumentWithCalories = () => {
-    const lines = documentText.split("\n");
+  // Compute indicator data only when dependencies change
+  const indicatorData = useMemo(() => {
+    const lines = documentText.split('\n');
     const usedEntryIds = new Set<string>();
+    const positionCounts = new Map<string, number>();
 
-    // Reset position tracking for this render
-    usedPositionCounts.current.clear();
+    const indicators: Array<{
+      entryId: string;
+      entry: Entry;
+      yPosition: number;
+    }> = [];
 
-    return lines.map((line, index) => {
+    lines.forEach((line, index) => {
       const trimmedLine = line.trim();
-      if (!trimmedLine.startsWith("-")) return null;
+      if (!trimmedLine.startsWith('-')) return;
 
-      // Find matching entry
       const matchedEntry = entries.find(
         (e) => e.rawText === trimmedLine && !usedEntryIds.has(e.id)
       );
-      if (matchedEntry) usedEntryIds.add(matchedEntry.id);
+      if (!matchedEntry) return;
 
-      const indicator = renderIndicator(matchedEntry);
-      if (!indicator) return null;
+      usedEntryIds.add(matchedEntry.id);
 
-      // Get Y position from measured layout, with fallback
-      const y = getEntryYPosition(trimmedLine, index) + INDICATOR_VERTICAL_OFFSET - scrollOffset;
+      // Calculate Y position
+      const prefix = trimmedLine.substring(0, 20);
+      const positions = entryYMap.get(prefix);
+      let yPosition: number;
 
-      // Hide indicator until we have fresh measurements (prevents position jump)
-      const opacity = hasFreshMeasurements ? 1 : 0;
+      if (positions?.length) {
+        const usedCount = positionCounts.get(prefix) || 0;
+        if (usedCount < positions.length) {
+          positionCounts.set(prefix, usedCount + 1);
+          yPosition = positions[usedCount];
+        } else {
+          yPosition = index * LINE_HEIGHT;
+        }
+      } else {
+        yPosition = index * LINE_HEIGHT;
+      }
 
-      return (
-        <View key={`indicator-${index}`} style={[styles.indicatorWrapper, { top: y, opacity }]}>
-          {indicator}
-        </View>
-      );
+      indicators.push({
+        entryId: matchedEntry.id,
+        entry: matchedEntry,
+        yPosition: yPosition + INDICATOR_VERTICAL_OFFSET,
+      });
     });
-  };
+
+    return indicators;
+  }, [documentText, entries, entryYMap]);
 
   return (
     <View style={styles.container}>
@@ -301,7 +386,15 @@ export function NotesEditor({
 
       {/* Overlay for inline nutrition indicators */}
       <View style={styles.overlay} pointerEvents="box-none">
-        {renderDocumentWithCalories()}
+        {indicatorData.map((item) => (
+          <IndicatorRow
+            key={item.entryId}
+            entry={item.entry}
+            yPosition={item.yPosition - scrollOffset}
+            opacity={hasFreshMeasurements ? 1 : 0}
+            onTap={handleIndicatorTap}
+          />
+        ))}
       </View>
 
       {/* Reasoning Popup */}
@@ -313,84 +406,4 @@ export function NotesEditor({
     </View>
   );
 }
-
-const LINE_HEIGHT = 21;
-const TEXT_INPUT_PADDING_TOP = 10;
-
-// Font vertical offset to align indicators with text
-const FONT_VERTICAL_OFFSET = 4;
-
-// Vertical offset to center indicator within line height
-const INDICATOR_VERTICAL_OFFSET = 2;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    overflow: "hidden",
-  },
-  hiddenMeasureText: {
-    // Same styling as documentInput for accurate measurement
-    position: "absolute",
-    fontSize: 16,
-    lineHeight: LINE_HEIGHT,
-    paddingLeft: 20,
-    paddingRight: 90,
-    paddingTop: 12,
-    color: "transparent",
-    fontFamily: "System",
-    includeFontPadding: false,
-    // Position to match TextInput but invisible
-    left: 0,
-    right: 0,
-    top: 0,
-    opacity: 0,
-    pointerEvents: "none",
-  },
-  documentInput: {
-    flex: 1,
-    fontSize: 16,
-    lineHeight: LINE_HEIGHT,
-    paddingLeft: 20,
-    paddingRight: 90,
-    paddingTop: 12,
-    color: "#333",
-    fontFamily: "System", // SF Pro on iOS
-    includeFontPadding: false,
-  },
-  overlay: {
-    position: "absolute",
-    top: TEXT_INPUT_PADDING_TOP + FONT_VERTICAL_OFFSET,
-    left: 0,
-    right: 0,
-    bottom: 100,
-    pointerEvents: "box-none",
-  },
-  indicatorWrapper: {
-    position: "absolute",
-    right: 10,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  inlineCalories: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#E3F2FD",
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 12,
-  },
-  caloriesText: {
-    fontSize: 12,
-    lineHeight: 16,
-    color: "#1976D2",
-    fontFamily: "System",
-    fontWeight: "600",
-    includeFontPadding: false,
-  },
-  errorIndicator: {
-    fontSize: 16,
-    marginLeft: 8,
-  },
-});
 

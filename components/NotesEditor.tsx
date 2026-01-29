@@ -34,102 +34,43 @@ export function NotesEditor({
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
   const [scrollOffset, setScrollOffset] = useState(0);
-  const [linePositions, setLinePositions] = useState<number[]>([]);
+  // Map of entry text prefix -> y position (for entries starting with "-")
+  const [entryYMap, setEntryYMap] = useState<Map<string, number[]>>(new Map());
+  // Track the text that was measured, so we know if positions are stale
+  const [measuredText, setMeasuredText] = useState<string>('');
 
   // Handle TextInput scroll to sync indicator positions
   const handleScroll = useCallback((event: any) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    setScrollOffset(offsetY);
+    setScrollOffset(event.nativeEvent.contentOffset.y);
   }, []);
 
-  // Handle text layout to get actual line positions (accounts for wrapped lines)
+  // Handle text layout - extract y positions for lines starting with "-"
   const handleTextLayout = useCallback((event: any) => {
     const { lines } = event.nativeEvent;
+    if (!lines?.length) return;
 
-    if (!lines || lines.length === 0) {
-      return;
-    }
+    // Group y-positions by text prefix (first 20 chars) to handle duplicates
+    const yMap = new Map<string, number[]>();
 
-    const logicalLines = documentText.split("\n");
-
-    // Calculate the starting character index of each logical line in the full text
-    const logicalLineStarts: number[] = [0];
-    for (let i = 0; i < logicalLines.length - 1; i++) {
-      logicalLineStarts.push(logicalLineStarts[i] + logicalLines[i].length + 1);
-    }
-
-    // SIMPLER APPROACH: For lines starting with "-", find the visual line that contains that dash
-    // This avoids complex character counting and handles empty lines naturally
-    const positions: number[] = new Array(logicalLines.length).fill(-1);
-
-    // First pass: build a list of visual lines with their text and y positions
-    const visualLineData: { text: string; y: number }[] = [];
-    for (let i = 0; i < lines.length; i++) {
-      const visualLine = lines[i];
-      visualLineData.push({
-        text: visualLine.text || '',
-        y: visualLine.y ?? 0,
-      });
-    }
-
-    // Second pass: for each logical line, find its y position
-    // Strategy: match the logical line's trimmed start with visual line content
-    let searchFromVisualIndex = 0;
-
-    for (let logicalIndex = 0; logicalIndex < logicalLines.length; logicalIndex++) {
-      const logicalLine = logicalLines[logicalIndex];
-      const trimmedLogical = logicalLine.trim();
-
-      // Handle empty lines: estimate position based on surrounding lines
-      if (trimmedLogical === '') {
-        let nextNonEmptyY = -1;
-        for (let v = searchFromVisualIndex; v < visualLineData.length; v++) {
-          if (visualLineData[v].text.trim() !== '') {
-            nextNonEmptyY = visualLineData[v].y;
-            break;
-          }
-        }
-        if (nextNonEmptyY !== -1) {
-          positions[logicalIndex] = nextNonEmptyY - LINE_HEIGHT;
-        } else if (logicalIndex > 0 && positions[logicalIndex - 1] !== -1) {
-          positions[logicalIndex] = positions[logicalIndex - 1] + LINE_HEIGHT;
-        } else {
-          positions[logicalIndex] = logicalIndex * LINE_HEIGHT;
-        }
-        continue;
+    for (const line of lines) {
+      const text = (line.text || '').trim();
+      if (text.startsWith('-')) {
+        const prefix = text.substring(0, 20);
+        const positions = yMap.get(prefix) || [];
+        positions.push(line.y ?? 0);
+        yMap.set(prefix, positions);
       }
-
-      // Non-empty line: find the visual line that starts with the same content
-      const searchPrefix = trimmedLogical.substring(0, Math.min(20, trimmedLogical.length));
-      let foundY = -1;
-
-      for (let v = searchFromVisualIndex; v < visualLineData.length; v++) {
-        const visualText = visualLineData[v].text;
-        const trimmedVisual = visualText.trim();
-
-        if (trimmedVisual.startsWith(searchPrefix) || visualText.includes(searchPrefix.substring(0, 10))) {
-          foundY = visualLineData[v].y;
-          searchFromVisualIndex = v + 1;
-          break;
-        }
-      }
-
-      // Fallback: estimate based on line height
-      if (foundY === -1) {
-        foundY = logicalIndex * LINE_HEIGHT;
-      }
-
-      positions[logicalIndex] = foundY;
     }
 
-    setLinePositions(positions);
+    setEntryYMap(yMap);
+    setMeasuredText(documentText); // Mark these measurements as current
   }, [documentText]);
 
   // Update document text when initialDocumentText changes (date navigation)
   useEffect(() => {
     setDocumentText(initialDocumentText);
-    // Clear positions when navigating to a new date so we don't use stale data
-    setLinePositions([]);
+    setEntryYMap(new Map());
+    setMeasuredText(''); // Clear so indicators wait for fresh measurements
   }, [initialDocumentText]);
 
   // Cleanup debounce timeout on unmount
@@ -239,16 +180,26 @@ export function NotesEditor({
     setSelectedEntry(null);
   }, []);
 
-  // Calculate Y position for a logical line index
-  // Uses actual measured positions if available (accounts for wrapped lines)
-  // Falls back to calculated position if measurements not available yet
-  const getLineYPosition = useCallback((lineIndex: number): number => {
-    if (linePositions.length > lineIndex && linePositions[lineIndex] !== undefined) {
-      return linePositions[lineIndex];
+  // Track which positions have been used (for handling duplicate entries)
+  const usedPositionCounts = useRef<Map<string, number>>(new Map());
+
+  // Get Y position for an entry by matching its text prefix
+  const getEntryYPosition = useCallback((entryText: string, fallbackIndex: number): number => {
+    const prefix = entryText.trim().substring(0, 20);
+    const positions = entryYMap.get(prefix);
+
+    if (positions?.length) {
+      // Track how many times we've used this prefix (for duplicates)
+      const usedCount = usedPositionCounts.current.get(prefix) || 0;
+      if (usedCount < positions.length) {
+        usedPositionCounts.current.set(prefix, usedCount + 1);
+        return positions[usedCount];
+      }
     }
+
     // Fallback to calculated position
-    return lineIndex * LINE_HEIGHT;
-  }, [linePositions]);
+    return fallbackIndex * LINE_HEIGHT;
+  }, [entryYMap]);
 
   // Render indicator for a matched entry
   const renderIndicator = (entry: Entry | undefined) => {
@@ -273,42 +224,41 @@ export function NotesEditor({
     return null;
   };
 
+  // Check if current measurements are fresh (match current text)
+  const hasFreshMeasurements = measuredText === documentText;
+
   // Render inline calorie indicators for dash lines
   const renderDocumentWithCalories = () => {
     const lines = documentText.split("\n");
-
-    // Track which entries have been matched to lines (for duplicates)
     const usedEntryIds = new Set<string>();
+
+    // Reset position tracking for this render
+    usedPositionCounts.current.clear();
 
     return lines.map((line, index) => {
       const trimmedLine = line.trim();
-      const isFoodLine = trimmedLine.startsWith("-");
+      if (!trimmedLine.startsWith("-")) return null;
 
-      let matchedEntry: Entry | undefined;
-      if (isFoodLine) {
-        // Find an entry that matches this line and hasn't been used yet
-        matchedEntry = entries.find(
-          (entry) =>
-            entry.rawText === trimmedLine && !usedEntryIds.has(entry.id),
-        );
-        if (matchedEntry) {
-          usedEntryIds.add(matchedEntry.id);
-        }
-      }
+      // Find matching entry
+      const matchedEntry = entries.find(
+        (e) => e.rawText === trimmedLine && !usedEntryIds.has(e.id)
+      );
+      if (matchedEntry) usedEntryIds.add(matchedEntry.id);
 
-      const indicator = isFoodLine ? renderIndicator(matchedEntry) : null;
+      const indicator = renderIndicator(matchedEntry);
+      if (!indicator) return null;
 
-      // Calculate Y position directly from line index, accounting for scroll
-      const indicatorY = getLineYPosition(index) + INDICATOR_VERTICAL_OFFSET - scrollOffset;
+      // Get Y position from measured layout, with fallback
+      const y = getEntryYPosition(trimmedLine, index) + INDICATOR_VERTICAL_OFFSET - scrollOffset;
 
-      return indicator ? (
-        <View
-          key={`indicator-${index}`}
-          style={[styles.indicatorWrapper, { top: indicatorY }]}
-        >
+      // Hide indicator until we have fresh measurements (prevents position jump)
+      const opacity = hasFreshMeasurements ? 1 : 0;
+
+      return (
+        <View key={`indicator-${index}`} style={[styles.indicatorWrapper, { top: y, opacity }]}>
           {indicator}
         </View>
-      ) : null;
+      );
     });
   };
 

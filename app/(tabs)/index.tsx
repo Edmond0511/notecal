@@ -1,7 +1,7 @@
+import { Calendar } from "@/components/Calendar";
 import { NotesEditor } from "@/components/NotesEditor";
 import { useAppStore } from "@/store/app-store";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import React, { useState } from "react";
 import {
   StatusBar,
@@ -25,8 +25,7 @@ export default function HomeScreen() {
 
   // Filter entries for current date in render (ensures fresh data)
   const entries = allEntries.filter((entry) => entry.date === currentDate);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [tempDate, setTempDate] = useState(new Date());
+  const [showCalendar, setShowCalendar] = useState(false);
   const [currentDocumentText, setCurrentDocumentText] = useState("");
 
   // Load document text for current date
@@ -95,23 +94,15 @@ export default function HomeScreen() {
   };
 
   // Calendar picker function
-  const openDatePicker = () => {
+  const openCalendar = () => {
     // Save current document before opening calendar
     saveCurrentDocument();
-    setTempDate(stringToDate(currentDate));
-    setShowDatePicker(true);
+    setShowCalendar(true);
   };
 
-  // Handle iOS date picker change
-  const onDateChange = (event: any, selectedDate?: Date) => {
-    if (event.type === "set" && selectedDate) {
-      const newDateString =
-        selectedDate.getFullYear().toString() +
-        (selectedDate.getMonth() + 1).toString().padStart(2, "0") +
-        selectedDate.getDate().toString().padStart(2, "0");
-      setCurrentDate(newDateString);
-    }
-    setShowDatePicker(false);
+  // Handle calendar date selection
+  const handleCalendarSelect = (newDateString: string) => {
+    setCurrentDate(newDateString);
   };
 
   // Handle document text changes from NotesEditor
@@ -163,7 +154,7 @@ export default function HomeScreen() {
             <Ionicons name="chevron-back" size={20} color="#333" />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={openDatePicker}>
+          <TouchableOpacity onPress={openCalendar}>
             <View style={styles.dateButtonContent}>
               <Text style={styles.dateText}>
                 {formatDateDisplay(currentDate)}
@@ -216,32 +207,13 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* DateTimePicker - iOS calendar with overlay */}
-      {showDatePicker && (
-        <View style={styles.datePickerOverlay}>
-          <View style={styles.datePickerContainer}>
-            <View style={styles.datePickerHeader}>
-              <Text style={styles.datePickerTitle}>Select Date</Text>
-              <TouchableOpacity
-                onPress={() => setShowDatePicker(false)}
-                style={styles.datePickerCloseButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="close" size={24} color="#007AFF" />
-              </TouchableOpacity>
-            </View>
-            <DateTimePicker
-              value={tempDate}
-              mode="date"
-              display="inline"
-              onChange={onDateChange}
-              style={styles.datePicker}
-              textColor="#000000"
-              accentColor="#007AFF"
-            />
-          </View>
-        </View>
-      )}
+      {/* Custom Calendar */}
+      <Calendar
+        visible={showCalendar}
+        onClose={() => setShowCalendar(false)}
+        selectedDate={currentDate}
+        onSelectDate={handleCalendarSelect}
+      />
     </SafeAreaView>
   );
 }
@@ -288,60 +260,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-  },
-  calendarIcon: {
-    marginRight: 4,
-  },
-  datePickerOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
-  },
-  datePickerContainer: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    width: "90%",
-    maxWidth: 400,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 12,
-  },
-  datePickerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E9ECEF",
-  },
-  datePickerTitle: {
-    fontSize: 18,
-    fontFamily: "System",
-    fontWeight: "600",
-    color: "#000000",
-  },
-  datePickerCloseButton: {
-    padding: 4,
-    borderRadius: 16,
-    backgroundColor: "#F0F8FF",
-  },
-  datePicker: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
   },
   totalsBar: {
     flexDirection: "row",

@@ -15,7 +15,6 @@ import {
 import {
   Gesture,
   GestureDetector,
-  GestureHandlerRootView,
 } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
@@ -352,7 +351,7 @@ export function NutritionReasoningPopup({
       transparent
       onRequestClose={onClose}
     >
-      <GestureHandlerRootView style={styles.gestureRoot}>
+      <View style={styles.gestureRoot}>
         <StatusBar barStyle="dark-content" />
         {/* Backdrop */}
         <Animated.View style={[styles.backdrop, backdropStyle]}>
@@ -574,7 +573,7 @@ export function NutritionReasoningPopup({
             )}
           </Animated.View>
         </GestureDetector>
-      </GestureHandlerRootView>
+      </View>
     </Modal>
   );
 }

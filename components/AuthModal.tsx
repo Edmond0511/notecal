@@ -18,7 +18,6 @@ import {
 import {
   Gesture,
   GestureDetector,
-  GestureHandlerRootView,
 } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
@@ -187,7 +186,7 @@ export function AuthModal({ visible, onClose, onAuthSuccess }: AuthModalProps) {
       transparent
       onRequestClose={onClose}
     >
-      <GestureHandlerRootView style={styles.gestureRoot}>
+      <View style={styles.gestureRoot}>
         <StatusBar barStyle="dark-content" />
 
         {/* Backdrop */}
@@ -310,7 +309,7 @@ export function AuthModal({ visible, onClose, onAuthSuccess }: AuthModalProps) {
             </View>
           </Animated.View>
         </GestureDetector>
-      </GestureHandlerRootView>
+      </View>
     </Modal>
   );
 }

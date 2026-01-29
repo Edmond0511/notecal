@@ -1,45 +1,45 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import React, { useEffect, useState } from "react";
+import { Dimensions, StyleSheet, Text, View } from "react-native";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
   Easing,
   interpolate,
-} from 'react-native-reanimated';
-import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+  runOnJS,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Color palette inspired by the reference design
 const COLORS = {
   calories: {
-    primary: '#FF6B35',
-    secondary: '#FFE5D9',
-    gradient: ['#FF8C5A', '#FF6B35'],
-    icon: '🔥',
+    primary: "#FF6B35",
+    secondary: "#FFE5D9",
+    track: "#FFD4C4",
+    gradient: ["#FF8C5A", "#FF6B35"],
   },
   protein: {
-    primary: '#4A90D9',
-    secondary: '#E3F2FD',
-    gradient: ['#64B5F6', '#4A90D9'],
-    icon: '🐟',
+    primary: "#4A90D9",
+    secondary: "#E3F2FD",
+    track: "#C5DCFA",
+    gradient: ["#64B5F6", "#4A90D9"],
   },
   fat: {
-    primary: '#F5A623',
-    secondary: '#FFF8E7',
-    gradient: ['#FFD54F', '#F5A623'],
-    icon: '💧',
+    primary: "#F5A623",
+    secondary: "#FFF8E7",
+    track: "#FFE8B8",
+    gradient: ["#FFD54F", "#F5A623"],
   },
   carbs: {
-    primary: '#9B6B9E',
-    secondary: '#F3E5F5',
-    gradient: ['#BA68C8', '#9B6B9E'],
-    icon: '🌿',
+    primary: "#9B6B9E",
+    secondary: "#F3E5F5",
+    track: "#E1C4E4",
+    gradient: ["#BA68C8", "#9B6B9E"],
   },
 };
-
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface CircularProgressProps {
   current: number;
@@ -47,6 +47,7 @@ interface CircularProgressProps {
   size: number;
   strokeWidth: number;
   color: string;
+  trackColor: string;
   gradientId: string;
   animationDelay?: number;
 }
@@ -57,31 +58,36 @@ function CircularProgress({
   size,
   strokeWidth,
   color,
+  trackColor,
   gradientId,
   animationDelay = 0,
 }: CircularProgressProps) {
-  const progress = useSharedValue(0);
   const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+  const [animatedPercentage, setAnimatedPercentage] = useState(0);
 
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference * (1 - animatedPercentage / 100);
+
+  const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = withTiming(percentage / 100, {
+    progress.value = withTiming(percentage, {
       duration: 1200,
       easing: Easing.out(Easing.cubic),
     });
   }, [percentage]);
 
-  const animatedStrokeDashoffset = useAnimatedStyle(() => {
-    const offset = circumference * (1 - progress.value);
-    return {
-      strokeDashoffset: offset,
-    };
+  useDerivedValue(() => {
+    runOnJS(setAnimatedPercentage)(progress.value);
   });
 
   return (
-    <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
+    <Svg
+      width={size}
+      height={size}
+      style={{ transform: [{ rotate: "-90deg" }] }}
+    >
       <Defs>
         <LinearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
           <Stop offset="0%" stopColor={color} stopOpacity="0.8" />
@@ -93,21 +99,21 @@ function CircularProgress({
         cx={size / 2}
         cy={size / 2}
         r={radius}
-        stroke="#F0F0F0"
+        stroke={trackColor}
         strokeWidth={strokeWidth}
         fill="transparent"
       />
       {/* Progress circle */}
-      <AnimatedCircle
+      <Circle
         cx={size / 2}
         cy={size / 2}
         r={radius}
-        stroke={`url(#${gradientId})`}
+        stroke={color}
         strokeWidth={strokeWidth}
         fill="transparent"
-        strokeDasharray={circumference}
+        strokeDasharray={`${circumference} ${circumference}`}
+        strokeDashoffset={strokeDashoffset}
         strokeLinecap="round"
-        animatedProps={animatedStrokeDashoffset}
       />
     </Svg>
   );
@@ -119,7 +125,6 @@ interface CalorieRingProps {
 }
 
 function CalorieRing({ current, target }: CalorieRingProps) {
-  const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0;
   const remaining = Math.max(target - current, 0);
   const isOver = current > target;
 
@@ -144,10 +149,10 @@ function CalorieRing({ current, target }: CalorieRingProps) {
             size={140}
             strokeWidth={12}
             color={COLORS.calories.primary}
+            trackColor={COLORS.calories.track}
             gradientId="calorieGradient"
           />
           <View style={styles.calorieCenter}>
-            <Text style={styles.calorieIcon}>{COLORS.calories.icon}</Text>
             <Text style={styles.calorieValue}>{Math.round(current)}</Text>
             <Text style={styles.calorieUnit}>kcal</Text>
           </View>
@@ -170,10 +175,6 @@ function CalorieRing({ current, target }: CalorieRingProps) {
                 {Math.round(remaining)} remaining
               </Text>
             )}
-          </View>
-
-          <View style={styles.percentageBadge}>
-            <Text style={styles.percentageText}>{Math.round(percentage)}%</Text>
           </View>
         </View>
       </View>
@@ -218,10 +219,6 @@ function MacroCard({ label, current, target, color, delay }: MacroCardProps) {
         animatedStyle,
       ]}
     >
-      <View style={styles.macroHeader}>
-        <Text style={styles.macroIcon}>{color.icon}</Text>
-      </View>
-
       <View style={styles.macroRingContainer}>
         <CircularProgress
           current={current}
@@ -229,6 +226,7 @@ function MacroCard({ label, current, target, color, delay }: MacroCardProps) {
           size={70}
           strokeWidth={6}
           color={color.primary}
+          trackColor={color.track}
           gradientId={`${label}Gradient`}
           animationDelay={delay}
         />
@@ -244,14 +242,21 @@ function MacroCard({ label, current, target, color, delay }: MacroCardProps) {
       <View style={styles.macroTargetContainer}>
         <Text style={styles.macroTargetText}>
           {isOver ? (
-            <Text style={styles.macroOverText}>+{Math.round(current - target)}g</Text>
+            <Text style={styles.macroOverText}>
+              +{Math.round(current - target)}g
+            </Text>
           ) : (
             `${Math.round(remaining)}g left`
           )}
         </Text>
       </View>
 
-      <View style={[styles.macroProgressBg, { backgroundColor: `${color.primary}20` }]}>
+      <View
+        style={[
+          styles.macroProgressBg,
+          { backgroundColor: `${color.primary}20` },
+        ]}
+      >
         <Animated.View
           style={[
             styles.macroProgressFill,
@@ -328,127 +333,106 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   calorieContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   calorieRingContainer: {
-    position: 'relative',
+    position: "relative",
     width: 140,
     height: 140,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   calorieCenter: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  calorieIcon: {
-    fontSize: 20,
-    marginBottom: 2,
+    position: "absolute",
+    justifyContent: "center",
+    alignItems: "center",
   },
   calorieValue: {
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.calories.primary,
     letterSpacing: -1,
   },
   calorieUnit: {
     fontSize: 12,
-    color: '#999',
-    fontWeight: '500',
+    color: "#999",
+    fontWeight: "500",
     marginTop: -2,
   },
   calorieInfo: {
     flex: 1,
     marginLeft: 16,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   calorieTargetRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
     marginBottom: 8,
   },
   calorieTargetLabel: {
     fontSize: 14,
-    color: '#888',
+    color: "#888",
     marginHorizontal: 4,
   },
   calorieTargetValue: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#333',
+    fontWeight: "700",
+    color: "#333",
   },
   calorieRemainingContainer: {
     marginBottom: 12,
   },
   calorieRemainingText: {
     fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
+    color: "#666",
+    fontWeight: "500",
   },
   calorieOverText: {
     fontSize: 14,
-    color: '#EF5350',
-    fontWeight: '600',
-  },
-  percentageBadge: {
-    backgroundColor: COLORS.calories.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  percentageText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
+    color: "#EF5350",
+    fontWeight: "600",
   },
 
   // Macro Card Styles
   macrosRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 10,
   },
   macroCard: {
     flex: 1,
     borderRadius: 16,
     padding: 12,
-    alignItems: 'center',
-  },
-  macroHeader: {
-    marginBottom: 8,
-  },
-  macroIcon: {
-    fontSize: 18,
+    alignItems: "center",
   },
   macroRingContainer: {
-    position: 'relative',
+    position: "relative",
     width: 70,
     height: 70,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
   },
   macroCenter: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: "absolute",
+    justifyContent: "center",
+    alignItems: "center",
   },
   macroValue: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   macroUnit: {
     fontSize: 10,
-    color: '#888',
+    color: "#888",
   },
   macroLabel: {
     fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
+    color: "#666",
+    fontWeight: "500",
     marginBottom: 4,
   },
   macroTargetContainer: {
@@ -456,20 +440,20 @@ const styles = StyleSheet.create({
   },
   macroTargetText: {
     fontSize: 11,
-    color: '#888',
+    color: "#888",
   },
   macroOverText: {
-    color: '#EF5350',
-    fontWeight: '600',
+    color: "#EF5350",
+    fontWeight: "600",
   },
   macroProgressBg: {
-    width: '100%',
+    width: "100%",
     height: 4,
     borderRadius: 2,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   macroProgressFill: {
-    height: '100%',
+    height: "100%",
     borderRadius: 2,
   },
 });

@@ -165,24 +165,6 @@ export function GoalsPopup({
                     carbs: goals.targetCarbs,
                   }}
                 />
-
-                {/* Quick stats */}
-                <View style={styles.quickStats}>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>BMR</Text>
-                    <Text style={styles.statValue}>{goals.bmr}</Text>
-                  </View>
-                  <View style={styles.statDivider} />
-                  <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>TDEE</Text>
-                    <Text style={styles.statValue}>{goals.tdee}</Text>
-                  </View>
-                  <View style={styles.statDivider} />
-                  <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>Target</Text>
-                    <Text style={styles.statValue}>{goals.targetKcal}</Text>
-                  </View>
-                </View>
               </Animated.View>
             ) : (
               // Setup Prompt - No goals configured
@@ -304,35 +286,5 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 20,
     backgroundColor: '#f5f5f5',
-  },
-  quickStats: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  statItem: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: '#888',
-    marginBottom: 2,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  statDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: '#eee',
   },
 });

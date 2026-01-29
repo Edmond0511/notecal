@@ -1,5 +1,6 @@
 import { Calendar } from "@/components/Calendar";
 import { NotesEditor } from "@/components/NotesEditor";
+import { SettingsModal } from "@/components/SettingsModal";
 import { useAppStore } from "@/store/app-store";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
@@ -26,6 +27,7 @@ export default function HomeScreen() {
   // Filter entries for current date in render (ensures fresh data)
   const entries = allEntries.filter((entry) => entry.date === currentDate);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [currentDocumentText, setCurrentDocumentText] = useState("");
 
   // Load document text for current date
@@ -145,6 +147,8 @@ export default function HomeScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.header}>
+        <View style={styles.headerPlaceholder} />
+
         <View style={styles.dateNavigationContainer}>
           <TouchableOpacity
             style={styles.navButtonCompact}
@@ -170,6 +174,14 @@ export default function HomeScreen() {
             <Ionicons name="chevron-forward" size={20} color="#333" />
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => setShowSettings(true)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="settings-outline" size={22} color="#333" />
+        </TouchableOpacity>
       </View>
 
       <NotesEditor
@@ -214,6 +226,12 @@ export default function HomeScreen() {
         selectedDate={currentDate}
         onSelectDate={handleCalendarSelect}
       />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        visible={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -229,9 +247,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "transparent",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 60,
+  },
+  headerPlaceholder: {
+    width: 36,
+  },
+  settingsButton: {
+    padding: 7,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 60,
   },
   dateNavigationContainer: {
     flexDirection: "row",

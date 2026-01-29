@@ -10,7 +10,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import {
   Gesture,
@@ -230,6 +230,9 @@ function ConfidencePopup({
           </Text>
         </View>
 
+        {/* AI Explanation Label */}
+        <Text style={styles.popupSectionLabel}>AI Explanation</Text>
+
         {/* Explanation Paragraph */}
         <ParsedText text={displayText} style={styles.popupExplanation} />
       </View>
@@ -373,7 +376,7 @@ export function NutritionReasoningPopup({
               style={styles.content}
               contentContainerStyle={[
                 styles.contentContainer,
-                { paddingBottom: insets.bottom + 600 },
+                { paddingBottom: insets.bottom + 20 },
               ]}
               showsVerticalScrollIndicator={false}
               onScrollBeginDrag={handleScrollBeginDrag}
@@ -527,9 +530,10 @@ export function NutritionReasoningPopup({
                             size={16}
                             color="#666"
                           />
-                          <Text style={styles.sourceText}>
-                            {item.reasoning.dataSource}
-                          </Text>
+                          <ParsedText
+                            text={item.reasoning.dataSource}
+                            style={styles.sourceText}
+                          />
                         </View>
                       )}
 
@@ -862,6 +866,16 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
     flex: 1,
   },
+  popupSectionLabel: {
+    fontSize: 12,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#000000",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    marginTop: 4,
+  },
   popupExplanation: {
     fontSize: 15,
     fontFamily: "System",
@@ -873,7 +887,6 @@ const styles = StyleSheet.create({
   linkText: {
     color: "#1976D2",
     fontWeight: "600",
-    textDecorationLine: "underline",
   },
   popupHint: {
     fontSize: 12,

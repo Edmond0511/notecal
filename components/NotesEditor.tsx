@@ -34,6 +34,7 @@ export function NotesEditor({
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
   const [scrollOffset, setScrollOffset] = useState(0);
+  const [linePositions, setLinePositions] = useState<number[]>([]);
 
   // Handle TextInput scroll to sync indicator positions
   const handleScroll = useCallback((event: any) => {
@@ -41,9 +42,94 @@ export function NotesEditor({
     setScrollOffset(offsetY);
   }, []);
 
+  // Handle text layout to get actual line positions (accounts for wrapped lines)
+  const handleTextLayout = useCallback((event: any) => {
+    const { lines } = event.nativeEvent;
+
+    if (!lines || lines.length === 0) {
+      return;
+    }
+
+    const logicalLines = documentText.split("\n");
+
+    // Calculate the starting character index of each logical line in the full text
+    const logicalLineStarts: number[] = [0];
+    for (let i = 0; i < logicalLines.length - 1; i++) {
+      logicalLineStarts.push(logicalLineStarts[i] + logicalLines[i].length + 1);
+    }
+
+    // SIMPLER APPROACH: For lines starting with "-", find the visual line that contains that dash
+    // This avoids complex character counting and handles empty lines naturally
+    const positions: number[] = new Array(logicalLines.length).fill(-1);
+
+    // First pass: build a list of visual lines with their text and y positions
+    const visualLineData: { text: string; y: number }[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const visualLine = lines[i];
+      visualLineData.push({
+        text: visualLine.text || '',
+        y: visualLine.y ?? 0,
+      });
+    }
+
+    // Second pass: for each logical line, find its y position
+    // Strategy: match the logical line's trimmed start with visual line content
+    let searchFromVisualIndex = 0;
+
+    for (let logicalIndex = 0; logicalIndex < logicalLines.length; logicalIndex++) {
+      const logicalLine = logicalLines[logicalIndex];
+      const trimmedLogical = logicalLine.trim();
+
+      // Handle empty lines: estimate position based on surrounding lines
+      if (trimmedLogical === '') {
+        let nextNonEmptyY = -1;
+        for (let v = searchFromVisualIndex; v < visualLineData.length; v++) {
+          if (visualLineData[v].text.trim() !== '') {
+            nextNonEmptyY = visualLineData[v].y;
+            break;
+          }
+        }
+        if (nextNonEmptyY !== -1) {
+          positions[logicalIndex] = nextNonEmptyY - LINE_HEIGHT;
+        } else if (logicalIndex > 0 && positions[logicalIndex - 1] !== -1) {
+          positions[logicalIndex] = positions[logicalIndex - 1] + LINE_HEIGHT;
+        } else {
+          positions[logicalIndex] = logicalIndex * LINE_HEIGHT;
+        }
+        continue;
+      }
+
+      // Non-empty line: find the visual line that starts with the same content
+      const searchPrefix = trimmedLogical.substring(0, Math.min(20, trimmedLogical.length));
+      let foundY = -1;
+
+      for (let v = searchFromVisualIndex; v < visualLineData.length; v++) {
+        const visualText = visualLineData[v].text;
+        const trimmedVisual = visualText.trim();
+
+        if (trimmedVisual.startsWith(searchPrefix) || visualText.includes(searchPrefix.substring(0, 10))) {
+          foundY = visualLineData[v].y;
+          searchFromVisualIndex = v + 1;
+          break;
+        }
+      }
+
+      // Fallback: estimate based on line height
+      if (foundY === -1) {
+        foundY = logicalIndex * LINE_HEIGHT;
+      }
+
+      positions[logicalIndex] = foundY;
+    }
+
+    setLinePositions(positions);
+  }, [documentText]);
+
   // Update document text when initialDocumentText changes (date navigation)
   useEffect(() => {
     setDocumentText(initialDocumentText);
+    // Clear positions when navigating to a new date so we don't use stale data
+    setLinePositions([]);
   }, [initialDocumentText]);
 
   // Cleanup debounce timeout on unmount
@@ -154,11 +240,15 @@ export function NotesEditor({
   }, []);
 
   // Calculate Y position for a logical line index
-  // Simple approach: use line index * LINE_HEIGHT
-  // This is reliable and doesn't depend on onTextLayout which has issues with empty lines
+  // Uses actual measured positions if available (accounts for wrapped lines)
+  // Falls back to calculated position if measurements not available yet
   const getLineYPosition = useCallback((lineIndex: number): number => {
+    if (linePositions.length > lineIndex && linePositions[lineIndex] !== undefined) {
+      return linePositions[lineIndex];
+    }
+    // Fallback to calculated position
     return lineIndex * LINE_HEIGHT;
-  }, []);
+  }, [linePositions]);
 
   // Render indicator for a matched entry
   const renderIndicator = (entry: Entry | undefined) => {
@@ -224,6 +314,15 @@ export function NotesEditor({
 
   return (
     <View style={styles.container}>
+      {/* Hidden Text component for reliable layout measurement */}
+      {/* TextInput.onTextLayout is unreliable for wrapped text */}
+      <Text
+        style={styles.hiddenMeasureText}
+        onTextLayout={handleTextLayout}
+      >
+        {documentText || ' '}
+      </Text>
+
       {/* Document editor - full screen */}
       <TextInput
         ref={textInputRef}
@@ -279,6 +378,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     overflow: "hidden",
+  },
+  hiddenMeasureText: {
+    // Same styling as documentInput for accurate measurement
+    position: "absolute",
+    fontSize: 16,
+    lineHeight: LINE_HEIGHT,
+    paddingLeft: 20,
+    paddingRight: 90,
+    paddingTop: 12,
+    color: "transparent",
+    fontFamily: "System",
+    includeFontPadding: false,
+    // Position to match TextInput but invisible
+    left: 0,
+    right: 0,
+    top: 0,
+    opacity: 0,
+    pointerEvents: "none",
   },
   documentInput: {
     flex: 1,

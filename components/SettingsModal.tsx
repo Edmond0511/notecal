@@ -1,7 +1,9 @@
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   Modal,
   StatusBar,
@@ -17,6 +19,7 @@ import {
 } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
+  FadeInDown,
   interpolate,
   runOnJS,
   useAnimatedStyle,
@@ -24,6 +27,7 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AuthModal } from "./AuthModal";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
@@ -33,10 +37,19 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
+interface UserInfo {
+  email: string;
+  provider: string;
+}
+
 export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [user, setUser] = useState<UserInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -48,21 +61,18 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       // Only allow drag when scrolled to top
     })
     .onUpdate((event) => {
-      // Only drag down when at top of scroll, or always allow if pulling down
       if (isScrolledToTop.value && event.translationY > 0) {
         translateY.value = event.translationY;
       }
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        // Dismiss the modal
         translateY.value = withSpring(SCREEN_HEIGHT, {
           damping: 20,
           stiffness: 200,
         });
         runOnJS(handleClose)();
       } else {
-        // Snap back
         translateY.value = withSpring(0, {
           damping: 20,
           stiffness: 400,
@@ -70,23 +80,18 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       }
     });
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: translateY.value }],
-    };
-  });
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
-  const backdropStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
       translateY.value,
       [0, SCREEN_HEIGHT * 0.5],
       [1, 0],
-      Extrapolation.CLAMP,
-    );
-    return {
-      opacity,
-    };
-  });
+      Extrapolation.CLAMP
+    ),
+  }));
 
   const handleScrollBeginDrag = (event: any) => {
     isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
@@ -96,71 +101,251 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
     isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
   };
 
-  // Reset translation when modal opens/closes
-  React.useEffect(() => {
+  // Fetch user on mount and when visible changes
+  useEffect(() => {
     if (visible) {
       translateY.value = 0;
       isScrolledToTop.value = true;
+      fetchUser();
     }
   }, [visible]);
 
+  const fetchUser = async () => {
+    setIsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const provider = user.app_metadata?.provider || "email";
+        setUser({
+          email: user.email || "",
+          provider: provider.charAt(0).toUpperCase() + provider.slice(1),
+        });
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
+
+  const handleAuthSuccess = () => {
+    fetchUser();
+  };
+
   return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent
-      onRequestClose={onClose}
-    >
-      <GestureHandlerRootView style={styles.gestureRoot}>
-        <StatusBar barStyle="dark-content" />
-        {/* Backdrop */}
-        <Animated.View style={[styles.backdrop, backdropStyle]}>
-          <TouchableOpacity
-            style={styles.backdropPressable}
-            onPress={handleClose}
-            activeOpacity={1}
-          />
-        </Animated.View>
-        <GestureDetector gesture={panGesture}>
-          <Animated.View
-            style={[
-              styles.container,
-              { marginTop: insets.top + 40 },
-              animatedStyle,
-            ]}
-          >
-            {/* Drag Indicator */}
-            <View style={styles.dragIndicatorContainer}>
-              <View style={styles.dragIndicator} />
-            </View>
-
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.title}>Settings</Text>
-            </View>
-
-            <Animated.ScrollView
-              style={styles.content}
-              contentContainerStyle={[
-                styles.contentContainer,
-                { paddingBottom: insets.bottom + 20 },
-              ]}
-              showsVerticalScrollIndicator={false}
-              onScrollBeginDrag={handleScrollBeginDrag}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
-              bounces={true}
-            >
-              {/* Settings content will go here */}
-              <View style={styles.placeholder}>
-                <Ionicons name="construct-outline" size={48} color="#ccc" />
-                <Text style={styles.placeholderText}>Settings coming soon</Text>
-              </View>
-            </Animated.ScrollView>
+    <>
+      <Modal
+        visible={visible}
+        animationType="fade"
+        transparent
+        onRequestClose={onClose}
+      >
+        <GestureHandlerRootView style={styles.gestureRoot}>
+          <StatusBar barStyle="dark-content" />
+          {/* Backdrop */}
+          <Animated.View style={[styles.backdrop, backdropStyle]}>
+            <TouchableOpacity
+              style={styles.backdropPressable}
+              onPress={handleClose}
+              activeOpacity={1}
+            />
           </Animated.View>
-        </GestureDetector>
-      </GestureHandlerRootView>
-    </Modal>
+          <GestureDetector gesture={panGesture}>
+            <Animated.View
+              style={[styles.container, { marginTop: insets.top }, animatedStyle]}
+            >
+              {/* Drag Indicator */}
+              <View style={styles.dragIndicatorContainer}>
+                <View style={styles.dragIndicator} />
+              </View>
+
+              {/* Header */}
+              <View style={styles.header}>
+                <Text style={styles.title}>Settings</Text>
+              </View>
+
+              <Animated.ScrollView
+                style={styles.content}
+                contentContainerStyle={[
+                  styles.contentContainer,
+                  { paddingBottom: insets.bottom + 20 },
+                ]}
+                showsVerticalScrollIndicator={false}
+                onScrollBeginDrag={handleScrollBeginDrag}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+                bounces={true}
+              >
+                {/* Account Section */}
+                <Animated.View
+                  entering={FadeInDown.delay(100).duration(400)}
+                  style={styles.section}
+                >
+                  <Text style={styles.sectionTitle}>Account</Text>
+
+                  {isLoading ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="small" color="#666" />
+                    </View>
+                  ) : user ? (
+                    /* Signed In State */
+                    <View style={styles.accountCard}>
+                      <View style={styles.accountInfo}>
+                        <View style={styles.avatarContainer}>
+                          <Text style={styles.avatarText}>
+                            {user.email.charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                        <View style={styles.accountDetails}>
+                          <Text style={styles.accountEmail} numberOfLines={1}>
+                            {user.email}
+                          </Text>
+                          <Text style={styles.accountProvider}>
+                            Signed in with {user.provider}
+                          </Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.signOutButton}
+                        onPress={handleSignOut}
+                        disabled={isSigningOut}
+                        activeOpacity={0.7}
+                      >
+                        {isSigningOut ? (
+                          <ActivityIndicator size="small" color="#DC2626" />
+                        ) : (
+                          <Text style={styles.signOutText}>Sign Out</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    /* Signed Out State */
+                    <TouchableOpacity
+                      style={styles.signInCard}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setShowAuthModal(true);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.signInIconContainer}>
+                        <Ionicons name="person-outline" size={24} color="#22C55E" />
+                      </View>
+                      <View style={styles.signInContent}>
+                        <Text style={styles.signInTitle}>Sign In</Text>
+                        <Text style={styles.signInSubtitle}>
+                          Sync your data across devices
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                    </TouchableOpacity>
+                  )}
+                </Animated.View>
+
+                {/* App Section */}
+                <Animated.View
+                  entering={FadeInDown.delay(200).duration(400)}
+                  style={styles.section}
+                >
+                  <Text style={styles.sectionTitle}>App</Text>
+
+                  <View style={styles.menuCard}>
+                    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+                      <View style={styles.menuIconContainer}>
+                        <Ionicons name="notifications-outline" size={20} color="#666" />
+                      </View>
+                      <Text style={styles.menuItemText}>Notifications</Text>
+                      <Ionicons name="chevron-forward" size={18} color="#ccc" />
+                    </TouchableOpacity>
+
+                    <View style={styles.menuDivider} />
+
+                    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+                      <View style={styles.menuIconContainer}>
+                        <Ionicons name="nutrition-outline" size={20} color="#666" />
+                      </View>
+                      <Text style={styles.menuItemText}>Nutrition Goals</Text>
+                      <Ionicons name="chevron-forward" size={18} color="#ccc" />
+                    </TouchableOpacity>
+
+                    <View style={styles.menuDivider} />
+
+                    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+                      <View style={styles.menuIconContainer}>
+                        <Ionicons name="scale-outline" size={20} color="#666" />
+                      </View>
+                      <Text style={styles.menuItemText}>Units</Text>
+                      <Text style={styles.menuItemValue}>Metric</Text>
+                    </TouchableOpacity>
+                  </View>
+                </Animated.View>
+
+                {/* About Section */}
+                <Animated.View
+                  entering={FadeInDown.delay(300).duration(400)}
+                  style={styles.section}
+                >
+                  <Text style={styles.sectionTitle}>About</Text>
+
+                  <View style={styles.menuCard}>
+                    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+                      <View style={styles.menuIconContainer}>
+                        <Ionicons name="help-circle-outline" size={20} color="#666" />
+                      </View>
+                      <Text style={styles.menuItemText}>Help & Support</Text>
+                      <Ionicons name="chevron-forward" size={18} color="#ccc" />
+                    </TouchableOpacity>
+
+                    <View style={styles.menuDivider} />
+
+                    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+                      <View style={styles.menuIconContainer}>
+                        <Ionicons name="document-text-outline" size={20} color="#666" />
+                      </View>
+                      <Text style={styles.menuItemText}>Privacy Policy</Text>
+                      <Ionicons name="chevron-forward" size={18} color="#ccc" />
+                    </TouchableOpacity>
+
+                    <View style={styles.menuDivider} />
+
+                    <View style={styles.menuItem}>
+                      <View style={styles.menuIconContainer}>
+                        <Ionicons name="information-circle-outline" size={20} color="#666" />
+                      </View>
+                      <Text style={styles.menuItemText}>Version</Text>
+                      <Text style={styles.menuItemValue}>1.0.0</Text>
+                    </View>
+                  </View>
+                </Animated.View>
+              </Animated.ScrollView>
+            </Animated.View>
+          </GestureDetector>
+        </GestureHandlerRootView>
+      </Modal>
+
+      {/* Auth Modal */}
+      <AuthModal
+        visible={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={handleAuthSuccess}
+      />
+    </>
   );
 }
 
@@ -178,7 +363,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f8f8f8",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     shadowColor: "#888",
@@ -191,6 +376,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 12,
     paddingBottom: 8,
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   dragIndicator: {
     width: 36,
@@ -203,6 +391,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: "#ffffff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
   },
   title: {
     fontSize: 18,
@@ -216,17 +406,149 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: 20,
+    padding: 16,
   },
-  placeholder: {
-    flex: 1,
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#999",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  loadingContainer: {
+    padding: 24,
+    alignItems: "center",
+  },
+  accountCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  accountInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  avatarContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#22C55E",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
+    marginRight: 12,
   },
-  placeholderText: {
+  avatarText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  accountDetails: {
+    flex: 1,
+  },
+  accountEmail: {
     fontSize: 16,
+    fontWeight: "600",
+    color: "#1a1a1a",
+    marginBottom: 2,
+  },
+  accountProvider: {
+    fontSize: 13,
+    color: "#666",
+  },
+  signOutButton: {
+    alignItems: "center",
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+  },
+  signOutText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#DC2626",
+  },
+  signInCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  signInIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#F0FDF4",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  signInContent: {
+    flex: 1,
+  },
+  signInTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1a1a1a",
+    marginBottom: 2,
+  },
+  signInSubtitle: {
+    fontSize: 13,
+    color: "#666",
+  },
+  menuCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+  },
+  menuIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#f5f5f5",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  menuItemText: {
+    flex: 1,
+    fontSize: 16,
+    color: "#1a1a1a",
+    fontWeight: "500",
+  },
+  menuItemValue: {
+    fontSize: 15,
     color: "#999",
-    marginTop: 12,
+    fontWeight: "500",
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: "#f0f0f0",
+    marginLeft: 60,
   },
 });

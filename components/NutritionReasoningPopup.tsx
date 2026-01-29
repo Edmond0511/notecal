@@ -180,6 +180,15 @@ function ConfidencePopup({
 }) {
   const colors = getConfidenceColors(confidence);
   const confidencePercent = Math.round(confidence * 100);
+  const overlayOpacity = useSharedValue(0);
+
+  React.useEffect(() => {
+    overlayOpacity.value = withSpring(1, { damping: 20, stiffness: 300 });
+  }, []);
+
+  const overlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacity.value,
+  }));
 
   const getConfidenceLevel = () => {
     if (confidence >= 0.8) return "High";
@@ -204,11 +213,12 @@ function ConfidencePopup({
     getDefaultExplanation();
 
   return (
-    <TouchableOpacity
-      style={styles.confidencePopupOverlay}
-      activeOpacity={1}
-      onPress={onClose}
-    >
+    <Animated.View style={[styles.confidencePopupOverlay, overlayAnimatedStyle]}>
+      <TouchableOpacity
+        style={styles.confidencePopupBackdrop}
+        activeOpacity={1}
+        onPress={onClose}
+      />
       <View style={styles.confidencePopup}>
         {/* Header */}
         <View style={styles.popupHeader}>
@@ -236,7 +246,7 @@ function ConfidencePopup({
         {/* Explanation Paragraph */}
         <ParsedText text={displayText} style={styles.popupExplanation} />
       </View>
-    </TouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -354,11 +364,7 @@ export function NutritionReasoningPopup({
         </Animated.View>
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[
-              styles.container,
-              { marginTop: insets.top + 40 },
-              animatedStyle,
-            ]}
+            style={[styles.container, { marginTop: insets.top }, animatedStyle]}
           >
             {/* Drag Indicator */}
             <View style={styles.dragIndicatorContainer}>
@@ -809,6 +815,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 20,
     elevation: 20,
+  },
+  confidencePopupBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
   confidencePopup: {
     backgroundColor: "#ffffff",

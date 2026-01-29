@@ -18,6 +18,7 @@ import {
 } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
+  FadeInDown,
   interpolate,
   runOnJS,
   useAnimatedStyle,
@@ -388,13 +389,19 @@ export function NutritionReasoningPopup({
               bounces={true}
             >
               {/* Original Input */}
-              <Text style={styles.inputText}>
-                {entry.rawText.replace(/^-\s*/, "")}
-              </Text>
+              <Animated.View entering={FadeInDown.delay(100).duration(400)}>
+                <Text style={styles.inputText}>
+                  {entry.rawText.replace(/^-\s*/, "")}
+                </Text>
+              </Animated.View>
 
               {/* Items */}
               {entry.items.map((item, index) => (
-                <View key={item.id || index} style={styles.itemCard}>
+                <Animated.View
+                  key={item.id || index}
+                  entering={FadeInDown.delay(150 + index * 100).duration(400)}
+                  style={styles.itemCard}
+                >
                   {/* Item Header */}
                   <View style={styles.itemHeader}>
                     <Text style={styles.itemLabel}>{item.label}</Text>
@@ -550,14 +557,17 @@ export function NutritionReasoningPopup({
                       )}
                     </View>
                   )}
-                </View>
+                </Animated.View>
               ))}
 
               {/* Totals */}
-              <View style={styles.totalsSection}>
+              <Animated.View
+                entering={FadeInDown.delay(150 + entry.items.length * 100).duration(400)}
+                style={styles.totalsSection}
+              >
                 <Text style={styles.totalsLabel}>Total</Text>
                 <Text style={styles.totalsValue}>{entry.inlineKcal} cal</Text>
-              </View>
+              </Animated.View>
             </Animated.ScrollView>
 
             {/* Render popup outside ScrollView for proper z-index layering */}
@@ -612,19 +622,17 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f8f8f8",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    shadowColor: "#888",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 8,
   },
   dragIndicatorContainer: {
     alignItems: "center",
     paddingTop: 12,
     paddingBottom: 8,
+    backgroundColor: "#f8f8f8",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   dragIndicator: {
     width: 36,
@@ -636,7 +644,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f8f8f8",
   },
   title: {
     fontSize: 18,
@@ -650,7 +658,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: 20,
+    padding: 16,
   },
   inputText: {
     fontSize: 24,
@@ -666,13 +674,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#cfcfcf14",
-    shadowColor: "#b4b4b4",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 0,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   itemHeader: {
     flexDirection: "row",
@@ -779,14 +785,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
     backgroundColor: "#ffffff",
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#cfcfcf14",
-    shadowColor: "#b4b4b4",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 0,
-    zIndex: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   totalsLabel: {
     fontSize: 18,
@@ -825,13 +828,11 @@ const styles = StyleSheet.create({
     padding: 20,
     minWidth: 320,
     maxWidth: 400,
-    shadowColor: "#b4b4b4",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 0,
-    borderWidth: 1,
-    borderColor: "#cfcfcf14",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   popupHeader: {
     flexDirection: "row",

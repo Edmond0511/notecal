@@ -1,5 +1,6 @@
 import { Entry } from "@/types";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   StyleSheet,
@@ -72,6 +73,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 12,
+    
   },
   caloriesText: {
     fontSize: 12,

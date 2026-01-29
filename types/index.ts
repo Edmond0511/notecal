@@ -47,6 +47,53 @@ export interface DailyTotals {
   kcal: number;
   protein: number;
   fat: number;
+  carbs: number;
+}
+
+// Goals Feature Types
+export type Sex = 'male' | 'female';
+
+export type ActivityLevel =
+  | 'sedentary'      // Desk job, no exercise (1.2)
+  | 'light'          // 1-3 days/week (1.375)
+  | 'moderate'       // 3-5 days/week (1.55)
+  | 'active'         // 6-7 days/week (1.725)
+  | 'extra_active';  // Physical job + exercise (1.9)
+
+export type GoalType =
+  | 'lose_fast'  // -1000 kcal/day
+  | 'lose'       // -500 kcal/day
+  | 'maintain'   // 0
+  | 'gain'       // +250 kcal/day
+  | 'gain_fast'; // +500 kcal/day
+
+export type ProteinPreference = 'low' | 'standard' | 'high';
+export type CarbPreference = 'low' | 'standard' | 'high';
+export type UnitSystem = 'metric' | 'imperial';
+
+export interface UserGoalsInput {
+  sex: Sex;
+  age: number;
+  heightCm: number;
+  weightKg: number;
+  bodyFatPercentage?: number | null;
+  activityLevel: ActivityLevel;
+  goalType: GoalType;
+  proteinPreference?: ProteinPreference;
+  carbPreference?: CarbPreference;
+}
+
+export interface UserGoals extends UserGoalsInput {
+  // Calculated targets
+  bmr: number;
+  tdee: number;
+  targetKcal: number;
+  targetProtein: number;
+  targetFat: number;
+  targetCarbs: number;
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface NutritionResolveRequest {
@@ -76,6 +123,9 @@ export interface AppState {
   documents: Document[];
   currentDate: string;
   isLoading: boolean;
+  // Goals state
+  goals: UserGoals | null;
+  preferredUnits: UnitSystem;
   // Actions
   addEntry: (rawText: string) => Promise<void>;
   updateEntry: (id: string, rawText: string) => Promise<void>;
@@ -88,4 +138,8 @@ export interface AppState {
   getDocument: (date: string) => Document | undefined;
   getAllDocuments: () => Document[];
   deleteDocument: (date: string) => void;
+  // Goals actions
+  setGoals: (goals: UserGoals) => void;
+  clearGoals: () => void;
+  setPreferredUnits: (units: UnitSystem) => void;
 }

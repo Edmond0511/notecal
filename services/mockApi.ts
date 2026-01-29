@@ -22,7 +22,7 @@ const mockFoodDatabase: Record<string, Partial<FoodItem>> = {
     label: 'White Rice',
     source: 'FDC',
     sourceId: '175236',
-    macros: { kcal: 130, protein: 2.7, fat: 0.3 },
+    macros: { kcal: 130, protein: 2.7, fat: 0.3, carbs: 28 },
     confidence: 0.85,
     citations: [{ provider: 'USDA FDC', url: 'https://fdc.nal.usda.gov/fdc-app.html#/food-details/175236/nutrients' }]
   },
@@ -30,7 +30,7 @@ const mockFoodDatabase: Record<string, Partial<FoodItem>> = {
     label: 'Egg',
     source: 'FDC',
     sourceId: '175236',
-    macros: { kcal: 155, protein: 13, fat: 11 },
+    macros: { kcal: 155, protein: 13, fat: 11, carbs: 1.1 },
     confidence: 0.9,
     citations: [{ provider: 'USDA FDC', url: 'https://fdc.nal.usda.gov/fdc-app.html#/food-details/175236/nutrients' }]
   },
@@ -38,7 +38,7 @@ const mockFoodDatabase: Record<string, Partial<FoodItem>> = {
     label: 'Banana',
     source: 'FDC',
     sourceId: '175236',
-    macros: { kcal: 89, protein: 1.1, fat: 0.3 },
+    macros: { kcal: 89, protein: 1.1, fat: 0.3, carbs: 23 },
     confidence: 0.95,
     citations: [{ provider: 'USDA FDC', url: 'https://fdc.nal.usda.gov/fdc-app.html#/food-details/175236/nutrients' }]
   },
@@ -46,7 +46,7 @@ const mockFoodDatabase: Record<string, Partial<FoodItem>> = {
     label: 'Apple',
     source: 'FDC',
     sourceId: '175236',
-    macros: { kcal: 52, protein: 0.3, fat: 0.2 },
+    macros: { kcal: 52, protein: 0.3, fat: 0.2, carbs: 14 },
     confidence: 0.9,
     citations: [{ provider: 'USDA FDC', url: 'https://fdc.nal.usda.gov/fdc-app.html#/food-details/175236/nutrients' }]
   }
@@ -127,7 +127,7 @@ function mockResolveNutrition(items: Array<{label: string, qty: number, unit: st
         label: item.label,
         source: 'FDC',
         sourceId: 'unknown',
-        macros: { kcal: 100, protein: 10, fat: 5 },
+        macros: { kcal: 100, protein: 10, fat: 5, carbs: 15 },
         confidence: 0.3,
         citations: [{ provider: 'Mock Data', url: '#' }]
       };
@@ -144,7 +144,8 @@ function mockResolveNutrition(items: Array<{label: string, qty: number, unit: st
       macros: {
         kcal: Math.round((mockData.macros?.kcal || 100) * item.qty / 100),
         protein: Math.round((mockData.macros?.protein || 10) * item.qty / 100 * 10) / 10,
-        fat: Math.round((mockData.macros?.fat || 5) * item.qty / 100 * 10) / 10
+        fat: Math.round((mockData.macros?.fat || 5) * item.qty / 100 * 10) / 10,
+        carbs: Math.round((mockData.macros?.carbs || 15) * item.qty / 100 * 10) / 10
       },
       confidence: mockData.confidence || 0.3,
       citations: mockData.citations || [{ provider: 'Mock Data', url: '#' }]
@@ -169,9 +170,10 @@ export async function mockResolveLine(textLine: string, locale: string = 'en-US'
       (acc, item) => ({
         kcal: acc.kcal + item.macros.kcal,
         protein: acc.protein + item.macros.protein,
-        fat: acc.fat + item.macros.fat
+        fat: acc.fat + item.macros.fat,
+        carbs: acc.carbs + item.macros.carbs
       }),
-      { kcal: 0, protein: 0, fat: 0 }
+      { kcal: 0, protein: 0, fat: 0, carbs: 0 }
     );
 
     return {
@@ -181,7 +183,7 @@ export async function mockResolveLine(textLine: string, locale: string = 'en-US'
   } catch (error) {
     return {
       resolved: [],
-      totals: { kcal: 0, protein: 0, fat: 0 },
+      totals: { kcal: 0, protein: 0, fat: 0, carbs: 0 },
       errors: ['Failed to resolve nutrition information']
     };
   }

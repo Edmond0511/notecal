@@ -1,4 +1,6 @@
 import { Calendar } from "@/components/Calendar";
+import { GoalsPopup } from "@/components/GoalsPopup";
+import { GoalsWizard } from "@/components/goals/GoalsWizard";
 import { NotesEditor } from "@/components/NotesEditor";
 import { SettingsModal } from "@/components/SettingsModal";
 import { useAppStore } from "@/store/app-store";
@@ -23,6 +25,7 @@ export default function HomeScreen() {
   const setCurrentDate = useAppStore((state) => state.setCurrentDate);
   const saveDocument = useAppStore((state) => state.saveDocument);
   const getDocument = useAppStore((state) => state.getDocument);
+  const goals = useAppStore((state) => state.goals);
 
   // Filter entries for current date - memoized to prevent unnecessary re-renders
   const entries = React.useMemo(
@@ -31,6 +34,8 @@ export default function HomeScreen() {
   );
   const [showCalendar, setShowCalendar] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showGoalsPopup, setShowGoalsPopup] = useState(false);
+  const [showGoalsWizard, setShowGoalsWizard] = useState(false);
   const [currentDocumentText, setCurrentDocumentText] = useState("");
 
   // Load document text for current date
@@ -197,8 +202,12 @@ export default function HomeScreen() {
         currentDate={currentDate}
       />
 
-      {/* Daily Totals Bar */}
-      <View style={styles.totalsBar}>
+      {/* Daily Totals Bar - Tap to open goals popup */}
+      <TouchableOpacity
+        style={styles.totalsBar}
+        onPress={() => setShowGoalsPopup(true)}
+        activeOpacity={0.8}
+      >
         <View style={styles.totalItem}>
           <Text style={styles.totalValue}>{Math.round(dailyTotals.kcal)}</Text>
           <Text style={styles.totalLabel}>cal</Text>
@@ -220,7 +229,7 @@ export default function HomeScreen() {
           <Text style={styles.totalValue}>{Math.round(dailyTotals.carbs)}</Text>
           <Text style={styles.totalLabel}>c</Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       {/* Custom Calendar */}
       <Calendar
@@ -234,6 +243,23 @@ export default function HomeScreen() {
       <SettingsModal
         visible={showSettings}
         onClose={() => setShowSettings(false)}
+      />
+
+      {/* Goals Popup */}
+      <GoalsPopup
+        visible={showGoalsPopup}
+        onClose={() => setShowGoalsPopup(false)}
+        onSetupPress={() => setShowGoalsWizard(true)}
+        onEditPress={() => setShowGoalsWizard(true)}
+        goals={goals}
+        consumed={dailyTotals}
+      />
+
+      {/* Goals Wizard */}
+      <GoalsWizard
+        visible={showGoalsWizard}
+        onClose={() => setShowGoalsWizard(false)}
+        existingGoals={goals}
       />
     </SafeAreaView>
   );

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document } from '@/types';
+import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem } from '@/types';
 import { resolveNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
 import { supabase } from '@/lib/supabase';
 
@@ -15,6 +15,8 @@ export const useAppStore = create<AppState>()(
       documents: [],
       currentDate: new Date().toISOString().split('T')[0].replace(/-/g, ''), // YYYYMMDD
       isLoading: false,
+      goals: null,
+      preferredUnits: 'metric' as UnitSystem,
 
   addEntry: async (rawText: string) => {
     // Only process lines that start with "- "
@@ -211,16 +213,18 @@ export const useAppStore = create<AppState>()(
         if (entry.status === 'ok' && entry.inlineKcal) {
           const protein = entry.items.reduce((sum, item) => sum + item.macros.protein, 0);
           const fat = entry.items.reduce((sum, item) => sum + item.macros.fat, 0);
+          const carbs = entry.items.reduce((sum, item) => sum + item.macros.carbs, 0);
 
           return {
             kcal: acc.kcal + entry.inlineKcal,
             protein: acc.protein + protein,
             fat: acc.fat + fat,
+            carbs: acc.carbs + carbs,
           };
         }
         return acc;
       },
-      { kcal: 0, protein: 0, fat: 0 }
+      { kcal: 0, protein: 0, fat: 0, carbs: 0 }
     );
 
     return {
@@ -269,6 +273,19 @@ export const useAppStore = create<AppState>()(
       documents: state.documents.filter(doc => doc.date !== date),
     }));
   },
+
+  // Goals management
+  setGoals: (goals: UserGoals) => {
+    set({ goals: { ...goals, updatedAt: new Date() } });
+  },
+
+  clearGoals: () => {
+    set({ goals: null });
+  },
+
+  setPreferredUnits: (units: UnitSystem) => {
+    set({ preferredUnits: units });
+  },
 }),
     {
       name: 'note-cal-storage', // unique name for the storage
@@ -278,6 +295,8 @@ export const useAppStore = create<AppState>()(
         entries: state.entries,
         documents: state.documents,
         currentDate: state.currentDate,
+        goals: state.goals,
+        preferredUnits: state.preferredUnits,
       }),
       // Handle version migrations if needed in the future
       version: 1,

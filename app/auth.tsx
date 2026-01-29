@@ -1,15 +1,15 @@
 import { supabase } from "@/lib/supabase";
+import { useFonts, IBMPlexSans_700Bold } from "@expo-google-fonts/ibm-plex-sans";
 import { Ionicons } from "@expo/vector-icons";
-import * as AppleAuthentication from "expo-apple-authentication";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Platform,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -19,8 +19,54 @@ import { SafeAreaView } from "react-native-safe-area-context";
 WebBrowser.maybeCompleteAuthSession();
 
 export default function AuthScreen() {
-  const [isLoading, setIsLoading] = useState<"google" | "apple" | null>(null);
+  const [fontsLoaded] = useFonts({
+    IBMPlexSans_700Bold,
+  });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState<"google" | "email" | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const handleEmailSignIn = async () => {
+    if (!email.trim() || !password.trim()) {
+      setError("Please enter email and password");
+      return;
+    }
+
+    try {
+      setIsLoading("email");
+      setError(null);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // Try sign in first
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (signInError) {
+        // If invalid credentials, try sign up
+        if (signInError.message.includes("Invalid login credentials")) {
+          const { error: signUpError } = await supabase.auth.signUp({
+            email: email.trim(),
+            password,
+          });
+
+          if (signUpError) throw signUpError;
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else {
+          throw signInError;
+        }
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to sign in");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsLoading(null);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     try {
@@ -46,55 +92,46 @@ export default function AuthScreen() {
 
         if (result.type === "success") {
           const url = result.url;
-          const params = new URLSearchParams(url.split("#")[1]);
-          const accessToken = params.get("access_token");
-          const refreshToken = params.get("refresh_token");
+          console.log("OAuth callback URL:", url);
 
-          if (accessToken && refreshToken) {
-            await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
+          // Extract code from URL (PKCE flow)
+          const urlObj = new URL(url);
+          const code = urlObj.searchParams.get("code");
+
+          if (code) {
+            console.log("Got auth code, exchanging for session...");
+            const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+
+            if (sessionError) {
+              console.error("Session error:", sessionError);
+              throw sessionError;
+            }
+
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          } else {
+            // Fallback: try hash fragment for tokens (legacy flow)
+            const hashParams = new URLSearchParams(url.split("#")[1] || "");
+            const accessToken = hashParams.get("access_token");
+            const refreshToken = hashParams.get("refresh_token");
+
+            if (accessToken && refreshToken) {
+              await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } else {
+              console.log("No code or tokens found in URL");
+              setError("Authentication failed - please try again");
+            }
           }
+        } else {
+          console.log("WebBrowser result:", result.type);
         }
       }
     } catch (err: any) {
       setError(err.message || "Failed to sign in with Google");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setIsLoading(null);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    try {
-      setIsLoading("apple");
-      setError(null);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
-
-      if (credential.identityToken) {
-        const { error } = await supabase.auth.signInWithIdToken({
-          provider: "apple",
-          token: credential.identityToken,
-        });
-
-        if (error) throw error;
-
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-    } catch (err: any) {
-      if (err.code !== "ERR_REQUEST_CANCELED") {
-        setError(err.message || "Failed to sign in with Apple");
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
     } finally {
       setIsLoading(null);
     }
@@ -110,8 +147,8 @@ export default function AuthScreen() {
           entering={FadeInDown.delay(100).duration(500)}
           style={styles.brandingContainer}
         >
-          <Text style={styles.appName}>NoteCal</Text>
-          <Text style={styles.tagline}>Create an account</Text>
+          <Text style={[styles.appName, fontsLoaded && { fontFamily: "IBMPlexSans_700Bold" }]}>NoteCal</Text>
+          <Text style={styles.tagline}>Log in or sign up</Text>
         </Animated.View>
 
         {/* Auth Buttons */}
@@ -119,6 +156,55 @@ export default function AuthScreen() {
           entering={FadeInDown.delay(200).duration(500)}
           style={styles.buttonsContainer}
         >
+          {/* Email Input */}
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor="#999"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={isLoading === null}
+          />
+
+          {/* Password Input */}
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor="#999"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={isLoading === null}
+          />
+
+          {/* Email Sign In Button */}
+          <TouchableOpacity
+            style={[styles.authButton, styles.emailButton]}
+            onPress={handleEmailSignIn}
+            disabled={isLoading !== null}
+            activeOpacity={0.8}
+          >
+            {isLoading === "email" ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Text style={[styles.authButtonText, styles.emailButtonText]}>
+                Continue
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
           {/* Google Sign In */}
           <TouchableOpacity
             style={styles.authButton}
@@ -130,35 +216,11 @@ export default function AuthScreen() {
               <ActivityIndicator size="small" color="#1a1a1a" />
             ) : (
               <>
-                {/* <View style={styles.googleIconContainer}>
-                  <Text style={styles.googleIcon}>G</Text>
-                </View> */}
                 <Ionicons name="logo-google" size={20} />
                 <Text style={styles.authButtonText}>Continue with Google</Text>
               </>
             )}
           </TouchableOpacity>
-
-          {/* Apple Sign In - iOS only */}
-          {Platform.OS === "ios" && (
-            <TouchableOpacity
-              style={[styles.authButton, styles.appleButton]}
-              onPress={handleAppleSignIn}
-              disabled={isLoading !== null}
-              activeOpacity={0.8}
-            >
-              {isLoading === "apple" ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <>
-                  <Ionicons name="logo-apple" size={20} color="#ffffff" />
-                  <Text style={[styles.authButtonText, styles.appleButtonText]}>
-                    Continue with Apple
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          )}
         </Animated.View>
 
         {/* Error Message */}
@@ -192,7 +254,6 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 32,
-    fontWeight: "700",
     color: "#1a1a1a",
     letterSpacing: -1,
     marginBottom: 4,
@@ -206,6 +267,16 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 20,
   },
+  input: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1.5,
+    borderColor: "#e5e5e5",
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    fontSize: 16,
+    color: "#1a1a1a",
+  },
   authButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -213,7 +284,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderWidth: 1.5,
     borderColor: "#e5e5e5",
-    borderRadius: 14,
+    borderRadius: 30,
     paddingVertical: 16,
     paddingHorizontal: 24,
     gap: 12,
@@ -223,30 +294,33 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  googleIconContainer: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  googleIcon: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#4285F4",
-  },
   authButtonText: {
     fontSize: 16,
     fontWeight: "600",
     color: "#1a1a1a",
   },
-  appleButton: {
-    backgroundColor: "#000000",
-    borderColor: "#000000",
+  emailButton: {
+    backgroundColor: "#1a1a1a",
+    borderColor: "#1a1a1a",
   },
-  appleButtonText: {
+  emailButtonText: {
     color: "#ffffff",
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#e5e5e5",
+  },
+  dividerText: {
+    paddingHorizontal: 16,
+    fontSize: 14,
+    color: "#999",
+    fontWeight: "500",
   },
   errorContainer: {
     flexDirection: "row",

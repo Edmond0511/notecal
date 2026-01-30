@@ -8,6 +8,7 @@ import React, {
   useState,
 } from "react";
 import {
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -29,6 +30,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     overflow: "hidden",
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   hiddenMeasureText: {
     position: "absolute",
@@ -366,31 +373,39 @@ export function NotesEditor({
         {documentText || " "}
       </Text>
 
-      {/* Document editor - full screen */}
-      <TextInput
-        ref={textInputRef}
-        style={styles.documentInput}
-        value={documentText}
-        onChangeText={handleTextChange}
-        onScroll={handleScroll}
-        placeholder={
-          entries.length === 0
-            ? "Enter food items starting with '-'"
-            : "Continue writing..."
-        }
-        placeholderTextColor="#ccc"
-        multiline
-        autoFocus
-        textAlignVertical="top"
-        autoCorrect={false}
-        autoCapitalize="sentences"
-        spellCheck={false}
-        underlineColorAndroid="transparent"
-        selectionColor="#007AFF"
-        contextMenuHidden={false}
-        selectTextOnFocus={false}
-        clearTextOnFocus={false}
-      />
+      {/* ScrollView wrapper enables keyboard dismiss on drag */}
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Document editor - full screen */}
+        <TextInput
+          ref={textInputRef}
+          style={styles.documentInput}
+          value={documentText}
+          onChangeText={handleTextChange}
+          onScroll={handleScroll}
+          placeholder={
+            entries.length === 0
+              ? "Enter food items starting with '-'"
+              : "Continue writing..."
+          }
+          placeholderTextColor="#ccc"
+          multiline
+          autoFocus
+          textAlignVertical="top"
+          autoCorrect={false}
+          autoCapitalize="sentences"
+          spellCheck={false}
+          underlineColorAndroid="transparent"
+          selectionColor="#007AFF"
+          contextMenuHidden={false}
+          selectTextOnFocus={false}
+          clearTextOnFocus={false}
+        />
+      </ScrollView>
 
       {/* Overlay for inline nutrition indicators */}
       <View style={styles.overlay} pointerEvents="box-none">

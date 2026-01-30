@@ -180,15 +180,6 @@ function ConfidencePopup({
 }) {
   const colors = getConfidenceColors(confidence);
   const confidencePercent = Math.round(confidence * 100);
-  const overlayOpacity = useSharedValue(0);
-
-  React.useEffect(() => {
-    overlayOpacity.value = withSpring(1, { damping: 20, stiffness: 300 });
-  }, []);
-
-  const overlayAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: overlayOpacity.value,
-  }));
 
   const getConfidenceLevel = () => {
     if (confidence >= 0.8) return "High";
@@ -213,13 +204,16 @@ function ConfidencePopup({
     getDefaultExplanation();
 
   return (
-    <Animated.View style={[styles.confidencePopupOverlay, overlayAnimatedStyle]}>
+    <View style={styles.confidencePopupOverlay}>
       <TouchableOpacity
         style={styles.confidencePopupBackdrop}
         activeOpacity={1}
         onPress={onClose}
       />
-      <View style={styles.confidencePopup}>
+      <Animated.View
+        entering={FadeInDown.duration(200)}
+        style={styles.confidencePopup}
+      >
         {/* Header */}
         <View style={styles.popupHeader}>
           <View
@@ -245,8 +239,8 @@ function ConfidencePopup({
 
         {/* Explanation Paragraph */}
         <ParsedText text={displayText} style={styles.popupExplanation} />
-      </View>
-    </Animated.View>
+      </Animated.View>
+    </View>
   );
 }
 

@@ -191,7 +191,6 @@ interface MacroCardProps {
 }
 
 function MacroCard({ label, current, target, color, delay }: MacroCardProps) {
-  const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0;
   const remaining = Math.max(target - current, 0);
   const isOver = current > target;
 
@@ -249,23 +248,6 @@ function MacroCard({ label, current, target, color, delay }: MacroCardProps) {
             `${Math.round(remaining)}g left`
           )}
         </Text>
-      </View>
-
-      <View
-        style={[
-          styles.macroProgressBg,
-          { backgroundColor: `${color.primary}20` },
-        ]}
-      >
-        <Animated.View
-          style={[
-            styles.macroProgressFill,
-            {
-              width: `${percentage}%`,
-              backgroundColor: color.primary,
-            },
-          ]}
-        />
       </View>
     </Animated.View>
   );
@@ -445,15 +427,5 @@ const styles = StyleSheet.create({
   macroOverText: {
     color: "#EF5350",
     fontWeight: "600",
-  },
-  macroProgressBg: {
-    width: "100%",
-    height: 4,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  macroProgressFill: {
-    height: "100%",
-    borderRadius: 2,
   },
 });

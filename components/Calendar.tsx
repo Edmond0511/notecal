@@ -402,17 +402,17 @@ const styles = StyleSheet.create({
     color: "#999",
   },
   selectedDay: {
-    backgroundColor: "#1976D2",
+    backgroundColor: "#1A6872",
   },
   selectedDayText: {
     color: "#fff",
     fontWeight: "600",
   },
   todayDay: {
-    backgroundColor: "#E3F2FD",
+    backgroundColor: "#E0F2F1",
   },
   todayDayText: {
-    color: "#1976D2",
+    color: "#1A6872",
     fontWeight: "600",
   },
   footer: {
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "System",
     fontWeight: "600",
-    color: "#1976D2",
+    color: "#1A6872",
   },
 });
 

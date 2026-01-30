@@ -1,7 +1,7 @@
-import { CarbPreference, ProteinPreference } from '@/types';
-import * as Haptics from 'expo-haptics';
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { CarbPreference, ProteinPreference } from "@/types";
+import * as Haptics from "expo-haptics";
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface Step4MacrosProps {
   proteinPreference: ProteinPreference;
@@ -10,16 +10,28 @@ interface Step4MacrosProps {
   onCarbChange: (pref: CarbPreference) => void;
 }
 
-const proteinOptions: { value: ProteinPreference; label: string; description: string }[] = [
-  { value: 'low', label: 'Lower', description: 'Minimal focus on protein' },
-  { value: 'standard', label: 'Standard', description: 'Balanced protein intake' },
-  { value: 'high', label: 'Higher', description: 'Extra protein for muscle' },
+const proteinOptions: {
+  value: ProteinPreference;
+  label: string;
+  description: string;
+}[] = [
+  { value: "low", label: "Lower", description: "Minimal focus on protein" },
+  {
+    value: "standard",
+    label: "Standard",
+    description: "Balanced protein intake",
+  },
+  { value: "high", label: "Higher", description: "Extra protein for muscle" },
 ];
 
-const carbOptions: { value: CarbPreference; label: string; description: string }[] = [
-  { value: 'low', label: 'Low Carb', description: 'Keto-friendly approach' },
-  { value: 'standard', label: 'Standard', description: 'Balanced carb intake' },
-  { value: 'high', label: 'High Carb', description: 'For active lifestyles' },
+const carbOptions: {
+  value: CarbPreference;
+  label: string;
+  description: string;
+}[] = [
+  { value: "low", label: "Low Carb", description: "Keto-friendly approach" },
+  { value: "standard", label: "Standard", description: "Balanced carb intake" },
+  { value: "high", label: "High Carb", description: "For active lifestyles" },
 ];
 
 export function Step4Macros({
@@ -74,7 +86,10 @@ export function Step4Macros({
           })}
         </View>
         <Text style={styles.optionDescription}>
-          {proteinOptions.find((o) => o.value === proteinPreference)?.description}
+          {
+            proteinOptions.find((o) => o.value === proteinPreference)
+              ?.description
+          }
         </Text>
       </View>
 
@@ -114,7 +129,8 @@ export function Step4Macros({
       {/* Info note */}
       <View style={styles.infoBox}>
         <Text style={styles.infoText}>
-          These preferences adjust your macro percentages. You can always change them later in Settings.
+          These preferences adjust your macro percentages. You can always change
+          them later in Settings.
         </Text>
       </View>
     </View>
@@ -127,13 +143,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
+    fontWeight: "700",
+    color: "#333",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginBottom: 24,
     lineHeight: 20,
   },
@@ -142,12 +158,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
     marginBottom: 12,
   },
   optionsRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     marginBottom: 8,
   },
@@ -155,39 +171,39 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     paddingHorizontal: 12,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   optionButtonSelected: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#4CAF50',
+    backgroundColor: "#E0F2F1",
+    borderColor: "#1A6872",
   },
   optionLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: "600",
+    color: "#666",
   },
   optionLabelSelected: {
-    color: '#2E7D32',
+    color: "#1A6872 ",
   },
   optionDescription: {
     fontSize: 13,
-    color: '#888',
-    textAlign: 'center',
+    color: "#888",
+    textAlign: "center",
   },
   infoBox: {
-    backgroundColor: '#FFF8E1',
+    backgroundColor: "#FFF8E1",
     padding: 16,
     borderRadius: 12,
     marginTop: 8,
   },
   infoText: {
     fontSize: 13,
-    color: '#F57F17',
-    textAlign: 'center',
+    color: "#F57F17",
+    textAlign: "center",
     lineHeight: 18,
   },
 });

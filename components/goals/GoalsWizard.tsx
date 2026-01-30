@@ -536,11 +536,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
   },
   progressDotActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1A6872',
   },
   progressDotCurrent: {
     width: 24,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1A6872',
   },
   contentContainer: {
     flex: 1,
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
   nextButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1A6872',
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 25,
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
   saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1A6872',
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 25,

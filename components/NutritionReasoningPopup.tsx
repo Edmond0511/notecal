@@ -726,12 +726,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: "System",
     fontWeight: "700",
-    color: "#1976D2",
+    color: "#1A6872",
     marginBottom: 4,
   },
   macroLabel: {
     fontSize: 11,
-    color: "#64B5F6",
+    color: "#4DB6AC",
     fontFamily: "System",
     fontWeight: "600",
     textTransform: "uppercase",
@@ -739,7 +739,7 @@ const styles = StyleSheet.create({
   },
   reasoningSection: {
     borderTopWidth: 2,
-    borderTopColor: "#E3F2FD",
+    borderTopColor: "#E0F2F1",
     paddingTop: 16,
     marginTop: 8,
   },
@@ -770,7 +770,7 @@ const styles = StyleSheet.create({
   },
   sourceText: {
     fontSize: 14,
-    color: "#1976D2",
+    color: "#1A6872",
     flex: 1,
     fontFamily: "System",
     fontWeight: "600",
@@ -802,7 +802,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: "System",
     fontWeight: "700",
-    color: "#1976D2",
+    color: "#1A6872",
     letterSpacing: -0.5,
   },
   // Confidence popup styles
@@ -879,7 +879,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   linkText: {
-    color: "#1976D2",
+    color: "#1A6872",
     fontWeight: "600",
   },
   popupHint: {

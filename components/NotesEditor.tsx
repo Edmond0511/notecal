@@ -1,7 +1,12 @@
 import { Entry } from "@/types";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   StyleSheet,
   Text,
@@ -69,16 +74,15 @@ const styles = StyleSheet.create({
   inlineCalories: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E3F2FD",
+    backgroundColor: "#E0F2F1",
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 12,
-    
   },
   caloriesText: {
     fontSize: 12,
     lineHeight: 16,
-    color: "#1976D2",
+    color: "#1A6872",
     fontFamily: "System",
     fontWeight: "600",
     includeFontPadding: false,
@@ -98,7 +102,7 @@ const CaloriesBadge = React.memo<{
     <Text style={styles.caloriesText}>{kcal} cal</Text>
   </TouchableOpacity>
 ));
-CaloriesBadge.displayName = 'CaloriesBadge';
+CaloriesBadge.displayName = "CaloriesBadge";
 
 // Memoized indicator row - only re-renders when entry data changes
 const IndicatorRow = React.memo<{
@@ -106,26 +110,28 @@ const IndicatorRow = React.memo<{
   yPosition: number;
   opacity: number;
   onTap: (entry: Entry) => void;
-}>(({ entry, yPosition, opacity, onTap }) => {
-  const handlePress = useCallback(() => onTap(entry), [entry, onTap]);
+}>(
+  ({ entry, yPosition, opacity, onTap }) => {
+    const handlePress = useCallback(() => onTap(entry), [entry, onTap]);
 
-  return (
-    <View style={[styles.indicatorWrapper, { top: yPosition, opacity }]}>
-      {entry.status === 'pending' ? (
-        <ThinkingIndicator />
-      ) : entry.status === 'ok' && entry.inlineKcal != null ? (
-        <CaloriesBadge kcal={entry.inlineKcal} onPress={handlePress} />
-      ) : null}
-    </View>
-  );
-}, (prev, next) => (
-  prev.entry.id === next.entry.id &&
-  prev.entry.status === next.entry.status &&
-  prev.entry.inlineKcal === next.entry.inlineKcal &&
-  prev.yPosition === next.yPosition &&
-  prev.opacity === next.opacity
-));
-IndicatorRow.displayName = 'IndicatorRow';
+    return (
+      <View style={[styles.indicatorWrapper, { top: yPosition, opacity }]}>
+        {entry.status === "pending" ? (
+          <ThinkingIndicator />
+        ) : entry.status === "ok" && entry.inlineKcal != null ? (
+          <CaloriesBadge kcal={entry.inlineKcal} onPress={handlePress} />
+        ) : null}
+      </View>
+    );
+  },
+  (prev, next) =>
+    prev.entry.id === next.entry.id &&
+    prev.entry.status === next.entry.status &&
+    prev.entry.inlineKcal === next.entry.inlineKcal &&
+    prev.yPosition === next.yPosition &&
+    prev.opacity === next.opacity,
+);
+IndicatorRow.displayName = "IndicatorRow";
 
 interface NotesEditorProps {
   entries: Entry[];
@@ -153,7 +159,7 @@ export function NotesEditor({
   // Map of entry text prefix -> y position (for entries starting with "-")
   const [entryYMap, setEntryYMap] = useState<Map<string, number[]>>(new Map());
   // Track the text that was measured, so we know if positions are stale
-  const [measuredText, setMeasuredText] = useState<string>('');
+  const [measuredText, setMeasuredText] = useState<string>("");
 
   // Handle TextInput scroll to sync indicator positions
   const handleScroll = useCallback((event: any) => {
@@ -161,32 +167,35 @@ export function NotesEditor({
   }, []);
 
   // Handle text layout - extract y positions for lines starting with "-"
-  const handleTextLayout = useCallback((event: any) => {
-    const { lines } = event.nativeEvent;
-    if (!lines?.length) return;
+  const handleTextLayout = useCallback(
+    (event: any) => {
+      const { lines } = event.nativeEvent;
+      if (!lines?.length) return;
 
-    // Group y-positions by text prefix (first 20 chars) to handle duplicates
-    const yMap = new Map<string, number[]>();
+      // Group y-positions by text prefix (first 20 chars) to handle duplicates
+      const yMap = new Map<string, number[]>();
 
-    for (const line of lines) {
-      const text = (line.text || '').trim();
-      if (text.startsWith('-')) {
-        const prefix = text.substring(0, 20);
-        const positions = yMap.get(prefix) || [];
-        positions.push(line.y ?? 0);
-        yMap.set(prefix, positions);
+      for (const line of lines) {
+        const text = (line.text || "").trim();
+        if (text.startsWith("-")) {
+          const prefix = text.substring(0, 20);
+          const positions = yMap.get(prefix) || [];
+          positions.push(line.y ?? 0);
+          yMap.set(prefix, positions);
+        }
       }
-    }
 
-    setEntryYMap(yMap);
-    setMeasuredText(documentText); // Mark these measurements as current
-  }, [documentText]);
+      setEntryYMap(yMap);
+      setMeasuredText(documentText); // Mark these measurements as current
+    },
+    [documentText],
+  );
 
   // Update document text when initialDocumentText changes (date navigation)
   useEffect(() => {
     setDocumentText(initialDocumentText);
     setEntryYMap(new Map());
-    setMeasuredText(''); // Clear so indicators wait for fresh measurements
+    setMeasuredText(""); // Clear so indicators wait for fresh measurements
   }, [initialDocumentText]);
 
   // Cleanup debounce timeout on unmount
@@ -301,7 +310,7 @@ export function NotesEditor({
 
   // Compute indicator data only when dependencies change
   const indicatorData = useMemo(() => {
-    const lines = documentText.split('\n');
+    const lines = documentText.split("\n");
     const usedEntryIds = new Set<string>();
     const positionCounts = new Map<string, number>();
 
@@ -313,10 +322,10 @@ export function NotesEditor({
 
     lines.forEach((line, index) => {
       const trimmedLine = line.trim();
-      if (!trimmedLine.startsWith('-')) return;
+      if (!trimmedLine.startsWith("-")) return;
 
       const matchedEntry = entries.find(
-        (e) => e.rawText === trimmedLine && !usedEntryIds.has(e.id)
+        (e) => e.rawText === trimmedLine && !usedEntryIds.has(e.id),
       );
       if (!matchedEntry) return;
 
@@ -353,11 +362,8 @@ export function NotesEditor({
     <View style={styles.container}>
       {/* Hidden Text component for reliable layout measurement */}
       {/* TextInput.onTextLayout is unreliable for wrapped text */}
-      <Text
-        style={styles.hiddenMeasureText}
-        onTextLayout={handleTextLayout}
-      >
-        {documentText || ' '}
+      <Text style={styles.hiddenMeasureText} onTextLayout={handleTextLayout}>
+        {documentText || " "}
       </Text>
 
       {/* Document editor - full screen */}
@@ -408,4 +414,3 @@ export function NotesEditor({
     </View>
   );
 }
-

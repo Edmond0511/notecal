@@ -1,15 +1,15 @@
-import { Sex } from '@/types';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import React from 'react';
+import { Sex } from "@/types";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import React from "react";
 import {
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { WizardFormData } from '../GoalsWizard';
+} from "react-native";
+import { WizardFormData } from "../GoalsWizard";
 
 interface Step1MetricsProps {
   formData: WizardFormData;
@@ -77,19 +77,19 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
           <TouchableOpacity
             style={[
               styles.sexOption,
-              formData.sex === 'male' && styles.sexOptionActive,
+              formData.sex === "male" && styles.sexOptionActive,
             ]}
-            onPress={() => selectSex('male')}
+            onPress={() => selectSex("male")}
           >
             <Ionicons
               name="male"
               size={24}
-              color={formData.sex === 'male' ? '#fff' : '#666'}
+              color={formData.sex === "male" ? "#fff" : "#666"}
             />
             <Text
               style={[
                 styles.sexOptionText,
-                formData.sex === 'male' && styles.sexOptionTextActive,
+                formData.sex === "male" && styles.sexOptionTextActive,
               ]}
             >
               Male
@@ -98,19 +98,19 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
           <TouchableOpacity
             style={[
               styles.sexOption,
-              formData.sex === 'female' && styles.sexOptionActive,
+              formData.sex === "female" && styles.sexOptionActive,
             ]}
-            onPress={() => selectSex('female')}
+            onPress={() => selectSex("female")}
           >
             <Ionicons
               name="female"
               size={24}
-              color={formData.sex === 'female' ? '#fff' : '#666'}
+              color={formData.sex === "female" ? "#fff" : "#666"}
             />
             <Text
               style={[
                 styles.sexOptionText,
-                formData.sex === 'female' && styles.sexOptionTextActive,
+                formData.sex === "female" && styles.sexOptionTextActive,
               ]}
             >
               Female
@@ -126,7 +126,9 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
           <TextInput
             style={styles.input}
             value={formData.age}
-            onChangeText={(text) => updateFormData({ age: text.replace(/[^0-9]/g, '') })}
+            onChangeText={(text) =>
+              updateFormData({ age: text.replace(/[^0-9]/g, "") })
+            }
             keyboardType="number-pad"
             placeholder="25"
             placeholderTextColor="#aaa"
@@ -145,7 +147,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
               style={[styles.input, styles.inputSmall]}
               value={formData.heightFeet}
               onChangeText={(text) =>
-                updateFormData({ heightFeet: text.replace(/[^0-9]/g, '') })
+                updateFormData({ heightFeet: text.replace(/[^0-9]/g, "") })
               }
               keyboardType="number-pad"
               placeholder="5"
@@ -157,7 +159,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
               style={[styles.input, styles.inputSmall]}
               value={formData.heightInches}
               onChangeText={(text) =>
-                updateFormData({ heightInches: text.replace(/[^0-9]/g, '') })
+                updateFormData({ heightInches: text.replace(/[^0-9]/g, "") })
               }
               keyboardType="number-pad"
               placeholder="10"
@@ -172,7 +174,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
               style={styles.input}
               value={formData.heightCm}
               onChangeText={(text) =>
-                updateFormData({ heightCm: text.replace(/[^0-9.]/g, '') })
+                updateFormData({ heightCm: text.replace(/[^0-9.]/g, "") })
               }
               keyboardType="decimal-pad"
               placeholder="175"
@@ -193,7 +195,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
               style={styles.input}
               value={formData.weightLbs}
               onChangeText={(text) =>
-                updateFormData({ weightLbs: text.replace(/[^0-9.]/g, '') })
+                updateFormData({ weightLbs: text.replace(/[^0-9.]/g, "") })
               }
               keyboardType="decimal-pad"
               placeholder="160"
@@ -208,7 +210,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
               style={styles.input}
               value={formData.weightKg}
               onChangeText={(text) =>
-                updateFormData({ weightKg: text.replace(/[^0-9.]/g, '') })
+                updateFormData({ weightKg: text.replace(/[^0-9.]/g, "") })
               }
               keyboardType="decimal-pad"
               placeholder="70"
@@ -231,7 +233,9 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
             style={styles.input}
             value={formData.bodyFatPercentage}
             onChangeText={(text) =>
-              updateFormData({ bodyFatPercentage: text.replace(/[^0-9.]/g, '') })
+              updateFormData({
+                bodyFatPercentage: text.replace(/[^0-9.]/g, ""),
+              })
             }
             keyboardType="decimal-pad"
             placeholder="20"
@@ -254,19 +258,19 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
+    fontWeight: "700",
+    color: "#333",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginBottom: 24,
     lineHeight: 20,
   },
   unitToggleContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
+    flexDirection: "row",
+    backgroundColor: "#f5f5f5",
     borderRadius: 12,
     padding: 4,
     marginBottom: 24,
@@ -274,12 +278,12 @@ const styles = StyleSheet.create({
   unitOption: {
     flex: 1,
     paddingVertical: 10,
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 10,
   },
   unitOptionActive: {
-    backgroundColor: '#fff',
-    shadowColor: '#000',
+    backgroundColor: "#fff",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -287,84 +291,84 @@ const styles = StyleSheet.create({
   },
   unitOptionText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#888',
+    fontWeight: "500",
+    color: "#888",
   },
   unitOptionTextActive: {
-    color: '#333',
+    color: "#333",
   },
   fieldContainer: {
     marginBottom: 20,
   },
   labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   fieldLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
     marginBottom: 8,
   },
   optionalLabel: {
     fontSize: 12,
-    color: '#888',
+    color: "#888",
     marginBottom: 8,
   },
   sexContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   sexOption: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     gap: 8,
   },
   sexOptionActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#1A6872",
   },
   sexOptionText: {
     fontSize: 15,
-    fontWeight: '500',
-    color: '#666',
+    fontWeight: "500",
+    color: "#666",
   },
   sexOptionTextActive: {
-    color: '#fff',
+    color: "#fff",
   },
   inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   input: {
     flex: 1,
     maxWidth: 120,
     height: 48,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 18,
-    fontWeight: '500',
-    color: '#333',
+    fontWeight: "500",
+    color: "#333",
   },
   inputSmall: {
     maxWidth: 80,
   },
   inputUnit: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     minWidth: 30,
   },
   fieldHint: {
     fontSize: 12,
-    color: '#888',
+    color: "#888",
     marginTop: 6,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
 });

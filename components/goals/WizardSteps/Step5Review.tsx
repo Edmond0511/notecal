@@ -44,7 +44,7 @@ export function Step5Review({ goals, formData }: Step5ReviewProps) {
       {/* Main calorie target */}
       <View style={styles.mainTargetCard}>
         <View style={styles.mainTargetHeader}>
-          <Ionicons name="flame" size={28} color="#FF5722" />
+          <Ionicons name="flame" size={28} color="#FF6B35" />
           <Text style={styles.mainTargetValue}>{goals.targetKcal}</Text>
           <Text style={styles.mainTargetUnit}>calories/day</Text>
         </View>
@@ -73,17 +73,17 @@ export function Step5Review({ goals, formData }: Step5ReviewProps) {
         <Text style={styles.cardTitle}>Daily Macros</Text>
         <View style={styles.macrosGrid}>
           <View style={[styles.macroItem, { backgroundColor: '#E3F2FD' }]}>
-            <Ionicons name="fish" size={20} color="#1976D2" />
+            <Ionicons name="fish" size={20} color="#4A90D9" />
             <Text style={styles.macroValue}>{goals.targetProtein}g</Text>
             <Text style={styles.macroLabel}>Protein</Text>
           </View>
-          <View style={[styles.macroItem, { backgroundColor: '#FFF3E0' }]}>
-            <Ionicons name="water" size={20} color="#F57C00" />
+          <View style={[styles.macroItem, { backgroundColor: '#FFF8E7' }]}>
+            <Ionicons name="water" size={20} color="#F5A623" />
             <Text style={styles.macroValue}>{goals.targetFat}g</Text>
             <Text style={styles.macroLabel}>Fat</Text>
           </View>
           <View style={[styles.macroItem, { backgroundColor: '#F3E5F5' }]}>
-            <Ionicons name="leaf" size={20} color="#7B1FA2" />
+            <Ionicons name="leaf" size={20} color="#9B6B9E" />
             <Text style={styles.macroValue}>{goals.targetCarbs}g</Text>
             <Text style={styles.macroLabel}>Carbs</Text>
           </View>
@@ -125,7 +125,7 @@ export function Step5Review({ goals, formData }: Step5ReviewProps) {
 
       {/* Goal expectation */}
       <View style={styles.expectationBox}>
-        <Ionicons name="trending-up" size={20} color="#4CAF50" />
+        <Ionicons name="trending-up" size={20} color="#1A6872" />
         <Text style={styles.expectationText}>
           Expected: {goalInfo.weeklyChange}
         </Text>
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   mainTargetCard: {
-    backgroundColor: '#FFF3E0',
+    backgroundColor: '#FFE5D9',
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   mainTargetValue: {
     fontSize: 48,
     fontWeight: '700',
-    color: '#E65100',
+    color: '#FF6B35',
   },
   mainTargetUnit: {
     fontSize: 16,
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   breakdownValueHighlight: {
-    color: '#E65100',
+    color: '#FF6B35',
   },
   macrosCard: {
     backgroundColor: '#f8f8f8',
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E0F2F1',
     padding: 12,
     borderRadius: 12,
     gap: 8,
@@ -269,6 +269,6 @@ const styles = StyleSheet.create({
   expectationText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2E7D32',
+    color: '#1A6872',
   },
 });

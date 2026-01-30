@@ -1,6 +1,6 @@
 import { Calendar } from "@/components/Calendar";
-import { GoalsPopup } from "@/components/GoalsPopup";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
+import { GoalsPopup } from "@/components/GoalsPopup";
 import { NotesEditor } from "@/components/NotesEditor";
 import { SettingsModal } from "@/components/SettingsModal";
 import { useAppStore } from "@/store/app-store";
@@ -30,7 +30,7 @@ export default function HomeScreen() {
   // Filter entries for current date - memoized to prevent unnecessary re-renders
   const entries = React.useMemo(
     () => allEntries.filter((entry) => entry.date === currentDate),
-    [allEntries, currentDate]
+    [allEntries, currentDate],
   );
   const [showCalendar, setShowCalendar] = useState(false);
   const [showSettings, setShowSettings] = useState(false);

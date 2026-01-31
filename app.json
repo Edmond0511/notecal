@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.edmond0511.notecal"
+      "bundleIdentifier": "com.edmond0511.notecal",
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {

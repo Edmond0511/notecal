@@ -154,7 +154,7 @@ function CalorieRing({ current, target }: CalorieRingProps) {
           />
           <View style={styles.calorieCenter}>
             <Text style={styles.calorieValue}>{Math.round(current)}</Text>
-            <Text style={styles.calorieUnit}>kcal</Text>
+            <Text style={styles.calorieUnit}>cal</Text>
           </View>
         </View>
 

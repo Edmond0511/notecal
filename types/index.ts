@@ -83,6 +83,13 @@ export interface UserGoalsInput {
   carbPreference?: CarbPreference;
 }
 
+export interface ManualTargets {
+  kcal?: number;
+  protein?: number;
+  fat?: number;
+  carbs?: number;
+}
+
 export interface UserGoals extends UserGoalsInput {
   // Calculated targets
   bmr: number;
@@ -91,6 +98,8 @@ export interface UserGoals extends UserGoalsInput {
   targetProtein: number;
   targetFat: number;
   targetCarbs: number;
+  // Optional manual overrides
+  manualTargets?: ManualTargets | null;
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -142,4 +151,5 @@ export interface AppState {
   setGoals: (goals: UserGoals) => void;
   clearGoals: () => void;
   setPreferredUnits: (units: UnitSystem) => void;
+  setManualTargets: (targets: ManualTargets | null) => void;
 }

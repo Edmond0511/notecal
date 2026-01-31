@@ -28,6 +28,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuthModal } from "./AuthModal";
+import { NutritionGoalsModal } from "./NutritionGoalsModal";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
@@ -47,6 +48,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showNutritionGoalsModal, setShowNutritionGoalsModal] = useState(false);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -276,7 +278,16 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
                     <View style={styles.menuDivider} />
 
-                    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+                    <TouchableOpacity
+                      style={styles.menuItem}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        console.log('🎯 Nutrition Goals pressed, setting visible to true');
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        onClose(); // Close settings first
+                        setTimeout(() => setShowNutritionGoalsModal(true), 100);
+                      }}
+                    >
                       <View style={styles.menuIconContainer}>
                         <Ionicons name="nutrition-outline" size={20} color="#666" />
                       </View>
@@ -344,6 +355,12 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
         visible={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onAuthSuccess={handleAuthSuccess}
+      />
+
+      {/* Nutrition Goals Modal */}
+      <NutritionGoalsModal
+        visible={showNutritionGoalsModal}
+        onClose={() => setShowNutritionGoalsModal(false)}
       />
     </>
   );

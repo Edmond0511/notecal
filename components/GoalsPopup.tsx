@@ -159,10 +159,10 @@ export function GoalsPopup({
                 <ProgressRings
                   consumed={consumed}
                   targets={{
-                    kcal: goals.targetKcal,
-                    protein: goals.targetProtein,
-                    fat: goals.targetFat,
-                    carbs: goals.targetCarbs,
+                    kcal: goals.manualTargets?.kcal ?? goals.targetKcal,
+                    protein: goals.manualTargets?.protein ?? goals.targetProtein,
+                    fat: goals.manualTargets?.fat ?? goals.targetFat,
+                    carbs: goals.manualTargets?.carbs ?? goals.targetCarbs,
                   }}
                 />
               </Animated.View>

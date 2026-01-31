@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem } from '@/types';
+import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets } from '@/types';
 import { resolveNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
 import { supabase } from '@/lib/supabase';
 
@@ -285,6 +285,19 @@ export const useAppStore = create<AppState>()(
 
   setPreferredUnits: (units: UnitSystem) => {
     set({ preferredUnits: units });
+  },
+
+  setManualTargets: (targets: ManualTargets | null) => {
+    const currentGoals = get().goals;
+    if (currentGoals) {
+      set({
+        goals: {
+          ...currentGoals,
+          manualTargets: targets,
+          updatedAt: new Date(),
+        },
+      });
+    }
   },
 }),
     {

@@ -10,6 +10,21 @@ interface Step5ReviewProps {
   formData: WizardFormData;
 }
 
+interface OtherNutrientDisplay {
+  key: 'fiber' | 'sugar' | 'sodium' | 'potassium';
+  label: string;
+  unit: string;
+  color: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
+const OTHER_NUTRIENTS: OtherNutrientDisplay[] = [
+  { key: 'fiber', label: 'Fiber', unit: 'g', color: '#8B6914', icon: 'leaf-outline' },
+  { key: 'sugar', label: 'Sugar', unit: 'g', color: '#C45BAA', icon: 'cube-outline' },
+  { key: 'sodium', label: 'Sodium', unit: 'mg', color: '#5B8CC4', icon: 'water-outline' },
+  { key: 'potassium', label: 'Potassium', unit: 'mg', color: '#6B8E5B', icon: 'flash-outline' },
+];
+
 export function Step5Review({ goals, formData }: Step5ReviewProps) {
   if (!goals) {
     return (
@@ -33,6 +48,11 @@ export function Step5Review({ goals, formData }: Step5ReviewProps) {
   const weightDisplay = formData.useImperial
     ? `${formData.weightLbs} lbs`
     : `${goals.weightKg} kg`;
+
+  // Get enabled other nutrients
+  const enabledOtherNutrients = OTHER_NUTRIENTS.filter(
+    (n) => goals.manualTargets?.[n.key] !== undefined
+  );
 
   return (
     <View style={styles.container}>
@@ -89,6 +109,28 @@ export function Step5Review({ goals, formData }: Step5ReviewProps) {
           </View>
         </View>
       </View>
+
+      {/* Other nutrients (if any enabled) */}
+      {enabledOtherNutrients.length > 0 && (
+        <View style={styles.otherNutrientsCard}>
+          <Text style={styles.cardTitle}>Other Nutrients</Text>
+          <View style={styles.otherNutrientsGrid}>
+            {enabledOtherNutrients.map((nutrient) => {
+              const value = goals.manualTargets?.[nutrient.key];
+              return (
+                <View key={nutrient.key} style={styles.otherNutrientItem}>
+                  <View style={[styles.nutrientDot, { backgroundColor: nutrient.color }]} />
+                  <Text style={styles.otherNutrientLabel}>{nutrient.label}</Text>
+                  <Text style={styles.otherNutrientValue}>
+                    {value}
+                    <Text style={styles.otherNutrientUnit}>{nutrient.unit}</Text>
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      )}
 
       {/* Summary of inputs */}
       <View style={styles.summaryCard}>
@@ -232,6 +274,45 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 2,
+  },
+  otherNutrientsCard: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  otherNutrientsGrid: {
+    gap: 8,
+  },
+  otherNutrientItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  nutrientDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  otherNutrientLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+  },
+  otherNutrientValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A6872',
+  },
+  otherNutrientUnit: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#888',
   },
   summaryCard: {
     backgroundColor: '#f8f8f8',

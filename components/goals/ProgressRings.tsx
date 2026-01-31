@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Dimensions, StyleSheet, Text, View } from "react-native";
 import Animated, {
   Easing,
+  FadeIn,
   interpolate,
+  Layout,
   runOnJS,
   useAnimatedStyle,
   useDerivedValue,
@@ -38,6 +40,27 @@ const COLORS = {
     secondary: "#F3E5F5",
     track: "#E1C4E4",
     gradient: ["#BA68C8", "#9B6B9E"],
+  },
+  // Other nutrients
+  fiber: {
+    primary: "#8B6914",
+    secondary: "#FDF6E3",
+    track: "#F0E4C8",
+  },
+  sugar: {
+    primary: "#C45BAA",
+    secondary: "#FCE4F6",
+    track: "#F5C4E8",
+  },
+  sodium: {
+    primary: "#5B8CC4",
+    secondary: "#E8F1FA",
+    track: "#C8DCF0",
+  },
+  potassium: {
+    primary: "#6B8E5B",
+    secondary: "#EDF5EB",
+    track: "#D4E6CF",
   },
 };
 
@@ -186,11 +209,12 @@ interface MacroCardProps {
   label: string;
   current: number;
   target: number;
-  color: typeof COLORS.protein;
+  color: { primary: string; secondary: string; track: string };
   delay: number;
+  unit?: string;
 }
 
-function MacroCard({ label, current, target, color, delay }: MacroCardProps) {
+function MacroCard({ label, current, target, color, delay, unit = "g" }: MacroCardProps) {
   const isOver = current > target;
 
   const fadeIn = useSharedValue(0);
@@ -230,7 +254,7 @@ function MacroCard({ label, current, target, color, delay }: MacroCardProps) {
         />
         <View style={styles.macroCenter}>
           <Text style={[styles.macroValue, { color: color.primary }]}>
-            {Math.round(current)}g
+            {Math.round(current)}{unit}
           </Text>
         </View>
       </View>
@@ -239,13 +263,82 @@ function MacroCard({ label, current, target, color, delay }: MacroCardProps) {
 
       <View style={styles.macroTargetContainer}>
         <Text style={[styles.macroProgressText, isOver && styles.macroOverText]}>
-          <Text style={styles.macroConsumed}>{Math.round(current)}g</Text>
+          <Text style={styles.macroConsumed}>{Math.round(current)}{unit}</Text>
           <Text style={styles.macroDivider}> / </Text>
-          <Text style={styles.macroTotal}>{target}g</Text>
+          <Text style={styles.macroTotal}>{target}{unit}</Text>
         </Text>
       </View>
     </Animated.View>
   );
+}
+
+// Compact nutrient bar for other nutrients
+interface NutrientBarProps {
+  label: string;
+  current: number;
+  target: number;
+  color: string;
+  unit: string;
+  delay: number;
+}
+
+function NutrientBar({ label, current, target, color, unit, delay }: NutrientBarProps) {
+  const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+  const isOver = current > target;
+
+  const fadeIn = useSharedValue(0);
+  const barWidth = useSharedValue(0);
+
+  useEffect(() => {
+    setTimeout(() => {
+      fadeIn.value = withTiming(1, { duration: 400 });
+      barWidth.value = withTiming(percentage, {
+        duration: 800,
+        easing: Easing.out(Easing.cubic),
+      });
+    }, delay);
+  }, [percentage]);
+
+  const containerStyle = useAnimatedStyle(() => ({
+    opacity: fadeIn.value,
+    transform: [{ translateX: interpolate(fadeIn.value, [0, 1], [-20, 0]) }],
+  }));
+
+  const barStyle = useAnimatedStyle(() => ({
+    width: `${barWidth.value}%`,
+  }));
+
+  return (
+    <Animated.View style={[styles.nutrientBarContainer, containerStyle]}>
+      <View style={styles.nutrientBarHeader}>
+        <View style={styles.nutrientBarLabelRow}>
+          <View style={[styles.nutrientDot, { backgroundColor: color }]} />
+          <Text style={styles.nutrientBarLabel}>{label}</Text>
+        </View>
+        <Text style={[styles.nutrientBarValue, isOver && styles.nutrientBarValueOver]}>
+          {Math.round(current)}<Text style={styles.nutrientBarUnit}>{unit}</Text>
+          <Text style={styles.nutrientBarDivider}> / </Text>
+          {target}<Text style={styles.nutrientBarUnit}>{unit}</Text>
+        </Text>
+      </View>
+      <View style={styles.nutrientBarTrack}>
+        <Animated.View
+          style={[
+            styles.nutrientBarFill,
+            { backgroundColor: color },
+            barStyle,
+          ]}
+        />
+      </View>
+    </Animated.View>
+  );
+}
+
+interface OtherNutrients {
+  fiber?: number;
+  sugar?: number;
+  sodium?: number;
+  potassium?: number;
 }
 
 interface ProgressRingsProps {
@@ -254,16 +347,45 @@ interface ProgressRingsProps {
     protein: number;
     fat: number;
     carbs: number;
+    fiber?: number;
+    sugar?: number;
+    sodium?: number;
+    potassium?: number;
   };
   targets: {
     kcal: number;
     protein: number;
     fat: number;
     carbs: number;
+    fiber?: number;
+    sugar?: number;
+    sodium?: number;
+    potassium?: number;
   };
 }
 
 export function ProgressRings({ consumed, targets }: ProgressRingsProps) {
+  // Determine which other nutrients are enabled (have targets)
+  const otherNutrients: Array<{
+    key: keyof OtherNutrients;
+    label: string;
+    unit: string;
+    color: string;
+  }> = [];
+
+  if (targets.fiber !== undefined) {
+    otherNutrients.push({ key: 'fiber', label: 'Fiber', unit: 'g', color: COLORS.fiber.primary });
+  }
+  if (targets.sugar !== undefined) {
+    otherNutrients.push({ key: 'sugar', label: 'Sugar', unit: 'g', color: COLORS.sugar.primary });
+  }
+  if (targets.sodium !== undefined) {
+    otherNutrients.push({ key: 'sodium', label: 'Sodium', unit: 'mg', color: COLORS.sodium.primary });
+  }
+  if (targets.potassium !== undefined) {
+    otherNutrients.push({ key: 'potassium', label: 'Potassium', unit: 'mg', color: COLORS.potassium.primary });
+  }
+
   return (
     <View style={styles.container}>
       {/* Main Calorie Ring */}
@@ -293,6 +415,30 @@ export function ProgressRings({ consumed, targets }: ProgressRingsProps) {
           delay={300}
         />
       </View>
+
+      {/* Other Nutrients Section */}
+      {otherNutrients.length > 0 && (
+        <Animated.View
+          entering={FadeIn.delay(400).duration(400)}
+          layout={Layout.springify()}
+          style={styles.otherNutrientsSection}
+        >
+          <Text style={styles.otherNutrientsTitle}>Other Nutrients</Text>
+          <View style={styles.otherNutrientsCard}>
+            {otherNutrients.map((nutrient, index) => (
+              <NutrientBar
+                key={nutrient.key}
+                label={nutrient.label}
+                current={consumed[nutrient.key] ?? 0}
+                target={targets[nutrient.key] ?? 0}
+                color={nutrient.color}
+                unit={nutrient.unit}
+                delay={450 + index * 100}
+              />
+            ))}
+          </View>
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -432,5 +578,74 @@ const styles = StyleSheet.create({
   },
   macroOverText: {
     color: "#EF5350",
+  },
+
+  // Other Nutrients Styles
+  otherNutrientsSection: {
+    marginTop: 16,
+  },
+  otherNutrientsTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#999",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  otherNutrientsCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    gap: 14,
+  },
+  nutrientBarContainer: {
+    gap: 6,
+  },
+  nutrientBarHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  nutrientBarLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  nutrientDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  nutrientBarLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#333",
+  },
+  nutrientBarValue: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#333",
+  },
+  nutrientBarValueOver: {
+    color: "#EF5350",
+  },
+  nutrientBarUnit: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#888",
+  },
+  nutrientBarDivider: {
+    color: "#ccc",
+  },
+  nutrientBarTrack: {
+    height: 6,
+    backgroundColor: "#F0F0F0",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  nutrientBarFill: {
+    height: "100%",
+    borderRadius: 3,
   },
 });

@@ -40,6 +40,10 @@ interface GoalsPopupProps {
     protein: number;
     fat: number;
     carbs: number;
+    fiber?: number;
+    sugar?: number;
+    sodium?: number;
+    potassium?: number;
   };
 }
 
@@ -163,6 +167,10 @@ export function GoalsPopup({
                     protein: goals.manualTargets?.protein ?? goals.targetProtein,
                     fat: goals.manualTargets?.fat ?? goals.targetFat,
                     carbs: goals.manualTargets?.carbs ?? goals.targetCarbs,
+                    fiber: goals.manualTargets?.fiber,
+                    sugar: goals.manualTargets?.sugar,
+                    sodium: goals.manualTargets?.sodium,
+                    potassium: goals.manualTargets?.potassium,
                   }}
                 />
               </Animated.View>

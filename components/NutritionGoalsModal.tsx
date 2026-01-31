@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   StatusBar,
   StyleSheet,
   Text,
@@ -21,14 +22,66 @@ import {
 } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
+  FadeIn,
   FadeInDown,
+  FadeOut,
   interpolate,
+  interpolateColor,
+  Layout,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// iOS-style Toggle Component
+interface IOSToggleProps {
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+  activeColor?: string;
+}
+
+function IOSToggle({ value, onValueChange, activeColor = '#34C759' }: IOSToggleProps) {
+  const progress = useSharedValue(value ? 1 : 0);
+
+  useEffect(() => {
+    progress.value = withSpring(value ? 1 : 0, {
+      mass: 0.5,
+      damping: 15,
+      stiffness: 120,
+    });
+  }, [value]);
+
+  const trackStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      progress.value,
+      [0, 1],
+      ['#E9E9EA', activeColor]
+    ),
+  }));
+
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: interpolate(progress.value, [0, 1], [2, 23]) },
+      { scale: interpolate(progress.value, [0, 0.5, 1], [1, 0.95, 1]) },
+    ],
+  }));
+
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onValueChange(!value);
+  };
+
+  return (
+    <Pressable onPress={handlePress}>
+      <Animated.View style={[styles.iosToggleTrack, trackStyle]}>
+        <Animated.View style={[styles.iosToggleThumb, thumbStyle]} />
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
@@ -37,6 +90,23 @@ interface NutritionGoalsModalProps {
   visible: boolean;
   onClose: () => void;
 }
+
+type NutrientField = 'kcal' | 'protein' | 'fat' | 'carbs' | 'fiber' | 'sugar' | 'sodium' | 'potassium';
+
+interface OtherNutrient {
+  key: 'fiber' | 'sugar' | 'sodium' | 'potassium';
+  label: string;
+  unit: string;
+  placeholder: string;
+  color: string;
+}
+
+const OTHER_NUTRIENTS: OtherNutrient[] = [
+  { key: 'fiber', label: 'Fiber', unit: 'g', placeholder: '25', color: '#8B6914' },
+  { key: 'sugar', label: 'Sugar', unit: 'g', placeholder: '50', color: '#C45BAA' },
+  { key: 'sodium', label: 'Sodium', unit: 'mg', placeholder: '2300', color: '#5B8CC4' },
+  { key: 'potassium', label: 'Potassium', unit: 'mg', placeholder: '3500', color: '#6B8E5B' },
+];
 
 export function NutritionGoalsModal({
   visible,
@@ -50,37 +120,84 @@ export function NutritionGoalsModal({
   const setGoals = useAppStore((state) => state.setGoals);
 
   // Inline editing state
-  const [editingField, setEditingField] = useState<'kcal' | 'protein' | 'fat' | 'carbs' | null>(null);
+  const [editingField, setEditingField] = useState<NutrientField | null>(null);
   const [manualKcal, setManualKcal] = useState("");
   const [manualProtein, setManualProtein] = useState("");
   const [manualFat, setManualFat] = useState("");
   const [manualCarbs, setManualCarbs] = useState("");
+
+  // Other nutrients - values and enabled states
+  const [manualFiber, setManualFiber] = useState("");
+  const [manualSugar, setManualSugar] = useState("");
+  const [manualSodium, setManualSodium] = useState("");
+  const [manualPotassium, setManualPotassium] = useState("");
+
+  const [fiberEnabled, setFiberEnabled] = useState(false);
+  const [sugarEnabled, setSugarEnabled] = useState(false);
+  const [sodiumEnabled, setSodiumEnabled] = useState(false);
+  const [potassiumEnabled, setPotassiumEnabled] = useState(false);
 
   // Refs for each input field
   const kcalInputRef = React.useRef<TextInput>(null);
   const proteinInputRef = React.useRef<TextInput>(null);
   const fatInputRef = React.useRef<TextInput>(null);
   const carbsInputRef = React.useRef<TextInput>(null);
+  const fiberInputRef = React.useRef<TextInput>(null);
+  const sugarInputRef = React.useRef<TextInput>(null);
+  const sodiumInputRef = React.useRef<TextInput>(null);
+  const potassiumInputRef = React.useRef<TextInput>(null);
+
+  const inputRefs: Record<NutrientField, React.RefObject<TextInput>> = {
+    kcal: kcalInputRef,
+    protein: proteinInputRef,
+    fat: fatInputRef,
+    carbs: carbsInputRef,
+    fiber: fiberInputRef,
+    sugar: sugarInputRef,
+    sodium: sodiumInputRef,
+    potassium: potassiumInputRef,
+  };
 
   // Initialize form from existing goals
   useEffect(() => {
     if (visible) {
-      // Always reset animation values when modal becomes visible
       translateY.value = 0;
       isScrolledToTop.value = true;
 
       if (goals) {
-        // Use manual targets if they exist, otherwise use calculated targets
         setManualKcal((goals.manualTargets?.kcal ?? goals.targetKcal).toString());
         setManualProtein((goals.manualTargets?.protein ?? goals.targetProtein).toString());
         setManualFat((goals.manualTargets?.fat ?? goals.targetFat).toString());
         setManualCarbs((goals.manualTargets?.carbs ?? goals.targetCarbs).toString());
+
+        // Other nutrients
+        const fiber = goals.manualTargets?.fiber;
+        const sugar = goals.manualTargets?.sugar;
+        const sodium = goals.manualTargets?.sodium;
+        const potassium = goals.manualTargets?.potassium;
+
+        setManualFiber(fiber?.toString() ?? "25");
+        setManualSugar(sugar?.toString() ?? "50");
+        setManualSodium(sodium?.toString() ?? "2300");
+        setManualPotassium(potassium?.toString() ?? "3500");
+
+        setFiberEnabled(fiber !== undefined);
+        setSugarEnabled(sugar !== undefined);
+        setSodiumEnabled(sodium !== undefined);
+        setPotassiumEnabled(potassium !== undefined);
       } else {
-        // Default values when no goals exist
         setManualKcal("2000");
         setManualProtein("150");
         setManualFat("65");
         setManualCarbs("200");
+        setManualFiber("25");
+        setManualSugar("50");
+        setManualSodium("2300");
+        setManualPotassium("3500");
+        setFiberEnabled(false);
+        setSugarEnabled(false);
+        setSodiumEnabled(false);
+        setPotassiumEnabled(false);
       }
       setEditingField(null);
     }
@@ -141,19 +258,20 @@ export function NutritionGoalsModal({
     const fatValue = parseInt(manualFat, 10) || 65;
     const carbsValue = parseInt(manualCarbs, 10) || 200;
 
-    // Create or update goals with manual targets
+    const manualTargets = {
+      kcal: kcalValue,
+      protein: proteinValue,
+      fat: fatValue,
+      carbs: carbsValue,
+      ...(fiberEnabled && { fiber: parseInt(manualFiber, 10) || 25 }),
+      ...(sugarEnabled && { sugar: parseInt(manualSugar, 10) || 50 }),
+      ...(sodiumEnabled && { sodium: parseInt(manualSodium, 10) || 2300 }),
+      ...(potassiumEnabled && { potassium: parseInt(manualPotassium, 10) || 3500 }),
+    };
+
     const updatedGoals = goals
-      ? {
-          ...goals,
-          manualTargets: {
-            kcal: kcalValue,
-            protein: proteinValue,
-            fat: fatValue,
-            carbs: carbsValue,
-          },
-        }
+      ? { ...goals, manualTargets }
       : {
-          // Create minimal goals structure when none exist
           sex: "male" as const,
           age: 30,
           heightCm: 175,
@@ -169,47 +287,116 @@ export function NutritionGoalsModal({
           targetProtein: proteinValue,
           targetFat: fatValue,
           targetCarbs: carbsValue,
-          manualTargets: {
-            kcal: kcalValue,
-            protein: proteinValue,
-            fat: fatValue,
-            carbs: carbsValue,
-          },
+          manualTargets,
         };
 
     setGoals(updatedGoals);
     onClose();
   };
 
-  // Get effective targets
-  const getEffectiveTargets = () => {
-    return {
-      kcal: parseInt(manualKcal, 10) || 2000,
-      protein: parseInt(manualProtein, 10) || 150,
-      fat: parseInt(manualFat, 10) || 65,
-      carbs: parseInt(manualCarbs, 10) || 200,
-    };
+  const getValueForField = (field: NutrientField): string => {
+    switch (field) {
+      case 'kcal': return manualKcal;
+      case 'protein': return manualProtein;
+      case 'fat': return manualFat;
+      case 'carbs': return manualCarbs;
+      case 'fiber': return manualFiber;
+      case 'sugar': return manualSugar;
+      case 'sodium': return manualSodium;
+      case 'potassium': return manualPotassium;
+    }
   };
 
-  // Start editing a specific field
-  const startEditing = (field: 'kcal' | 'protein' | 'fat' | 'carbs') => {
+  const setValueForField = (field: NutrientField, value: string) => {
+    const cleanValue = value.replace(/[^0-9]/g, "");
+    switch (field) {
+      case 'kcal': setManualKcal(cleanValue); break;
+      case 'protein': setManualProtein(cleanValue); break;
+      case 'fat': setManualFat(cleanValue); break;
+      case 'carbs': setManualCarbs(cleanValue); break;
+      case 'fiber': setManualFiber(cleanValue); break;
+      case 'sugar': setManualSugar(cleanValue); break;
+      case 'sodium': setManualSodium(cleanValue); break;
+      case 'potassium': setManualPotassium(cleanValue); break;
+    }
+  };
+
+  const startEditing = (field: NutrientField) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditingField(field);
-
-    // Focus the appropriate input
-    setTimeout(() => {
-      if (field === 'kcal') kcalInputRef.current?.focus();
-      else if (field === 'protein') proteinInputRef.current?.focus();
-      else if (field === 'fat') fatInputRef.current?.focus();
-      else if (field === 'carbs') carbsInputRef.current?.focus();
-    }, 100);
+    setTimeout(() => inputRefs[field].current?.focus(), 100);
   };
 
-  const stopEditing = () => {
-    setEditingField(null);
+  const stopEditing = () => setEditingField(null);
+
+  const toggleNutrient = (nutrient: 'fiber' | 'sugar' | 'sodium' | 'potassium') => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    switch (nutrient) {
+      case 'fiber': setFiberEnabled(!fiberEnabled); break;
+      case 'sugar': setSugarEnabled(!sugarEnabled); break;
+      case 'sodium': setSodiumEnabled(!sodiumEnabled); break;
+      case 'potassium': setPotassiumEnabled(!potassiumEnabled); break;
+    }
   };
 
-  const effectiveTargets = getEffectiveTargets();
+  const isNutrientEnabled = (nutrient: 'fiber' | 'sugar' | 'sodium' | 'potassium'): boolean => {
+    switch (nutrient) {
+      case 'fiber': return fiberEnabled;
+      case 'sugar': return sugarEnabled;
+      case 'sodium': return sodiumEnabled;
+      case 'potassium': return potassiumEnabled;
+    }
+  };
+
+  const renderTargetRow = (
+    field: NutrientField,
+    label: string,
+    unit: string,
+    isLast: boolean = false,
+    accentColor?: string
+  ) => {
+    const value = getValueForField(field);
+    const displayValue = parseInt(value, 10) || 0;
+
+    return (
+      <TouchableOpacity
+        key={field}
+        style={[styles.targetRow, isLast && styles.targetRowLast]}
+        onPress={() => startEditing(field)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.targetLabelContainer}>
+          {accentColor && <View style={[styles.nutrientDot, { backgroundColor: accentColor }]} />}
+          <Text style={styles.targetLabel}>{label}</Text>
+        </View>
+        {editingField === field ? (
+          <View style={styles.targetInputContainer}>
+            <TextInput
+              ref={inputRefs[field]}
+              style={styles.targetInput}
+              value={value}
+              onChangeText={(text) => setValueForField(field, text)}
+              keyboardType="number-pad"
+              onBlur={stopEditing}
+              selectTextOnFocus
+            />
+            <Text style={styles.targetInputUnit}>{unit}</Text>
+          </View>
+        ) : (
+          <View style={styles.targetValueContainer}>
+            <Text style={styles.targetValue}>
+              {field === 'kcal' ? displayValue.toLocaleString() : displayValue}
+            </Text>
+            <Text style={styles.targetUnit}>{unit}</Text>
+            <Ionicons name="pencil" size={12} color="#999" style={styles.targetEditIcon} />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  // Get enabled other nutrients for display in Daily Targets
+  const enabledOtherNutrients = OTHER_NUTRIENTS.filter(n => isNutrientEnabled(n.key));
 
   return (
     <Modal
@@ -220,7 +407,6 @@ export function NutritionGoalsModal({
     >
       <GestureHandlerRootView style={styles.gestureRoot}>
         <StatusBar barStyle="dark-content" />
-        {/* Backdrop */}
         <Animated.View style={[styles.backdrop, backdropStyle]}>
           <TouchableOpacity
             style={styles.backdropPressable}
@@ -231,18 +417,12 @@ export function NutritionGoalsModal({
 
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[
-              styles.container,
-              { marginTop: insets.top },
-              animatedStyle,
-            ]}
+            style={[styles.container, { marginTop: insets.top }, animatedStyle]}
           >
-            {/* Drag Indicator */}
             <View style={styles.dragIndicatorContainer}>
               <View style={styles.dragIndicator} />
             </View>
 
-            {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Nutrition Goals</Text>
             </View>
@@ -271,171 +451,73 @@ export function NutritionGoalsModal({
                 >
                   <Text style={styles.sectionTitle}>Daily Targets</Text>
 
-                  <View style={styles.goalsCard}>
-                    {/* Calories Row */}
-                    <TouchableOpacity
-                      style={styles.targetRow}
-                      onPress={() => startEditing('kcal')}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.targetLabel}>Calories</Text>
-                      {editingField === 'kcal' ? (
-                        <View style={styles.targetInputContainer}>
-                          <TextInput
-                            ref={kcalInputRef}
-                            style={styles.targetInput}
-                            value={manualKcal}
-                            onChangeText={(text) =>
-                              setManualKcal(text.replace(/[^0-9]/g, ""))
-                            }
-                            keyboardType="number-pad"
-                            onBlur={stopEditing}
-                            selectTextOnFocus
-                          />
-                          <Text style={styles.targetInputUnit}>kcal</Text>
-                        </View>
-                      ) : (
-                        <View style={styles.targetValueContainer}>
-                          <Text style={styles.targetValue}>
-                            {effectiveTargets.kcal.toLocaleString()}
-                          </Text>
-                          <Text style={styles.targetUnit}>kcal</Text>
-                          <Ionicons
-                            name="pencil"
-                            size={12}
-                            color="#999"
-                            style={styles.targetEditIcon}
-                          />
-                        </View>
-                      )}
-                    </TouchableOpacity>
+                  <Animated.View style={styles.goalsCard} layout={Layout.springify()}>
+                    {renderTargetRow('kcal', 'Calories', 'kcal')}
+                    {renderTargetRow('protein', 'Protein', 'g')}
+                    {renderTargetRow('fat', 'Fat', 'g')}
+                    {renderTargetRow('carbs', 'Carbs', 'g', enabledOtherNutrients.length === 0)}
 
-                    {/* Protein Row */}
-                    <TouchableOpacity
-                      style={styles.targetRow}
-                      onPress={() => startEditing('protein')}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.targetLabel}>Protein</Text>
-                      {editingField === 'protein' ? (
-                        <View style={styles.targetInputContainer}>
-                          <TextInput
-                            ref={proteinInputRef}
-                            style={styles.targetInput}
-                            value={manualProtein}
-                            onChangeText={(text) =>
-                              setManualProtein(text.replace(/[^0-9]/g, ""))
-                            }
-                            keyboardType="number-pad"
-                            onBlur={stopEditing}
-                            selectTextOnFocus
-                          />
-                          <Text style={styles.targetInputUnit}>g</Text>
-                        </View>
-                      ) : (
-                        <View style={styles.targetValueContainer}>
-                          <Text style={styles.targetValue}>
-                            {effectiveTargets.protein}
-                          </Text>
-                          <Text style={styles.targetUnit}>g</Text>
-                          <Ionicons
-                            name="pencil"
-                            size={12}
-                            color="#999"
-                            style={styles.targetEditIcon}
-                          />
-                        </View>
-                      )}
-                    </TouchableOpacity>
+                    {/* Enabled other nutrients appear here */}
+                    {enabledOtherNutrients.map((nutrient, index) => (
+                      <Animated.View
+                        key={nutrient.key}
+                        entering={FadeIn.duration(200)}
+                        exiting={FadeOut.duration(150)}
+                        layout={Layout.springify()}
+                      >
+                        {renderTargetRow(
+                          nutrient.key,
+                          nutrient.label,
+                          nutrient.unit,
+                          index === enabledOtherNutrients.length - 1,
+                          nutrient.color
+                        )}
+                      </Animated.View>
+                    ))}
+                  </Animated.View>
+                </Animated.View>
 
-                    {/* Fat Row */}
-                    <TouchableOpacity
-                      style={styles.targetRow}
-                      onPress={() => startEditing('fat')}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.targetLabel}>Fat</Text>
-                      {editingField === 'fat' ? (
-                        <View style={styles.targetInputContainer}>
-                          <TextInput
-                            ref={fatInputRef}
-                            style={styles.targetInput}
-                            value={manualFat}
-                            onChangeText={(text) =>
-                              setManualFat(text.replace(/[^0-9]/g, ""))
-                            }
-                            keyboardType="number-pad"
-                            onBlur={stopEditing}
-                            selectTextOnFocus
-                          />
-                          <Text style={styles.targetInputUnit}>g</Text>
-                        </View>
-                      ) : (
-                        <View style={styles.targetValueContainer}>
-                          <Text style={styles.targetValue}>
-                            {effectiveTargets.fat}
-                          </Text>
-                          <Text style={styles.targetUnit}>g</Text>
-                          <Ionicons
-                            name="pencil"
-                            size={12}
-                            color="#999"
-                            style={styles.targetEditIcon}
-                          />
-                        </View>
-                      )}
-                    </TouchableOpacity>
+                {/* Other Nutrients Section */}
+                <Animated.View
+                  entering={FadeInDown.delay(200).duration(400)}
+                  style={styles.section}
+                >
+                  <Text style={styles.sectionTitle}>Other Nutrients</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    Toggle to track additional nutrients
+                  </Text>
 
-                    {/* Carbs Row */}
-                    <TouchableOpacity
-                      style={[styles.targetRow, styles.targetRowLast]}
-                      onPress={() => startEditing('carbs')}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.targetLabel}>Carbs</Text>
-                      {editingField === 'carbs' ? (
-                        <View style={styles.targetInputContainer}>
-                          <TextInput
-                            ref={carbsInputRef}
-                            style={styles.targetInput}
-                            value={manualCarbs}
-                            onChangeText={(text) =>
-                              setManualCarbs(text.replace(/[^0-9]/g, ""))
-                            }
-                            keyboardType="number-pad"
-                            onBlur={stopEditing}
-                            selectTextOnFocus
-                          />
-                          <Text style={styles.targetInputUnit}>g</Text>
-                        </View>
-                      ) : (
-                        <View style={styles.targetValueContainer}>
-                          <Text style={styles.targetValue}>
-                            {effectiveTargets.carbs}
-                          </Text>
-                          <Text style={styles.targetUnit}>g</Text>
-                          <Ionicons
-                            name="pencil"
-                            size={12}
-                            color="#999"
-                            style={styles.targetEditIcon}
+                  <View style={styles.toggleCard}>
+                    {OTHER_NUTRIENTS.map((nutrient, index) => {
+                      const enabled = isNutrientEnabled(nutrient.key);
+                      return (
+                        <View
+                          key={nutrient.key}
+                          style={[
+                            styles.toggleRow,
+                            index === OTHER_NUTRIENTS.length - 1 && styles.toggleRowLast,
+                          ]}
+                        >
+                          <View style={styles.toggleLabelContainer}>
+                            <View style={[styles.nutrientDot, { backgroundColor: nutrient.color }]} />
+                            <Text style={styles.toggleLabel}>{nutrient.label}</Text>
+                            <Text style={styles.toggleUnit}>({nutrient.unit})</Text>
+                          </View>
+                          <IOSToggle
+                            value={enabled}
+                            onValueChange={() => toggleNutrient(nutrient.key)}
+                            activeColor="#1A6872"
                           />
                         </View>
-                      )}
-                    </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 </Animated.View>
               </Animated.ScrollView>
             </KeyboardAvoidingView>
 
-            {/* Bottom Actions */}
-            <View
-              style={[styles.bottomActions, { paddingBottom: insets.bottom + 16 }]}
-            >
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={handleSaveGoals}
-              >
+            <View style={[styles.bottomActions, { paddingBottom: insets.bottom + 16 }]}>
+              <TouchableOpacity style={styles.saveButton} onPress={handleSaveGoals}>
                 <Text style={styles.saveButtonText}>Save Goals</Text>
               </TouchableOpacity>
             </View>
@@ -486,7 +568,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontFamily: "System",
     fontWeight: "600",
     color: "#1a1a1a",
     textAlign: "center",
@@ -513,11 +594,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginLeft: 4,
   },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: "#aaa",
+    marginBottom: 12,
+    marginLeft: 4,
+  },
   goalsCard: {
     backgroundColor: "#ffffff",
     borderRadius: 16,
     paddingVertical: 4,
-    paddingHorizontal: 0,
+    overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
@@ -533,9 +620,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#f0f0f0",
     minHeight: 52,
+    backgroundColor: "#ffffff",
   },
   targetRowLast: {
     borderBottomWidth: 0,
+  },
+  targetLabelContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  nutrientDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   targetLabel: {
     fontSize: 15,
@@ -582,6 +680,60 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     color: "#1A6872",
+  },
+  toggleCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#f0f0f0",
+  },
+  toggleRowLast: {
+    borderBottomWidth: 0,
+  },
+  toggleLabelContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  toggleLabel: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#333",
+  },
+  toggleUnit: {
+    fontSize: 13,
+    color: "#999",
+  },
+  iosToggleTrack: {
+    width: 51,
+    height: 31,
+    borderRadius: 15.5,
+    justifyContent: "center",
+    padding: 2,
+  },
+  iosToggleThumb: {
+    width: 27,
+    height: 27,
+    borderRadius: 13.5,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
   },
   bottomActions: {
     flexDirection: "row",

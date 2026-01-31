@@ -88,6 +88,10 @@ export interface ManualTargets {
   protein?: number;
   fat?: number;
   carbs?: number;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number;
+  potassium?: number;
 }
 
 export interface UserGoals extends UserGoalsInput {

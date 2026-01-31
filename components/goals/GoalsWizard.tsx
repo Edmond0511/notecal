@@ -256,6 +256,12 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
     };
 
     const calculatedGoals = calculateGoals(input);
+
+    // Preserve existing manual targets when editing via wizard
+    if (existingGoals?.manualTargets) {
+      calculatedGoals.manualTargets = existingGoals.manualTargets;
+    }
+
     setGoals(calculatedGoals);
     setPreferredUnits(formData.useImperial ? 'imperial' : 'metric');
     onClose();

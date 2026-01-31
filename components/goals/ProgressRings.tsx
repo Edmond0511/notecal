@@ -191,7 +191,6 @@ interface MacroCardProps {
 }
 
 function MacroCard({ label, current, target, color, delay }: MacroCardProps) {
-  const remaining = Math.max(target - current, 0);
   const isOver = current > target;
 
   const fadeIn = useSharedValue(0);
@@ -231,7 +230,7 @@ function MacroCard({ label, current, target, color, delay }: MacroCardProps) {
         />
         <View style={styles.macroCenter}>
           <Text style={[styles.macroValue, { color: color.primary }]}>
-            {Math.round(current)}
+            {Math.round(current)}g
           </Text>
         </View>
       </View>
@@ -239,14 +238,10 @@ function MacroCard({ label, current, target, color, delay }: MacroCardProps) {
       <Text style={styles.macroLabel}>{label}</Text>
 
       <View style={styles.macroTargetContainer}>
-        <Text style={styles.macroTargetText}>
-          {isOver ? (
-            <Text style={styles.macroOverText}>
-              +{Math.round(current - target)}g
-            </Text>
-          ) : (
-            `${Math.round(remaining)}g left`
-          )}
+        <Text style={[styles.macroProgressText, isOver && styles.macroOverText]}>
+          <Text style={styles.macroConsumed}>{Math.round(current)}g</Text>
+          <Text style={styles.macroDivider}> / </Text>
+          <Text style={styles.macroTotal}>{target}g</Text>
         </Text>
       </View>
     </Animated.View>
@@ -420,12 +415,22 @@ const styles = StyleSheet.create({
   macroTargetContainer: {
     marginBottom: 8,
   },
-  macroTargetText: {
+  macroProgressText: {
     fontSize: 11,
+    color: "#666",
+  },
+  macroConsumed: {
+    fontWeight: "600",
+    color: "#333",
+  },
+  macroDivider: {
+    color: "#aaa",
+  },
+  macroTotal: {
+    fontWeight: "500",
     color: "#888",
   },
   macroOverText: {
     color: "#EF5350",
-    fontWeight: "600",
   },
 });

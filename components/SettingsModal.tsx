@@ -282,7 +282,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                       style={styles.menuItem}
                       activeOpacity={0.7}
                       onPress={() => {
-                        console.log('🎯 Nutrition Goals pressed, setting visible to true');
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         onClose(); // Close settings first
                         setTimeout(() => setShowNutritionGoalsModal(true), 100);

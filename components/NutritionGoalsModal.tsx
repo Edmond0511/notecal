@@ -60,6 +60,14 @@ interface OtherNutrient {
   color: string;
 }
 
+// Universal default values for micronutrients (no personalized calculation needed)
+const DEFAULT_MICRONUTRIENTS = {
+  fiber: 25,       // 25g - universal recommendation
+  sugar: 50,       // 50g - ~10% of 2000 kcal diet
+  sodium: 2300,    // 2300mg - universal limit
+  potassium: 3500, // 3500mg - universal recommendation
+};
+
 const OTHER_NUTRIENTS: OtherNutrient[] = [
   {
     key: "fiber",
@@ -159,16 +167,16 @@ export function NutritionGoalsModal({
           (goals.manualTargets?.carbs ?? goals.targetCarbs).toString(),
         );
 
-        // Other nutrients
+        // Other nutrients - use saved values or universal defaults
         const fiber = goals.manualTargets?.fiber;
         const sugar = goals.manualTargets?.sugar;
         const sodium = goals.manualTargets?.sodium;
         const potassium = goals.manualTargets?.potassium;
 
-        setManualFiber(fiber?.toString() ?? "25");
-        setManualSugar(sugar?.toString() ?? "50");
-        setManualSodium(sodium?.toString() ?? "2300");
-        setManualPotassium(potassium?.toString() ?? "3500");
+        setManualFiber(fiber?.toString() ?? DEFAULT_MICRONUTRIENTS.fiber.toString());
+        setManualSugar(sugar?.toString() ?? DEFAULT_MICRONUTRIENTS.sugar.toString());
+        setManualSodium(sodium?.toString() ?? DEFAULT_MICRONUTRIENTS.sodium.toString());
+        setManualPotassium(potassium?.toString() ?? DEFAULT_MICRONUTRIENTS.potassium.toString());
 
         setFiberEnabled(fiber !== undefined);
         setSugarEnabled(sugar !== undefined);
@@ -179,10 +187,10 @@ export function NutritionGoalsModal({
         setManualProtein("150");
         setManualFat("65");
         setManualCarbs("200");
-        setManualFiber("25");
-        setManualSugar("50");
-        setManualSodium("2300");
-        setManualPotassium("3500");
+        setManualFiber(DEFAULT_MICRONUTRIENTS.fiber.toString());
+        setManualSugar(DEFAULT_MICRONUTRIENTS.sugar.toString());
+        setManualSodium(DEFAULT_MICRONUTRIENTS.sodium.toString());
+        setManualPotassium(DEFAULT_MICRONUTRIENTS.potassium.toString());
         setFiberEnabled(false);
         setSugarEnabled(false);
         setSodiumEnabled(false);
@@ -252,11 +260,11 @@ export function NutritionGoalsModal({
       protein: proteinValue,
       fat: fatValue,
       carbs: carbsValue,
-      ...(fiberEnabled && { fiber: parseInt(manualFiber, 10) || 25 }),
-      ...(sugarEnabled && { sugar: parseInt(manualSugar, 10) || 50 }),
-      ...(sodiumEnabled && { sodium: parseInt(manualSodium, 10) || 2300 }),
+      ...(fiberEnabled && { fiber: parseInt(manualFiber, 10) || DEFAULT_MICRONUTRIENTS.fiber }),
+      ...(sugarEnabled && { sugar: parseInt(manualSugar, 10) || DEFAULT_MICRONUTRIENTS.sugar }),
+      ...(sodiumEnabled && { sodium: parseInt(manualSodium, 10) || DEFAULT_MICRONUTRIENTS.sodium }),
       ...(potassiumEnabled && {
-        potassium: parseInt(manualPotassium, 10) || 3500,
+        potassium: parseInt(manualPotassium, 10) || DEFAULT_MICRONUTRIENTS.potassium,
       }),
     };
 
@@ -362,6 +370,46 @@ export function NutritionGoalsModal({
         setPotassiumEnabled(!potassiumEnabled);
         break;
     }
+  };
+
+  // Check if any values have been modified from calculated/default values
+  const hasAnyModifications = (): boolean => {
+    if (!goals) return false;
+
+    const kcalChanged = parseInt(manualKcal, 10) !== goals.targetKcal;
+    const proteinChanged = parseInt(manualProtein, 10) !== goals.targetProtein;
+    const fatChanged = parseInt(manualFat, 10) !== goals.targetFat;
+    const carbsChanged = parseInt(manualCarbs, 10) !== goals.targetCarbs;
+
+    // Check micronutrients (only if enabled)
+    const fiberChanged = fiberEnabled && parseInt(manualFiber, 10) !== DEFAULT_MICRONUTRIENTS.fiber;
+    const sugarChanged = sugarEnabled && parseInt(manualSugar, 10) !== DEFAULT_MICRONUTRIENTS.sugar;
+    const sodiumChanged = sodiumEnabled && parseInt(manualSodium, 10) !== DEFAULT_MICRONUTRIENTS.sodium;
+    const potassiumChanged = potassiumEnabled && parseInt(manualPotassium, 10) !== DEFAULT_MICRONUTRIENTS.potassium;
+
+    return kcalChanged || proteinChanged || fatChanged || carbsChanged ||
+           fiberChanged || sugarChanged || sodiumChanged || potassiumChanged;
+  };
+
+  // Reset all targets to calculated/universal values
+  const resetAllToCalculated = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (goals) {
+      // Reset macros to calculated values
+      setManualKcal(goals.targetKcal.toString());
+      setManualProtein(goals.targetProtein.toString());
+      setManualFat(goals.targetFat.toString());
+      setManualCarbs(goals.targetCarbs.toString());
+    }
+
+    // Reset micronutrients to universal defaults
+    setManualFiber(DEFAULT_MICRONUTRIENTS.fiber.toString());
+    setManualSugar(DEFAULT_MICRONUTRIENTS.sugar.toString());
+    setManualSodium(DEFAULT_MICRONUTRIENTS.sodium.toString());
+    setManualPotassium(DEFAULT_MICRONUTRIENTS.potassium.toString());
+
+    setEditingField(null);
   };
 
   const isNutrientEnabled = (
@@ -486,7 +534,27 @@ export function NutritionGoalsModal({
                   entering={FadeInDown.delay(100).duration(400)}
                   style={styles.section}
                 >
-                  <Text style={styles.sectionTitle}>Daily Targets</Text>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Daily Targets</Text>
+
+                    {/* Reset to calculated values - inline with section title */}
+                    {goals && hasAnyModifications() && (
+                      <Animated.View
+                        entering={FadeIn.duration(200)}
+                        exiting={FadeOut.duration(150)}
+                      >
+                        <TouchableOpacity
+                          style={styles.resetButton}
+                          onPress={resetAllToCalculated}
+                          activeOpacity={0.7}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="refresh" size={13} color="#1A6872" />
+                          <Text style={styles.resetButtonText}>Reset</Text>
+                        </TouchableOpacity>
+                      </Animated.View>
+                    )}
+                  </View>
 
                   <Animated.View
                     style={styles.goalsCard}
@@ -527,7 +595,9 @@ export function NutritionGoalsModal({
                   entering={FadeInDown.delay(200).duration(400)}
                   style={styles.section}
                 >
-                  <Text style={styles.sectionTitle}>Other Nutrients</Text>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Other Nutrients</Text>
+                  </View>
 
                   <View style={styles.toggleCard}>
                     {OTHER_NUTRIENTS.map((nutrient, index) => {
@@ -641,14 +711,35 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+    marginLeft: 4,
+    marginRight: 4,
+  },
   sectionTitle: {
     fontSize: 13,
     fontWeight: "600",
     color: "#999",
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    marginBottom: 8,
-    marginLeft: 4,
+  },
+  resetButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    backgroundColor: "rgba(26, 104, 114, 0.08)",
+    borderRadius: 12,
+  },
+  resetButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1A6872",
+    letterSpacing: 0.2,
   },
   sectionSubtitle: {
     fontSize: 13,

@@ -336,7 +336,7 @@ async function checkUserQuota(userId: string) {
 
 function createFallbackResponse(foodText: string): NutritionResolveResponse {
   // Return zeros when AI service is unavailable
-  const nutrition = { kcal: 0, protein: 0, fat: 0, carbs: 0 };
+  const nutrition = { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, sugar: 0, sodium: 0, potassium: 0 };
 
   return {
     resolved: [{

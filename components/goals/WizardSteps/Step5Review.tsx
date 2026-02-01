@@ -119,7 +119,6 @@ export function Step5Review({ goals, formData }: Step5ReviewProps) {
               const value = goals.manualTargets?.[nutrient.key];
               return (
                 <View key={nutrient.key} style={styles.otherNutrientItem}>
-                  <View style={[styles.nutrientDot, { backgroundColor: nutrient.color }]} />
                   <Text style={styles.otherNutrientLabel}>{nutrient.label}</Text>
                   <Text style={styles.otherNutrientValue}>
                     {value}
@@ -292,11 +291,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     gap: 8,
-  },
-  nutrientDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
   otherNutrientLabel: {
     flex: 1,

@@ -7,9 +7,9 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  Pressable,
   StatusBar,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -26,62 +26,13 @@ import Animated, {
   FadeInDown,
   FadeOut,
   interpolate,
-  interpolateColor,
   Layout,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
-  withTiming,
+  withSpring
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-// iOS-style Toggle Component
-interface IOSToggleProps {
-  value: boolean;
-  onValueChange: (value: boolean) => void;
-  activeColor?: string;
-}
-
-function IOSToggle({ value, onValueChange, activeColor = '#34C759' }: IOSToggleProps) {
-  const progress = useSharedValue(value ? 1 : 0);
-
-  useEffect(() => {
-    progress.value = withSpring(value ? 1 : 0, {
-      mass: 0.5,
-      damping: 15,
-      stiffness: 120,
-    });
-  }, [value]);
-
-  const trackStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(
-      progress.value,
-      [0, 1],
-      ['#E9E9EA', activeColor]
-    ),
-  }));
-
-  const thumbStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: interpolate(progress.value, [0, 1], [2, 23]) },
-      { scale: interpolate(progress.value, [0, 0.5, 1], [1, 0.95, 1]) },
-    ],
-  }));
-
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onValueChange(!value);
-  };
-
-  return (
-    <Pressable onPress={handlePress}>
-      <Animated.View style={[styles.iosToggleTrack, trackStyle]}>
-        <Animated.View style={[styles.iosToggleThumb, thumbStyle]} />
-      </Animated.View>
-    </Pressable>
-  );
-}
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
@@ -91,10 +42,18 @@ interface NutritionGoalsModalProps {
   onClose: () => void;
 }
 
-type NutrientField = 'kcal' | 'protein' | 'fat' | 'carbs' | 'fiber' | 'sugar' | 'sodium' | 'potassium';
+type NutrientField =
+  | "kcal"
+  | "protein"
+  | "fat"
+  | "carbs"
+  | "fiber"
+  | "sugar"
+  | "sodium"
+  | "potassium";
 
 interface OtherNutrient {
-  key: 'fiber' | 'sugar' | 'sodium' | 'potassium';
+  key: "fiber" | "sugar" | "sodium" | "potassium";
   label: string;
   unit: string;
   placeholder: string;
@@ -102,10 +61,34 @@ interface OtherNutrient {
 }
 
 const OTHER_NUTRIENTS: OtherNutrient[] = [
-  { key: 'fiber', label: 'Fiber', unit: 'g', placeholder: '25', color: '#8B6914' },
-  { key: 'sugar', label: 'Sugar', unit: 'g', placeholder: '50', color: '#C45BAA' },
-  { key: 'sodium', label: 'Sodium', unit: 'mg', placeholder: '2300', color: '#5B8CC4' },
-  { key: 'potassium', label: 'Potassium', unit: 'mg', placeholder: '3500', color: '#6B8E5B' },
+  {
+    key: "fiber",
+    label: "Fiber",
+    unit: "g",
+    placeholder: "25",
+    color: "#8B6914",
+  },
+  {
+    key: "sugar",
+    label: "Sugar",
+    unit: "g",
+    placeholder: "50",
+    color: "#C45BAA",
+  },
+  {
+    key: "sodium",
+    label: "Sodium",
+    unit: "mg",
+    placeholder: "2300",
+    color: "#5B8CC4",
+  },
+  {
+    key: "potassium",
+    label: "Potassium",
+    unit: "mg",
+    placeholder: "3500",
+    color: "#6B8E5B",
+  },
 ];
 
 export function NutritionGoalsModal({
@@ -165,10 +148,16 @@ export function NutritionGoalsModal({
       isScrolledToTop.value = true;
 
       if (goals) {
-        setManualKcal((goals.manualTargets?.kcal ?? goals.targetKcal).toString());
-        setManualProtein((goals.manualTargets?.protein ?? goals.targetProtein).toString());
+        setManualKcal(
+          (goals.manualTargets?.kcal ?? goals.targetKcal).toString(),
+        );
+        setManualProtein(
+          (goals.manualTargets?.protein ?? goals.targetProtein).toString(),
+        );
         setManualFat((goals.manualTargets?.fat ?? goals.targetFat).toString());
-        setManualCarbs((goals.manualTargets?.carbs ?? goals.targetCarbs).toString());
+        setManualCarbs(
+          (goals.manualTargets?.carbs ?? goals.targetCarbs).toString(),
+        );
 
         // Other nutrients
         const fiber = goals.manualTargets?.fiber;
@@ -238,7 +227,7 @@ export function NutritionGoalsModal({
       translateY.value,
       [0, SCREEN_HEIGHT * 0.5],
       [1, 0],
-      Extrapolation.CLAMP
+      Extrapolation.CLAMP,
     ),
   }));
 
@@ -266,7 +255,9 @@ export function NutritionGoalsModal({
       ...(fiberEnabled && { fiber: parseInt(manualFiber, 10) || 25 }),
       ...(sugarEnabled && { sugar: parseInt(manualSugar, 10) || 50 }),
       ...(sodiumEnabled && { sodium: parseInt(manualSodium, 10) || 2300 }),
-      ...(potassiumEnabled && { potassium: parseInt(manualPotassium, 10) || 3500 }),
+      ...(potassiumEnabled && {
+        potassium: parseInt(manualPotassium, 10) || 3500,
+      }),
     };
 
     const updatedGoals = goals
@@ -296,28 +287,52 @@ export function NutritionGoalsModal({
 
   const getValueForField = (field: NutrientField): string => {
     switch (field) {
-      case 'kcal': return manualKcal;
-      case 'protein': return manualProtein;
-      case 'fat': return manualFat;
-      case 'carbs': return manualCarbs;
-      case 'fiber': return manualFiber;
-      case 'sugar': return manualSugar;
-      case 'sodium': return manualSodium;
-      case 'potassium': return manualPotassium;
+      case "kcal":
+        return manualKcal;
+      case "protein":
+        return manualProtein;
+      case "fat":
+        return manualFat;
+      case "carbs":
+        return manualCarbs;
+      case "fiber":
+        return manualFiber;
+      case "sugar":
+        return manualSugar;
+      case "sodium":
+        return manualSodium;
+      case "potassium":
+        return manualPotassium;
     }
   };
 
   const setValueForField = (field: NutrientField, value: string) => {
     const cleanValue = value.replace(/[^0-9]/g, "");
     switch (field) {
-      case 'kcal': setManualKcal(cleanValue); break;
-      case 'protein': setManualProtein(cleanValue); break;
-      case 'fat': setManualFat(cleanValue); break;
-      case 'carbs': setManualCarbs(cleanValue); break;
-      case 'fiber': setManualFiber(cleanValue); break;
-      case 'sugar': setManualSugar(cleanValue); break;
-      case 'sodium': setManualSodium(cleanValue); break;
-      case 'potassium': setManualPotassium(cleanValue); break;
+      case "kcal":
+        setManualKcal(cleanValue);
+        break;
+      case "protein":
+        setManualProtein(cleanValue);
+        break;
+      case "fat":
+        setManualFat(cleanValue);
+        break;
+      case "carbs":
+        setManualCarbs(cleanValue);
+        break;
+      case "fiber":
+        setManualFiber(cleanValue);
+        break;
+      case "sugar":
+        setManualSugar(cleanValue);
+        break;
+      case "sodium":
+        setManualSodium(cleanValue);
+        break;
+      case "potassium":
+        setManualPotassium(cleanValue);
+        break;
     }
   };
 
@@ -329,22 +344,38 @@ export function NutritionGoalsModal({
 
   const stopEditing = () => setEditingField(null);
 
-  const toggleNutrient = (nutrient: 'fiber' | 'sugar' | 'sodium' | 'potassium') => {
+  const toggleNutrient = (
+    nutrient: "fiber" | "sugar" | "sodium" | "potassium",
+  ) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     switch (nutrient) {
-      case 'fiber': setFiberEnabled(!fiberEnabled); break;
-      case 'sugar': setSugarEnabled(!sugarEnabled); break;
-      case 'sodium': setSodiumEnabled(!sodiumEnabled); break;
-      case 'potassium': setPotassiumEnabled(!potassiumEnabled); break;
+      case "fiber":
+        setFiberEnabled(!fiberEnabled);
+        break;
+      case "sugar":
+        setSugarEnabled(!sugarEnabled);
+        break;
+      case "sodium":
+        setSodiumEnabled(!sodiumEnabled);
+        break;
+      case "potassium":
+        setPotassiumEnabled(!potassiumEnabled);
+        break;
     }
   };
 
-  const isNutrientEnabled = (nutrient: 'fiber' | 'sugar' | 'sodium' | 'potassium'): boolean => {
+  const isNutrientEnabled = (
+    nutrient: "fiber" | "sugar" | "sodium" | "potassium",
+  ): boolean => {
     switch (nutrient) {
-      case 'fiber': return fiberEnabled;
-      case 'sugar': return sugarEnabled;
-      case 'sodium': return sodiumEnabled;
-      case 'potassium': return potassiumEnabled;
+      case "fiber":
+        return fiberEnabled;
+      case "sugar":
+        return sugarEnabled;
+      case "sodium":
+        return sodiumEnabled;
+      case "potassium":
+        return potassiumEnabled;
     }
   };
 
@@ -353,7 +384,7 @@ export function NutritionGoalsModal({
     label: string,
     unit: string,
     isLast: boolean = false,
-    accentColor?: string
+    accentColor?: string,
   ) => {
     const value = getValueForField(field);
     const displayValue = parseInt(value, 10) || 0;
@@ -366,7 +397,6 @@ export function NutritionGoalsModal({
         activeOpacity={0.7}
       >
         <View style={styles.targetLabelContainer}>
-          {accentColor && <View style={[styles.nutrientDot, { backgroundColor: accentColor }]} />}
           <Text style={styles.targetLabel}>{label}</Text>
         </View>
         {editingField === field ? (
@@ -385,10 +415,15 @@ export function NutritionGoalsModal({
         ) : (
           <View style={styles.targetValueContainer}>
             <Text style={styles.targetValue}>
-              {field === 'kcal' ? displayValue.toLocaleString() : displayValue}
+              {field === "kcal" ? displayValue.toLocaleString() : displayValue}
             </Text>
             <Text style={styles.targetUnit}>{unit}</Text>
-            <Ionicons name="pencil" size={12} color="#999" style={styles.targetEditIcon} />
+            <Ionicons
+              name="pencil"
+              size={12}
+              color="#999"
+              style={styles.targetEditIcon}
+            />
           </View>
         )}
       </TouchableOpacity>
@@ -396,7 +431,9 @@ export function NutritionGoalsModal({
   };
 
   // Get enabled other nutrients for display in Daily Targets
-  const enabledOtherNutrients = OTHER_NUTRIENTS.filter(n => isNutrientEnabled(n.key));
+  const enabledOtherNutrients = OTHER_NUTRIENTS.filter((n) =>
+    isNutrientEnabled(n.key),
+  );
 
   return (
     <Modal
@@ -451,11 +488,19 @@ export function NutritionGoalsModal({
                 >
                   <Text style={styles.sectionTitle}>Daily Targets</Text>
 
-                  <Animated.View style={styles.goalsCard} layout={Layout.springify()}>
-                    {renderTargetRow('kcal', 'Calories', 'kcal')}
-                    {renderTargetRow('protein', 'Protein', 'g')}
-                    {renderTargetRow('fat', 'Fat', 'g')}
-                    {renderTargetRow('carbs', 'Carbs', 'g', enabledOtherNutrients.length === 0)}
+                  <Animated.View
+                    style={styles.goalsCard}
+                    layout={Layout.springify()}
+                  >
+                    {renderTargetRow("kcal", "Calories", "kcal")}
+                    {renderTargetRow("protein", "Protein", "g")}
+                    {renderTargetRow("fat", "Fat", "g")}
+                    {renderTargetRow(
+                      "carbs",
+                      "Carbs",
+                      "g",
+                      enabledOtherNutrients.length === 0,
+                    )}
 
                     {/* Enabled other nutrients appear here */}
                     {enabledOtherNutrients.map((nutrient, index) => (
@@ -470,7 +515,7 @@ export function NutritionGoalsModal({
                           nutrient.label,
                           nutrient.unit,
                           index === enabledOtherNutrients.length - 1,
-                          nutrient.color
+                          nutrient.color,
                         )}
                       </Animated.View>
                     ))}
@@ -483,9 +528,6 @@ export function NutritionGoalsModal({
                   style={styles.section}
                 >
                   <Text style={styles.sectionTitle}>Other Nutrients</Text>
-                  <Text style={styles.sectionSubtitle}>
-                    Toggle to track additional nutrients
-                  </Text>
 
                   <View style={styles.toggleCard}>
                     {OTHER_NUTRIENTS.map((nutrient, index) => {
@@ -495,18 +537,24 @@ export function NutritionGoalsModal({
                           key={nutrient.key}
                           style={[
                             styles.toggleRow,
-                            index === OTHER_NUTRIENTS.length - 1 && styles.toggleRowLast,
+                            index === OTHER_NUTRIENTS.length - 1 &&
+                              styles.toggleRowLast,
                           ]}
                         >
                           <View style={styles.toggleLabelContainer}>
-                            <View style={[styles.nutrientDot, { backgroundColor: nutrient.color }]} />
-                            <Text style={styles.toggleLabel}>{nutrient.label}</Text>
-                            <Text style={styles.toggleUnit}>({nutrient.unit})</Text>
+                            <Text style={styles.toggleLabel}>
+                              {nutrient.label}
+                            </Text>
+                            <Text style={styles.toggleUnit}>
+                              ({nutrient.unit})
+                            </Text>
                           </View>
-                          <IOSToggle
+                          <Switch
                             value={enabled}
                             onValueChange={() => toggleNutrient(nutrient.key)}
-                            activeColor="#1A6872"
+                            trackColor={{ false: "#E9E9EA", true: "#007AFF" }}
+                            thumbColor="#FFFFFF"
+                            ios_backgroundColor="#E9E9EA"
                           />
                         </View>
                       );
@@ -516,8 +564,16 @@ export function NutritionGoalsModal({
               </Animated.ScrollView>
             </KeyboardAvoidingView>
 
-            <View style={[styles.bottomActions, { paddingBottom: insets.bottom + 16 }]}>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSaveGoals}>
+            <View
+              style={[
+                styles.bottomActions,
+                { paddingBottom: insets.bottom + 16 },
+              ]}
+            >
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveGoals}
+              >
                 <Text style={styles.saveButtonText}>Save Goals</Text>
               </TouchableOpacity>
             </View>
@@ -630,11 +686,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  nutrientDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
   targetLabel: {
     fontSize: 15,
     fontWeight: "500",
@@ -716,24 +767,6 @@ const styles = StyleSheet.create({
   toggleUnit: {
     fontSize: 13,
     color: "#999",
-  },
-  iosToggleTrack: {
-    width: 51,
-    height: 31,
-    borderRadius: 15.5,
-    justifyContent: "center",
-    padding: 2,
-  },
-  iosToggleThumb: {
-    width: 27,
-    height: 27,
-    borderRadius: 13.5,
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
   },
   bottomActions: {
     flexDirection: "row",

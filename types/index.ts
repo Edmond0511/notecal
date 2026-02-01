@@ -7,6 +7,17 @@ export interface NutritionReasoning {
   confidenceAnalysis?: string; // Detailed paragraph explaining confidence calculation
 }
 
+export interface Macros {
+  kcal: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number;
+  potassium?: number;
+}
+
 export interface FoodItem {
   id: string;
   entryId: string;
@@ -17,12 +28,7 @@ export interface FoodItem {
   unit: string;
   source: 'FDC' | 'CNF' | 'OFF' | 'fallback';
   sourceId: string;
-  macros: {
-    kcal: number;
-    protein: number;
-    fat: number;
-    carbs: number;
-  };
+  macros: Macros;
   confidence: number; // 0-1 scale
   citations: {
     provider: string;
@@ -48,6 +54,10 @@ export interface DailyTotals {
   protein: number;
   fat: number;
   carbs: number;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number;
+  potassium?: number;
 }
 
 // Goals Feature Types
@@ -116,12 +126,7 @@ export interface NutritionResolveRequest {
 
 export interface NutritionResolveResponse {
   resolved: FoodItem[];
-  totals: {
-    kcal: number;
-    protein: number;
-    fat: number;
-    carbs: number;
-  };
+  totals: Macros;
   errors?: string[];
 }
 

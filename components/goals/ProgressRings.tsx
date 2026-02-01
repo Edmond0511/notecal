@@ -254,8 +254,9 @@ function MacroCard({ label, current, target, color, delay, unit = "g" }: MacroCa
         />
         <View style={styles.macroCenter}>
           <Text style={[styles.macroValue, { color: color.primary }]}>
-            {Math.round(current)}{unit}
+            {Math.round(current)}
           </Text>
+          <Text style={[styles.macroUnit, { color: color.primary }]}>{unit}</Text>
         </View>
       </View>
 
@@ -311,10 +312,7 @@ function NutrientBar({ label, current, target, color, unit, delay }: NutrientBar
   return (
     <Animated.View style={[styles.nutrientBarContainer, containerStyle]}>
       <View style={styles.nutrientBarHeader}>
-        <View style={styles.nutrientBarLabelRow}>
-          <View style={[styles.nutrientDot, { backgroundColor: color }]} />
-          <Text style={styles.nutrientBarLabel}>{label}</Text>
-        </View>
+        <Text style={styles.nutrientBarLabel}>{label}</Text>
         <Text style={[styles.nutrientBarValue, isOver && styles.nutrientBarValueOver]}>
           {Math.round(current)}<Text style={styles.nutrientBarUnit}>{unit}</Text>
           <Text style={styles.nutrientBarDivider}> / </Text>
@@ -548,8 +546,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   macroUnit: {
-    fontSize: 10,
-    color: "#888",
+    fontSize: 11,
+    fontWeight: "500",
+    marginTop: -2,
+    opacity: 0.7,
   },
   macroLabel: {
     fontSize: 12,
@@ -596,16 +596,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-  },
-  nutrientBarLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  nutrientDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
   nutrientBarLabel: {
     fontSize: 14,

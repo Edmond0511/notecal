@@ -214,17 +214,25 @@ export const useAppStore = create<AppState>()(
           const protein = entry.items.reduce((sum, item) => sum + item.macros.protein, 0);
           const fat = entry.items.reduce((sum, item) => sum + item.macros.fat, 0);
           const carbs = entry.items.reduce((sum, item) => sum + item.macros.carbs, 0);
+          const fiber = entry.items.reduce((sum, item) => sum + (item.macros.fiber ?? 0), 0);
+          const sugar = entry.items.reduce((sum, item) => sum + (item.macros.sugar ?? 0), 0);
+          const sodium = entry.items.reduce((sum, item) => sum + (item.macros.sodium ?? 0), 0);
+          const potassium = entry.items.reduce((sum, item) => sum + (item.macros.potassium ?? 0), 0);
 
           return {
             kcal: acc.kcal + entry.inlineKcal,
             protein: acc.protein + protein,
             fat: acc.fat + fat,
             carbs: acc.carbs + carbs,
+            fiber: acc.fiber + fiber,
+            sugar: acc.sugar + sugar,
+            sodium: acc.sodium + sodium,
+            potassium: acc.potassium + potassium,
           };
         }
         return acc;
       },
-      { kcal: 0, protein: 0, fat: 0, carbs: 0 }
+      { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, sugar: 0, sodium: 0, potassium: 0 }
     );
 
     return {

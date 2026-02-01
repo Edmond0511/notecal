@@ -423,7 +423,6 @@ export function ProgressRings({ consumed, targets }: ProgressRingsProps) {
           layout={Layout.springify()}
           style={styles.otherNutrientsSection}
         >
-          <Text style={styles.otherNutrientsTitle}>Other Nutrients</Text>
           <View style={styles.otherNutrientsCard}>
             {otherNutrients.map((nutrient, index) => (
               <NutrientBar
@@ -583,15 +582,6 @@ const styles = StyleSheet.create({
   // Other Nutrients Styles
   otherNutrientsSection: {
     marginTop: 16,
-  },
-  otherNutrientsTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#999",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 10,
-    marginLeft: 4,
   },
   otherNutrientsCard: {
     backgroundColor: "#fff",

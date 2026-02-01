@@ -5,6 +5,14 @@ import { NotesEditor } from "@/components/NotesEditor";
 import { SettingsModal } from "@/components/SettingsModal";
 import { useAppStore } from "@/store/app-store";
 import { Ionicons } from "@expo/vector-icons";
+import { IconProp } from "@fortawesome/fontawesome-svg-core";
+import {
+  faFireFlameCurved,
+  faDrumstickBite,
+  faDroplet,
+  faWheatAwn,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import React, { useState } from "react";
 import {
   StatusBar,
@@ -14,6 +22,13 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const icons = {
+  fire: faFireFlameCurved as IconProp,
+  protein: faDrumstickBite as IconProp,
+  fat: faDroplet as IconProp,
+  carbs: faWheatAwn as IconProp,
+};
 
 export default function HomeScreen() {
   // Get all entries and currentDate from store - single subscription
@@ -230,24 +245,24 @@ export default function HomeScreen() {
       >
         <View style={styles.totalItem}>
           <Text style={styles.totalValue}>{Math.round(dailyTotals.kcal)}</Text>
-          <Text style={styles.totalLabel}>cal</Text>
+          <FontAwesomeIcon icon={icons.fire} size={14} color="#FF6B35" style={styles.totalIcon} />
         </View>
         <View style={styles.totalDivider} />
         <View style={styles.totalItem}>
           <Text style={styles.totalValue}>
             {Math.round(dailyTotals.protein)}
           </Text>
-          <Text style={styles.totalLabel}>p</Text>
+          <FontAwesomeIcon icon={icons.protein} size={14} color="#4A90D9" style={styles.totalIcon} />
         </View>
         <View style={styles.totalDivider} />
         <View style={styles.totalItem}>
           <Text style={styles.totalValue}>{Math.round(dailyTotals.fat)}</Text>
-          <Text style={styles.totalLabel}>f</Text>
+          <FontAwesomeIcon icon={icons.fat} size={14} color="#F5A623" style={styles.totalIcon} />
         </View>
         <View style={styles.totalDivider} />
         <View style={styles.totalItem}>
           <Text style={styles.totalValue}>{Math.round(dailyTotals.carbs)}</Text>
-          <Text style={styles.totalLabel}>c</Text>
+          <FontAwesomeIcon icon={icons.carbs} size={14} color="#9B6B9E" style={styles.totalIcon} />
         </View>
       </TouchableOpacity>
 
@@ -341,44 +356,39 @@ const styles = StyleSheet.create({
   totalsBar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#ffffffcc",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
-    borderRadius: 45,
+    justifyContent: "space-evenly",
+    backgroundColor: "#ffffffee",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 28,
     alignSelf: "center",
-    width: "80%",
+    marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   totalItem: {
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   totalValue: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: "System",
     fontWeight: "600",
-    color: "#333",
+    color: "#222",
+    letterSpacing: -0.3,
   },
-  totalLabel: {
-    fontSize: 12,
-    color: "#888",
-    marginTop: 2,
-    fontFamily: "System",
-    fontWeight: "400",
+  totalIcon: {
+    marginTop: 3,
   },
   totalDivider: {
     width: 1,
-    height: 30,
-    backgroundColor: "#ddd",
+    height: 24,
+    backgroundColor: "#e0e0e0",
   },
 });

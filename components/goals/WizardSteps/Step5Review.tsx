@@ -140,7 +140,7 @@ export function Step5Review({ goals, formData, existingGoals, onResetManualTarge
       {hasModifications && (
         <View style={styles.modificationNotice}>
           <View style={styles.modificationHeader}>
-            <Ionicons name="information-circle" size={20} color="#B45309" />
+            <Ionicons name="information-circle" size={20} color="#1A6872" />
             <Text style={styles.modificationTitle}>Custom Targets Active</Text>
           </View>
           <Text style={styles.modificationDescription}>
@@ -163,7 +163,7 @@ export function Step5Review({ goals, formData, existingGoals, onResetManualTarge
             onPress={handleResetToCalculated}
             activeOpacity={0.7}
           >
-            <Ionicons name="refresh" size={16} color="#B45309" />
+            <Ionicons name="refresh" size={16} color="#1A6872" />
             <Text style={styles.resetToCalculatedText}>Reset to Calculated Values</Text>
           </TouchableOpacity>
         </View>
@@ -472,12 +472,10 @@ const styles = StyleSheet.create({
     color: "#1A6872",
   },
   modificationNotice: {
-    backgroundColor: "#FEF3C7",
+    backgroundColor: "#E0F2F1",
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#FCD34D",
   },
   modificationHeader: {
     flexDirection: "row",
@@ -488,16 +486,16 @@ const styles = StyleSheet.create({
   modificationTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#B45309",
+    color: "#1A6872",
   },
   modificationDescription: {
     fontSize: 13,
-    color: "#92400E",
+    color: "#2A8A8A",
     lineHeight: 18,
     marginBottom: 12,
   },
   modificationList: {
-    backgroundColor: "#FFFBEB",
+    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     padding: 10,
     marginBottom: 12,
@@ -511,20 +509,20 @@ const styles = StyleSheet.create({
   modificationLabel: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#92400E",
+    color: "#1A6872",
   },
   modificationValues: {
     fontSize: 13,
   },
   calculatedValue: {
-    color: "#92400E",
+    color: "#6B9E9E",
     textDecorationLine: "line-through",
   },
   modificationArrow: {
-    color: "#B45309",
+    color: "#1A6872",
   },
   manualValue: {
-    color: "#B45309",
+    color: "#1A6872",
     fontWeight: "600",
   },
   resetToCalculatedButton: {
@@ -532,7 +530,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: "#FDE68A",
+    backgroundColor: "#B2DFDB",
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
@@ -540,6 +538,6 @@ const styles = StyleSheet.create({
   resetToCalculatedText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#B45309",
+    color: "#1A6872",
   },
 });

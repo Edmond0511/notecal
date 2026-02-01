@@ -8,6 +8,7 @@ import {
   faDroplet,
   faDrumstickBite,
   faFireFlameCurved,
+  faGlassWater,
   faSeedling,
   faWheatAwn,
 } from "@fortawesome/free-solid-svg-icons";
@@ -62,10 +63,11 @@ type NutrientField =
   | "fiber"
   | "sugar"
   | "sodium"
-  | "potassium";
+  | "potassium"
+  | "water";
 
 interface OtherNutrient {
-  key: "fiber" | "sugar" | "sodium" | "potassium";
+  key: "fiber" | "sugar" | "sodium" | "potassium" | "water";
   label: string;
   unit: string;
   placeholder: string;
@@ -83,6 +85,7 @@ const icons = {
   cube: faCube as IconProp,
   cubesStacked: faCubesStacked as IconProp,
   bolt: faBolt as IconProp,
+  glassWater: faGlassWater as IconProp,
 };
 
 // Icons and colors for main macros
@@ -99,6 +102,12 @@ const DEFAULT_MICRONUTRIENTS = {
   sugar: 50,       // 50g - ~10% of 2000 kcal diet
   sodium: 2300,    // 2300mg - universal limit
   potassium: 3500, // 3500mg - universal recommendation
+};
+
+// Sex-based water intake recommendations
+const DEFAULT_WATER = {
+  male: 3700,      // 3.7L in ml
+  female: 2700,    // 2.7L in ml
 };
 
 const OTHER_NUTRIENTS: OtherNutrient[] = [
@@ -134,6 +143,14 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
     color: "#6B8E5B",
     icon: icons.bolt,
   },
+  {
+    key: "water",
+    label: "Water",
+    unit: "ml",
+    placeholder: "3700",
+    color: "#00BCD4",
+    icon: icons.glassWater,
+  },
 ];
 
 export function NutritionGoalsModal({
@@ -159,11 +176,13 @@ export function NutritionGoalsModal({
   const [manualSugar, setManualSugar] = useState("");
   const [manualSodium, setManualSodium] = useState("");
   const [manualPotassium, setManualPotassium] = useState("");
+  const [manualWater, setManualWater] = useState("");
 
   const [fiberEnabled, setFiberEnabled] = useState(false);
   const [sugarEnabled, setSugarEnabled] = useState(false);
   const [sodiumEnabled, setSodiumEnabled] = useState(false);
   const [potassiumEnabled, setPotassiumEnabled] = useState(false);
+  const [waterEnabled, setWaterEnabled] = useState(false);
 
   // Refs for each input field
   const kcalInputRef = React.useRef<TextInput>(null);
@@ -174,6 +193,7 @@ export function NutritionGoalsModal({
   const sugarInputRef = React.useRef<TextInput>(null);
   const sodiumInputRef = React.useRef<TextInput>(null);
   const potassiumInputRef = React.useRef<TextInput>(null);
+  const waterInputRef = React.useRef<TextInput>(null);
 
   const inputRefs: Record<NutrientField, React.RefObject<TextInput>> = {
     kcal: kcalInputRef,
@@ -184,6 +204,7 @@ export function NutritionGoalsModal({
     sugar: sugarInputRef,
     sodium: sodiumInputRef,
     potassium: potassiumInputRef,
+    water: waterInputRef,
   };
 
   // Initialize form from existing goals
@@ -209,16 +230,22 @@ export function NutritionGoalsModal({
         const sugar = goals.manualTargets?.sugar;
         const sodium = goals.manualTargets?.sodium;
         const potassium = goals.manualTargets?.potassium;
+        const water = goals.manualTargets?.water;
+
+        // Get sex-based water default
+        const defaultWater = goals.sex === 'female' ? DEFAULT_WATER.female : DEFAULT_WATER.male;
 
         setManualFiber(fiber?.toString() ?? DEFAULT_MICRONUTRIENTS.fiber.toString());
         setManualSugar(sugar?.toString() ?? DEFAULT_MICRONUTRIENTS.sugar.toString());
         setManualSodium(sodium?.toString() ?? DEFAULT_MICRONUTRIENTS.sodium.toString());
         setManualPotassium(potassium?.toString() ?? DEFAULT_MICRONUTRIENTS.potassium.toString());
+        setManualWater(water?.toString() ?? defaultWater.toString());
 
         setFiberEnabled(fiber !== undefined);
         setSugarEnabled(sugar !== undefined);
         setSodiumEnabled(sodium !== undefined);
         setPotassiumEnabled(potassium !== undefined);
+        setWaterEnabled(water !== undefined);
       } else {
         setManualKcal("2000");
         setManualProtein("150");
@@ -228,10 +255,12 @@ export function NutritionGoalsModal({
         setManualSugar(DEFAULT_MICRONUTRIENTS.sugar.toString());
         setManualSodium(DEFAULT_MICRONUTRIENTS.sodium.toString());
         setManualPotassium(DEFAULT_MICRONUTRIENTS.potassium.toString());
+        setManualWater(DEFAULT_WATER.male.toString()); // Default to male until goals are set
         setFiberEnabled(false);
         setSugarEnabled(false);
         setSodiumEnabled(false);
         setPotassiumEnabled(false);
+        setWaterEnabled(false);
       }
       setEditingField(null);
     }
@@ -292,6 +321,9 @@ export function NutritionGoalsModal({
     const fatValue = parseInt(manualFat, 10) || 65;
     const carbsValue = parseInt(manualCarbs, 10) || 200;
 
+    // Get sex-based water default
+    const defaultWater = goals?.sex === 'female' ? DEFAULT_WATER.female : DEFAULT_WATER.male;
+
     const manualTargets = {
       kcal: kcalValue,
       protein: proteinValue,
@@ -303,6 +335,7 @@ export function NutritionGoalsModal({
       ...(potassiumEnabled && {
         potassium: parseInt(manualPotassium, 10) || DEFAULT_MICRONUTRIENTS.potassium,
       }),
+      ...(waterEnabled && { water: parseInt(manualWater, 10) || defaultWater }),
     };
 
     const updatedGoals = goals
@@ -348,6 +381,8 @@ export function NutritionGoalsModal({
         return manualSodium;
       case "potassium":
         return manualPotassium;
+      case "water":
+        return manualWater;
     }
   };
 
@@ -378,6 +413,9 @@ export function NutritionGoalsModal({
       case "potassium":
         setManualPotassium(cleanValue);
         break;
+      case "water":
+        setManualWater(cleanValue);
+        break;
     }
   };
 
@@ -390,7 +428,7 @@ export function NutritionGoalsModal({
   const stopEditing = () => setEditingField(null);
 
   const toggleNutrient = (
-    nutrient: "fiber" | "sugar" | "sodium" | "potassium",
+    nutrient: "fiber" | "sugar" | "sodium" | "potassium" | "water",
   ) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     switch (nutrient) {
@@ -405,6 +443,9 @@ export function NutritionGoalsModal({
         break;
       case "potassium":
         setPotassiumEnabled(!potassiumEnabled);
+        break;
+      case "water":
+        setWaterEnabled(!waterEnabled);
         break;
     }
   };
@@ -424,8 +465,12 @@ export function NutritionGoalsModal({
     const sodiumChanged = sodiumEnabled && parseInt(manualSodium, 10) !== DEFAULT_MICRONUTRIENTS.sodium;
     const potassiumChanged = potassiumEnabled && parseInt(manualPotassium, 10) !== DEFAULT_MICRONUTRIENTS.potassium;
 
+    // Check water (sex-based default)
+    const defaultWater = goals.sex === 'female' ? DEFAULT_WATER.female : DEFAULT_WATER.male;
+    const waterChanged = waterEnabled && parseInt(manualWater, 10) !== defaultWater;
+
     return kcalChanged || proteinChanged || fatChanged || carbsChanged ||
-           fiberChanged || sugarChanged || sodiumChanged || potassiumChanged;
+           fiberChanged || sugarChanged || sodiumChanged || potassiumChanged || waterChanged;
   };
 
   // Reset all targets to calculated/universal values
@@ -438,6 +483,10 @@ export function NutritionGoalsModal({
       setManualProtein(goals.targetProtein.toString());
       setManualFat(goals.targetFat.toString());
       setManualCarbs(goals.targetCarbs.toString());
+
+      // Reset water to sex-based default
+      const defaultWater = goals.sex === 'female' ? DEFAULT_WATER.female : DEFAULT_WATER.male;
+      setManualWater(defaultWater.toString());
     }
 
     // Reset micronutrients to universal defaults
@@ -450,7 +499,7 @@ export function NutritionGoalsModal({
   };
 
   const isNutrientEnabled = (
-    nutrient: "fiber" | "sugar" | "sodium" | "potassium",
+    nutrient: "fiber" | "sugar" | "sodium" | "potassium" | "water",
   ): boolean => {
     switch (nutrient) {
       case "fiber":
@@ -461,6 +510,8 @@ export function NutritionGoalsModal({
         return sodiumEnabled;
       case "potassium":
         return potassiumEnabled;
+      case "water":
+        return waterEnabled;
     }
   };
 

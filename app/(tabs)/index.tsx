@@ -168,6 +168,10 @@ export default function HomeScreen() {
             (sum, item) => sum + (item.macros?.potassium || 0),
             0,
           );
+          const entryWater = entry.items.reduce(
+            (sum, item) => sum + (item.macros?.water || 0),
+            0,
+          );
           return {
             kcal: acc.kcal + (entry.inlineKcal || 0),
             protein: acc.protein + entryProtein,
@@ -177,11 +181,12 @@ export default function HomeScreen() {
             sugar: acc.sugar + entrySugar,
             sodium: acc.sodium + entrySodium,
             potassium: acc.potassium + entryPotassium,
+            water: acc.water + entryWater,
           };
         }
         return acc;
       },
-      { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, sugar: 0, sodium: 0, potassium: 0 },
+      { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, sugar: 0, sodium: 0, potassium: 0, water: 0 },
     );
   }, [entries]);
 

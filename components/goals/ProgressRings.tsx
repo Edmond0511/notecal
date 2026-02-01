@@ -70,6 +70,11 @@ const COLORS = {
     secondary: "#EDF5EB",
     track: "#D4E6CF",
   },
+  water: {
+    primary: "#00BCD4",
+    secondary: "#E0F7FA",
+    track: "#B2EBF2",
+  },
 };
 
 const ICONS = {
@@ -363,6 +368,7 @@ interface OtherNutrients {
   sugar?: number;
   sodium?: number;
   potassium?: number;
+  water?: number;
 }
 
 interface ProgressRingsProps {
@@ -375,6 +381,7 @@ interface ProgressRingsProps {
     sugar?: number;
     sodium?: number;
     potassium?: number;
+    water?: number;
   };
   targets: {
     kcal: number;
@@ -385,6 +392,7 @@ interface ProgressRingsProps {
     sugar?: number;
     sodium?: number;
     potassium?: number;
+    water?: number;
   };
 }
 
@@ -408,6 +416,9 @@ export function ProgressRings({ consumed, targets }: ProgressRingsProps) {
   }
   if (targets.potassium !== undefined) {
     otherNutrients.push({ key: 'potassium', label: 'Potassium', unit: 'mg', color: COLORS.potassium.primary });
+  }
+  if (targets.water !== undefined) {
+    otherNutrients.push({ key: 'water', label: 'Water', unit: 'ml', color: COLORS.water.primary });
   }
 
   return (

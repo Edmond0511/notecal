@@ -44,6 +44,7 @@ interface GoalsPopupProps {
     sugar?: number;
     sodium?: number;
     potassium?: number;
+    water?: number;
   };
 }
 
@@ -171,6 +172,7 @@ export function GoalsPopup({
                     sugar: goals.manualTargets?.sugar,
                     sodium: goals.manualTargets?.sodium,
                     potassium: goals.manualTargets?.potassium,
+                    water: goals.manualTargets?.water,
                   }}
                 />
               </Animated.View>

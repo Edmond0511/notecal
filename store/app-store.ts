@@ -8,6 +8,27 @@ import { supabase } from '@/lib/supabase';
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 const USE_AI_API = true; // Use AI-powered nutrition API
 
+// Water entry parsing utilities
+const WATER_REGEX = /^(water|agua)\s*,?\s*(\d+(?:\.\d+)?)\s*(ml|l|oz|cups?)?$/i;
+const WATER_CONVERSIONS: Record<string, number> = {
+  ml: 1,
+  l: 1000,
+  oz: 29.57,
+  cup: 237,
+  cups: 237,
+};
+
+function parseWaterEntry(text: string): { isWater: boolean; amountMl: number } {
+  const match = text.match(WATER_REGEX);
+  if (!match) return { isWater: false, amountMl: 0 };
+
+  const amount = parseFloat(match[2]);
+  const unit = (match[3] || 'ml').toLowerCase();
+  const multiplier = WATER_CONVERSIONS[unit] || 1;
+
+  return { isWater: true, amountMl: Math.round(amount * multiplier) };
+}
+
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -28,6 +49,38 @@ export const useAppStore = create<AppState>()(
 
     // Don't create an entry if there's no food text after the dash
     if (!textLine) {
+      return;
+    }
+
+    // Check if this is a water entry - handle locally without API call
+    const waterResult = parseWaterEntry(textLine);
+    if (waterResult.isWater) {
+      const entryId = Date.now().toString();
+      const waterEntry: Entry = {
+        id: entryId,
+        date: get().currentDate,
+        rawText,
+        inlineKcal: 0, // Water has no calories
+        status: 'ok',
+        items: [{
+          id: `${entryId}-water`,
+          entryId,
+          label: 'Water',
+          qty: waterResult.amountMl,
+          unit: 'ml',
+          source: 'local',
+          sourceId: 'water',
+          macros: { kcal: 0, protein: 0, fat: 0, carbs: 0, water: waterResult.amountMl },
+          confidence: 1.0,
+          citations: [],
+        }],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      set((state) => ({
+        entries: [...state.entries, waterEntry],
+      }));
       return;
     }
 
@@ -210,7 +263,8 @@ export const useAppStore = create<AppState>()(
     const entries = get().getEntriesForDate(date);
     const totals = entries.reduce(
       (acc, entry) => {
-        if (entry.status === 'ok' && entry.inlineKcal) {
+        if (entry.status === 'ok') {
+          const kcal = entry.inlineKcal ?? 0;
           const protein = entry.items.reduce((sum, item) => sum + item.macros.protein, 0);
           const fat = entry.items.reduce((sum, item) => sum + item.macros.fat, 0);
           const carbs = entry.items.reduce((sum, item) => sum + item.macros.carbs, 0);
@@ -218,9 +272,10 @@ export const useAppStore = create<AppState>()(
           const sugar = entry.items.reduce((sum, item) => sum + (item.macros.sugar ?? 0), 0);
           const sodium = entry.items.reduce((sum, item) => sum + (item.macros.sodium ?? 0), 0);
           const potassium = entry.items.reduce((sum, item) => sum + (item.macros.potassium ?? 0), 0);
+          const water = entry.items.reduce((sum, item) => sum + (item.macros.water ?? 0), 0);
 
           return {
-            kcal: acc.kcal + entry.inlineKcal,
+            kcal: acc.kcal + kcal,
             protein: acc.protein + protein,
             fat: acc.fat + fat,
             carbs: acc.carbs + carbs,
@@ -228,11 +283,12 @@ export const useAppStore = create<AppState>()(
             sugar: acc.sugar + sugar,
             sodium: acc.sodium + sodium,
             potassium: acc.potassium + potassium,
+            water: acc.water + water,
           };
         }
         return acc;
       },
-      { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, sugar: 0, sodium: 0, potassium: 0 }
+      { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, sugar: 0, sodium: 0, potassium: 0, water: 0 }
     );
 
     return {

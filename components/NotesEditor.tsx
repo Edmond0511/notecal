@@ -1,4 +1,7 @@
 import { Entry } from "@/types";
+import { IconProp } from "@fortawesome/fontawesome-svg-core";
+import { faDroplet } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import * as Haptics from "expo-haptics";
 import React, {
   useCallback,
@@ -17,6 +20,8 @@ import {
 } from "react-native";
 import { NutritionReasoningPopup } from "./NutritionReasoningPopup";
 import { ThinkingIndicator } from "./ThinkingIndicator";
+
+const waterIcon = faDroplet as IconProp;
 
 // Constants
 const LINE_HEIGHT = 21;
@@ -94,6 +99,24 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     includeFontPadding: false,
   },
+  inlineWater: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E0F7FA",
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 12,
+    gap: 3,
+    marginLeft: 4,
+  },
+  waterText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: "#00BCD4",
+    fontFamily: "System",
+    fontWeight: "600",
+    includeFontPadding: false,
+  },
 });
 
 // Memoized calorie badge - only re-renders when kcal changes
@@ -111,6 +134,15 @@ const CaloriesBadge = React.memo<{
 ));
 CaloriesBadge.displayName = "CaloriesBadge";
 
+// Memoized water badge - only re-renders when amount changes
+const WaterBadge = React.memo<{ amountMl: number }>(({ amountMl }) => (
+  <View style={styles.inlineWater}>
+    <FontAwesomeIcon icon={waterIcon} size={10} color="#00BCD4" />
+    <Text style={styles.waterText}>{amountMl}ml</Text>
+  </View>
+));
+WaterBadge.displayName = "WaterBadge";
+
 // Memoized indicator row - only re-renders when entry data changes
 const IndicatorRow = React.memo<{
   entry: Entry;
@@ -121,12 +153,25 @@ const IndicatorRow = React.memo<{
   ({ entry, yPosition, opacity, onTap }) => {
     const handlePress = useCallback(() => onTap(entry), [entry, onTap]);
 
+    // Calculate water amount from entry items
+    const waterAmount = useMemo(() => {
+      return entry.items.reduce((sum, item) => sum + (item.macros.water ?? 0), 0);
+    }, [entry.items]);
+
+    const hasCalories = entry.inlineKcal != null && entry.inlineKcal > 0;
+    const hasWater = waterAmount > 0;
+
     return (
       <View style={[styles.indicatorWrapper, { top: yPosition, opacity }]}>
         {entry.status === "pending" ? (
           <ThinkingIndicator />
-        ) : entry.status === "ok" && entry.inlineKcal != null ? (
-          <CaloriesBadge kcal={entry.inlineKcal} onPress={handlePress} />
+        ) : entry.status === "ok" ? (
+          <>
+            {hasCalories && (
+              <CaloriesBadge kcal={entry.inlineKcal!} onPress={handlePress} />
+            )}
+            {hasWater && <WaterBadge amountMl={waterAmount} />}
+          </>
         ) : null}
       </View>
     );
@@ -135,6 +180,7 @@ const IndicatorRow = React.memo<{
     prev.entry.id === next.entry.id &&
     prev.entry.status === next.entry.status &&
     prev.entry.inlineKcal === next.entry.inlineKcal &&
+    prev.entry.items === next.entry.items &&
     prev.yPosition === next.yPosition &&
     prev.opacity === next.opacity,
 );

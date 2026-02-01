@@ -16,6 +16,7 @@ export interface Macros {
   sugar?: number;
   sodium?: number;
   potassium?: number;
+  water?: number;
 }
 
 export interface FoodItem {
@@ -26,7 +27,7 @@ export interface FoodItem {
   prep?: string;
   qty: number;
   unit: string;
-  source: 'FDC' | 'CNF' | 'OFF' | 'fallback';
+  source: 'FDC' | 'CNF' | 'OFF' | 'fallback' | 'local';
   sourceId: string;
   macros: Macros;
   confidence: number; // 0-1 scale
@@ -58,6 +59,7 @@ export interface DailyTotals {
   sugar?: number;
   sodium?: number;
   potassium?: number;
+  water?: number;
 }
 
 // Goals Feature Types
@@ -102,6 +104,7 @@ export interface ManualTargets {
   sugar?: number;
   sodium?: number;
   potassium?: number;
+  water?: number;
 }
 
 export interface UserGoals extends UserGoalsInput {

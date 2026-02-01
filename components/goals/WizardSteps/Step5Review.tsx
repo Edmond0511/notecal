@@ -18,8 +18,10 @@ import {
   faWheatAwn,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import * as Haptics from "expo-haptics";
+import React, { useState, useRef } from "react";
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { WizardFormData } from "../GoalsWizard";
 
 // Cast icons to IconProp to fix type mismatch between FA packages
@@ -34,6 +36,21 @@ const icons = {
   cubesStacked: faCubesStacked as IconProp,
   tint: faTint as IconProp,
   bolt: faBolt as IconProp,
+};
+
+const CALORIE_EXPLANATIONS = {
+  bmr: {
+    title: "BMR (Basal Metabolic Rate)",
+    description:
+      "The calories your body burns at complete rest - just to keep vital organs like your heart, lungs, and brain functioning.",
+    formula: "Calculated using the Mifflin-St Jeor equation based on your age, sex, height, and weight.",
+  },
+  tdee: {
+    title: "TDEE (Total Daily Energy Expenditure)",
+    description:
+      "Your BMR plus calories burned through daily activity and exercise. This is your estimated total daily calorie burn.",
+    formula: "TDEE = BMR × Activity Multiplier",
+  },
 };
 
 interface Step5ReviewProps {
@@ -74,7 +91,59 @@ const OTHER_NUTRIENTS = [
   },
 ];
 
+// Popup component for BMR/TDEE explanations
+function CalorieExplanationPopup({
+  type,
+  visible,
+  onClose,
+}: {
+  type: "bmr" | "tdee";
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const explanation = CALORIE_EXPLANATIONS[type];
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.explanationPopupOverlay}>
+        <TouchableOpacity
+          style={styles.explanationPopupBackdrop}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          style={styles.explanationPopup}
+        >
+          <View style={styles.explanationHeader}>
+            <Ionicons name="information-circle" size={22} color="#1A6872" />
+            <Text style={styles.explanationTitle}>{explanation.title}</Text>
+          </View>
+          <Text style={styles.explanationDescription}>{explanation.description}</Text>
+          <View style={styles.explanationFormulaBox}>
+            <Text style={styles.explanationFormula}>{explanation.formula}</Text>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
 export function Step5Review({ goals, formData, existingGoals, onResetManualTargets }: Step5ReviewProps) {
+  const [activeExplanation, setActiveExplanation] = useState<"bmr" | "tdee" | null>(null);
+  const lastExplanationType = useRef<"bmr" | "tdee">("bmr");
+
+  const handleExplanationPress = (type: "bmr" | "tdee") => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    lastExplanationType.current = type;
+    setActiveExplanation(type);
+  };
+
   if (!goals) {
     return (
       <View style={styles.container}>
@@ -178,12 +247,28 @@ export function Step5Review({ goals, formData, existingGoals, onResetManualTarge
         </View>
         <View style={styles.calculationBreakdown}>
           <View style={styles.breakdownItem}>
-            <Text style={styles.breakdownLabel}>BMR</Text>
+            <TouchableOpacity
+              style={styles.breakdownLabelRow}
+              onPress={() => handleExplanationPress("bmr")}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.breakdownLabel}>BMR</Text>
+              <Ionicons name="information-circle-outline" size={12} color="#aaa" style={styles.breakdownInfoIcon} />
+            </TouchableOpacity>
             <Text style={styles.breakdownValue}>{goals.bmr}</Text>
           </View>
           <FontAwesomeIcon icon={icons.arrowRight} size={14} color="#ccc" />
           <View style={styles.breakdownItem}>
-            <Text style={styles.breakdownLabel}>TDEE</Text>
+            <TouchableOpacity
+              style={styles.breakdownLabelRow}
+              onPress={() => handleExplanationPress("tdee")}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.breakdownLabel}>TDEE</Text>
+              <Ionicons name="information-circle-outline" size={12} color="#aaa" style={styles.breakdownInfoIcon} />
+            </TouchableOpacity>
             <Text style={styles.breakdownValue}>{goals.tdee}</Text>
           </View>
           <FontAwesomeIcon icon={icons.arrowRight} size={14} color="#ccc" />
@@ -295,6 +380,13 @@ export function Step5Review({ goals, formData, existingGoals, onResetManualTarge
           Expected: {goalInfo.weeklyChange}
         </Text>
       </View>
+
+      {/* BMR/TDEE explanation popup */}
+      <CalorieExplanationPopup
+        type={lastExplanationType.current}
+        visible={activeExplanation !== null}
+        onClose={() => setActiveExplanation(null)}
+      />
     </View>
   );
 }
@@ -365,6 +457,14 @@ const styles = StyleSheet.create({
   },
   breakdownValueHighlight: {
     color: "#FF6B35",
+  },
+  breakdownLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  breakdownInfoIcon: {
+    marginLeft: 2,
   },
   macrosCard: {
     backgroundColor: "#f8f8f8",
@@ -539,5 +639,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#1A6872",
+  },
+  explanationPopupOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  explanationPopupBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+  },
+  explanationPopup: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 20,
+    maxWidth: 320,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  explanationHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  explanationTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1A6872",
+    flex: 1,
+  },
+  explanationDescription: {
+    fontSize: 14,
+    color: "#555",
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  explanationFormulaBox: {
+    backgroundColor: "#E0F2F1",
+    borderRadius: 8,
+    padding: 12,
+  },
+  explanationFormula: {
+    fontSize: 13,
+    color: "#1A6872",
+    fontStyle: "italic",
   },
 });

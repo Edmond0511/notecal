@@ -1,5 +1,17 @@
 import { useAppStore } from "@/store/app-store";
 import { Ionicons } from "@expo/vector-icons";
+import { IconProp } from "@fortawesome/fontawesome-svg-core";
+import {
+  faBolt,
+  faCube,
+  faCubesStacked,
+  faDroplet,
+  faDrumstickBite,
+  faFireFlameCurved,
+  faSeedling,
+  faWheatAwn,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
 import {
@@ -58,7 +70,28 @@ interface OtherNutrient {
   unit: string;
   placeholder: string;
   color: string;
+  icon: IconProp;
 }
+
+// Cast icons to IconProp to fix type mismatch between FA packages
+const icons = {
+  fire: faFireFlameCurved as IconProp,
+  drumstickBite: faDrumstickBite as IconProp,
+  droplet: faDroplet as IconProp,
+  wheatAwn: faWheatAwn as IconProp,
+  seedling: faSeedling as IconProp,
+  cube: faCube as IconProp,
+  cubesStacked: faCubesStacked as IconProp,
+  bolt: faBolt as IconProp,
+};
+
+// Icons and colors for main macros
+const MACRO_CONFIG = {
+  kcal: { icon: icons.fire, color: "#FF6B35" },
+  protein: { icon: icons.drumstickBite, color: "#4A90D9" },
+  fat: { icon: icons.droplet, color: "#F5A623" },
+  carbs: { icon: icons.wheatAwn, color: "#9B6B9E" },
+};
 
 // Universal default values for micronutrients (no personalized calculation needed)
 const DEFAULT_MICRONUTRIENTS = {
@@ -75,6 +108,7 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
     unit: "g",
     placeholder: "25",
     color: "#8B6914",
+    icon: icons.seedling,
   },
   {
     key: "sugar",
@@ -82,6 +116,7 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
     unit: "g",
     placeholder: "50",
     color: "#C45BAA",
+    icon: icons.cube,
   },
   {
     key: "sodium",
@@ -89,6 +124,7 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
     unit: "mg",
     placeholder: "2300",
     color: "#5B8CC4",
+    icon: icons.cubesStacked,
   },
   {
     key: "potassium",
@@ -96,6 +132,7 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
     unit: "mg",
     placeholder: "3500",
     color: "#6B8E5B",
+    icon: icons.bolt,
   },
 ];
 
@@ -432,7 +469,8 @@ export function NutritionGoalsModal({
     label: string,
     unit: string,
     isLast: boolean = false,
-    accentColor?: string,
+    icon?: IconProp,
+    iconColor?: string,
   ) => {
     const value = getValueForField(field);
     const displayValue = parseInt(value, 10) || 0;
@@ -445,6 +483,13 @@ export function NutritionGoalsModal({
         activeOpacity={0.7}
       >
         <View style={styles.targetLabelContainer}>
+          {icon && (
+            <FontAwesomeIcon
+              icon={icon}
+              size={16}
+              color={iconColor || "#666"}
+            />
+          )}
           <Text style={styles.targetLabel}>{label}</Text>
         </View>
         {editingField === field ? (
@@ -560,14 +605,16 @@ export function NutritionGoalsModal({
                     style={styles.goalsCard}
                     layout={Layout.springify()}
                   >
-                    {renderTargetRow("kcal", "Calories", "kcal")}
-                    {renderTargetRow("protein", "Protein", "g")}
-                    {renderTargetRow("fat", "Fat", "g")}
+                    {renderTargetRow("kcal", "Calories", "kcal", false, MACRO_CONFIG.kcal.icon, MACRO_CONFIG.kcal.color)}
+                    {renderTargetRow("protein", "Protein", "g", false, MACRO_CONFIG.protein.icon, MACRO_CONFIG.protein.color)}
+                    {renderTargetRow("fat", "Fat", "g", false, MACRO_CONFIG.fat.icon, MACRO_CONFIG.fat.color)}
                     {renderTargetRow(
                       "carbs",
                       "Carbs",
                       "g",
                       enabledOtherNutrients.length === 0,
+                      MACRO_CONFIG.carbs.icon,
+                      MACRO_CONFIG.carbs.color,
                     )}
 
                     {/* Enabled other nutrients appear here */}
@@ -583,6 +630,7 @@ export function NutritionGoalsModal({
                           nutrient.label,
                           nutrient.unit,
                           index === enabledOtherNutrients.length - 1,
+                          nutrient.icon,
                           nutrient.color,
                         )}
                       </Animated.View>
@@ -612,12 +660,11 @@ export function NutritionGoalsModal({
                           ]}
                         >
                           <View style={styles.toggleLabelContainer}>
+                    
                             <Text style={styles.toggleLabel}>
                               {nutrient.label}
                             </Text>
-                            <Text style={styles.toggleUnit}>
-                              ({nutrient.unit})
-                            </Text>
+                  
                           </View>
                           <Switch
                             value={enabled}
@@ -790,7 +837,7 @@ const styles = StyleSheet.create({
   targetValue: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1A6872",
+    color: "#333",
   },
   targetUnit: {
     fontSize: 14,
@@ -813,7 +860,7 @@ const styles = StyleSheet.create({
   targetInput: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1A6872",
+    color: "#333",
     textAlign: "right",
     minWidth: 60,
     padding: 0,
@@ -821,7 +868,7 @@ const styles = StyleSheet.create({
   targetInputUnit: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#1A6872",
+    color: "#333",
   },
   toggleCard: {
     backgroundColor: "#ffffff",

@@ -3,6 +3,7 @@ import {
   getActivityLevelDescription,
   getGoalTypeDescription,
 } from "@/utils/goalsCalculator";
+import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
   faArrowRight,
@@ -18,7 +19,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { WizardFormData } from "../GoalsWizard";
 
 // Cast icons to IconProp to fix type mismatch between FA packages
@@ -38,6 +39,8 @@ const icons = {
 interface Step5ReviewProps {
   goals: UserGoals | null;
   formData: WizardFormData;
+  existingGoals?: UserGoals | null;
+  onResetManualTargets?: () => void;
 }
 
 const OTHER_NUTRIENTS = [
@@ -71,7 +74,7 @@ const OTHER_NUTRIENTS = [
   },
 ];
 
-export function Step5Review({ goals, formData }: Step5ReviewProps) {
+export function Step5Review({ goals, formData, existingGoals, onResetManualTargets }: Step5ReviewProps) {
   if (!goals) {
     return (
       <View style={styles.container}>
@@ -85,6 +88,31 @@ export function Step5Review({ goals, formData }: Step5ReviewProps) {
 
   const activityInfo = getActivityLevelDescription(goals.activityLevel);
   const goalInfo = getGoalTypeDescription(goals.goalType);
+
+  // Check for manual modifications
+  const manualTargets = existingGoals?.manualTargets;
+  const modifications: Array<{ label: string; calculated: number; manual: number; unit: string }> = [];
+
+  if (manualTargets) {
+    if (manualTargets.kcal !== undefined && manualTargets.kcal !== goals.targetKcal) {
+      modifications.push({ label: "Calories", calculated: goals.targetKcal, manual: manualTargets.kcal, unit: "kcal" });
+    }
+    if (manualTargets.protein !== undefined && manualTargets.protein !== goals.targetProtein) {
+      modifications.push({ label: "Protein", calculated: goals.targetProtein, manual: manualTargets.protein, unit: "g" });
+    }
+    if (manualTargets.fat !== undefined && manualTargets.fat !== goals.targetFat) {
+      modifications.push({ label: "Fat", calculated: goals.targetFat, manual: manualTargets.fat, unit: "g" });
+    }
+    if (manualTargets.carbs !== undefined && manualTargets.carbs !== goals.targetCarbs) {
+      modifications.push({ label: "Carbs", calculated: goals.targetCarbs, manual: manualTargets.carbs, unit: "g" });
+    }
+  }
+
+  const hasModifications = modifications.length > 0;
+
+  const handleResetToCalculated = () => {
+    onResetManualTargets?.();
+  };
 
   // Format height display
   const heightDisplay = formData.useImperial
@@ -107,6 +135,39 @@ export function Step5Review({ goals, formData }: Step5ReviewProps) {
       <Text style={styles.subtitle}>
         Here's your daily nutrition plan based on your inputs
       </Text>
+
+      {/* Manual modifications notice */}
+      {hasModifications && (
+        <View style={styles.modificationNotice}>
+          <View style={styles.modificationHeader}>
+            <Ionicons name="information-circle" size={20} color="#B45309" />
+            <Text style={styles.modificationTitle}>Custom Targets Active</Text>
+          </View>
+          <Text style={styles.modificationDescription}>
+            You have manually adjusted some values. The calculated values based on your profile are:
+          </Text>
+          <View style={styles.modificationList}>
+            {modifications.map((mod, index) => (
+              <View key={mod.label} style={styles.modificationItem}>
+                <Text style={styles.modificationLabel}>{mod.label}:</Text>
+                <Text style={styles.modificationValues}>
+                  <Text style={styles.calculatedValue}>{mod.calculated}{mod.unit}</Text>
+                  <Text style={styles.modificationArrow}> → </Text>
+                  <Text style={styles.manualValue}>{mod.manual}{mod.unit}</Text>
+                </Text>
+              </View>
+            ))}
+          </View>
+          <TouchableOpacity
+            style={styles.resetToCalculatedButton}
+            onPress={handleResetToCalculated}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="refresh" size={16} color="#B45309" />
+            <Text style={styles.resetToCalculatedText}>Reset to Calculated Values</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Main calorie target */}
       <View style={styles.mainTargetCard}>
@@ -409,5 +470,76 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#1A6872",
+  },
+  modificationNotice: {
+    backgroundColor: "#FEF3C7",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+  },
+  modificationHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  modificationTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#B45309",
+  },
+  modificationDescription: {
+    fontSize: 13,
+    color: "#92400E",
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  modificationList: {
+    backgroundColor: "#FFFBEB",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  modificationItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  modificationLabel: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#92400E",
+  },
+  modificationValues: {
+    fontSize: 13,
+  },
+  calculatedValue: {
+    color: "#92400E",
+    textDecorationLine: "line-through",
+  },
+  modificationArrow: {
+    color: "#B45309",
+  },
+  manualValue: {
+    color: "#B45309",
+    fontWeight: "600",
+  },
+  resetToCalculatedButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#FDE68A",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  resetToCalculatedText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#B45309",
   },
 });

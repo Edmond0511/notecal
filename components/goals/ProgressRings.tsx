@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Dimensions, StyleSheet, Text, View } from "react-native";
+import { IconProp } from "@fortawesome/fontawesome-svg-core";
+import {
+  faFireFlameCurved,
+  faDrumstickBite,
+  faDroplet,
+  faWheatAwn,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import Animated, {
   Easing,
   FadeIn,
@@ -62,6 +70,13 @@ const COLORS = {
     secondary: "#EDF5EB",
     track: "#D4E6CF",
   },
+};
+
+const ICONS = {
+  calories: faFireFlameCurved as IconProp,
+  protein: faDrumstickBite as IconProp,
+  fat: faDroplet as IconProp,
+  carbs: faWheatAwn as IconProp,
 };
 
 interface CircularProgressProps {
@@ -164,6 +179,11 @@ function CalorieRing({ current, target }: CalorieRingProps) {
 
   return (
     <Animated.View style={[styles.calorieCard, animatedStyle]}>
+      {/* Icon in top-right corner */}
+      <View style={styles.calorieIconContainer}>
+        <FontAwesomeIcon icon={ICONS.calories} size={14} color={COLORS.calories.primary} />
+      </View>
+
       <View style={styles.calorieContent}>
         <View style={styles.calorieRingContainer}>
           <CircularProgress
@@ -212,9 +232,10 @@ interface MacroCardProps {
   color: { primary: string; secondary: string; track: string };
   delay: number;
   unit?: string;
+  icon: IconProp;
 }
 
-function MacroCard({ label, current, target, color, delay, unit = "g" }: MacroCardProps) {
+function MacroCard({ label, current, target, color, delay, unit = "g", icon }: MacroCardProps) {
   const isOver = current > target;
 
   const fadeIn = useSharedValue(0);
@@ -241,6 +262,11 @@ function MacroCard({ label, current, target, color, delay, unit = "g" }: MacroCa
         animatedStyle,
       ]}
     >
+      {/* Icon in top-right corner */}
+      <View style={styles.macroIconContainer}>
+        <FontAwesomeIcon icon={icon} size={12} color={color.primary} />
+      </View>
+
       <View style={styles.macroRingContainer}>
         <CircularProgress
           current={current}
@@ -397,6 +423,7 @@ export function ProgressRings({ consumed, targets }: ProgressRingsProps) {
           target={targets.protein}
           color={COLORS.protein}
           delay={100}
+          icon={ICONS.protein}
         />
         <MacroCard
           label="Fat"
@@ -404,6 +431,7 @@ export function ProgressRings({ consumed, targets }: ProgressRingsProps) {
           target={targets.fat}
           color={COLORS.fat}
           delay={200}
+          icon={ICONS.fat}
         />
         <MacroCard
           label="Carbs"
@@ -411,6 +439,7 @@ export function ProgressRings({ consumed, targets }: ProgressRingsProps) {
           target={targets.carbs}
           color={COLORS.carbs}
           delay={300}
+          icon={ICONS.carbs}
         />
       </View>
 
@@ -451,6 +480,12 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
+  },
+  calorieIconContainer: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    opacity: 0.8,
   },
   calorieContent: {
     flexDirection: "row",
@@ -527,6 +562,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     alignItems: "center",
+  },
+  macroIconContainer: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    opacity: 0.8,
   },
   macroRingContainer: {
     position: "relative",

@@ -137,16 +137,36 @@ export default function HomeScreen() {
             (sum, item) => sum + (item.macros?.carbs || 0),
             0,
           );
+          const entryFiber = entry.items.reduce(
+            (sum, item) => sum + (item.macros?.fiber || 0),
+            0,
+          );
+          const entrySugar = entry.items.reduce(
+            (sum, item) => sum + (item.macros?.sugar || 0),
+            0,
+          );
+          const entrySodium = entry.items.reduce(
+            (sum, item) => sum + (item.macros?.sodium || 0),
+            0,
+          );
+          const entryPotassium = entry.items.reduce(
+            (sum, item) => sum + (item.macros?.potassium || 0),
+            0,
+          );
           return {
             kcal: acc.kcal + (entry.inlineKcal || 0),
             protein: acc.protein + entryProtein,
             fat: acc.fat + entryFat,
             carbs: acc.carbs + entryCarbs,
+            fiber: acc.fiber + entryFiber,
+            sugar: acc.sugar + entrySugar,
+            sodium: acc.sodium + entrySodium,
+            potassium: acc.potassium + entryPotassium,
           };
         }
         return acc;
       },
-      { kcal: 0, protein: 0, fat: 0, carbs: 0 },
+      { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, sugar: 0, sodium: 0, potassium: 0 },
     );
   }, [entries]);
 

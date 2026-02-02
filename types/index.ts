@@ -49,6 +49,16 @@ export interface Entry {
   updatedAt: Date;
 }
 
+export interface SavedEntry {
+  id: string;
+  rawText: string;         // Original text (e.g., "- chicken breast, 150g")
+  items: FoodItem[];       // Pre-resolved nutrition data
+  totalKcal: number;       // Cached total calories for quick display
+  createdAt: Date;
+  lastUsedAt: Date;
+  usageCount: number;
+}
+
 export interface DailyTotals {
   date: string;
   kcal: number;
@@ -147,6 +157,8 @@ export interface AppState {
   // Goals state
   goals: UserGoals | null;
   preferredUnits: UnitSystem;
+  // Saved entries state
+  savedEntries: SavedEntry[];
   // Actions
   addEntry: (rawText: string) => Promise<void>;
   updateEntry: (id: string, rawText: string) => Promise<void>;
@@ -164,4 +176,8 @@ export interface AppState {
   clearGoals: () => void;
   setPreferredUnits: (units: UnitSystem) => void;
   setManualTargets: (targets: ManualTargets | null) => void;
+  // Saved entries actions
+  saveEntry: (entry: Entry) => void;
+  deleteSavedEntry: (id: string) => void;
+  useSavedEntry: (savedEntry: SavedEntry) => Entry;
 }

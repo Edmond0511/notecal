@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets } from '@/types';
+import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets, SavedEntry } from '@/types';
 import { resolveNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
 import { supabase } from '@/lib/supabase';
 
@@ -51,6 +51,7 @@ export const useAppStore = create<AppState>()(
       isLoading: false,
       goals: null,
       preferredUnits: 'metric' as UnitSystem,
+      savedEntries: [],
 
   addEntry: async (rawText: string) => {
     // Only process lines that start with "- "
@@ -376,6 +377,111 @@ export const useAppStore = create<AppState>()(
       });
     }
   },
+
+  // Saved entries management
+  saveEntry: (entry: Entry) => {
+    console.log('📌 saveEntry called with:', {
+      status: entry.status,
+      itemsCount: entry.items?.length,
+      rawText: entry.rawText
+    });
+
+    // Only save entries that are resolved with items
+    if (entry.status !== 'ok' || !entry.items.length) {
+      console.log('📌 saveEntry skipped - not ok or no items');
+      return;
+    }
+
+    const { savedEntries } = get();
+    console.log('📌 Current savedEntries count:', savedEntries.length);
+
+    // Normalize rawText for duplicate check (lowercase, trim)
+    const normalizedText = entry.rawText.toLowerCase().trim();
+
+    // Check if this entry already exists
+    const existingIndex = savedEntries.findIndex(
+      (se) => se.rawText.toLowerCase().trim() === normalizedText
+    );
+
+    if (existingIndex !== -1) {
+      // Update existing: increment usage count and update lastUsedAt
+      console.log('📌 Updating existing saved entry at index:', existingIndex);
+      set((state) => ({
+        savedEntries: state.savedEntries.map((se, idx) =>
+          idx === existingIndex
+            ? {
+                ...se,
+                lastUsedAt: new Date(),
+                usageCount: se.usageCount + 1,
+              }
+            : se
+        ),
+      }));
+    } else {
+      // Create new saved entry
+      const newSavedEntry: SavedEntry = {
+        id: Date.now().toString(),
+        rawText: entry.rawText,
+        items: entry.items.map((item) => ({
+          ...item,
+          entryId: '', // Clear the entryId since this is a template
+        })),
+        totalKcal: entry.inlineKcal ?? 0,
+        createdAt: new Date(),
+        lastUsedAt: new Date(),
+        usageCount: 1,
+      };
+
+      console.log('📌 Creating new saved entry:', newSavedEntry.rawText);
+      set((state) => ({
+        savedEntries: [...state.savedEntries, newSavedEntry],
+      }));
+      console.log('📌 New savedEntries count:', get().savedEntries.length);
+    }
+  },
+
+  deleteSavedEntry: (id: string) => {
+    set((state) => ({
+      savedEntries: state.savedEntries.filter((se) => se.id !== id),
+    }));
+  },
+
+  useSavedEntry: (savedEntry: SavedEntry): Entry => {
+    const entryId = Date.now().toString();
+    const currentDate = get().currentDate;
+
+    // Create new entry with pre-populated nutrition data
+    const newEntry: Entry = {
+      id: entryId,
+      date: currentDate,
+      rawText: savedEntry.rawText,
+      inlineKcal: savedEntry.totalKcal,
+      status: 'ok',
+      items: savedEntry.items.map((item) => ({
+        ...item,
+        id: `${entryId}-${item.id}`,
+        entryId: entryId,
+      })),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Update savedEntry's lastUsedAt and usageCount
+    set((state) => ({
+      entries: [...state.entries, newEntry],
+      savedEntries: state.savedEntries.map((se) =>
+        se.id === savedEntry.id
+          ? {
+              ...se,
+              lastUsedAt: new Date(),
+              usageCount: se.usageCount + 1,
+            }
+          : se
+      ),
+    }));
+
+    return newEntry;
+  },
 }),
     {
       name: 'note-cal-storage', // unique name for the storage
@@ -387,9 +493,27 @@ export const useAppStore = create<AppState>()(
         currentDate: state.currentDate,
         goals: state.goals,
         preferredUnits: state.preferredUnits,
+        savedEntries: state.savedEntries,
       }),
-      // Handle version migrations if needed in the future
-      version: 1,
+      // Handle version migrations
+      version: 2,
+      migrate: (persistedState: any, version: number) => {
+        if (version < 2) {
+          // Add savedEntries if it doesn't exist
+          return {
+            ...persistedState,
+            savedEntries: persistedState.savedEntries || [],
+          };
+        }
+        return persistedState;
+      },
+      // Ensure proper merge with initial state
+      merge: (persistedState: any, currentState: any) => ({
+        ...currentState,
+        ...persistedState,
+        // Ensure savedEntries is always an array
+        savedEntries: persistedState?.savedEntries ?? currentState.savedEntries ?? [],
+      }),
     }
   )
 );

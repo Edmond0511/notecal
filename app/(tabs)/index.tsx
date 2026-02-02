@@ -2,8 +2,10 @@ import { Calendar } from "@/components/Calendar";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
 import { GoalsPopup } from "@/components/GoalsPopup";
 import { NotesEditor } from "@/components/NotesEditor";
+import { SavedEntriesPopup } from "@/components/SavedEntriesPopup";
 import { SettingsModal } from "@/components/SettingsModal";
 import { useAppStore } from "@/store/app-store";
+import { SavedEntry } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -13,7 +15,7 @@ import {
   faWheatAwn,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   StatusBar,
   StyleSheet,
@@ -51,6 +53,7 @@ export default function HomeScreen() {
   const [showSettings, setShowSettings] = useState(false);
   const [showGoalsPopup, setShowGoalsPopup] = useState(false);
   const [showGoalsWizard, setShowGoalsWizard] = useState(false);
+  const [showSavedEntriesPopup, setShowSavedEntriesPopup] = useState(false);
   const [currentDocumentText, setCurrentDocumentText] = useState("");
 
   // Load document text for current date
@@ -134,6 +137,28 @@ export default function HomeScreen() {
   const handleDocumentTextChange = (text: string) => {
     setCurrentDocumentText(text);
   };
+
+  // Handle saved entry selection
+  const handleSelectSavedEntry = useCallback(
+    (savedEntry: SavedEntry) => {
+      // Create entry with pre-loaded nutrition data (no API call)
+      // useSavedEntry is a store function, not a hook - call it directly
+      const storeUseSavedEntry = useAppStore.getState().useSavedEntry;
+      storeUseSavedEntry(savedEntry);
+
+      // Update document text
+      const newLine = savedEntry.rawText;
+      const updatedText = currentDocumentText
+        ? `${currentDocumentText}\n${newLine}`
+        : newLine;
+      setCurrentDocumentText(updatedText);
+      saveDocument(currentDate, updatedText);
+
+      // Close popup
+      setShowSavedEntriesPopup(false);
+    },
+    [currentDocumentText, currentDate, saveDocument]
+  );
 
   // Calculate daily totals from entries
   const dailyTotals = React.useMemo(() => {
@@ -242,34 +267,46 @@ export default function HomeScreen() {
         currentDate={currentDate}
       />
 
-      {/* Daily Totals Bar - Tap to open goals popup */}
-      <TouchableOpacity
-        style={styles.totalsBar}
-        onPress={() => setShowGoalsPopup(true)}
-        activeOpacity={0.8}
-      >
-        <View style={styles.totalItem}>
-          <Text style={styles.totalValue}>{Math.round(dailyTotals.kcal)}</Text>
-          <FontAwesomeIcon icon={icons.fire} size={14} color="#FF6B35" style={styles.totalIcon} />
-        </View>
-        <View style={styles.totalDivider} />
-        <View style={styles.totalItem}>
-          <Text style={styles.totalValue}>
-            {Math.round(dailyTotals.protein)}
-          </Text>
-          <FontAwesomeIcon icon={icons.protein} size={14} color="#4A90D9" style={styles.totalIcon} />
-        </View>
-        <View style={styles.totalDivider} />
-        <View style={styles.totalItem}>
-          <Text style={styles.totalValue}>{Math.round(dailyTotals.fat)}</Text>
-          <FontAwesomeIcon icon={icons.fat} size={14} color="#F5A623" style={styles.totalIcon} />
-        </View>
-        <View style={styles.totalDivider} />
-        <View style={styles.totalItem}>
-          <Text style={styles.totalValue}>{Math.round(dailyTotals.carbs)}</Text>
-          <FontAwesomeIcon icon={icons.carbs} size={14} color="#9B6B9E" style={styles.totalIcon} />
-        </View>
-      </TouchableOpacity>
+      {/* Bottom Bar Container with Add Button and Totals */}
+      <View style={styles.bottomBarContainer}>
+        {/* Add saved entry button */}
+        <TouchableOpacity
+          style={styles.addSavedButton}
+          onPress={() => setShowSavedEntriesPopup(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={24} color="#1A6872" />
+        </TouchableOpacity>
+
+        {/* Daily Totals Bar - Tap to open goals popup */}
+        <TouchableOpacity
+          style={styles.totalsBar}
+          onPress={() => setShowGoalsPopup(true)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.totalItem}>
+            <Text style={styles.totalValue}>{Math.round(dailyTotals.kcal)}</Text>
+            <FontAwesomeIcon icon={icons.fire} size={14} color="#FF6B35" style={styles.totalIcon} />
+          </View>
+          <View style={styles.totalDivider} />
+          <View style={styles.totalItem}>
+            <Text style={styles.totalValue}>
+              {Math.round(dailyTotals.protein)}
+            </Text>
+            <FontAwesomeIcon icon={icons.protein} size={14} color="#4A90D9" style={styles.totalIcon} />
+          </View>
+          <View style={styles.totalDivider} />
+          <View style={styles.totalItem}>
+            <Text style={styles.totalValue}>{Math.round(dailyTotals.fat)}</Text>
+            <FontAwesomeIcon icon={icons.fat} size={14} color="#F5A623" style={styles.totalIcon} />
+          </View>
+          <View style={styles.totalDivider} />
+          <View style={styles.totalItem}>
+            <Text style={styles.totalValue}>{Math.round(dailyTotals.carbs)}</Text>
+            <FontAwesomeIcon icon={icons.carbs} size={14} color="#9B6B9E" style={styles.totalIcon} />
+          </View>
+        </TouchableOpacity>
+      </View>
 
       {/* Custom Calendar */}
       <Calendar
@@ -300,6 +337,13 @@ export default function HomeScreen() {
         visible={showGoalsWizard}
         onClose={() => setShowGoalsWizard(false)}
         existingGoals={goals}
+      />
+
+      {/* Saved Entries Popup */}
+      <SavedEntriesPopup
+        visible={showSavedEntriesPopup}
+        onClose={() => setShowSavedEntriesPopup(false)}
+        onSelectEntry={handleSelectSavedEntry}
       />
     </SafeAreaView>
   );
@@ -358,6 +402,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
+  bottomBarContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    marginBottom: 12,
+  },
+  addSavedButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#E0F2F1",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
   totalsBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -366,8 +433,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 28,
-    alignSelf: "center",
-    marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,

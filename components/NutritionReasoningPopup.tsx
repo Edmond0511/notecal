@@ -15,7 +15,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Dimensions,
   Linking,
@@ -338,9 +338,48 @@ export function NutritionReasoningPopup({
     confidence: number;
     reasoning?: any;
   } | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
 
   // Get goals to check which micronutrients are enabled
   const goals = useAppStore((state) => state.goals);
+  const saveEntry = useAppStore((state) => state.saveEntry);
+  const deleteSavedEntry = useAppStore((state) => state.deleteSavedEntry);
+  const savedEntries = useAppStore((state) => state.savedEntries);
+
+  // Check if entry is already saved and get its ID
+  const savedEntryMatch = React.useMemo(() => {
+    if (!entry) return null;
+    const normalizedText = entry.rawText.toLowerCase().trim();
+    return savedEntries.find(
+      (se) => se.rawText.toLowerCase().trim() === normalizedText
+    ) || null;
+  }, [entry, savedEntries]);
+
+  const isEntrySaved = savedEntryMatch !== null;
+
+  const handleSaveEntry = useCallback(() => {
+    console.log('🔘 Save button pressed, entry:', {
+      status: entry?.status,
+      itemsCount: entry?.items?.length,
+      rawText: entry?.rawText,
+      isEntrySaved,
+    });
+    if (!entry || entry.status !== 'ok' || !entry.items.length) {
+      console.log('🔘 Save aborted - entry not valid');
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (isEntrySaved && savedEntryMatch) {
+      // Unsave - delete the saved entry
+      deleteSavedEntry(savedEntryMatch.id);
+    } else {
+      // Save the entry
+      saveEntry(entry);
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 1500);
+    }
+  }, [entry, saveEntry, deleteSavedEntry, isEntrySaved, savedEntryMatch]);
 
   // Check which micronutrients are enabled in goals
   const enabledMicros = {
@@ -419,6 +458,7 @@ export function NutritionReasoningPopup({
     }
     setActiveConfidencePopup(null);
     setActivePopupData(null);
+    setIsSaved(false);
   }, [visible]);
 
   if (!entry) return null;
@@ -452,6 +492,30 @@ export function NutritionReasoningPopup({
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Nutrition Details</Text>
+              {entry && entry.status === 'ok' && entry.items.length > 0 && (
+                <TouchableOpacity
+                  style={[
+                    styles.saveButton,
+                    (isSaved || isEntrySaved) && styles.saveButtonSaved,
+                  ]}
+                  onPress={handleSaveEntry}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={isSaved || isEntrySaved ? "bookmark" : "bookmark-outline"}
+                    size={16}
+                    color={isSaved || isEntrySaved ? "#fff" : "#1A6872"}
+                  />
+                  <Text
+                    style={[
+                      styles.saveButtonText,
+                      (isSaved || isEntrySaved) && styles.saveButtonTextSaved,
+                    ]}
+                  >
+                    {isSaved ? "Saved!" : isEntrySaved ? "Saved" : "Save"}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             <Animated.ScrollView
@@ -825,7 +889,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#ddd",
   },
   header: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: "#f8f8f8",
@@ -837,6 +903,29 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
     textAlign: "center",
     letterSpacing: -0.3,
+  },
+  saveButton: {
+    position: "absolute",
+    right: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#E0F2F1",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  saveButtonSaved: {
+    backgroundColor: "#1A6872",
+  },
+  saveButtonText: {
+    fontSize: 13,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#1A6872",
+  },
+  saveButtonTextSaved: {
+    color: "#fff",
   },
   content: {
     flex: 1,

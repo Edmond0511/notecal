@@ -779,7 +779,7 @@ function MicroItem({
     : Math.round(value).toString();
 
   return (
-    <View style={styles.macroItem}>
+    <View style={styles.microItem}>
       <View style={styles.macroIconContainer}>
         <FontAwesomeIcon icon={icon} size={12} color={colors.primary} />
       </View>
@@ -906,6 +906,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
+  microItem: {
+    alignItems: "center",
+    flexBasis: "22%",
+    flexGrow: 0,
+    flexShrink: 0,
+  },
   macroIconContainer: {
     marginBottom: 6,
   },
@@ -926,7 +932,7 @@ const styles = StyleSheet.create({
   },
   microsRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     marginBottom: 16,
     gap: 8,
   },

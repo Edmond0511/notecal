@@ -406,10 +406,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
     marginBottom: 12,
+    paddingHorizontal: 16,
   },
   addSavedButton: {
+    marginRight: 12,
     width: 48,
     height: 48,
     borderRadius: 24,

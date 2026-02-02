@@ -157,9 +157,6 @@ export function SavedEntriesPopup({
                 <View style={styles.caloriesBadge}>
                   <Text style={styles.caloriesText}>{Math.round(item.totalKcal)} cal</Text>
                 </View>
-                <Text style={styles.usageText}>
-                  used {item.usageCount}x
-                </Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#ccc" />
@@ -304,7 +301,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   caloriesBadge: {
-    backgroundColor: '#FFE5D9',
+    backgroundColor: '#E0F2F1',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
@@ -312,11 +309,7 @@ const styles = StyleSheet.create({
   caloriesText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FF6B35',
-  },
-  usageText: {
-    fontSize: 12,
-    color: '#999',
+    color: '#1A6872',
   },
   deleteAction: {
     backgroundColor: '#FF4444',

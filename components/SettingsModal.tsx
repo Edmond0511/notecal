@@ -268,16 +268,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                   <Text style={styles.sectionTitle}>App</Text>
 
                   <View style={styles.menuCard}>
-                    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-                      <View style={styles.menuIconContainer}>
-                        <Ionicons name="notifications-outline" size={20} color="#666" />
-                      </View>
-                      <Text style={styles.menuItemText}>Notifications</Text>
-                      <Ionicons name="chevron-forward" size={18} color="#ccc" />
-                    </TouchableOpacity>
-
-                    <View style={styles.menuDivider} />
-
                     <TouchableOpacity
                       style={styles.menuItem}
                       activeOpacity={0.7}
@@ -293,16 +283,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                       <Text style={styles.menuItemText}>Nutrition Goals</Text>
                       <Ionicons name="chevron-forward" size={18} color="#ccc" />
                     </TouchableOpacity>
-
-                    <View style={styles.menuDivider} />
-
-                    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-                      <View style={styles.menuIconContainer}>
-                        <Ionicons name="scale-outline" size={20} color="#666" />
-                      </View>
-                      <Text style={styles.menuItemText}>Units</Text>
-                      <Text style={styles.menuItemValue}>Metric</Text>
-                    </TouchableOpacity>
                   </View>
                 </Animated.View>
 
@@ -314,26 +294,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                   <Text style={styles.sectionTitle}>About</Text>
 
                   <View style={styles.menuCard}>
-                    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-                      <View style={styles.menuIconContainer}>
-                        <Ionicons name="help-circle-outline" size={20} color="#666" />
-                      </View>
-                      <Text style={styles.menuItemText}>Help & Support</Text>
-                      <Ionicons name="chevron-forward" size={18} color="#ccc" />
-                    </TouchableOpacity>
-
-                    <View style={styles.menuDivider} />
-
-                    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-                      <View style={styles.menuIconContainer}>
-                        <Ionicons name="document-text-outline" size={20} color="#666" />
-                      </View>
-                      <Text style={styles.menuItemText}>Privacy Policy</Text>
-                      <Ionicons name="chevron-forward" size={18} color="#ccc" />
-                    </TouchableOpacity>
-
-                    <View style={styles.menuDivider} />
-
                     <View style={styles.menuItem}>
                       <View style={styles.menuIconContainer}>
                         <Ionicons name="information-circle-outline" size={20} color="#666" />

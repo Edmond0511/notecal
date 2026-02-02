@@ -418,7 +418,7 @@ export function ProgressRings({ consumed, targets }: ProgressRingsProps) {
     otherNutrients.push({ key: 'potassium', label: 'Potassium', unit: 'mg', color: COLORS.potassium.primary });
   }
   if (targets.water !== undefined) {
-    otherNutrients.push({ key: 'water', label: 'Water', unit: 'ml', color: COLORS.water.primary });
+    otherNutrients.push({ key: 'water', label: 'Water', unit: 'L', color: COLORS.water.primary });
   }
 
   return (

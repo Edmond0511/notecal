@@ -260,12 +260,12 @@ export function getGoalTypeDescription(goal: GoalType): {
     lose_fast: {
       title: 'Lose Fast',
       description: 'Aggressive calorie deficit',
-      weeklyChange: '~1 kg/week loss',
+      weeklyChange: '~2 lb/week loss',
     },
     lose: {
       title: 'Lose Weight',
       description: 'Moderate calorie deficit',
-      weeklyChange: '~0.5 kg/week loss',
+      weeklyChange: '~1 lb/week loss',
     },
     maintain: {
       title: 'Maintain',
@@ -275,12 +275,12 @@ export function getGoalTypeDescription(goal: GoalType): {
     gain: {
       title: 'Gain Weight',
       description: 'Lean muscle building',
-      weeklyChange: '~0.25 kg/week gain',
+      weeklyChange: '~0.5 lb/week gain',
     },
     gain_fast: {
       title: 'Gain Fast',
       description: 'Bulk phase',
-      weeklyChange: '~0.5 kg/week gain',
+      weeklyChange: '~1 lb/week gain',
     },
   };
   return descriptions[goal];

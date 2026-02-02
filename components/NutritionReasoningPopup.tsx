@@ -1,4 +1,18 @@
+import { useAppStore } from "@/store/app-store";
 import { Entry } from "@/types";
+import { IconProp } from "@fortawesome/fontawesome-svg-core";
+import {
+  faBolt,
+  faCube,
+  faCubesStacked,
+  faDroplet,
+  faDrumstickBite,
+  faFireFlameCurved,
+  faGlassWater,
+  faSeedling,
+  faWheatAwn,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
@@ -26,6 +40,64 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// Color palette matching ProgressRings
+const MACRO_COLORS = {
+  calories: {
+    primary: "#FF6B35",
+    secondary: "#FFE5D9",
+  },
+  protein: {
+    primary: "#4A90D9",
+    secondary: "#E3F2FD",
+  },
+  fat: {
+    primary: "#F5A623",
+    secondary: "#FFF8E7",
+  },
+  carbs: {
+    primary: "#9B6B9E",
+    secondary: "#F3E5F5",
+  },
+};
+
+const MICRO_COLORS = {
+  fiber: {
+    primary: "#8B6914",
+    secondary: "#FDF6E3",
+  },
+  sugar: {
+    primary: "#C45BAA",
+    secondary: "#FCE4F6",
+  },
+  sodium: {
+    primary: "#5B8CC4",
+    secondary: "#E8F1FA",
+  },
+  potassium: {
+    primary: "#6B8E5B",
+    secondary: "#EDF5EB",
+  },
+  water: {
+    primary: "#4DB6AC",
+    secondary: "#E0F2F1",
+  },
+};
+
+const MACRO_ICONS = {
+  calories: faFireFlameCurved as IconProp,
+  protein: faDrumstickBite as IconProp,
+  fat: faDroplet as IconProp,
+  carbs: faWheatAwn as IconProp,
+};
+
+const MICRO_ICONS = {
+  fiber: faSeedling as IconProp,
+  sugar: faCube as IconProp,
+  sodium: faCubesStacked as IconProp,
+  potassium: faBolt as IconProp,
+  water: faGlassWater as IconProp,
+};
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
@@ -267,6 +339,18 @@ export function NutritionReasoningPopup({
     reasoning?: any;
   } | null>(null);
 
+  // Get goals to check which micronutrients are enabled
+  const goals = useAppStore((state) => state.goals);
+
+  // Check which micronutrients are enabled in goals
+  const enabledMicros = {
+    fiber: goals?.manualTargets?.fiber !== undefined,
+    sugar: goals?.manualTargets?.sugar !== undefined,
+    sodium: goals?.manualTargets?.sodium !== undefined,
+    potassium: goals?.manualTargets?.potassium !== undefined,
+    water: goals?.manualTargets?.water !== undefined,
+  };
+
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
@@ -455,22 +539,80 @@ export function NutritionReasoningPopup({
                   {/* Macros */}
                   <View style={styles.macrosRow}>
                     <MacroItem
-                      label="calories"
+                      label="cal"
                       value={item.macros.kcal}
                       unit=""
+                      type="calories"
                     />
                     <MacroItem
                       label="protein"
                       value={item.macros.protein}
                       unit="g"
+                      type="protein"
                     />
-                    <MacroItem label="fat" value={item.macros.fat} unit="g" />
+                    <MacroItem
+                      label="fat"
+                      value={item.macros.fat}
+                      unit="g"
+                      type="fat"
+                    />
                     <MacroItem
                       label="carbs"
                       value={item.macros.carbs}
                       unit="g"
+                      type="carbs"
                     />
                   </View>
+
+                  {/* Micronutrients - only show if enabled in goals */}
+                  {((enabledMicros.fiber && item.macros.fiber !== undefined) ||
+                    (enabledMicros.sugar && item.macros.sugar !== undefined) ||
+                    (enabledMicros.sodium && item.macros.sodium !== undefined) ||
+                    (enabledMicros.potassium && item.macros.potassium !== undefined) ||
+                    (enabledMicros.water && item.macros.water !== undefined)) && (
+                    <View style={styles.microsRow}>
+                      {enabledMicros.fiber && item.macros.fiber !== undefined && (
+                        <MicroItem
+                          label="fiber"
+                          value={item.macros.fiber}
+                          unit="g"
+                          type="fiber"
+                        />
+                      )}
+                      {enabledMicros.sugar && item.macros.sugar !== undefined && (
+                        <MicroItem
+                          label="sugar"
+                          value={item.macros.sugar}
+                          unit="g"
+                          type="sugar"
+                        />
+                      )}
+                      {enabledMicros.sodium && item.macros.sodium !== undefined && (
+                        <MicroItem
+                          label="sodium"
+                          value={item.macros.sodium}
+                          unit="mg"
+                          type="sodium"
+                        />
+                      )}
+                      {enabledMicros.potassium && item.macros.potassium !== undefined && (
+                        <MicroItem
+                          label="potassium"
+                          value={item.macros.potassium}
+                          unit="mg"
+                          type="potassium"
+                        />
+                      )}
+                      {enabledMicros.water && item.macros.water !== undefined && (
+                        <MicroItem
+                          label="water"
+                          value={item.macros.water}
+                          unit="L"
+                          type="water"
+                        />
+                      )}
+                    </View>
+                  )}
 
                   {/* Reasoning Section */}
                   {item.reasoning && (
@@ -559,7 +701,14 @@ export function NutritionReasoningPopup({
                 entering={FadeInDown.delay(150 + entry.items.length * 100).duration(400)}
                 style={styles.totalsSection}
               >
-                <Text style={styles.totalsLabel}>Total</Text>
+                <View style={styles.totalsLeft}>
+                  <FontAwesomeIcon
+                    icon={MACRO_ICONS.calories}
+                    size={18}
+                    color={MACRO_COLORS.calories.primary}
+                  />
+                  <Text style={styles.totalsLabel}>Total</Text>
+                </View>
                 <Text style={styles.totalsValue}>{entry.inlineKcal} cal</Text>
               </Animated.View>
             </Animated.ScrollView>
@@ -586,15 +735,56 @@ function MacroItem({
   label,
   value,
   unit,
+  type,
 }: {
   label: string;
   value: number;
   unit: string;
+  type: "calories" | "protein" | "fat" | "carbs";
 }) {
+  const colors = MACRO_COLORS[type];
+  const icon = MACRO_ICONS[type];
+
   return (
     <View style={styles.macroItem}>
+      <View style={styles.macroIconContainer}>
+        <FontAwesomeIcon icon={icon} size={12} color={colors.primary} />
+      </View>
       <Text style={styles.macroValue}>
         {Math.round(value)}
+        {unit}
+      </Text>
+      <Text style={styles.macroLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function MicroItem({
+  label,
+  value,
+  unit,
+  type,
+}: {
+  label: string;
+  value: number;
+  unit: string;
+  type: "fiber" | "sugar" | "sodium" | "potassium" | "water";
+}) {
+  const colors = MICRO_COLORS[type];
+  const icon = MICRO_ICONS[type];
+
+  // Format value based on type
+  const displayValue = type === "water"
+    ? value.toFixed(1)
+    : Math.round(value).toString();
+
+  return (
+    <View style={styles.macroItem}>
+      <View style={styles.macroIconContainer}>
+        <FontAwesomeIcon icon={icon} size={12} color={colors.primary} />
+      </View>
+      <Text style={styles.macroValue}>
+        {displayValue}
         {unit}
       </Text>
       <Text style={styles.macroLabel}>{label}</Text>
@@ -710,30 +900,39 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 16,
-    paddingVertical: 12,
+    gap: 8,
   },
   macroItem: {
     alignItems: "center",
     flex: 1,
   },
+  macroIconContainer: {
+    marginBottom: 6,
+  },
   macroValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: "System",
     fontWeight: "700",
-    color: "#1A6872",
-    marginBottom: 4,
+    color: "#333",
+    marginBottom: 2,
   },
   macroLabel: {
-    fontSize: 11,
-    color: "#4DB6AC",
+    fontSize: 10,
     fontFamily: "System",
     fontWeight: "600",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+    color: "#888",
+  },
+  microsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+    gap: 8,
   },
   reasoningSection: {
-    borderTopWidth: 2,
-    borderTopColor: "#E0F2F1",
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
     paddingTop: 16,
     marginTop: 8,
   },
@@ -764,7 +963,7 @@ const styles = StyleSheet.create({
   },
   sourceText: {
     fontSize: 14,
-    color: "#1A6872",
+    color: "#4A90D9",
     flex: 1,
     fontFamily: "System",
     fontWeight: "600",
@@ -774,16 +973,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 20,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     marginTop: 12,
-    backgroundColor: "#ffffff",
+    backgroundColor: MACRO_COLORS.calories.secondary,
     borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+  },
+  totalsLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   totalsLabel: {
     fontSize: 18,
@@ -796,7 +995,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: "System",
     fontWeight: "700",
-    color: "#1A6872",
+    color: MACRO_COLORS.calories.primary,
     letterSpacing: -0.5,
   },
   // Confidence popup styles
@@ -873,7 +1072,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   linkText: {
-    color: "#1A6872",
+    color: "#4A90D9",
     fontWeight: "600",
   },
   popupHint: {

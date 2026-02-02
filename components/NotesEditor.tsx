@@ -1,6 +1,6 @@
 import { Entry } from "@/types";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
-import { faDroplet } from "@fortawesome/free-solid-svg-icons";
+import { faGlassWater } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import * as Haptics from "expo-haptics";
 import React, {
@@ -21,7 +21,7 @@ import {
 import { NutritionReasoningPopup } from "./NutritionReasoningPopup";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
-const waterIcon = faDroplet as IconProp;
+const waterIcon = faGlassWater as IconProp;
 
 // Constants
 const LINE_HEIGHT = 21;
@@ -135,10 +135,10 @@ const CaloriesBadge = React.memo<{
 CaloriesBadge.displayName = "CaloriesBadge";
 
 // Memoized water badge - only re-renders when amount changes
-const WaterBadge = React.memo<{ amountMl: number }>(({ amountMl }) => (
+const WaterBadge = React.memo<{ amountL: number }>(({ amountL }) => (
   <View style={styles.inlineWater}>
     <FontAwesomeIcon icon={waterIcon} size={10} color="#1A6872" />
-    <Text style={styles.waterText}>{amountMl}ml</Text>
+    <Text style={styles.waterText}>{amountL}L</Text>
   </View>
 ));
 WaterBadge.displayName = "WaterBadge";
@@ -170,7 +170,7 @@ const IndicatorRow = React.memo<{
             {hasCalories && (
               <CaloriesBadge kcal={entry.inlineKcal!} onPress={handlePress} />
             )}
-            {hasWater && <WaterBadge amountMl={waterAmount} />}
+            {hasWater && <WaterBadge amountL={waterAmount} />}
           </>
         ) : null}
       </View>

@@ -104,10 +104,10 @@ const DEFAULT_MICRONUTRIENTS = {
   potassium: 3500, // 3500mg - universal recommendation
 };
 
-// Sex-based water intake recommendations
+// Sex-based water intake recommendations (in liters)
 const DEFAULT_WATER = {
-  male: 3700,      // 3.7L in ml
-  female: 2700,    // 2.7L in ml
+  male: 3.7,
+  female: 2.7,
 };
 
 const OTHER_NUTRIENTS: OtherNutrient[] = [
@@ -146,8 +146,8 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
   {
     key: "water",
     label: "Water",
-    unit: "ml",
-    placeholder: "3700",
+    unit: "L",
+    placeholder: "3.7",
     color: "#4DB6AC",
     icon: icons.glassWater,
   },
@@ -336,7 +336,7 @@ export function NutritionGoalsModal({
       ...(potassiumEnabled && {
         potassium: parseInt(manualPotassium, 10) || DEFAULT_MICRONUTRIENTS.potassium,
       }),
-      ...(waterEnabled && { water: parseInt(manualWater, 10) || defaultWater }),
+      ...(waterEnabled && { water: parseFloat(manualWater) || defaultWater }),
     };
 
     const updatedGoals = goals
@@ -388,7 +388,10 @@ export function NutritionGoalsModal({
   };
 
   const setValueForField = (field: NutrientField, value: string) => {
-    const cleanValue = value.replace(/[^0-9]/g, "");
+    // Allow decimals for water (liters), integers only for others
+    const cleanValue = field === "water"
+      ? value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1")  // Allow one decimal point
+      : value.replace(/[^0-9]/g, "");
     switch (field) {
       case "kcal":
         setManualKcal(cleanValue);
@@ -468,7 +471,7 @@ export function NutritionGoalsModal({
 
     // Check water (sex-based default)
     const defaultWater = goals.sex === 'female' ? DEFAULT_WATER.female : DEFAULT_WATER.male;
-    const waterChanged = waterEnabled && parseInt(manualWater, 10) !== defaultWater;
+    const waterChanged = waterEnabled && parseFloat(manualWater) !== defaultWater;
 
     return kcalChanged || proteinChanged || fatChanged || carbsChanged ||
            fiberChanged || sugarChanged || sodiumChanged || potassiumChanged || waterChanged;
@@ -525,7 +528,8 @@ export function NutritionGoalsModal({
     iconColor?: string,
   ) => {
     const value = getValueForField(field);
-    const displayValue = parseInt(value, 10) || 0;
+    // Use parseFloat for water (liters), parseInt for others
+    const displayValue = field === "water" ? (parseFloat(value) || 0) : (parseInt(value, 10) || 0);
 
     return (
       <TouchableOpacity
@@ -551,7 +555,7 @@ export function NutritionGoalsModal({
               style={styles.targetInput}
               value={value}
               onChangeText={(text) => setValueForField(field, text)}
-              keyboardType="number-pad"
+              keyboardType={field === "water" ? "decimal-pad" : "number-pad"}
               onBlur={stopEditing}
               selectTextOnFocus
             />
@@ -712,7 +716,7 @@ export function NutritionGoalsModal({
                         color="#1A6872"
                       />
                       <Text style={styles.waterTipText}>
-                        Track water: "- 500ml water" or "- water 1l"
+                        Track water: "- water 1L" or "- 0.5L water"
                       </Text>
                     </Animated.View>
                   )}

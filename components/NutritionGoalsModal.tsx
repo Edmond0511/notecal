@@ -184,8 +184,6 @@ export function NutritionGoalsModal({
   const [potassiumEnabled, setPotassiumEnabled] = useState(false);
   const [waterEnabled, setWaterEnabled] = useState(false);
 
-  // Water tooltip state
-  const [showWaterTip, setShowWaterTip] = useState(false);
 
   // Refs for each input field
   const kcalInputRef = React.useRef<TextInput>(null);
@@ -448,12 +446,7 @@ export function NutritionGoalsModal({
         setPotassiumEnabled(!potassiumEnabled);
         break;
       case "water":
-        const newWaterEnabled = !waterEnabled;
-        setWaterEnabled(newWaterEnabled);
-        if (newWaterEnabled) {
-          setShowWaterTip(true);
-          setTimeout(() => setShowWaterTip(false), 4000);
-        }
+        setWaterEnabled(!waterEnabled);
         break;
     }
   };
@@ -707,7 +700,7 @@ export function NutritionGoalsModal({
                   </View>
 
                   {/* Water tracking tooltip */}
-                  {showWaterTip && (
+                  {waterEnabled && (
                     <Animated.View
                       entering={FadeIn.duration(200)}
                       exiting={FadeOut.duration(200)}

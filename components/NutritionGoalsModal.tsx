@@ -710,11 +710,6 @@ export function NutritionGoalsModal({
                       exiting={FadeOut.duration(200)}
                       style={styles.waterTip}
                     >
-                      <FontAwesomeIcon
-                        icon={icons.glassWater}
-                        size={14}
-                        color="#1A6872"
-                      />
                       <Text style={styles.waterTipText}>
                         Track water: "- water 1L" or "- 0.5L water"
                       </Text>

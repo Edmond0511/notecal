@@ -9,24 +9,36 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 const USE_AI_API = true; // Use AI-powered nutrition API
 
 // Water entry parsing utilities
-const WATER_REGEX = /^(water|agua)\s*,?\s*(\d+(?:\.\d+)?)\s*(ml|l|oz|cups?)?$/i;
+// Pattern 1: "water 500ml" or "sparkling water 1l" (water first)
+const WATER_FIRST_REGEX = /^((?:sparkling|mineral|soda|fizzy|still)\s+)?(water|agua|h2o)\s*,?\s*(\d+(?:\.\d+)?)\s*(ml|l|oz)?$/i;
+
+// Pattern 2: "500ml water" or "1l sparkling water" (quantity first)
+const QTY_FIRST_REGEX = /^(\d+(?:\.\d+)?)\s*(ml|l|oz)?\s*(?:of\s+)?((?:sparkling|mineral|soda|fizzy|still)\s+)?(water|agua|h2o)$/i;
+
 const WATER_CONVERSIONS: Record<string, number> = {
   ml: 1,
   l: 1000,
   oz: 29.57,
-  cup: 237,
-  cups: 237,
 };
 
 function parseWaterEntry(text: string): { isWater: boolean; amountMl: number } {
-  const match = text.match(WATER_REGEX);
-  if (!match) return { isWater: false, amountMl: 0 };
+  // Try water-first pattern: "water 500ml", "sparkling water 1l"
+  let match = text.match(WATER_FIRST_REGEX);
+  if (match) {
+    const amount = parseFloat(match[3]);
+    const unit = (match[4] || 'ml').toLowerCase();
+    return { isWater: true, amountMl: Math.round(amount * (WATER_CONVERSIONS[unit] || 1)) };
+  }
 
-  const amount = parseFloat(match[2]);
-  const unit = (match[3] || 'ml').toLowerCase();
-  const multiplier = WATER_CONVERSIONS[unit] || 1;
+  // Try quantity-first pattern: "500ml water", "1l sparkling water"
+  match = text.match(QTY_FIRST_REGEX);
+  if (match) {
+    const amount = parseFloat(match[1]);
+    const unit = (match[2] || 'ml').toLowerCase();
+    return { isWater: true, amountMl: Math.round(amount * (WATER_CONVERSIONS[unit] || 1)) };
+  }
 
-  return { isWater: true, amountMl: Math.round(amount * multiplier) };
+  return { isWater: false, amountMl: 0 };
 }
 
 export const useAppStore = create<AppState>()(

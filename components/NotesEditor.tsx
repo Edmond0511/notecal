@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   inlineWater: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E0F7FA",
+    backgroundColor: "#E0F2F1",
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 12,
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   waterText: {
     fontSize: 12,
     lineHeight: 16,
-    color: "#00BCD4",
+    color: "#1A6872",
     fontFamily: "System",
     fontWeight: "600",
     includeFontPadding: false,
@@ -137,7 +137,7 @@ CaloriesBadge.displayName = "CaloriesBadge";
 // Memoized water badge - only re-renders when amount changes
 const WaterBadge = React.memo<{ amountMl: number }>(({ amountMl }) => (
   <View style={styles.inlineWater}>
-    <FontAwesomeIcon icon={waterIcon} size={10} color="#00BCD4" />
+    <FontAwesomeIcon icon={waterIcon} size={10} color="#1A6872" />
     <Text style={styles.waterText}>{amountMl}ml</Text>
   </View>
 ));

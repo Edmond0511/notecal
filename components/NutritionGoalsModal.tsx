@@ -148,7 +148,7 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
     label: "Water",
     unit: "ml",
     placeholder: "3700",
-    color: "#00BCD4",
+    color: "#4DB6AC",
     icon: icons.glassWater,
   },
 ];
@@ -183,6 +183,9 @@ export function NutritionGoalsModal({
   const [sodiumEnabled, setSodiumEnabled] = useState(false);
   const [potassiumEnabled, setPotassiumEnabled] = useState(false);
   const [waterEnabled, setWaterEnabled] = useState(false);
+
+  // Water tooltip state
+  const [showWaterTip, setShowWaterTip] = useState(false);
 
   // Refs for each input field
   const kcalInputRef = React.useRef<TextInput>(null);
@@ -445,7 +448,12 @@ export function NutritionGoalsModal({
         setPotassiumEnabled(!potassiumEnabled);
         break;
       case "water":
-        setWaterEnabled(!waterEnabled);
+        const newWaterEnabled = !waterEnabled;
+        setWaterEnabled(newWaterEnabled);
+        if (newWaterEnabled) {
+          setShowWaterTip(true);
+          setTimeout(() => setShowWaterTip(false), 4000);
+        }
         break;
     }
   };
@@ -697,6 +705,24 @@ export function NutritionGoalsModal({
                   <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Other Nutrients</Text>
                   </View>
+
+                  {/* Water tracking tooltip */}
+                  {showWaterTip && (
+                    <Animated.View
+                      entering={FadeIn.duration(200)}
+                      exiting={FadeOut.duration(200)}
+                      style={styles.waterTip}
+                    >
+                      <FontAwesomeIcon
+                        icon={icons.glassWater}
+                        size={14}
+                        color="#1A6872"
+                      />
+                      <Text style={styles.waterTipText}>
+                        Track water: "- 500ml water" or "- water 1l"
+                      </Text>
+                    </Animated.View>
+                  )}
 
                   <View style={styles.toggleCard}>
                     {OTHER_NUTRIENTS.map((nutrient, index) => {
@@ -978,5 +1004,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#fff",
+  },
+  waterTip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(26, 104, 114, 0.08)",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+  waterTipText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#1A6872",
+    flex: 1,
   },
 });

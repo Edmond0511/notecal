@@ -1,9 +1,50 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
+import { MMKV } from 'react-native-mmkv';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets } from '@/types';
 import { resolveNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
 import { supabase } from '@/lib/supabase';
+
+// Initialize MMKV storage
+const mmkv = new MMKV({ id: 'note-cal-storage' });
+
+// MMKV storage adapter for Zustand
+const mmkvStorage: StateStorage = {
+  getItem: (name) => {
+    const value = mmkv.getString(name);
+    return value ?? null;
+  },
+  setItem: (name, value) => {
+    mmkv.set(name, value);
+  },
+  removeItem: (name) => {
+    mmkv.delete(name);
+  },
+};
+
+// Migration: Transfer data from AsyncStorage to MMKV (runs once)
+const MIGRATION_KEY = 'mmkv-migration-complete';
+
+export async function migrateFromAsyncStorage(): Promise<void> {
+  if (mmkv.getBoolean(MIGRATION_KEY)) {
+    return;
+  }
+
+  try {
+    const asyncStorageData = await AsyncStorage.getItem('note-cal-storage');
+
+    if (asyncStorageData) {
+      mmkv.set('note-cal-storage', asyncStorageData);
+      console.log('✅ Migrated data from AsyncStorage to MMKV');
+      await AsyncStorage.removeItem('note-cal-storage');
+    }
+
+    mmkv.set(MIGRATION_KEY, true);
+  } catch (error) {
+    console.error('Migration from AsyncStorage failed:', error);
+  }
+}
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 const USE_AI_API = true; // Use AI-powered nutrition API
@@ -378,9 +419,8 @@ export const useAppStore = create<AppState>()(
   },
 }),
     {
-      name: 'note-cal-storage', // unique name for the storage
-      storage: createJSONStorage(() => AsyncStorage),
-      // Only persist the data we need (exclude functions and non-serializable data)
+      name: 'note-cal-storage',
+      storage: createJSONStorage(() => mmkvStorage),
       partialize: (state) => ({
         entries: state.entries,
         documents: state.documents,
@@ -388,7 +428,6 @@ export const useAppStore = create<AppState>()(
         goals: state.goals,
         preferredUnits: state.preferredUnits,
       }),
-      // Handle version migrations if needed in the future
       version: 1,
     }
   )

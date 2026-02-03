@@ -516,25 +516,32 @@ export function NutritionReasoningPopup({
   const savedEntries = useAppStore((state) => state.savedEntries);
   const updateEntryItemMacro = useAppStore((state) => state.updateEntryItemMacro);
 
+  // Subscribe directly to the store entry to get live updates after edits
+  const storeEntry = useAppStore((state) =>
+    entry ? state.entries.find((e) => e.id === entry.id) : null
+  );
+  // Use store entry if available (for live updates), otherwise fall back to prop
+  const displayEntry = storeEntry || entry;
+
   // Check if entry is already saved and get its ID
   const savedEntryMatch = React.useMemo(() => {
-    if (!entry) return null;
-    const normalizedText = entry.rawText.toLowerCase().trim();
+    if (!displayEntry) return null;
+    const normalizedText = displayEntry.rawText.toLowerCase().trim();
     return savedEntries.find(
       (se) => se.rawText.toLowerCase().trim() === normalizedText
     ) || null;
-  }, [entry, savedEntries]);
+  }, [displayEntry, savedEntries]);
 
   const isEntrySaved = savedEntryMatch !== null;
 
   const handleSaveEntry = useCallback(() => {
     console.log('🔘 Save button pressed, entry:', {
-      status: entry?.status,
-      itemsCount: entry?.items?.length,
-      rawText: entry?.rawText,
+      status: displayEntry?.status,
+      itemsCount: displayEntry?.items?.length,
+      rawText: displayEntry?.rawText,
       isEntrySaved,
     });
-    if (!entry || entry.status !== 'ok' || !entry.items.length) {
+    if (!displayEntry || displayEntry.status !== 'ok' || !displayEntry.items.length) {
       console.log('🔘 Save aborted - entry not valid');
       return;
     }
@@ -545,11 +552,11 @@ export function NutritionReasoningPopup({
       deleteSavedEntry(savedEntryMatch.id);
     } else {
       // Save the entry
-      saveEntry(entry);
+      saveEntry(displayEntry);
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 1500);
     }
-  }, [entry, saveEntry, deleteSavedEntry, isEntrySaved, savedEntryMatch]);
+  }, [displayEntry, saveEntry, deleteSavedEntry, isEntrySaved, savedEntryMatch]);
 
   // Check which micronutrients are enabled in goals
   const enabledMicros = {
@@ -644,13 +651,13 @@ export function NutritionReasoningPopup({
   // Handler for saving edited nutrient value
   const handleSaveNutrient = useCallback(
     (value: number) => {
-      if (!entry || !editNutrientPopup) return;
-      updateEntryItemMacro(entry.id, editNutrientPopup.itemId, editNutrientPopup.nutrientKey, value);
+      if (!displayEntry || !editNutrientPopup) return;
+      updateEntryItemMacro(displayEntry.id, editNutrientPopup.itemId, editNutrientPopup.nutrientKey, value);
     },
-    [entry, editNutrientPopup, updateEntryItemMacro]
+    [displayEntry, editNutrientPopup, updateEntryItemMacro]
   );
 
-  if (!entry) return null;
+  if (!displayEntry) return null;
 
   return (
     <Modal
@@ -681,7 +688,7 @@ export function NutritionReasoningPopup({
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Nutrition Details</Text>
-              {entry && entry.status === 'ok' && entry.items.length > 0 && (
+              {displayEntry && displayEntry.status === 'ok' && displayEntry.items.length > 0 && (
                 <TouchableOpacity
                   style={[
                     styles.saveButton,
@@ -722,12 +729,12 @@ export function NutritionReasoningPopup({
               {/* Original Input */}
               <Animated.View entering={FadeInDown.delay(100).duration(400)}>
                 <Text style={styles.inputText}>
-                  {entry.rawText.replace(/^-\s*/, "")}
+                  {displayEntry.rawText.replace(/^-\s*/, "")}
                 </Text>
               </Animated.View>
 
               {/* Items */}
-              {entry.items.map((item, index) => (
+              {displayEntry.items.map((item, index) => (
                 <Animated.View
                   key={item.id || index}
                   entering={FadeInDown.delay(150 + index * 100).duration(400)}
@@ -960,7 +967,7 @@ export function NutritionReasoningPopup({
 
               {/* Totals */}
               <Animated.View
-                entering={FadeInDown.delay(150 + entry.items.length * 100).duration(400)}
+                entering={FadeInDown.delay(150 + displayEntry.items.length * 100).duration(400)}
                 style={styles.totalsSection}
               >
                 <View style={styles.totalsLeft}>
@@ -971,7 +978,7 @@ export function NutritionReasoningPopup({
                   />
                   <Text style={styles.totalsLabel}>Total</Text>
                 </View>
-                <Text style={styles.totalsValue}>{entry.inlineKcal} cal</Text>
+                <Text style={styles.totalsValue}>{displayEntry.inlineKcal} cal</Text>
               </Animated.View>
             </Animated.ScrollView>
 
@@ -1020,20 +1027,22 @@ function MacroItem({
   const icon = MACRO_ICONS[type];
 
   return (
-    <GHTouchableOpacity
-      style={styles.macroItem}
-      onPress={onPress}
-      activeOpacity={0.6}
-    >
-      <View style={styles.macroIconContainer}>
-        <FontAwesomeIcon icon={icon} size={12} color={colors.primary} />
-      </View>
-      <Text style={styles.macroValue}>
-        {Math.round(value)}
-        {unit}
-      </Text>
-      <Text style={styles.macroLabel}>{label}</Text>
-    </GHTouchableOpacity>
+    <View style={styles.macroItem}>
+      <GHTouchableOpacity
+        style={styles.macroItemTouchable}
+        onPress={onPress}
+        activeOpacity={0.6}
+      >
+        <View style={styles.macroIconContainer}>
+          <FontAwesomeIcon icon={icon} size={12} color={colors.primary} />
+        </View>
+        <Text style={styles.macroValue}>
+          {Math.round(value)}
+          {unit}
+        </Text>
+        <Text style={styles.macroLabel}>{label}</Text>
+      </GHTouchableOpacity>
+    </View>
   );
 }
 
@@ -1059,20 +1068,22 @@ function MicroItem({
     : Math.round(value).toString();
 
   return (
-    <GHTouchableOpacity
-      style={styles.microItem}
-      onPress={onPress}
-      activeOpacity={0.6}
-    >
-      <View style={styles.macroIconContainer}>
-        <FontAwesomeIcon icon={icon} size={12} color={colors.primary} />
-      </View>
-      <Text style={styles.macroValue}>
-        {displayValue}
-        {unit}
-      </Text>
-      <Text style={styles.macroLabel}>{label}</Text>
-    </GHTouchableOpacity>
+    <View style={styles.microItem}>
+      <GHTouchableOpacity
+        style={styles.microItemTouchable}
+        onPress={onPress}
+        activeOpacity={0.6}
+      >
+        <View style={styles.macroIconContainer}>
+          <FontAwesomeIcon icon={icon} size={12} color={colors.primary} />
+        </View>
+        <Text style={styles.macroValue}>
+          {displayValue}
+          {unit}
+        </Text>
+        <Text style={styles.macroLabel}>{label}</Text>
+      </GHTouchableOpacity>
+    </View>
   );
 }
 
@@ -1215,11 +1226,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
+  macroItemTouchable: {
+    alignItems: "center",
+  },
   microItem: {
     alignItems: "center",
     flexBasis: "22%",
     flexGrow: 0,
     flexShrink: 0,
+  },
+  microItemTouchable: {
+    alignItems: "center",
   },
   macroIconContainer: {
     marginBottom: 6,

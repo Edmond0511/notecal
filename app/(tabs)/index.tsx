@@ -6,6 +6,7 @@ import { SavedEntriesPopup } from "@/components/SavedEntriesPopup";
 import { SettingsModal } from "@/components/SettingsModal";
 import { useAppStore } from "@/store/app-store";
 import { SavedEntry } from "@/types";
+import { truncateNumber } from "@/utils/formatNumber";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -285,24 +286,24 @@ export default function HomeScreen() {
           activeOpacity={0.8}
         >
           <View style={styles.totalItem}>
-            <Text style={styles.totalValue}>{Math.round(dailyTotals.kcal)}</Text>
+            <Text style={styles.totalValue}>{truncateNumber(dailyTotals.kcal, 5)}</Text>
             <FontAwesomeIcon icon={icons.fire} size={14} color="#FF6B35" style={styles.totalIcon} />
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
             <Text style={styles.totalValue}>
-              {Math.round(dailyTotals.protein)}
+              {truncateNumber(dailyTotals.protein, 4)}
             </Text>
             <FontAwesomeIcon icon={icons.protein} size={14} color="#4A90D9" style={styles.totalIcon} />
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
-            <Text style={styles.totalValue}>{Math.round(dailyTotals.fat)}</Text>
+            <Text style={styles.totalValue}>{truncateNumber(dailyTotals.fat, 4)}</Text>
             <FontAwesomeIcon icon={icons.fat} size={14} color="#F5A623" style={styles.totalIcon} />
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
-            <Text style={styles.totalValue}>{Math.round(dailyTotals.carbs)}</Text>
+            <Text style={styles.totalValue}>{truncateNumber(dailyTotals.carbs, 4)}</Text>
             <FontAwesomeIcon icon={icons.carbs} size={14} color="#9B6B9E" style={styles.totalIcon} />
           </View>
         </TouchableOpacity>

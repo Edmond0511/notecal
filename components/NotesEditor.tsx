@@ -1,4 +1,5 @@
 import { Entry } from "@/types";
+import { truncateNumber } from "@/utils/formatNumber";
 import * as Haptics from "expo-haptics";
 import React, {
   useCallback,
@@ -124,7 +125,7 @@ const CaloriesBadge = React.memo<{
     onPress={onPress}
     activeOpacity={0.7}
   >
-    <Text style={styles.caloriesText}>{kcal} cal</Text>
+    <Text style={styles.caloriesText}>{truncateNumber(kcal, 6)} cal</Text>
   </TouchableOpacity>
 ));
 CaloriesBadge.displayName = "CaloriesBadge";

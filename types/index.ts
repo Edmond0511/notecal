@@ -181,4 +181,6 @@ export interface AppState {
   deleteSavedEntry: (id: string) => void;
   useSavedEntry: (savedEntry: SavedEntry) => Entry;
   createSavedEntry: (rawText: string) => Promise<{ success: boolean; error?: string }>;
+  // Item editing actions
+  updateEntryItemMacro: (entryId: string, itemId: string, macroKey: keyof Macros, value: number) => void;
 }

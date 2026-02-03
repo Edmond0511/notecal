@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets, SavedEntry } from '@/types';
+import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets, SavedEntry, Macros } from '@/types';
 import { resolveNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
 import { supabase } from '@/lib/supabase';
 
@@ -540,6 +540,39 @@ export const useAppStore = create<AppState>()(
       }
       return { success: false, error: 'Failed to resolve nutrition' };
     }
+  },
+
+  updateEntryItemMacro: (entryId: string, itemId: string, macroKey: keyof Macros, value: number) => {
+    set((state) => ({
+      entries: state.entries.map((entry) => {
+        if (entry.id !== entryId) return entry;
+
+        // Update the specific item's macro
+        const updatedItems = entry.items.map((item) => {
+          if (item.id !== itemId) return item;
+
+          return {
+            ...item,
+            macros: {
+              ...item.macros,
+              [macroKey]: value,
+            },
+          };
+        });
+
+        // Recalculate inlineKcal if calories were updated
+        const newInlineKcal = macroKey === 'kcal'
+          ? updatedItems.reduce((sum, item) => sum + item.macros.kcal, 0)
+          : entry.inlineKcal;
+
+        return {
+          ...entry,
+          items: updatedItems,
+          inlineKcal: newInlineKcal,
+          updatedAt: new Date(),
+        };
+      }),
+    }));
   },
 }),
     {

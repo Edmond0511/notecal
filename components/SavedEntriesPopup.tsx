@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
   },
   thinkingText: {
     fontSize: 14,
-    color: '#1A6872',
+    color: '#888',
     fontWeight: '500',
     letterSpacing: 0.3,
   },

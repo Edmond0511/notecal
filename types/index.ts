@@ -180,4 +180,5 @@ export interface AppState {
   saveEntry: (entry: Entry) => void;
   deleteSavedEntry: (id: string) => void;
   useSavedEntry: (savedEntry: SavedEntry) => Entry;
+  createSavedEntry: (rawText: string) => Promise<{ success: boolean; error?: string }>;
 }

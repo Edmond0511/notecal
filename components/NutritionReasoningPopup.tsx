@@ -512,7 +512,7 @@ export function NutritionReasoningPopup({
                       (isSaved || isEntrySaved) && styles.saveButtonTextSaved,
                     ]}
                   >
-                    {isSaved ? "Saved!" : isEntrySaved ? "Saved" : "Save"}
+                    {isSaved || isEntrySaved ? "Saved" : "Save"}
                   </Text>
                 </TouchableOpacity>
               )}

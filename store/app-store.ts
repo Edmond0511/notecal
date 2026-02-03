@@ -482,6 +482,65 @@ export const useAppStore = create<AppState>()(
 
     return newEntry;
   },
+
+  createSavedEntry: async (rawText: string): Promise<{ success: boolean; error?: string }> => {
+    // Remove "- " prefix if present and trim
+    const foodText = rawText.replace(/^-\s*/, '').trim();
+    if (!foodText) {
+      return { success: false, error: 'Empty input' };
+    }
+
+    // Check for duplicates (normalize to "- foodText" format for comparison)
+    const normalizedText = `- ${foodText}`.toLowerCase().trim();
+    const existing = get().savedEntries.find(
+      (se) => se.rawText.toLowerCase().trim() === normalizedText
+    );
+    if (existing) {
+      return { success: false, error: 'Already saved' };
+    }
+
+    try {
+      // Get current user ID if available
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Call nutrition API to resolve the food
+      const response = await resolveNutrition(foodText, {
+        userId: user?.id
+      });
+
+      if (!response.resolved?.length) {
+        return { success: false, error: 'Could not resolve nutrition' };
+      }
+
+      // Create SavedEntry from the response
+      const newSavedEntry: SavedEntry = {
+        id: Date.now().toString(),
+        rawText: `- ${foodText}`,
+        items: response.resolved.map((item) => ({
+          ...item,
+          entryId: '', // Clear entryId since this is a template
+        })),
+        totalKcal: response.totals?.kcal ?? 0,
+        createdAt: new Date(),
+        lastUsedAt: new Date(),
+        usageCount: 0,
+      };
+
+      set((state) => ({
+        savedEntries: [...state.savedEntries, newSavedEntry],
+      }));
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error creating saved entry:', error);
+      if (error instanceof NutritionQuotaExceededError) {
+        return { success: false, error: 'Quota exceeded' };
+      } else if (error instanceof NutritionRateLimitError) {
+        return { success: false, error: 'Too many requests' };
+      }
+      return { success: false, error: 'Failed to resolve nutrition' };
+    }
+  },
 }),
     {
       name: 'note-cal-storage', // unique name for the storage

@@ -2,13 +2,16 @@ import { useAppStore } from '@/store/app-store';
 import { SavedEntry } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import React, { useEffect } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useState } from 'react';
 import {
   Dimensions,
   FlatList,
+  Keyboard,
   Modal,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -19,17 +22,85 @@ import {
   Swipeable,
 } from 'react-native-gesture-handler';
 import Animated, {
+  Easing,
   Extrapolation,
   FadeInDown,
   interpolate,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DISMISS_THRESHOLD = 100;
+
+// Shimmer dimensions for thinking indicator
+const SHIMMER_WIDTH = 60;
+const TEXT_WIDTH = 140; // Width of "Calculating nutrition" text
+
+// Animated thinking indicator with shimmer effect
+function ThinkingIndicator() {
+  const shimmerTranslate = useSharedValue(-SHIMMER_WIDTH);
+  const shimmerOpacity = useSharedValue(0);
+
+  React.useEffect(() => {
+    // Animate shimmer sweep with fade in/out
+    shimmerTranslate.value = withRepeat(
+      withSequence(
+        withTiming(TEXT_WIDTH + SHIMMER_WIDTH, {
+          duration: 1800,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        withTiming(-SHIMMER_WIDTH, { duration: 0 })
+      ),
+      -1,
+      false
+    );
+
+    shimmerOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.7, { duration: 400, easing: Easing.ease }),
+        withTiming(0.7, { duration: 1000 }), // Hold
+        withTiming(0, { duration: 400, easing: Easing.ease }),
+        withTiming(0, { duration: 0 }) // Reset
+      ),
+      -1,
+      false
+    );
+  }, []);
+
+  const shimmerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shimmerTranslate.value }],
+    opacity: shimmerOpacity.value,
+  }));
+
+  return (
+    <View style={styles.thinkingContainer}>
+      <View style={styles.shimmerTextContainer}>
+        {/* Base text layer */}
+        <Text style={styles.thinkingText}>Calculating nutrition</Text>
+
+        {/* Shimmer overlay */}
+        <Animated.View style={[styles.shimmerOverlay, shimmerStyle]}>
+          <LinearGradient
+            colors={[
+              'rgba(255, 255, 255, 0)',
+              'rgba(255, 255, 255, 0.9)',
+              'rgba(255, 255, 255, 0)',
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.shimmerGradient}
+          />
+        </Animated.View>
+      </View>
+    </View>
+  );
+}
 
 interface SavedEntriesPopupProps {
   visible: boolean;
@@ -45,6 +116,12 @@ export function SavedEntriesPopup({
   const translateY = useSharedValue(0);
   const savedEntries = useAppStore((state) => state.savedEntries);
   const deleteSavedEntry = useAppStore((state) => state.deleteSavedEntry);
+  const createSavedEntry = useAppStore((state) => state.createSavedEntry);
+
+  // State for direct entry input
+  const [inputText, setInputText] = useState('');
+  const [isResolving, setIsResolving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Debug log when visible
   useEffect(() => {
@@ -66,9 +143,34 @@ export function SavedEntriesPopup({
   useEffect(() => {
     if (visible) {
       translateY.value = 0;
+      // Reset input state when popup opens
+      setInputText('');
+      setError(null);
+      setIsResolving(false);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   }, [visible]);
+
+  const handleAddEntry = async () => {
+    const trimmedText = inputText.trim();
+    if (!trimmedText || isResolving) return;
+
+    Keyboard.dismiss();
+    setIsResolving(true);
+    setError(null);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const result = await createSavedEntry(trimmedText);
+
+    setIsResolving(false);
+    if (result.success) {
+      setInputText('');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      setError(result.error || 'Failed to save');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  };
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -120,9 +222,6 @@ export function SavedEntriesPopup({
   }));
 
   const getDisplayLabel = (entry: SavedEntry) => {
-    if (entry.items.length > 0) {
-      return entry.items.map((item) => item.label).join(', ');
-    }
     return entry.rawText.replace(/^-\s*/, '');
   };
 
@@ -220,6 +319,32 @@ export function SavedEntriesPopup({
                 </Text>
               </Animated.View>
             )}
+
+            {/* Add Entry Input */}
+            <View style={styles.inputContainer}>
+              {isResolving ? (
+                <View style={styles.loadingWrapper}>
+                  <ThinkingIndicator />
+                </View>
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Type food to save..."
+                  placeholderTextColor="#999"
+                  value={inputText}
+                  onChangeText={(text) => {
+                    setInputText(text);
+                    if (error) setError(null);
+                  }}
+                  onSubmitEditing={handleAddEntry}
+                  returnKeyType="done"
+                  editable={!isResolving}
+                />
+              )}
+              {error && (
+                <Text style={styles.errorText}>{error}</Text>
+              )}
+            </View>
           </Animated.View>
         </GestureDetector>
       </GestureHandlerRootView>
@@ -244,8 +369,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: 32,
-    minHeight: 250,
-    maxHeight: SCREEN_HEIGHT * 0.6,
+    minHeight: 450,
+    maxHeight: SCREEN_HEIGHT * 0.9,
   },
   dragIndicatorContainer: {
     alignItems: 'center',
@@ -269,6 +394,61 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333',
     textAlign: 'center',
+  },
+  inputContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  input: {
+    height: 44,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 25,
+    paddingHorizontal: 18,
+    fontSize: 15,
+    color: '#333',
+  },
+  loadingWrapper: {
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 25,
+  },
+  thinkingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shimmerTextContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    height: 20,
+  },
+  thinkingText: {
+    fontSize: 14,
+    color: '#1A6872',
+    fontWeight: '500',
+    letterSpacing: 0.3,
+  },
+  shimmerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: SHIMMER_WIDTH,
+    height: 20,
+  },
+  shimmerGradient: {
+    flex: 1,
+    width: SHIMMER_WIDTH,
+    height: 20,
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#e74c3c',
+    marginTop: 6,
+    marginLeft: 2,
   },
   list: {
     flex: 1,

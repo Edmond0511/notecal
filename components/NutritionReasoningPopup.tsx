@@ -1,5 +1,6 @@
 import { useAppStore } from "@/store/app-store";
-import { Entry } from "@/types";
+import { Entry, Macros } from "@/types";
+import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
   faBolt,
@@ -13,10 +14,8 @@ import {
   faWheatAwn,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React, { useState, useCallback, useRef } from "react";
-import { Macros } from "@/types";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Dimensions,
   Keyboard,
@@ -351,7 +350,10 @@ const NUTRIENT_UNITS: Record<NutrientKey, string> = {
 };
 
 // Map display type to macro key
-const MACRO_TYPE_TO_KEY: Record<"calories" | "protein" | "fat" | "carbs", MacroKey> = {
+const MACRO_TYPE_TO_KEY: Record<
+  "calories" | "protein" | "fat" | "carbs",
+  MacroKey
+> = {
   calories: "kcal",
   protein: "protein",
   fat: "fat",
@@ -433,9 +435,7 @@ function SomethingOffPopup({
       style={styles.somethingOffRoot}
     >
       {/* Backdrop */}
-      <Animated.View
-        style={[styles.somethingOffBackdrop, backdropStyle]}
-      >
+      <Animated.View style={[styles.somethingOffBackdrop, backdropStyle]}>
         <TouchableOpacity
           style={styles.backdropPressable}
           activeOpacity={1}
@@ -446,7 +446,11 @@ function SomethingOffPopup({
       {/* Sheet Container */}
       <GestureDetector gesture={panGesture}>
         <Animated.View
-          style={[styles.somethingOffContainer, { marginTop: insets.top }, animatedStyle]}
+          style={[
+            styles.somethingOffContainer,
+            { marginTop: insets.top },
+            animatedStyle,
+          ]}
         >
           {/* Drag Indicator */}
           <View style={styles.somethingOffDragIndicatorContainer}>
@@ -463,7 +467,11 @@ function SomethingOffPopup({
             {/* Item Label */}
             <View style={styles.somethingOffItemRow}>
               <View style={styles.somethingOffIconContainer}>
-                <Ionicons name="alert-circle-outline" size={18} color="#F59E0B" />
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={18}
+                  color="#F59E0B"
+                />
               </View>
               <Text style={styles.somethingOffItemLabel} numberOfLines={2}>
                 {item.label}
@@ -498,15 +506,20 @@ function SomethingOffPopup({
                 activeOpacity={0.7}
                 disabled={isLoading}
               >
-                <Text style={[
-                  styles.somethingOffCancelText,
-                  isLoading && { color: "#bbb" }
-                ]}>Cancel</Text>
+                <Text
+                  style={[
+                    styles.somethingOffCancelText,
+                    isLoading && { color: "#bbb" },
+                  ]}
+                >
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.somethingOffSubmitButton,
-                  (!feedback.trim() || isLoading) && styles.somethingOffSubmitButtonDisabled,
+                  (!feedback.trim() || isLoading) &&
+                    styles.somethingOffSubmitButtonDisabled,
                 ]}
                 onPress={handleSubmit}
                 activeOpacity={0.7}
@@ -553,6 +566,8 @@ function EditNutrientPopup({
   const label = NUTRIENT_LABELS[nutrientKey];
   const unit = NUTRIENT_UNITS[nutrientKey];
   const inputRef = useRef<TextInput>(null);
+  const insets = useSafeAreaInsets();
+  const translateY = useSharedValue(0);
 
   // Format initial value - water to 1 decimal, others as integers
   const formatValue = (val: number) =>
@@ -569,104 +584,172 @@ function EditNutrientPopup({
     }
   };
 
+  const handleClose = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Keyboard.dismiss();
+    onClose();
+  };
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      if (event.translationY > 0) {
+        translateY.value = event.translationY;
+      }
+    })
+    .onEnd((event) => {
+      if (event.translationY > DISMISS_THRESHOLD) {
+        translateY.value = withSpring(SCREEN_HEIGHT, {
+          damping: 20,
+          stiffness: 200,
+        });
+        runOnJS(handleClose)();
+      } else {
+        translateY.value = withSpring(0, {
+          damping: 20,
+          stiffness: 400,
+        });
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
+
+  const backdropStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      translateY.value,
+      [0, SCREEN_HEIGHT * 0.5],
+      [1, 0],
+      Extrapolation.CLAMP,
+    );
+    return {
+      opacity,
+    };
+  });
+
   return (
-    <View style={styles.editMicroOverlay}>
-      <TouchableOpacity
-        style={styles.editMicroBackdrop}
-        activeOpacity={1}
-        onPress={() => {
-          Keyboard.dismiss();
-          onClose();
-        }}
-      />
-      <Animated.View
-        entering={FadeInDown.duration(200)}
-        style={styles.editMicroPopup}
-      >
-        {/* Header with icon and title */}
-        <View style={styles.editMicroHeader}>
-          <View
-            style={[
-              styles.editMicroIconContainer,
-              { backgroundColor: colors.secondary },
-            ]}
-          >
-            <FontAwesomeIcon icon={icon} size={16} color={colors.primary} />
-          </View>
-          <Text style={styles.editMicroTitle}>Edit {label}</Text>
-        </View>
-
-        {/* Input field */}
-        <View style={styles.editMicroInputContainer}>
-          <TextInput
-            ref={inputRef}
-            style={[
-              styles.editMicroInput,
-              { borderColor: colors.primary },
-            ]}
-            value={inputValue}
-            onChangeText={setInputValue}
-            keyboardType="decimal-pad"
-            selectTextOnFocus
-            autoFocus
-            returnKeyType="done"
-            onSubmitEditing={handleSave}
-          />
-          <View
-            style={[
-              styles.editMicroUnitBadge,
-              { backgroundColor: colors.secondary },
-            ]}
-          >
-            <Text style={[styles.editMicroUnitText, { color: colors.primary }]}>
-              {unit}
-            </Text>
-          </View>
-        </View>
-
-        {/* Action buttons */}
-        <View style={styles.editMicroActions}>
-          <TouchableOpacity
-            style={[
-              styles.editMicroRevertButton,
-              !originalValue && styles.editMicroRevertButtonDisabled,
-            ]}
-            onPress={() => {
-              if (!originalValue) return;
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              Keyboard.dismiss();
-              onRevert();
-              onClose();
-            }}
-            activeOpacity={originalValue ? 0.7 : 1}
-            disabled={!originalValue}
-          >
-            <Ionicons
-              name="refresh-outline"
-              size={16}
-              color={originalValue ? "#666" : "#bbb"}
-              style={{ marginRight: 4 }}
-            />
-            <Text style={[
-              styles.editMicroRevertText,
-              !originalValue && styles.editMicroRevertTextDisabled,
-            ]}>
-              Revert
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.editMicroSaveButton,
-              { backgroundColor: colors.primary },
-            ]}
-            onPress={handleSave}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.editMicroSaveText}>Save</Text>
-          </TouchableOpacity>
-        </View>
+    <Animated.View
+      entering={FadeIn.duration(200)}
+      style={styles.editNutrientRoot}
+    >
+      {/* Backdrop */}
+      <Animated.View style={[styles.editNutrientBackdrop, backdropStyle]}>
+        <TouchableOpacity
+          style={styles.backdropPressable}
+          activeOpacity={1}
+          onPress={handleClose}
+        />
       </Animated.View>
-    </View>
+
+      {/* Sheet Container */}
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
+          style={[
+            styles.editNutrientContainer,
+            { marginTop: insets.top },
+            animatedStyle,
+          ]}
+        >
+          {/* Drag Indicator */}
+          <View style={styles.editNutrientDragIndicatorContainer}>
+            <View style={styles.dragIndicator} />
+          </View>
+
+          {/* Header */}
+          <View style={styles.editNutrientHeader}>
+            <View
+              style={[
+                styles.editNutrientIconContainer,
+                { backgroundColor: colors.secondary },
+              ]}
+            >
+              <FontAwesomeIcon icon={icon} size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.editNutrientTitle}>Edit {label}</Text>
+          </View>
+
+          {/* Content */}
+          <View style={styles.editNutrientContent}>
+            {/* Input field */}
+            <View style={styles.editNutrientInputContainer}>
+              <TextInput
+                ref={inputRef}
+                style={[
+                  styles.editNutrientInput,
+                  { borderColor: colors.primary },
+                ]}
+                value={inputValue}
+                onChangeText={setInputValue}
+                keyboardType="decimal-pad"
+                selectTextOnFocus
+                autoFocus
+              />
+              <View
+                style={[
+                  styles.editNutrientUnitBadge,
+                  { backgroundColor: colors.secondary },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.editNutrientUnitText,
+                    { color: colors.primary },
+                  ]}
+                >
+                  {unit}
+                </Text>
+              </View>
+            </View>
+
+            {/* Action buttons */}
+            <View style={styles.editNutrientActions}>
+              <TouchableOpacity
+                style={[
+                  styles.editNutrientRevertButton,
+                  !originalValue && styles.editNutrientRevertButtonDisabled,
+                ]}
+                onPress={() => {
+                  if (!originalValue) return;
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  Keyboard.dismiss();
+                  onRevert();
+                  onClose();
+                }}
+                activeOpacity={originalValue ? 0.7 : 1}
+                disabled={!originalValue}
+              >
+                <Ionicons
+                  name="refresh-outline"
+                  size={16}
+                  color={originalValue ? "#666" : "#bbb"}
+                  style={{ marginRight: 4 }}
+                />
+                <Text
+                  style={[
+                    styles.editNutrientRevertText,
+                    !originalValue && styles.editNutrientRevertTextDisabled,
+                  ]}
+                >
+                  Revert
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.editNutrientSaveButton,
+                  { backgroundColor: colors.primary },
+                ]}
+                onPress={handleSave}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.editNutrientSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Animated.View>
+      </GestureDetector>
+    </Animated.View>
   );
 }
 
@@ -711,14 +794,20 @@ export function NutritionReasoningPopup({
   const saveEntry = useAppStore((state) => state.saveEntry);
   const deleteSavedEntry = useAppStore((state) => state.deleteSavedEntry);
   const savedEntries = useAppStore((state) => state.savedEntries);
-  const updateEntryItemMacro = useAppStore((state) => state.updateEntryItemMacro);
-  const revertEntryItemSingleMacro = useAppStore((state) => state.revertEntryItemSingleMacro);
-  const revertEntryItemMacros = useAppStore((state) => state.revertEntryItemMacros);
+  const updateEntryItemMacro = useAppStore(
+    (state) => state.updateEntryItemMacro,
+  );
+  const revertEntryItemSingleMacro = useAppStore(
+    (state) => state.revertEntryItemSingleMacro,
+  );
+  const revertEntryItemMacros = useAppStore(
+    (state) => state.revertEntryItemMacros,
+  );
   const correctEntryItem = useAppStore((state) => state.correctEntryItem);
 
   // Subscribe directly to the store entry to get live updates after edits
   const storeEntry = useAppStore((state) =>
-    entry ? state.entries.find((e) => e.id === entry.id) : null
+    entry ? state.entries.find((e) => e.id === entry.id) : null,
   );
   // Use store entry if available (for live updates), otherwise fall back to prop
   const displayEntry = storeEntry || entry;
@@ -727,22 +816,28 @@ export function NutritionReasoningPopup({
   const savedEntryMatch = React.useMemo(() => {
     if (!displayEntry) return null;
     const normalizedText = displayEntry.rawText.toLowerCase().trim();
-    return savedEntries.find(
-      (se) => se.rawText.toLowerCase().trim() === normalizedText
-    ) || null;
+    return (
+      savedEntries.find(
+        (se) => se.rawText.toLowerCase().trim() === normalizedText,
+      ) || null
+    );
   }, [displayEntry, savedEntries]);
 
   const isEntrySaved = savedEntryMatch !== null;
 
   const handleSaveEntry = useCallback(() => {
-    console.log('🔘 Save button pressed, entry:', {
+    console.log("🔘 Save button pressed, entry:", {
       status: displayEntry?.status,
       itemsCount: displayEntry?.items?.length,
       rawText: displayEntry?.rawText,
       isEntrySaved,
     });
-    if (!displayEntry || displayEntry.status !== 'ok' || !displayEntry.items.length) {
-      console.log('🔘 Save aborted - entry not valid');
+    if (
+      !displayEntry ||
+      displayEntry.status !== "ok" ||
+      !displayEntry.items.length
+    ) {
+      console.log("🔘 Save aborted - entry not valid");
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -756,7 +851,13 @@ export function NutritionReasoningPopup({
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 1500);
     }
-  }, [displayEntry, saveEntry, deleteSavedEntry, isEntrySaved, savedEntryMatch]);
+  }, [
+    displayEntry,
+    saveEntry,
+    deleteSavedEntry,
+    isEntrySaved,
+    savedEntryMatch,
+  ]);
 
   // Check which micronutrients are enabled in goals
   const enabledMicros = {
@@ -843,51 +944,76 @@ export function NutritionReasoningPopup({
 
   // Handler for when a nutrient is clicked
   const handleNutrientPress = useCallback(
-    (itemId: string, nutrientKey: NutrientKey, currentValue: number, originalValue?: number) => {
+    (
+      itemId: string,
+      nutrientKey: NutrientKey,
+      currentValue: number,
+      originalValue?: number,
+    ) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setEditNutrientPopup({ itemId, nutrientKey, currentValue, originalValue });
+      setEditNutrientPopup({
+        itemId,
+        nutrientKey,
+        currentValue,
+        originalValue,
+      });
     },
-    []
+    [],
   );
 
   // Handler for saving edited nutrient value
   const handleSaveNutrient = useCallback(
     (value: number) => {
       if (!displayEntry || !editNutrientPopup) return;
-      updateEntryItemMacro(displayEntry.id, editNutrientPopup.itemId, editNutrientPopup.nutrientKey, value);
+      updateEntryItemMacro(
+        displayEntry.id,
+        editNutrientPopup.itemId,
+        editNutrientPopup.nutrientKey,
+        value,
+      );
     },
-    [displayEntry, editNutrientPopup, updateEntryItemMacro]
+    [displayEntry, editNutrientPopup, updateEntryItemMacro],
   );
 
   // Handler for reverting single nutrient to calculated value
   const handleRevertNutrient = useCallback(() => {
     if (!displayEntry || !editNutrientPopup) return;
-    revertEntryItemSingleMacro(displayEntry.id, editNutrientPopup.itemId, editNutrientPopup.nutrientKey);
+    revertEntryItemSingleMacro(
+      displayEntry.id,
+      editNutrientPopup.itemId,
+      editNutrientPopup.nutrientKey,
+    );
   }, [displayEntry, editNutrientPopup, revertEntryItemSingleMacro]);
 
   // Handler for reverting ALL macros for an item
-  const handleRevertAllMacros = useCallback((itemId: string) => {
-    if (!displayEntry) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    revertEntryItemMacros(displayEntry.id, itemId);
-  }, [displayEntry, revertEntryItemMacros]);
+  const handleRevertAllMacros = useCallback(
+    (itemId: string) => {
+      if (!displayEntry) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      revertEntryItemMacros(displayEntry.id, itemId);
+    },
+    [displayEntry, revertEntryItemMacros],
+  );
 
   // Handler for submitting "Something Off" correction feedback
-  const handleSomethingOffSubmit = useCallback(async (feedback: string) => {
-    if (!displayEntry || !somethingOffItem) return;
+  const handleSomethingOffSubmit = useCallback(
+    async (feedback: string) => {
+      if (!displayEntry || !somethingOffItem) return;
 
-    setIsCorrecting(true);
-    try {
-      await correctEntryItem(displayEntry.id, somethingOffItem.id, feedback);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setSomethingOffItem(null);
-    } catch (error) {
-      console.error('Error correcting entry:', error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setIsCorrecting(false);
-    }
-  }, [displayEntry, somethingOffItem, correctEntryItem]);
+      setIsCorrecting(true);
+      try {
+        await correctEntryItem(displayEntry.id, somethingOffItem.id, feedback);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setSomethingOffItem(null);
+      } catch (error) {
+        console.error("Error correcting entry:", error);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      } finally {
+        setIsCorrecting(false);
+      }
+    },
+    [displayEntry, somethingOffItem, correctEntryItem],
+  );
 
   if (!displayEntry) return null;
 
@@ -920,30 +1046,36 @@ export function NutritionReasoningPopup({
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Nutrition Details</Text>
-              {displayEntry && displayEntry.status === 'ok' && displayEntry.items.length > 0 && (
-                <TouchableOpacity
-                  style={[
-                    styles.saveButton,
-                    (isSaved || isEntrySaved) && styles.saveButtonSaved,
-                  ]}
-                  onPress={handleSaveEntry}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name={isSaved || isEntrySaved ? "bookmark" : "bookmark-outline"}
-                    size={16}
-                    color={isSaved || isEntrySaved ? "#fff" : "#1A6872"}
-                  />
-                  <Text
+              {displayEntry &&
+                displayEntry.status === "ok" &&
+                displayEntry.items.length > 0 && (
+                  <TouchableOpacity
                     style={[
-                      styles.saveButtonText,
-                      (isSaved || isEntrySaved) && styles.saveButtonTextSaved,
+                      styles.saveButton,
+                      (isSaved || isEntrySaved) && styles.saveButtonSaved,
                     ]}
+                    onPress={handleSaveEntry}
+                    activeOpacity={0.7}
                   >
-                    {isSaved || isEntrySaved ? "Saved" : "Save"}
-                  </Text>
-                </TouchableOpacity>
-              )}
+                    <Ionicons
+                      name={
+                        isSaved || isEntrySaved
+                          ? "bookmark"
+                          : "bookmark-outline"
+                      }
+                      size={16}
+                      color={isSaved || isEntrySaved ? "#fff" : "#1A6872"}
+                    />
+                    <Text
+                      style={[
+                        styles.saveButtonText,
+                        (isSaved || isEntrySaved) && styles.saveButtonTextSaved,
+                      ]}
+                    >
+                      {isSaved || isEntrySaved ? "Saved" : "Save"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
             </View>
 
             <Animated.ScrollView
@@ -1035,83 +1167,154 @@ export function NutritionReasoningPopup({
                       value={item.macros.kcal}
                       unit=""
                       type="calories"
-                      onPress={() => handleNutrientPress(item.id, "kcal", item.macros.kcal, item.originalMacros?.kcal)}
+                      onPress={() =>
+                        handleNutrientPress(
+                          item.id,
+                          "kcal",
+                          item.macros.kcal,
+                          item.originalMacros?.kcal,
+                        )
+                      }
                     />
                     <MacroItem
                       label="protein"
                       value={item.macros.protein}
                       unit="g"
                       type="protein"
-                      onPress={() => handleNutrientPress(item.id, "protein", item.macros.protein, item.originalMacros?.protein)}
+                      onPress={() =>
+                        handleNutrientPress(
+                          item.id,
+                          "protein",
+                          item.macros.protein,
+                          item.originalMacros?.protein,
+                        )
+                      }
                     />
                     <MacroItem
                       label="fat"
                       value={item.macros.fat}
                       unit="g"
                       type="fat"
-                      onPress={() => handleNutrientPress(item.id, "fat", item.macros.fat, item.originalMacros?.fat)}
+                      onPress={() =>
+                        handleNutrientPress(
+                          item.id,
+                          "fat",
+                          item.macros.fat,
+                          item.originalMacros?.fat,
+                        )
+                      }
                     />
                     <MacroItem
                       label="carbs"
                       value={item.macros.carbs}
                       unit="g"
                       type="carbs"
-                      onPress={() => handleNutrientPress(item.id, "carbs", item.macros.carbs, item.originalMacros?.carbs)}
+                      onPress={() =>
+                        handleNutrientPress(
+                          item.id,
+                          "carbs",
+                          item.macros.carbs,
+                          item.originalMacros?.carbs,
+                        )
+                      }
                     />
                   </View>
 
                   {/* Micronutrients - only show if enabled in goals */}
                   {((enabledMicros.fiber && item.macros.fiber !== undefined) ||
                     (enabledMicros.sugar && item.macros.sugar !== undefined) ||
-                    (enabledMicros.sodium && item.macros.sodium !== undefined) ||
-                    (enabledMicros.potassium && item.macros.potassium !== undefined) ||
-                    (enabledMicros.water && item.macros.water !== undefined)) && (
+                    (enabledMicros.sodium &&
+                      item.macros.sodium !== undefined) ||
+                    (enabledMicros.potassium &&
+                      item.macros.potassium !== undefined) ||
+                    (enabledMicros.water &&
+                      item.macros.water !== undefined)) && (
                     <View style={styles.microsRow}>
-                      {enabledMicros.fiber && item.macros.fiber !== undefined && (
-                        <MicroItem
-                          label="fiber"
-                          value={item.macros.fiber}
-                          unit="g"
-                          type="fiber"
-                          onPress={() => handleNutrientPress(item.id, "fiber", item.macros.fiber!, item.originalMacros?.fiber)}
-                        />
-                      )}
-                      {enabledMicros.sugar && item.macros.sugar !== undefined && (
-                        <MicroItem
-                          label="sugar"
-                          value={item.macros.sugar}
-                          unit="g"
-                          type="sugar"
-                          onPress={() => handleNutrientPress(item.id, "sugar", item.macros.sugar!, item.originalMacros?.sugar)}
-                        />
-                      )}
-                      {enabledMicros.sodium && item.macros.sodium !== undefined && (
-                        <MicroItem
-                          label="sodium"
-                          value={item.macros.sodium}
-                          unit="mg"
-                          type="sodium"
-                          onPress={() => handleNutrientPress(item.id, "sodium", item.macros.sodium!, item.originalMacros?.sodium)}
-                        />
-                      )}
-                      {enabledMicros.potassium && item.macros.potassium !== undefined && (
-                        <MicroItem
-                          label="potassium"
-                          value={item.macros.potassium}
-                          unit="mg"
-                          type="potassium"
-                          onPress={() => handleNutrientPress(item.id, "potassium", item.macros.potassium!, item.originalMacros?.potassium)}
-                        />
-                      )}
-                      {enabledMicros.water && item.macros.water !== undefined && (
-                        <MicroItem
-                          label="water"
-                          value={item.macros.water}
-                          unit="L"
-                          type="water"
-                          onPress={() => handleNutrientPress(item.id, "water", item.macros.water!, item.originalMacros?.water)}
-                        />
-                      )}
+                      {enabledMicros.fiber &&
+                        item.macros.fiber !== undefined && (
+                          <MicroItem
+                            label="fiber"
+                            value={item.macros.fiber}
+                            unit="g"
+                            type="fiber"
+                            onPress={() =>
+                              handleNutrientPress(
+                                item.id,
+                                "fiber",
+                                item.macros.fiber!,
+                                item.originalMacros?.fiber,
+                              )
+                            }
+                          />
+                        )}
+                      {enabledMicros.sugar &&
+                        item.macros.sugar !== undefined && (
+                          <MicroItem
+                            label="sugar"
+                            value={item.macros.sugar}
+                            unit="g"
+                            type="sugar"
+                            onPress={() =>
+                              handleNutrientPress(
+                                item.id,
+                                "sugar",
+                                item.macros.sugar!,
+                                item.originalMacros?.sugar,
+                              )
+                            }
+                          />
+                        )}
+                      {enabledMicros.sodium &&
+                        item.macros.sodium !== undefined && (
+                          <MicroItem
+                            label="sodium"
+                            value={item.macros.sodium}
+                            unit="mg"
+                            type="sodium"
+                            onPress={() =>
+                              handleNutrientPress(
+                                item.id,
+                                "sodium",
+                                item.macros.sodium!,
+                                item.originalMacros?.sodium,
+                              )
+                            }
+                          />
+                        )}
+                      {enabledMicros.potassium &&
+                        item.macros.potassium !== undefined && (
+                          <MicroItem
+                            label="potassium"
+                            value={item.macros.potassium}
+                            unit="mg"
+                            type="potassium"
+                            onPress={() =>
+                              handleNutrientPress(
+                                item.id,
+                                "potassium",
+                                item.macros.potassium!,
+                                item.originalMacros?.potassium,
+                              )
+                            }
+                          />
+                        )}
+                      {enabledMicros.water &&
+                        item.macros.water !== undefined && (
+                          <MicroItem
+                            label="water"
+                            value={item.macros.water}
+                            unit="L"
+                            type="water"
+                            onPress={() =>
+                              handleNutrientPress(
+                                item.id,
+                                "water",
+                                item.macros.water!,
+                                item.originalMacros?.water,
+                              )
+                            }
+                          />
+                        )}
                     </View>
                   )}
 
@@ -1122,8 +1325,14 @@ export function NutritionReasoningPopup({
                       onPress={() => handleRevertAllMacros(item.id)}
                       activeOpacity={0.6}
                     >
-                      <Ionicons name="refresh-outline" size={14} color="#8B5CF6" />
-                      <Text style={styles.revertAllText}>Revert to calculated</Text>
+                      <Ionicons
+                        name="refresh-outline"
+                        size={14}
+                        color="#8B5CF6"
+                      />
+                      <Text style={styles.revertAllText}>
+                        Revert to calculated
+                      </Text>
                     </TouchableOpacity>
                   )}
 
@@ -1140,8 +1349,14 @@ export function NutritionReasoningPopup({
                     }}
                     activeOpacity={0.6}
                   >
-                    <Ionicons name="alert-circle-outline" size={14} color="#888" />
-                    <Text style={styles.somethingOffButtonText}>Something Off?</Text>
+                    <Ionicons
+                      name="alert-circle-outline"
+                      size={14}
+                      color="#888"
+                    />
+                    <Text style={styles.somethingOffButtonText}>
+                      Something Off?
+                    </Text>
                   </TouchableOpacity>
 
                   {/* Reasoning Section */}
@@ -1228,7 +1443,9 @@ export function NutritionReasoningPopup({
 
               {/* Totals */}
               <Animated.View
-                entering={FadeInDown.delay(150 + displayEntry.items.length * 100).duration(400)}
+                entering={FadeInDown.delay(
+                  150 + displayEntry.items.length * 100,
+                ).duration(400)}
                 style={styles.totalsSection}
               >
                 <View style={styles.totalsLeft}>
@@ -1239,7 +1456,9 @@ export function NutritionReasoningPopup({
                   />
                   <Text style={styles.totalsLabel}>Total</Text>
                 </View>
-                <Text style={styles.totalsValue}>{displayEntry.inlineKcal} cal</Text>
+                <Text style={styles.totalsValue}>
+                  {displayEntry.inlineKcal} cal
+                </Text>
               </Animated.View>
             </Animated.ScrollView>
 
@@ -1254,21 +1473,20 @@ export function NutritionReasoningPopup({
                 }}
               />
             )}
-
-            {/* Edit Nutrient Popup */}
-            {editNutrientPopup && (
-              <EditNutrientPopup
-                nutrientKey={editNutrientPopup.nutrientKey}
-                currentValue={editNutrientPopup.currentValue}
-                originalValue={editNutrientPopup.originalValue}
-                onSave={handleSaveNutrient}
-                onRevert={handleRevertNutrient}
-                onClose={() => setEditNutrientPopup(null)}
-              />
-            )}
-
           </Animated.View>
         </GestureDetector>
+
+        {/* Edit Nutrient Popup - rendered outside GestureDetector to cover entire modal */}
+        {editNutrientPopup && (
+          <EditNutrientPopup
+            nutrientKey={editNutrientPopup.nutrientKey}
+            currentValue={editNutrientPopup.currentValue}
+            originalValue={editNutrientPopup.originalValue}
+            onSave={handleSaveNutrient}
+            onRevert={handleRevertNutrient}
+            onClose={() => setEditNutrientPopup(null)}
+          />
+        )}
 
         {/* Something Off Popup - rendered outside GestureDetector to cover entire modal */}
         {somethingOffItem && (
@@ -1337,9 +1555,8 @@ function MicroItem({
   const icon = MICRO_ICONS[type];
 
   // Format value based on type
-  const displayValue = type === "water"
-    ? value.toFixed(1)
-    : Math.round(value).toString();
+  const displayValue =
+    type === "water" ? value.toFixed(1) : Math.round(value).toString();
 
   return (
     <View style={styles.microItem}>
@@ -1689,62 +1906,61 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 4,
   },
-  // Edit Micro Popup styles
-  editMicroOverlay: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    left: 0,
-    bottom: 0,
+  // Edit Nutrient Popup styles - bottom sheet like SomethingOffPopup
+  editNutrientRoot: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
     zIndex: 9999,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 24,
     elevation: 20,
   },
-  editMicroBackdrop: {
+  editNutrientBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
-  editMicroPopup: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    padding: 24,
-    width: "100%",
-    maxWidth: 340,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 8,
+  editNutrientContainer: {
+    flex: 1,
+    backgroundColor: "#f8f8f8",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
-  editMicroHeader: {
+  editNutrientDragIndicatorContainer: {
+    alignItems: "center",
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  editNutrientHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 24,
-    gap: 14,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 12,
   },
-  editMicroIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  editNutrientIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
-  editMicroTitle: {
-    fontSize: 20,
+  editNutrientTitle: {
+    fontSize: 18,
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#1a1a1a",
-    letterSpacing: -0.4,
+    textAlign: "center",
+    letterSpacing: -0.3,
   },
-  editMicroInputContainer: {
+  editNutrientContent: {
+    paddingHorizontal: 20,
+  },
+  editNutrientInputContainer: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 24,
     gap: 12,
   },
-  editMicroInput: {
+  editNutrientInput: {
     flex: 1,
     height: 56,
     borderWidth: 2,
@@ -1754,53 +1970,53 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     fontWeight: "600",
     color: "#1a1a1a",
-    backgroundColor: "#fafafa",
+    backgroundColor: "#ffffff",
     letterSpacing: -0.5,
   },
-  editMicroUnitBadge: {
+  editNutrientUnitBadge: {
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
   },
-  editMicroUnitText: {
+  editNutrientUnitText: {
     fontSize: 16,
     fontFamily: "System",
     fontWeight: "700",
     letterSpacing: 0.3,
   },
-  editMicroActions: {
+  editNutrientActions: {
     flexDirection: "row",
     gap: 12,
   },
-  editMicroRevertButton: {
+  editNutrientRevertButton: {
     flex: 1,
-    height: 50,
+    height: 52,
     borderRadius: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#e5e5e5",
   },
-  editMicroRevertButtonDisabled: {
+  editNutrientRevertButtonDisabled: {
     backgroundColor: "#f5f5f5",
   },
-  editMicroRevertText: {
+  editNutrientRevertText: {
     fontSize: 16,
     fontFamily: "System",
     fontWeight: "600",
     color: "#666",
   },
-  editMicroRevertTextDisabled: {
+  editNutrientRevertTextDisabled: {
     color: "#bbb",
   },
-  editMicroSaveButton: {
+  editNutrientSaveButton: {
     flex: 1,
-    height: 50,
+    height: 52,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
-  editMicroSaveText: {
+  editNutrientSaveText: {
     fontSize: 16,
     fontFamily: "System",
     fontWeight: "700",

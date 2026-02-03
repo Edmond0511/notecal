@@ -1,106 +1,72 @@
-import { useAppStore } from '@/store/app-store';
-import { SavedEntry } from '@/types';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState } from 'react';
+import { useAppStore } from "@/store/app-store";
+import { SavedEntry } from "@/types";
+import { Ionicons } from "@expo/vector-icons";
+import { IconProp } from "@fortawesome/fontawesome-svg-core";
+import {
+  faDroplet,
+  faDrumstickBite,
+  faFireFlameCurved,
+  faWheatAwn,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import * as Haptics from "expo-haptics";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Dimensions,
-  FlatList,
-  Keyboard,
   Modal,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
 import {
   Gesture,
   GestureDetector,
-  GestureHandlerRootView,
   Swipeable,
-} from 'react-native-gesture-handler';
+} from "react-native-gesture-handler";
 import Animated, {
-  Easing,
   Extrapolation,
+  FadeIn,
   FadeInDown,
   interpolate,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
-  withSequence,
   withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const DISMISS_THRESHOLD = 100;
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const DISMISS_THRESHOLD = 150;
 
-// Shimmer dimensions for thinking indicator
-const SHIMMER_WIDTH = 60;
-const TEXT_WIDTH = 140; // Width of "Calculating nutrition" text
+// Color palette matching NutritionReasoningPopup
+const MACRO_COLORS = {
+  calories: {
+    primary: "#FF6B35",
+    secondary: "#FFE5D9",
+  },
+  protein: {
+    primary: "#4A90D9",
+    secondary: "#E3F2FD",
+  },
+  fat: {
+    primary: "#F5A623",
+    secondary: "#FFF8E7",
+  },
+  carbs: {
+    primary: "#9B6B9E",
+    secondary: "#F3E5F5",
+  },
+};
 
-// Animated thinking indicator with shimmer effect
-function ThinkingIndicator() {
-  const shimmerTranslate = useSharedValue(-SHIMMER_WIDTH);
-  const shimmerOpacity = useSharedValue(0);
-
-  React.useEffect(() => {
-    // Animate shimmer sweep with fade in/out
-    shimmerTranslate.value = withRepeat(
-      withSequence(
-        withTiming(TEXT_WIDTH + SHIMMER_WIDTH, {
-          duration: 1800,
-          easing: Easing.inOut(Easing.ease),
-        }),
-        withTiming(-SHIMMER_WIDTH, { duration: 0 })
-      ),
-      -1,
-      false
-    );
-
-    shimmerOpacity.value = withRepeat(
-      withSequence(
-        withTiming(0.7, { duration: 400, easing: Easing.ease }),
-        withTiming(0.7, { duration: 1000 }), // Hold
-        withTiming(0, { duration: 400, easing: Easing.ease }),
-        withTiming(0, { duration: 0 }) // Reset
-      ),
-      -1,
-      false
-    );
-  }, []);
-
-  const shimmerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shimmerTranslate.value }],
-    opacity: shimmerOpacity.value,
-  }));
-
-  return (
-    <View style={styles.thinkingContainer}>
-      <View style={styles.shimmerTextContainer}>
-        {/* Base text layer */}
-        <Text style={styles.thinkingText}>Calculating nutrition</Text>
-
-        {/* Shimmer overlay */}
-        <Animated.View style={[styles.shimmerOverlay, shimmerStyle]}>
-          <LinearGradient
-            colors={[
-              'rgba(255, 255, 255, 0)',
-              'rgba(255, 255, 255, 0.9)',
-              'rgba(255, 255, 255, 0)',
-            ]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.shimmerGradient}
-          />
-        </Animated.View>
-      </View>
-    </View>
-  );
-}
+const MACRO_ICONS = {
+  calories: faFireFlameCurved as IconProp,
+  protein: faDrumstickBite as IconProp,
+  fat: faDroplet as IconProp,
+  carbs: faWheatAwn as IconProp,
+};
 
 interface SavedEntriesPopupProps {
   visible: boolean;
@@ -113,64 +79,42 @@ export function SavedEntriesPopup({
   onClose,
   onSelectEntry,
 }: SavedEntriesPopupProps) {
+  const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
+  const scrollOffset = useSharedValue(0);
+  const isScrolledToTop = useSharedValue(true);
   const savedEntries = useAppStore((state) => state.savedEntries);
   const deleteSavedEntry = useAppStore((state) => state.deleteSavedEntry);
-  const createSavedEntry = useAppStore((state) => state.createSavedEntry);
 
-  // State for direct entry input
-  const [inputText, setInputText] = useState('');
-  const [isResolving, setIsResolving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Debug log when visible
-  useEffect(() => {
-    if (visible) {
-      console.log('📋 SavedEntriesPopup opened, savedEntries:', savedEntries.length);
-      console.log('📋 savedEntries data:', JSON.stringify(savedEntries, null, 2));
-    }
-  }, [visible, savedEntries]);
-
-  // Sort by lastUsedAt (most recent first)
-  const sortedEntries = React.useMemo(() => {
-    return [...savedEntries].sort((a, b) => {
-      const dateA = new Date(a.lastUsedAt).getTime();
-      const dateB = new Date(b.lastUsedAt).getTime();
-      return dateB - dateA;
-    });
-  }, [savedEntries]);
-
+  // Reset state when popup opens
   useEffect(() => {
     if (visible) {
       translateY.value = 0;
-      // Reset input state when popup opens
-      setInputText('');
-      setError(null);
-      setIsResolving(false);
+      isScrolledToTop.value = true;
+      setSearchQuery("");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   }, [visible]);
 
-  const handleAddEntry = async () => {
-    const trimmedText = inputText.trim();
-    if (!trimmedText || isResolving) return;
+  // Sort by lastUsedAt (most recent first) and filter by search
+  const filteredEntries = useMemo(() => {
+    const sorted = [...savedEntries].sort((a, b) => {
+      const dateA = new Date(a.lastUsedAt).getTime();
+      const dateB = new Date(b.lastUsedAt).getTime();
+      return dateB - dateA;
+    });
 
-    Keyboard.dismiss();
-    setIsResolving(true);
-    setError(null);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    const result = await createSavedEntry(trimmedText);
-
-    setIsResolving(false);
-    if (result.success) {
-      setInputText('');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } else {
-      setError(result.error || 'Failed to save');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    if (!searchQuery.trim()) {
+      return sorted;
     }
-  };
+
+    const query = searchQuery.toLowerCase().trim();
+    return sorted.filter((entry) =>
+      entry.rawText.toLowerCase().includes(query)
+    );
+  }, [savedEntries, searchQuery]);
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -189,7 +133,7 @@ export function SavedEntriesPopup({
 
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
-      if (event.translationY > 0) {
+      if (isScrolledToTop.value && event.translationY > 0) {
         translateY.value = event.translationY;
       }
     })
@@ -215,14 +159,24 @@ export function SavedEntriesPopup({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.3],
+      [0, SCREEN_HEIGHT * 0.5],
       [1, 0],
       Extrapolation.CLAMP
     ),
   }));
 
   const getDisplayLabel = (entry: SavedEntry) => {
-    return entry.rawText.replace(/^-\s*/, '');
+    return entry.rawText.replace(/^-\s*/, "");
+  };
+
+  const handleScrollBeginDrag = (event: any) => {
+    scrollOffset.value = event.nativeEvent.contentOffset.y;
+    isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
+  };
+
+  const handleScroll = (event: any) => {
+    scrollOffset.value = event.nativeEvent.contentOffset.y;
+    isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
   };
 
   const renderRightActions = (id: string) => {
@@ -237,28 +191,77 @@ export function SavedEntriesPopup({
   };
 
   const renderItem = ({ item, index }: { item: SavedEntry; index: number }) => {
+    // Calculate totals from items array
+    const totals = item.items.reduce(
+      (acc, foodItem) => ({
+        protein: acc.protein + (foodItem.macros.protein || 0),
+        fat: acc.fat + (foodItem.macros.fat || 0),
+        carbs: acc.carbs + (foodItem.macros.carbs || 0),
+      }),
+      { protein: 0, fat: 0, carbs: 0 }
+    );
+
     return (
-      <Animated.View entering={FadeInDown.delay(index * 50).duration(200)}>
+      <Animated.View entering={FadeInDown.delay(index * 40).duration(300)}>
         <Swipeable
           renderRightActions={() => renderRightActions(item.id)}
           overshootRight={false}
         >
           <TouchableOpacity
-            style={styles.entryItem}
+            style={styles.entryCard}
             onPress={() => handleSelectEntry(item)}
             activeOpacity={0.7}
           >
             <View style={styles.entryContent}>
-              <Text style={styles.entryLabel} numberOfLines={1}>
+              <Text style={styles.entryLabel} numberOfLines={2}>
                 {getDisplayLabel(item)}
               </Text>
-              <View style={styles.entryMeta}>
-                <View style={styles.caloriesBadge}>
-                  <Text style={styles.caloriesText}>{Math.round(item.totalKcal)} cal</Text>
+              <View style={styles.macrosRow}>
+                <View style={styles.macroItem}>
+                  <FontAwesomeIcon
+                    icon={MACRO_ICONS.calories}
+                    size={10}
+                    color={MACRO_COLORS.calories.primary}
+                  />
+                  <Text style={styles.macroValue}>
+                    {Math.round(item.totalKcal)}
+                  </Text>
+                </View>
+                <View style={styles.macroItem}>
+                  <FontAwesomeIcon
+                    icon={MACRO_ICONS.protein}
+                    size={10}
+                    color={MACRO_COLORS.protein.primary}
+                  />
+                  <Text style={styles.macroValue}>
+                    {Math.round(totals.protein)}g
+                  </Text>
+                </View>
+                <View style={styles.macroItem}>
+                  <FontAwesomeIcon
+                    icon={MACRO_ICONS.fat}
+                    size={10}
+                    color={MACRO_COLORS.fat.primary}
+                  />
+                  <Text style={styles.macroValue}>
+                    {Math.round(totals.fat)}g
+                  </Text>
+                </View>
+                <View style={styles.macroItem}>
+                  <FontAwesomeIcon
+                    icon={MACRO_ICONS.carbs}
+                    size={10}
+                    color={MACRO_COLORS.carbs.primary}
+                  />
+                  <Text style={styles.macroValue}>
+                    {Math.round(totals.carbs)}g
+                  </Text>
                 </View>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#ccc" />
+            <View style={styles.chevronContainer}>
+              <Ionicons name="chevron-forward" size={18} color="#ccc" />
+            </View>
           </TouchableOpacity>
         </Swipeable>
       </Animated.View>
@@ -271,9 +274,9 @@ export function SavedEntriesPopup({
       animationType="fade"
       transparent
       onRequestClose={onClose}
-      statusBarTranslucent
     >
-      <GestureHandlerRootView style={styles.gestureRoot}>
+      <View style={styles.gestureRoot}>
+        <StatusBar barStyle="dark-content" />
         {/* Backdrop */}
         <Animated.View style={[styles.backdrop, backdropStyle]}>
           <TouchableOpacity
@@ -285,7 +288,13 @@ export function SavedEntriesPopup({
 
         {/* Popup Content */}
         <GestureDetector gesture={panGesture}>
-          <Animated.View style={[styles.popupContainer, animatedStyle]}>
+          <Animated.View
+            style={[
+              styles.container,
+              { marginTop: insets.top },
+              animatedStyle,
+            ]}
+          >
             {/* Drag Indicator */}
             <View style={styles.dragIndicatorContainer}>
               <View style={styles.dragIndicator} />
@@ -293,18 +302,74 @@ export function SavedEntriesPopup({
 
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.title}>Saved Foods ({savedEntries.length})</Text>
+              <Text style={styles.title}>Saved Foods</Text>
+              <View style={styles.countBadge}>
+                <Text style={styles.countText}>{savedEntries.length}</Text>
+              </View>
             </View>
 
-            {sortedEntries.length > 0 ? (
-              <FlatList
-                data={sortedEntries}
-                keyExtractor={(item) => item.id}
-                renderItem={renderItem}
-                style={styles.list}
-                contentContainerStyle={styles.listContent}
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <View style={styles.searchInputWrapper}>
+                <Ionicons
+                  name="search"
+                  size={18}
+                  color="#999"
+                  style={styles.searchIcon}
+                />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search saved foods..."
+                  placeholderTextColor="#999"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => setSearchQuery("")}
+                    style={styles.clearButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#ccc" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Content */}
+            {filteredEntries.length > 0 ? (
+              <Animated.ScrollView
+                style={styles.content}
+                contentContainerStyle={[
+                  styles.contentContainer,
+                  { paddingBottom: insets.bottom + 20 },
+                ]}
                 showsVerticalScrollIndicator={false}
-              />
+                onScrollBeginDrag={handleScrollBeginDrag}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+                bounces={true}
+                keyboardShouldPersistTaps="handled"
+              >
+                {filteredEntries.map((item, index) => (
+                  <View key={item.id}>{renderItem({ item, index })}</View>
+                ))}
+              </Animated.ScrollView>
+            ) : searchQuery.length > 0 ? (
+              <Animated.View
+                entering={FadeIn.duration(300)}
+                style={styles.emptyContent}
+              >
+                <View style={styles.emptyIconContainer}>
+                  <Ionicons name="search-outline" size={32} color="#999" />
+                </View>
+                <Text style={styles.emptyTitle}>No results found</Text>
+                <Text style={styles.emptyDescription}>
+                  Try a different search term
+                </Text>
+              </Animated.View>
             ) : (
               <Animated.View
                 entering={FadeInDown.delay(100).duration(300)}
@@ -315,39 +380,14 @@ export function SavedEntriesPopup({
                 </View>
                 <Text style={styles.emptyTitle}>No saved foods yet</Text>
                 <Text style={styles.emptyDescription}>
-                  Save your frequently eaten foods for quick access without re-calculating nutrition
+                  Tap the Save button on any food entry to add it here for quick
+                  access
                 </Text>
               </Animated.View>
             )}
-
-            {/* Add Entry Input */}
-            <View style={styles.inputContainer}>
-              {isResolving ? (
-                <View style={styles.loadingWrapper}>
-                  <ThinkingIndicator />
-                </View>
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  placeholder="Type food to save..."
-                  placeholderTextColor="#999"
-                  value={inputText}
-                  onChangeText={(text) => {
-                    setInputText(text);
-                    if (error) setError(null);
-                  }}
-                  onSubmitEditing={handleAddEntry}
-                  returnKeyType="done"
-                  editable={!isResolving}
-                />
-              )}
-              {error && (
-                <Text style={styles.errorText}>{error}</Text>
-              )}
-            </View>
           </Animated.View>
         </GestureDetector>
-      </GestureHandlerRootView>
+      </View>
     </Modal>
   );
 }
@@ -355,176 +395,185 @@ export function SavedEntriesPopup({
 const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
   backdropPressable: {
     flex: 1,
   },
-  popupContainer: {
-    backgroundColor: '#fff',
+  container: {
+    flex: 1,
+    backgroundColor: "#f8f8f8",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingBottom: 32,
-    minHeight: 450,
-    maxHeight: SCREEN_HEIGHT * 0.9,
   },
   dragIndicatorContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 12,
     paddingBottom: 8,
+    backgroundColor: "#f8f8f8",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   dragIndicator: {
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#ddd',
+    backgroundColor: "#ddd",
   },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingVertical: 16,
+    backgroundColor: "#f8f8f8",
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
-    textAlign: 'center',
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#1a1a1a",
+    textAlign: "center",
+    letterSpacing: -0.3,
   },
-  inputContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+  countBadge: {
+    marginLeft: 8,
+    backgroundColor: "#E0F2F1",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
   },
-  input: {
-    height: 44,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 25,
-    paddingHorizontal: 18,
-    fontSize: 15,
-    color: '#333',
-  },
-  loadingWrapper: {
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 25,
-  },
-  thinkingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shimmerTextContainer: {
-    position: 'relative',
-    overflow: 'hidden',
-    height: 20,
-  },
-  thinkingText: {
-    fontSize: 14,
-    color: '#888',
-    fontWeight: '500',
-    letterSpacing: 0.3,
-  },
-  shimmerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: SHIMMER_WIDTH,
-    height: 20,
-  },
-  shimmerGradient: {
-    flex: 1,
-    width: SHIMMER_WIDTH,
-    height: 20,
-  },
-  errorText: {
+  countText: {
     fontSize: 13,
-    color: '#e74c3c',
-    marginTop: 6,
-    marginLeft: 2,
+    fontFamily: "System",
+    fontWeight: "700",
+    color: "#1A6872",
   },
-  list: {
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    backgroundColor: "#f8f8f8",
+  },
+  searchInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: "#1a1a1a",
+    padding: 0,
+  },
+  clearButton: {
+    padding: 4,
+  },
+  content: {
     flex: 1,
   },
-  listContent: {
-    paddingVertical: 8,
+  contentContainer: {
+    padding: 16,
   },
-  entryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
+  entryCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   entryContent: {
     flex: 1,
-    marginRight: 8,
   },
   entryLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: 17,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#1a1a1a",
+    marginBottom: 8,
+    lineHeight: 22,
+    letterSpacing: -0.2,
   },
-  entryMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  macrosRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
-  caloriesBadge: {
-    backgroundColor: '#E0F2F1',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
+  macroItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
-  caloriesText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1A6872',
+  macroValue: {
+    fontSize: 13,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#666",
+  },
+  chevronContainer: {
+    marginLeft: 12,
   },
   deleteAction: {
-    backgroundColor: '#FF4444',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#F87171",
+    justifyContent: "center",
+    alignItems: "center",
     width: 80,
-    height: '100%',
+    borderRadius: 16,
+    marginLeft: 8,
+    marginBottom: 12,
   },
-  // Empty state
   emptyContent: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 24,
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 40,
   },
   emptyIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#E0F2F1',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#E0F2F1",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
+    fontSize: 20,
+    fontFamily: "System",
+    fontWeight: "700",
+    color: "#1a1a1a",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
+    letterSpacing: -0.3,
   },
   emptyDescription: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 16,
+    fontSize: 15,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 22,
   },
 });

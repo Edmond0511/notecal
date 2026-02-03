@@ -459,7 +459,7 @@ function SomethingOffPopup({
 
           {/* Header */}
           <View style={styles.somethingOffHeader}>
-            <Text style={styles.somethingOffTitle}>Report Issue</Text>
+            <Text style={styles.somethingOffTitle}>Fix Issue</Text>
           </View>
 
           {/* Content */}

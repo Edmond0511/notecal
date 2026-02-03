@@ -1045,6 +1045,21 @@ export function NutritionReasoningPopup({
 
             {/* Header */}
             <View style={styles.header}>
+              {displayEntry.createdAt && (
+                <View style={styles.entryTimeBadge}>
+                  <Ionicons name="time-outline" size={13} color="#8B7355" />
+                  <Text style={styles.entryTimeText}>
+                    {new Date(displayEntry.createdAt).toLocaleTimeString(
+                      "en-US",
+                      {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      },
+                    )}
+                  </Text>
+                </View>
+              )}
               <Text style={styles.title}>Nutrition Details</Text>
               {displayEntry &&
                 displayEntry.status === "ok" &&
@@ -1618,6 +1633,23 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: "#f8f8f8",
   },
+  entryTimeBadge: {
+    position: "absolute",
+    left: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#F5F0EB",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  entryTimeText: {
+    fontSize: 13,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#8B7355",
+  },
   title: {
     fontSize: 18,
     fontFamily: "System",
@@ -1633,7 +1665,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     backgroundColor: "#E0F2F1",
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
   },

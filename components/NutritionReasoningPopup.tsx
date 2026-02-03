@@ -360,12 +360,16 @@ const MACRO_TYPE_TO_KEY: Record<"calories" | "protein" | "fat" | "carbs", MacroK
 function EditNutrientPopup({
   nutrientKey,
   currentValue,
+  originalValue,
   onSave,
+  onRevert,
   onClose,
 }: {
   nutrientKey: NutrientKey;
   currentValue: number;
+  originalValue?: number;
   onSave: (value: number) => void;
+  onRevert: () => void;
   onClose: () => void;
 }) {
   // Get colors based on whether it's a macro or micro
@@ -454,15 +458,32 @@ function EditNutrientPopup({
         {/* Action buttons */}
         <View style={styles.editMicroActions}>
           <TouchableOpacity
-            style={styles.editMicroCancelButton}
+            style={[
+              styles.editMicroRevertButton,
+              !originalValue && styles.editMicroRevertButtonDisabled,
+            ]}
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              if (!originalValue) return;
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               Keyboard.dismiss();
+              onRevert();
               onClose();
             }}
-            activeOpacity={0.7}
+            activeOpacity={originalValue ? 0.7 : 1}
+            disabled={!originalValue}
           >
-            <Text style={styles.editMicroCancelText}>Cancel</Text>
+            <Ionicons
+              name="refresh-outline"
+              size={16}
+              color={originalValue ? "#666" : "#bbb"}
+              style={{ marginRight: 4 }}
+            />
+            <Text style={[
+              styles.editMicroRevertText,
+              !originalValue && styles.editMicroRevertTextDisabled,
+            ]}>
+              Revert
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
@@ -507,6 +528,7 @@ export function NutritionReasoningPopup({
     itemId: string;
     nutrientKey: NutrientKey;
     currentValue: number;
+    originalValue?: number;
   } | null>(null);
 
   // Get goals to check which micronutrients are enabled
@@ -515,6 +537,8 @@ export function NutritionReasoningPopup({
   const deleteSavedEntry = useAppStore((state) => state.deleteSavedEntry);
   const savedEntries = useAppStore((state) => state.savedEntries);
   const updateEntryItemMacro = useAppStore((state) => state.updateEntryItemMacro);
+  const revertEntryItemSingleMacro = useAppStore((state) => state.revertEntryItemSingleMacro);
+  const revertEntryItemMacros = useAppStore((state) => state.revertEntryItemMacros);
 
   // Subscribe directly to the store entry to get live updates after edits
   const storeEntry = useAppStore((state) =>
@@ -641,9 +665,9 @@ export function NutritionReasoningPopup({
 
   // Handler for when a nutrient is clicked
   const handleNutrientPress = useCallback(
-    (itemId: string, nutrientKey: NutrientKey, currentValue: number) => {
+    (itemId: string, nutrientKey: NutrientKey, currentValue: number, originalValue?: number) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setEditNutrientPopup({ itemId, nutrientKey, currentValue });
+      setEditNutrientPopup({ itemId, nutrientKey, currentValue, originalValue });
     },
     []
   );
@@ -656,6 +680,19 @@ export function NutritionReasoningPopup({
     },
     [displayEntry, editNutrientPopup, updateEntryItemMacro]
   );
+
+  // Handler for reverting single nutrient to calculated value
+  const handleRevertNutrient = useCallback(() => {
+    if (!displayEntry || !editNutrientPopup) return;
+    revertEntryItemSingleMacro(displayEntry.id, editNutrientPopup.itemId, editNutrientPopup.nutrientKey);
+  }, [displayEntry, editNutrientPopup, revertEntryItemSingleMacro]);
+
+  // Handler for reverting ALL macros for an item
+  const handleRevertAllMacros = useCallback((itemId: string) => {
+    if (!displayEntry) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    revertEntryItemMacros(displayEntry.id, itemId);
+  }, [displayEntry, revertEntryItemMacros]);
 
   if (!displayEntry) return null;
 
@@ -803,28 +840,28 @@ export function NutritionReasoningPopup({
                       value={item.macros.kcal}
                       unit=""
                       type="calories"
-                      onPress={() => handleNutrientPress(item.id, "kcal", item.macros.kcal)}
+                      onPress={() => handleNutrientPress(item.id, "kcal", item.macros.kcal, item.originalMacros?.kcal)}
                     />
                     <MacroItem
                       label="protein"
                       value={item.macros.protein}
                       unit="g"
                       type="protein"
-                      onPress={() => handleNutrientPress(item.id, "protein", item.macros.protein)}
+                      onPress={() => handleNutrientPress(item.id, "protein", item.macros.protein, item.originalMacros?.protein)}
                     />
                     <MacroItem
                       label="fat"
                       value={item.macros.fat}
                       unit="g"
                       type="fat"
-                      onPress={() => handleNutrientPress(item.id, "fat", item.macros.fat)}
+                      onPress={() => handleNutrientPress(item.id, "fat", item.macros.fat, item.originalMacros?.fat)}
                     />
                     <MacroItem
                       label="carbs"
                       value={item.macros.carbs}
                       unit="g"
                       type="carbs"
-                      onPress={() => handleNutrientPress(item.id, "carbs", item.macros.carbs)}
+                      onPress={() => handleNutrientPress(item.id, "carbs", item.macros.carbs, item.originalMacros?.carbs)}
                     />
                   </View>
 
@@ -841,7 +878,7 @@ export function NutritionReasoningPopup({
                           value={item.macros.fiber}
                           unit="g"
                           type="fiber"
-                          onPress={() => handleNutrientPress(item.id, "fiber", item.macros.fiber!)}
+                          onPress={() => handleNutrientPress(item.id, "fiber", item.macros.fiber!, item.originalMacros?.fiber)}
                         />
                       )}
                       {enabledMicros.sugar && item.macros.sugar !== undefined && (
@@ -850,7 +887,7 @@ export function NutritionReasoningPopup({
                           value={item.macros.sugar}
                           unit="g"
                           type="sugar"
-                          onPress={() => handleNutrientPress(item.id, "sugar", item.macros.sugar!)}
+                          onPress={() => handleNutrientPress(item.id, "sugar", item.macros.sugar!, item.originalMacros?.sugar)}
                         />
                       )}
                       {enabledMicros.sodium && item.macros.sodium !== undefined && (
@@ -859,7 +896,7 @@ export function NutritionReasoningPopup({
                           value={item.macros.sodium}
                           unit="mg"
                           type="sodium"
-                          onPress={() => handleNutrientPress(item.id, "sodium", item.macros.sodium!)}
+                          onPress={() => handleNutrientPress(item.id, "sodium", item.macros.sodium!, item.originalMacros?.sodium)}
                         />
                       )}
                       {enabledMicros.potassium && item.macros.potassium !== undefined && (
@@ -868,7 +905,7 @@ export function NutritionReasoningPopup({
                           value={item.macros.potassium}
                           unit="mg"
                           type="potassium"
-                          onPress={() => handleNutrientPress(item.id, "potassium", item.macros.potassium!)}
+                          onPress={() => handleNutrientPress(item.id, "potassium", item.macros.potassium!, item.originalMacros?.potassium)}
                         />
                       )}
                       {enabledMicros.water && item.macros.water !== undefined && (
@@ -877,10 +914,22 @@ export function NutritionReasoningPopup({
                           value={item.macros.water}
                           unit="L"
                           type="water"
-                          onPress={() => handleNutrientPress(item.id, "water", item.macros.water!)}
+                          onPress={() => handleNutrientPress(item.id, "water", item.macros.water!, item.originalMacros?.water)}
                         />
                       )}
                     </View>
+                  )}
+
+                  {/* Revert All - shows when any macro has been edited */}
+                  {item.originalMacros && (
+                    <TouchableOpacity
+                      style={styles.revertAllRow}
+                      onPress={() => handleRevertAllMacros(item.id)}
+                      activeOpacity={0.6}
+                    >
+                      <Ionicons name="refresh-outline" size={14} color="#8B5CF6" />
+                      <Text style={styles.revertAllText}>Revert to calculated</Text>
+                    </TouchableOpacity>
                   )}
 
                   {/* Reasoning Section */}
@@ -999,7 +1048,9 @@ export function NutritionReasoningPopup({
               <EditNutrientPopup
                 nutrientKey={editNutrientPopup.nutrientKey}
                 currentValue={editNutrientPopup.currentValue}
+                originalValue={editNutrientPopup.originalValue}
                 onSave={handleSaveNutrient}
+                onRevert={handleRevertNutrient}
                 onClose={() => setEditNutrientPopup(null)}
               />
             )}
@@ -1498,19 +1549,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
   },
-  editMicroCancelButton: {
+  editMicroRevertButton: {
     flex: 1,
     height: 50,
     borderRadius: 14,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#f0f0f0",
   },
-  editMicroCancelText: {
+  editMicroRevertButtonDisabled: {
+    backgroundColor: "#f5f5f5",
+  },
+  editMicroRevertText: {
     fontSize: 16,
     fontFamily: "System",
     fontWeight: "600",
     color: "#666",
+  },
+  editMicroRevertTextDisabled: {
+    color: "#bbb",
   },
   editMicroSaveButton: {
     flex: 1,
@@ -1524,5 +1582,24 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     fontWeight: "700",
     color: "#ffffff",
+  },
+  // Revert All styles
+  revertAllRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    marginTop: -4,
+    backgroundColor: "#FAF5FF",
+    borderRadius: 10,
+  },
+  revertAllText: {
+    fontSize: 13,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#8B5CF6",
   },
 });

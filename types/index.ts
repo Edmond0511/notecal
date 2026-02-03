@@ -30,6 +30,7 @@ export interface FoodItem {
   source: 'FDC' | 'CNF' | 'OFF' | 'fallback' | 'local';
   sourceId: string;
   macros: Macros;
+  originalMacros?: Macros; // Original AI-calculated values for revert
   confidence: number; // 0-1 scale
   citations: {
     provider: string;
@@ -183,4 +184,6 @@ export interface AppState {
   createSavedEntry: (rawText: string) => Promise<{ success: boolean; error?: string }>;
   // Item editing actions
   updateEntryItemMacro: (entryId: string, itemId: string, macroKey: keyof Macros, value: number) => void;
+  revertEntryItemSingleMacro: (entryId: string, itemId: string, macroKey: keyof Macros) => void;
+  revertEntryItemMacros: (entryId: string, itemId: string) => void;
 }

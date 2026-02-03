@@ -551,8 +551,12 @@ export const useAppStore = create<AppState>()(
         const updatedItems = entry.items.map((item) => {
           if (item.id !== itemId) return item;
 
+          // Save original macros on first edit if not already saved
+          const originalMacros = item.originalMacros ?? { ...item.macros };
+
           return {
             ...item,
+            originalMacros,
             macros: {
               ...item.macros,
               [macroKey]: value,
@@ -564,6 +568,87 @@ export const useAppStore = create<AppState>()(
         const newInlineKcal = macroKey === 'kcal'
           ? updatedItems.reduce((sum, item) => sum + item.macros.kcal, 0)
           : entry.inlineKcal;
+
+        return {
+          ...entry,
+          items: updatedItems,
+          inlineKcal: newInlineKcal,
+          updatedAt: new Date(),
+        };
+      }),
+    }));
+  },
+
+  revertEntryItemSingleMacro: (entryId: string, itemId: string, macroKey: keyof Macros) => {
+    set((state) => ({
+      entries: state.entries.map((entry) => {
+        if (entry.id !== entryId) return entry;
+
+        const updatedItems = entry.items.map((item) => {
+          if (item.id !== itemId) return item;
+
+          // Revert single macro to original if available
+          if (!item.originalMacros || item.originalMacros[macroKey] === undefined) return item;
+
+          const newMacros = {
+            ...item.macros,
+            [macroKey]: item.originalMacros[macroKey],
+          };
+
+          // Check if all macros are now back to original - if so, clear originalMacros
+          const allReverted =
+            newMacros.kcal === item.originalMacros.kcal &&
+            newMacros.protein === item.originalMacros.protein &&
+            newMacros.fat === item.originalMacros.fat &&
+            newMacros.carbs === item.originalMacros.carbs &&
+            newMacros.fiber === item.originalMacros.fiber &&
+            newMacros.sugar === item.originalMacros.sugar &&
+            newMacros.sodium === item.originalMacros.sodium &&
+            newMacros.potassium === item.originalMacros.potassium &&
+            newMacros.water === item.originalMacros.water;
+
+          return {
+            ...item,
+            macros: newMacros,
+            originalMacros: allReverted ? undefined : item.originalMacros,
+          };
+        });
+
+        // Recalculate inlineKcal if calories were reverted
+        const newInlineKcal = macroKey === 'kcal'
+          ? updatedItems.reduce((sum, item) => sum + item.macros.kcal, 0)
+          : entry.inlineKcal;
+
+        return {
+          ...entry,
+          items: updatedItems,
+          inlineKcal: newInlineKcal,
+          updatedAt: new Date(),
+        };
+      }),
+    }));
+  },
+
+  revertEntryItemMacros: (entryId: string, itemId: string) => {
+    set((state) => ({
+      entries: state.entries.map((entry) => {
+        if (entry.id !== entryId) return entry;
+
+        const updatedItems = entry.items.map((item) => {
+          if (item.id !== itemId) return item;
+
+          // Revert to original macros if available
+          if (!item.originalMacros) return item;
+
+          return {
+            ...item,
+            macros: { ...item.originalMacros },
+            originalMacros: undefined, // Clear since we've reverted
+          };
+        });
+
+        // Recalculate inlineKcal
+        const newInlineKcal = updatedItems.reduce((sum, item) => sum + item.macros.kcal, 0);
 
         return {
           ...entry,

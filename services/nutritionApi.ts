@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { NutritionResolveResponse } from '@/types';
+import { NutritionResolveResponse, Macros, FoodItem } from '@/types';
 
 export interface NutritionApiOptions {
   userId?: string;
@@ -354,4 +354,93 @@ function createFallbackResponse(foodText: string): NutritionResolveResponse {
     totals: nutrition,
     errors: ['AI service unavailable']
   };
+}
+
+/**
+ * Correction response from the AI
+ */
+export interface CorrectionResponse {
+  correctedMacros: Macros;
+  correctedLabel?: string;
+  explanation: string;
+}
+
+/**
+ * Correct nutrition data for a food item based on user feedback
+ * @param item The food item to correct
+ * @param feedback User's description of what's wrong
+ * @param options Optional configuration including user ID
+ * @returns CorrectionResponse with updated values and explanation
+ */
+export async function correctNutrition(
+  item: FoodItem,
+  feedback: string,
+  options: NutritionApiOptions = {}
+): Promise<CorrectionResponse> {
+  const { userId } = options;
+
+  if (!feedback || feedback.trim().length === 0) {
+    throw new NutritionApiError('Feedback is required');
+  }
+
+  try {
+    // Check user quota if userId is provided
+    if (userId) {
+      await checkUserQuota(userId);
+    }
+
+    // Call the Supabase Edge Function with correction mode
+    const { data, error } = await supabase.functions.invoke<CorrectionResponse>('nutrition-resolve', {
+      body: {
+        correctionMode: true,
+        foodText: item.label,
+        currentMacros: item.macros,
+        userFeedback: feedback.trim(),
+        userId
+      }
+    });
+
+    if (error) {
+      throw new NutritionApiError(
+        error.message || 'Failed to correct nutrition',
+        error.status
+      );
+    }
+
+    if (!data) {
+      throw new NutritionApiError('No data returned from correction service');
+    }
+
+    // Validate response structure
+    if (!data.correctedMacros || typeof data.correctedMacros !== 'object') {
+      throw new NutritionApiError('Invalid response format: missing correctedMacros');
+    }
+
+    if (!data.explanation || typeof data.explanation !== 'string') {
+      throw new NutritionApiError('Invalid response format: missing explanation');
+    }
+
+    return data;
+
+  } catch (error) {
+    if (error instanceof NutritionApiError) {
+      throw error;
+    }
+
+    // Handle specific error types
+    if (error.message?.includes('rate limit')) {
+      throw new NutritionRateLimitError('Rate limit exceeded. Please try again later.');
+    }
+
+    if (error.message?.includes('quota exceeded')) {
+      throw new NutritionQuotaExceededError('Monthly quota exceeded. Please upgrade your plan.');
+    }
+
+    // Network or other errors
+    throw new NutritionApiError(
+      `Failed to correct nutrition: ${error.message}`,
+      undefined,
+      error as Error
+    );
+  }
 }

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets, SavedEntry, Macros } from '@/types';
-import { resolveNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
+import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
 import { supabase } from '@/lib/supabase';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
@@ -658,6 +658,69 @@ export const useAppStore = create<AppState>()(
         };
       }),
     }));
+  },
+
+  correctEntryItem: async (entryId: string, itemId: string, feedback: string) => {
+    const entry = get().entries.find((e) => e.id === entryId);
+    const item = entry?.items.find((i) => i.id === itemId);
+
+    if (!entry || !item) {
+      console.error('[correctEntryItem] Entry or item not found');
+      return;
+    }
+
+    try {
+      // Get current user ID if available
+      const { data: { user } } = await supabase.auth.getUser();
+
+      console.log('[correctEntryItem] Calling correction API for:', item.label, '| Feedback:', feedback);
+
+      // Call the correction API
+      const result = await correctNutrition(item, feedback, {
+        userId: user?.id
+      });
+
+      console.log('[correctEntryItem] Correction result:', result);
+
+      // Update the item with corrected values
+      set((state) => ({
+        entries: state.entries.map((e) => {
+          if (e.id !== entryId) return e;
+
+          const updatedItems = e.items.map((i) => {
+            if (i.id !== itemId) return i;
+
+            return {
+              ...i,
+              // Update label if corrected
+              label: result.correctedLabel || i.label,
+              // Update macros with corrected values
+              macros: result.correctedMacros,
+              // Preserve original macros for revert functionality
+              originalMacros: i.originalMacros || { ...i.macros },
+              // Update reasoning with explanation
+              reasoning: {
+                ...i.reasoning,
+                interpretation: result.explanation,
+              },
+            };
+          });
+
+          // Recalculate inlineKcal
+          const newInlineKcal = updatedItems.reduce((sum, item) => sum + item.macros.kcal, 0);
+
+          return {
+            ...e,
+            items: updatedItems,
+            inlineKcal: newInlineKcal,
+            updatedAt: new Date(),
+          };
+        }),
+      }));
+    } catch (error) {
+      console.error('[correctEntryItem] Error:', error);
+      throw error; // Re-throw so the UI can handle it
+    }
   },
 }),
     {

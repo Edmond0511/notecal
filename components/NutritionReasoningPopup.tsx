@@ -36,6 +36,7 @@ import {
 } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
+  FadeIn,
   FadeInDown,
   interpolate,
   runOnJS,
@@ -357,6 +358,174 @@ const MACRO_TYPE_TO_KEY: Record<"calories" | "protein" | "fat" | "carbs", MacroK
   carbs: "carbs",
 };
 
+// Something Off Popup component - bottom sheet style like NutritionReasoningPopup
+function SomethingOffPopup({
+  item,
+  onSubmit,
+  onClose,
+  isLoading,
+}: {
+  item: { id: string; label: string; macros: Macros };
+  onSubmit: (feedback: string) => void;
+  onClose: () => void;
+  isLoading: boolean;
+}) {
+  const [feedback, setFeedback] = useState("");
+  const inputRef = useRef<TextInput>(null);
+  const insets = useSafeAreaInsets();
+  const translateY = useSharedValue(0);
+
+  const handleSubmit = () => {
+    if (!feedback.trim() || isLoading) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onSubmit(feedback.trim());
+  };
+
+  const handleClose = () => {
+    if (isLoading) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Keyboard.dismiss();
+    onClose();
+  };
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      if (event.translationY > 0) {
+        translateY.value = event.translationY;
+      }
+    })
+    .onEnd((event) => {
+      if (event.translationY > DISMISS_THRESHOLD) {
+        translateY.value = withSpring(SCREEN_HEIGHT, {
+          damping: 20,
+          stiffness: 200,
+        });
+        runOnJS(handleClose)();
+      } else {
+        translateY.value = withSpring(0, {
+          damping: 20,
+          stiffness: 400,
+        });
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
+
+  const backdropStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      translateY.value,
+      [0, SCREEN_HEIGHT * 0.5],
+      [1, 0],
+      Extrapolation.CLAMP,
+    );
+    return {
+      opacity,
+    };
+  });
+
+  return (
+    <Animated.View
+      entering={FadeIn.duration(200)}
+      style={styles.somethingOffRoot}
+    >
+      {/* Backdrop */}
+      <Animated.View
+        style={[styles.somethingOffBackdrop, backdropStyle]}
+      >
+        <TouchableOpacity
+          style={styles.backdropPressable}
+          activeOpacity={1}
+          onPress={handleClose}
+        />
+      </Animated.View>
+
+      {/* Sheet Container */}
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
+          style={[styles.somethingOffContainer, { marginTop: insets.top }, animatedStyle]}
+        >
+          {/* Drag Indicator */}
+          <View style={styles.somethingOffDragIndicatorContainer}>
+            <View style={styles.dragIndicator} />
+          </View>
+
+          {/* Header */}
+          <View style={styles.somethingOffHeader}>
+            <Text style={styles.somethingOffTitle}>Report Issue</Text>
+          </View>
+
+          {/* Content */}
+          <View style={styles.somethingOffContent}>
+            {/* Item Label */}
+            <View style={styles.somethingOffItemRow}>
+              <View style={styles.somethingOffIconContainer}>
+                <Ionicons name="alert-circle-outline" size={18} color="#F59E0B" />
+              </View>
+              <Text style={styles.somethingOffItemLabel} numberOfLines={2}>
+                {item.label}
+              </Text>
+            </View>
+
+            {/* Input */}
+            <TextInput
+              ref={inputRef}
+              style={styles.somethingOffInput}
+              value={feedback}
+              onChangeText={setFeedback}
+              placeholder="Describe what's wrong..."
+              placeholderTextColor="#999"
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              autoFocus
+              editable={!isLoading}
+            />
+
+            {/* Hint */}
+            <Text style={styles.somethingOffHint}>
+              E.g., "Calories seem too high", "This is grilled, not fried"
+            </Text>
+
+            {/* Action buttons */}
+            <View style={styles.somethingOffActions}>
+              <TouchableOpacity
+                style={styles.somethingOffCancelButton}
+                onPress={handleClose}
+                activeOpacity={0.7}
+                disabled={isLoading}
+              >
+                <Text style={[
+                  styles.somethingOffCancelText,
+                  isLoading && { color: "#bbb" }
+                ]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.somethingOffSubmitButton,
+                  (!feedback.trim() || isLoading) && styles.somethingOffSubmitButtonDisabled,
+                ]}
+                onPress={handleSubmit}
+                activeOpacity={0.7}
+                disabled={!feedback.trim() || isLoading}
+              >
+                {isLoading ? (
+                  <Text style={styles.somethingOffSubmitText}>Updating...</Text>
+                ) : (
+                  <Text style={styles.somethingOffSubmitText}>Submit</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Animated.View>
+      </GestureDetector>
+    </Animated.View>
+  );
+}
+
 function EditNutrientPopup({
   nutrientKey,
   currentValue,
@@ -530,6 +699,12 @@ export function NutritionReasoningPopup({
     currentValue: number;
     originalValue?: number;
   } | null>(null);
+  const [somethingOffItem, setSomethingOffItem] = useState<{
+    id: string;
+    label: string;
+    macros: Macros;
+  } | null>(null);
+  const [isCorrecting, setIsCorrecting] = useState(false);
 
   // Get goals to check which micronutrients are enabled
   const goals = useAppStore((state) => state.goals);
@@ -539,6 +714,7 @@ export function NutritionReasoningPopup({
   const updateEntryItemMacro = useAppStore((state) => state.updateEntryItemMacro);
   const revertEntryItemSingleMacro = useAppStore((state) => state.revertEntryItemSingleMacro);
   const revertEntryItemMacros = useAppStore((state) => state.revertEntryItemMacros);
+  const correctEntryItem = useAppStore((state) => state.correctEntryItem);
 
   // Subscribe directly to the store entry to get live updates after edits
   const storeEntry = useAppStore((state) =>
@@ -661,6 +837,8 @@ export function NutritionReasoningPopup({
     setActivePopupData(null);
     setIsSaved(false);
     setEditNutrientPopup(null);
+    setSomethingOffItem(null);
+    setIsCorrecting(false);
   }, [visible]);
 
   // Handler for when a nutrient is clicked
@@ -693,6 +871,23 @@ export function NutritionReasoningPopup({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     revertEntryItemMacros(displayEntry.id, itemId);
   }, [displayEntry, revertEntryItemMacros]);
+
+  // Handler for submitting "Something Off" correction feedback
+  const handleSomethingOffSubmit = useCallback(async (feedback: string) => {
+    if (!displayEntry || !somethingOffItem) return;
+
+    setIsCorrecting(true);
+    try {
+      await correctEntryItem(displayEntry.id, somethingOffItem.id, feedback);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSomethingOffItem(null);
+    } catch (error) {
+      console.error('Error correcting entry:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsCorrecting(false);
+    }
+  }, [displayEntry, somethingOffItem, correctEntryItem]);
 
   if (!displayEntry) return null;
 
@@ -932,6 +1127,23 @@ export function NutritionReasoningPopup({
                     </TouchableOpacity>
                   )}
 
+                  {/* Something Off Button */}
+                  <TouchableOpacity
+                    style={styles.somethingOffButton}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setSomethingOffItem({
+                        id: item.id,
+                        label: item.label,
+                        macros: item.macros,
+                      });
+                    }}
+                    activeOpacity={0.6}
+                  >
+                    <Ionicons name="alert-circle-outline" size={14} color="#888" />
+                    <Text style={styles.somethingOffButtonText}>Something Off?</Text>
+                  </TouchableOpacity>
+
                   {/* Reasoning Section */}
                   {item.reasoning && (
                     <View style={styles.reasoningSection}>
@@ -1054,8 +1266,19 @@ export function NutritionReasoningPopup({
                 onClose={() => setEditNutrientPopup(null)}
               />
             )}
+
           </Animated.View>
         </GestureDetector>
+
+        {/* Something Off Popup - rendered outside GestureDetector to cover entire modal */}
+        {somethingOffItem && (
+          <SomethingOffPopup
+            item={somethingOffItem}
+            onSubmit={handleSomethingOffSubmit}
+            onClose={() => setSomethingOffItem(null)}
+            isLoading={isCorrecting}
+          />
+        )}
       </View>
     </Modal>
   );
@@ -1601,5 +1824,149 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     fontWeight: "600",
     color: "#8B5CF6",
+  },
+  // Something Off Button styles
+  somethingOffButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  somethingOffButtonText: {
+    fontSize: 13,
+    fontFamily: "System",
+    fontWeight: "500",
+    color: "#888",
+  },
+  // Something Off Popup styles - bottom sheet like NutritionReasoningPopup
+  somethingOffRoot: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
+    zIndex: 9999,
+    elevation: 20,
+  },
+  somethingOffBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+  somethingOffContainer: {
+    flex: 1,
+    backgroundColor: "#f8f8f8",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  somethingOffDragIndicatorContainer: {
+    alignItems: "center",
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  somethingOffHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  somethingOffTitle: {
+    fontSize: 18,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#1a1a1a",
+    textAlign: "center",
+    letterSpacing: -0.3,
+  },
+  somethingOffContent: {
+    paddingHorizontal: 20,
+  },
+  somethingOffItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  somethingOffIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#FEF3C7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  somethingOffItemLabel: {
+    flex: 1,
+    fontSize: 17,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#1a1a1a",
+    lineHeight: 22,
+  },
+  somethingOffInput: {
+    height: 120,
+    borderWidth: 1.5,
+    borderColor: "#e5e5e5",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 14,
+    fontSize: 16,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: "#1a1a1a",
+    backgroundColor: "#ffffff",
+    marginBottom: 8,
+  },
+  somethingOffHint: {
+    fontSize: 13,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: "#888",
+    marginBottom: 24,
+    lineHeight: 18,
+    paddingHorizontal: 4,
+  },
+  somethingOffActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  somethingOffCancelButton: {
+    flex: 1,
+    height: 52,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#e5e5e5",
+  },
+  somethingOffCancelText: {
+    fontSize: 16,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#666",
+  },
+  somethingOffSubmitButton: {
+    flex: 1,
+    height: 52,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1A6872",
+  },
+  somethingOffSubmitButtonDisabled: {
+    backgroundColor: "#9CA3AF",
+  },
+  somethingOffSubmitText: {
+    fontSize: 16,
+    fontFamily: "System",
+    fontWeight: "700",
+    color: "#ffffff",
   },
 });

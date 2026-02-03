@@ -186,4 +186,6 @@ export interface AppState {
   updateEntryItemMacro: (entryId: string, itemId: string, macroKey: keyof Macros, value: number) => void;
   revertEntryItemSingleMacro: (entryId: string, itemId: string, macroKey: keyof Macros) => void;
   revertEntryItemMacros: (entryId: string, itemId: string) => void;
+  // Correction action
+  correctEntryItem: (entryId: string, itemId: string, feedback: string) => Promise<void>;
 }

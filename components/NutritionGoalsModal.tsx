@@ -148,7 +148,7 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
     label: "Water",
     unit: "L",
     placeholder: "3.7",
-    color: "#4DB6AC",
+    color: "#8B5CF6",
     icon: icons.glassWater,
   },
 ];
@@ -710,9 +710,34 @@ export function NutritionGoalsModal({
                       exiting={FadeOut.duration(200)}
                       style={styles.waterTip}
                     >
+                      <View style={styles.waterTipHeader}>
+                        <FontAwesomeIcon
+                          icon={icons.glassWater}
+                          size={14}
+                          color="#8B5CF6"
+                        />
+                        <Text style={styles.waterTipTitle}>Logging Water</Text>
+                      </View>
                       <Text style={styles.waterTipText}>
-                        Track water: "- water 1L" or "- 0.5L water"
+                        Add entries like: "- water, 500ml" or "- 2 glasses water"
                       </Text>
+                      <View style={styles.waterTipUnitsRow}>
+                        <View style={styles.waterTipUnit}>
+                          <Text style={styles.waterTipUnitText}>L</Text>
+                        </View>
+                        <View style={styles.waterTipUnit}>
+                          <Text style={styles.waterTipUnitText}>mL</Text>
+                        </View>
+                        <View style={styles.waterTipUnit}>
+                          <Text style={styles.waterTipUnitText}>oz</Text>
+                        </View>
+                        <View style={styles.waterTipUnit}>
+                          <Text style={styles.waterTipUnitText}>cups</Text>
+                        </View>
+                        <View style={styles.waterTipUnit}>
+                          <Text style={styles.waterTipUnitText}>glasses</Text>
+                        </View>
+                      </View>
                     </Animated.View>
                   )}
 
@@ -998,19 +1023,48 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   waterTip: {
+    backgroundColor: "#FAF5FF",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(139, 92, 246, 0.12)",
+  },
+  waterTipHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(26, 104, 114, 0.08)",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  waterTipTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#8B5CF6",
   },
   waterTipText: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#1A6872",
-    flex: 1,
+    color: "#6B7280",
+    marginBottom: 10,
+    lineHeight: 18,
+  },
+  waterTipUnitsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  waterTipUnit: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: "rgba(139, 92, 246, 0.18)",
+  },
+  waterTipUnitText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#8B5CF6",
   },
 });

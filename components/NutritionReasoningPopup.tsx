@@ -479,13 +479,6 @@ function SomethingOffPopup({
           <View style={styles.somethingOffContent}>
             {/* Item Label */}
             <View style={styles.somethingOffItemRow}>
-              <View style={styles.somethingOffIconContainer}>
-                <Ionicons
-                  name="alert-circle-outline"
-                  size={18}
-                  color="#F59E0B"
-                />
-              </View>
               <Text style={styles.somethingOffItemLabel} numberOfLines={2}>
                 {item.label}
               </Text>

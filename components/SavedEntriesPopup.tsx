@@ -302,10 +302,20 @@ export function SavedEntriesPopup({
 
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.title}>Saved Foods</Text>
-              <View style={styles.countBadge}>
-                <Text style={styles.countText}>{savedEntries.length}</Text>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={handleClose}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chevron-back" size={20} color="#666" />
+              </TouchableOpacity>
+              <View style={styles.titleContainer}>
+                <Text style={styles.title}>Saved Foods</Text>
+                <View style={styles.countBadge}>
+                  <Text style={styles.countText}>{savedEntries.length}</Text>
+                </View>
               </View>
+              <View style={styles.headerRightSpacer} />
             </View>
 
             {/* Search Bar */}
@@ -427,13 +437,28 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: "#f8f8f8",
   },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#EBEBEB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerRightSpacer: {
+    width: 36,
+  },
+  titleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: "System",
     fontWeight: "600",
     color: "#1a1a1a",

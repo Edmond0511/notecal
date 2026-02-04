@@ -1045,52 +1045,15 @@ export function NutritionReasoningPopup({
 
             {/* Header */}
             <View style={styles.header}>
-              {displayEntry.createdAt && (
-                <View style={styles.entryTimeBadge}>
-                  <Ionicons name="time-outline" size={13} color="#8B7355" />
-                  <Text style={styles.entryTimeText}>
-                    {new Date(displayEntry.createdAt).toLocaleTimeString(
-                      "en-US",
-                      {
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                      },
-                    )}
-                  </Text>
-                </View>
-              )}
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={handleClose}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chevron-back" size={20} color="#666" />
+              </TouchableOpacity>
               <Text style={styles.title}>Nutrition Details</Text>
-              {displayEntry &&
-                displayEntry.status === "ok" &&
-                displayEntry.items.length > 0 && (
-                  <TouchableOpacity
-                    style={[
-                      styles.saveButton,
-                      (isSaved || isEntrySaved) && styles.saveButtonSaved,
-                    ]}
-                    onPress={handleSaveEntry}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name={
-                        isSaved || isEntrySaved
-                          ? "bookmark"
-                          : "bookmark-outline"
-                      }
-                      size={16}
-                      color={isSaved || isEntrySaved ? "#fff" : "#1A6872"}
-                    />
-                    <Text
-                      style={[
-                        styles.saveButtonText,
-                        (isSaved || isEntrySaved) && styles.saveButtonTextSaved,
-                      ]}
-                    >
-                      {isSaved || isEntrySaved ? "Saved" : "Save"}
-                    </Text>
-                  </TouchableOpacity>
-                )}
+              <View style={styles.headerRightSpacer} />
             </View>
 
             <Animated.ScrollView
@@ -1110,6 +1073,54 @@ export function NutritionReasoningPopup({
                 <Text style={styles.inputText}>
                   {displayEntry.rawText.replace(/^-\s*/, "")}
                 </Text>
+                {/* Metadata Row - Time & Save */}
+                <View style={styles.metadataRow}>
+                  {displayEntry.createdAt && (
+                    <View style={styles.entryTimeBadge}>
+                      <Ionicons name="time-outline" size={13} color="#8B7355" />
+                      <Text style={styles.entryTimeText}>
+                        {new Date(displayEntry.createdAt).toLocaleTimeString(
+                          "en-US",
+                          {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          },
+                        )}
+                      </Text>
+                    </View>
+                  )}
+                  {displayEntry.status === "ok" &&
+                    displayEntry.items.length > 0 && (
+                      <TouchableOpacity
+                        style={[
+                          styles.saveButton,
+                          (isSaved || isEntrySaved) && styles.saveButtonSaved,
+                        ]}
+                        onPress={handleSaveEntry}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name={
+                            isSaved || isEntrySaved
+                              ? "bookmark"
+                              : "bookmark-outline"
+                          }
+                          size={14}
+                          color={isSaved || isEntrySaved ? "#fff" : "#1A6872"}
+                        />
+                        <Text
+                          style={[
+                            styles.saveButtonText,
+                            (isSaved || isEntrySaved) &&
+                              styles.saveButtonTextSaved,
+                          ]}
+                        >
+                          {isSaved || isEntrySaved ? "Saved" : "Save"}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                </View>
               </Animated.View>
 
               {/* Items */}
@@ -1628,52 +1639,65 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: "#f8f8f8",
   },
-  entryTimeBadge: {
-    position: "absolute",
-    left: 16,
-    flexDirection: "row",
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#EBEBEB",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: "#F5F0EB",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
+    justifyContent: "center",
   },
-  entryTimeText: {
-    fontSize: 13,
-    fontFamily: "System",
-    fontWeight: "600",
-    color: "#8B7355",
+  headerRightSpacer: {
+    width: 36,
   },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: "System",
     fontWeight: "600",
     color: "#1a1a1a",
     textAlign: "center",
     letterSpacing: -0.3,
   },
+  metadataRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 20,
+  },
+  entryTimeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#F5F0EB",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  entryTimeText: {
+    fontSize: 12,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#8B7355",
+  },
   saveButton: {
-    position: "absolute",
-    right: 16,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     backgroundColor: "#E0F2F1",
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 14,
   },
   saveButtonSaved: {
     backgroundColor: "#1A6872",
   },
   saveButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: "System",
     fontWeight: "600",
     color: "#1A6872",
@@ -1693,7 +1717,7 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     fontWeight: "700",
     lineHeight: 32,
-    marginBottom: 24,
+    marginBottom: 12,
     letterSpacing: -0.5,
   },
   itemCard: {

@@ -179,7 +179,15 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
               {/* Header */}
               <View style={styles.header}>
+                <TouchableOpacity
+                  style={styles.backButton}
+                  onPress={handleClose}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="chevron-back" size={20} color="#666" />
+                </TouchableOpacity>
                 <Text style={styles.title}>Settings</Text>
+                <View style={styles.headerRightSpacer} />
               </View>
 
               <Animated.ScrollView
@@ -358,13 +366,26 @@ const styles = StyleSheet.create({
     backgroundColor: "#ddd",
   },
   header: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: "#f8f8f8",
   },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#EBEBEB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerRightSpacer: {
+    width: 36,
+  },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: "System",
     fontWeight: "600",
     color: "#1a1a1a",

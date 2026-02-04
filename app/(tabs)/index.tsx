@@ -4,6 +4,7 @@ import { GoalsPopup } from "@/components/GoalsPopup";
 import { NotesEditor } from "@/components/NotesEditor";
 import { SavedEntriesPopup } from "@/components/SavedEntriesPopup";
 import { SettingsModal } from "@/components/SettingsModal";
+import { useSwipeDateNavigation } from "@/hooks/useSwipeDateNavigation";
 import { useAppStore } from "@/store/app-store";
 import { SavedEntry } from "@/types";
 import { truncateNumber } from "@/utils/formatNumber";
@@ -24,6 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   interpolate,
   useAnimatedKeyboard,
@@ -178,6 +180,13 @@ export default function HomeScreen() {
     ),
   }));
 
+  // Swipe gesture for date navigation
+  const { gesture: swipeGesture, animatedStyle: swipeAnimatedStyle } =
+    useSwipeDateNavigation({
+      onSwipeLeft: () => navigateDate("next"),
+      onSwipeRight: () => navigateDate("prev"),
+    });
+
   // Calculate daily totals from entries
   const dailyTotals = React.useMemo(() => {
     return entries.reduce(
@@ -285,17 +294,19 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.editorWrapper}>
-        <NotesEditor
-          entries={entries}
-          initialDocumentText={currentDocumentText}
-          onDocumentTextChange={handleDocumentTextChange}
-          onAddEntry={addEntry}
-          onUpdateEntry={updateEntry}
-          onDeleteEntry={deleteEntry}
-          currentDate={currentDate}
-        />
-      </View>
+      <GestureDetector gesture={swipeGesture}>
+        <Animated.View style={[styles.editorWrapper, swipeAnimatedStyle]}>
+          <NotesEditor
+            entries={entries}
+            initialDocumentText={currentDocumentText}
+            onDocumentTextChange={handleDocumentTextChange}
+            onAddEntry={addEntry}
+            onUpdateEntry={updateEntry}
+            onDeleteEntry={deleteEntry}
+            currentDate={currentDate}
+          />
+        </Animated.View>
+      </GestureDetector>
 
       {/* Bottom Bar Container with Add Button and Totals */}
       <Animated.View

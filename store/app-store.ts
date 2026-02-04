@@ -696,10 +696,13 @@ export const useAppStore = create<AppState>()(
               label: result.correctedLabel || i.label,
               // Update macros with corrected values
               macros: result.correctedMacros,
-              // Preserve original macros for revert functionality
-              originalMacros: i.originalMacros || { ...i.macros },
-              // Update reasoning with explanation
-              reasoning: {
+              // Clear originalMacros - AI-corrected values become the new "truth"
+              // (revert button only shows for manual edits, not AI corrections)
+              originalMacros: undefined,
+              // Update confidence if provided
+              confidence: result.confidence ?? i.confidence,
+              // Update reasoning with new reasoning or fallback to explanation
+              reasoning: result.reasoning || {
                 ...i.reasoning,
                 interpretation: result.explanation,
               },

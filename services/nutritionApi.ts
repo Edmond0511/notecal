@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { NutritionResolveResponse, Macros, FoodItem } from '@/types';
+import { NutritionResolveResponse, Macros, FoodItem, NutritionReasoning } from '@/types';
 
 export interface NutritionApiOptions {
   userId?: string;
@@ -363,6 +363,8 @@ export interface CorrectionResponse {
   correctedMacros: Macros;
   correctedLabel?: string;
   explanation: string;
+  confidence?: number;
+  reasoning?: NutritionReasoning;
 }
 
 /**

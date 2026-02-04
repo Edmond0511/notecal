@@ -10,9 +10,9 @@ import { truncateNumber } from "@/utils/formatNumber";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
-  faFireFlameCurved,
-  faDrumstickBite,
   faDroplet,
+  faDrumstickBite,
+  faFireFlameCurved,
   faWheatAwn,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -25,6 +25,7 @@ import {
   View,
 } from "react-native";
 import Animated, {
+  interpolate,
   useAnimatedKeyboard,
   useAnimatedStyle,
 } from "react-native-reanimated";
@@ -162,13 +163,19 @@ export default function HomeScreen() {
       // Close popup
       setShowSavedEntriesPopup(false);
     },
-    [currentDocumentText, currentDate, saveDocument]
+    [currentDocumentText, currentDate, saveDocument],
   );
 
   // Keyboard-aware animation for bottom bar
   const keyboard = useAnimatedKeyboard();
   const animatedBottomBarStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: -keyboard.height.value }],
+    paddingBottom: interpolate(
+      keyboard.height.value,
+      [0, 200],
+      [50, 12],
+      "clamp",
+    ),
   }));
 
   // Calculate daily totals from entries
@@ -222,7 +229,17 @@ export default function HomeScreen() {
         }
         return acc;
       },
-      { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, sugar: 0, sodium: 0, potassium: 0, water: 0 },
+      {
+        kcal: 0,
+        protein: 0,
+        fat: 0,
+        carbs: 0,
+        fiber: 0,
+        sugar: 0,
+        sodium: 0,
+        potassium: 0,
+        water: 0,
+      },
     );
   }, [entries]);
 
@@ -281,7 +298,9 @@ export default function HomeScreen() {
       </View>
 
       {/* Bottom Bar Container with Add Button and Totals */}
-      <Animated.View style={[styles.bottomBarContainer, animatedBottomBarStyle]}>
+      <Animated.View
+        style={[styles.bottomBarContainer, animatedBottomBarStyle]}
+      >
         {/* Add saved entry button */}
         <TouchableOpacity
           style={styles.addSavedButton}
@@ -298,25 +317,51 @@ export default function HomeScreen() {
           activeOpacity={0.8}
         >
           <View style={styles.totalItem}>
-            <Text style={styles.totalValue}>{truncateNumber(dailyTotals.kcal, 5)}</Text>
-            <FontAwesomeIcon icon={icons.fire} size={14} color="#FF6B35" style={styles.totalIcon} />
+            <Text style={styles.totalValue}>
+              {truncateNumber(dailyTotals.kcal, 5)}
+            </Text>
+            <FontAwesomeIcon
+              icon={icons.fire}
+              size={14}
+              color="#FF6B35"
+              style={styles.totalIcon}
+            />
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
             <Text style={styles.totalValue}>
               {truncateNumber(dailyTotals.protein, 4)}
             </Text>
-            <FontAwesomeIcon icon={icons.protein} size={14} color="#4A90D9" style={styles.totalIcon} />
+            <FontAwesomeIcon
+              icon={icons.protein}
+              size={14}
+              color="#4A90D9"
+              style={styles.totalIcon}
+            />
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
-            <Text style={styles.totalValue}>{truncateNumber(dailyTotals.fat, 4)}</Text>
-            <FontAwesomeIcon icon={icons.fat} size={14} color="#F5A623" style={styles.totalIcon} />
+            <Text style={styles.totalValue}>
+              {truncateNumber(dailyTotals.fat, 4)}
+            </Text>
+            <FontAwesomeIcon
+              icon={icons.fat}
+              size={14}
+              color="#F5A623"
+              style={styles.totalIcon}
+            />
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
-            <Text style={styles.totalValue}>{truncateNumber(dailyTotals.carbs, 4)}</Text>
-            <FontAwesomeIcon icon={icons.carbs} size={14} color="#9B6B9E" style={styles.totalIcon} />
+            <Text style={styles.totalValue}>
+              {truncateNumber(dailyTotals.carbs, 4)}
+            </Text>
+            <FontAwesomeIcon
+              icon={icons.carbs}
+              size={14}
+              color="#9B6B9E"
+              style={styles.totalIcon}
+            />
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -427,9 +472,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingBottom: 28,
     paddingHorizontal: 16,
-    backgroundColor: "#fff",
+    backgroundColor: "transparent",
   },
   addSavedButton: {
     marginRight: 12,

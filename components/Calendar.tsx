@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -10,11 +9,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, {
+  FadeIn,
+  FadeInDown,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CALENDAR_PADDING = 20;
-const DAY_SIZE = Math.floor((SCREEN_WIDTH - CALENDAR_PADDING * 2 - 12) / 7);
+const CALENDAR_PADDING = 24;
+const DAY_SIZE = Math.floor((SCREEN_WIDTH - CALENDAR_PADDING * 2) / 7);
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 const MONTHS = [
@@ -138,7 +141,7 @@ export function Calendar({
 
   const handleSelectDate = useCallback(
     (date: Date) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onSelectDate(formatDate(date));
       onClose();
     },
@@ -146,7 +149,10 @@ export function Calendar({
   );
 
   const goToToday = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const today = new Date();
+    setViewMonth(today.getMonth());
+    setViewYear(today.getFullYear());
     onSelectDate(getTodayString());
     onClose();
   }, [onSelectDate, onClose]);
@@ -172,93 +178,100 @@ export function Calendar({
   return (
     <Modal
       visible={visible}
-      animationType="fade"
+      animationType="none"
       transparent
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       <View style={styles.modalContainer}>
         {/* Backdrop */}
-        <View style={styles.backdrop}>
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          style={styles.backdrop}
+        >
           <Pressable style={styles.backdropPressable} onPress={handleClose} />
-        </View>
+        </Animated.View>
 
         {/* Calendar Sheet */}
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]}>
-          {/* Handle */}
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}
+        >
+          {/* Minimal handle line */}
           <View style={styles.handleContainer}>
             <View style={styles.handle} />
           </View>
 
-          {/* Header */}
-          <View style={styles.header}>
+          {/* Header - Month Year with text-based navigation */}
+          <Animated.View
+            entering={FadeInDown.delay(50).duration(400)}
+            style={styles.header}
+          >
             <TouchableOpacity
               onPress={() => navigateMonth("prev")}
               style={styles.navButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
             >
-              <Ionicons name="chevron-back" size={22} color="#333" />
+              <Text style={styles.navText}>←</Text>
             </TouchableOpacity>
 
             <View style={styles.monthYearContainer}>
-              <Text style={styles.monthText}>{MONTHS[viewMonth]}</Text>
-              <Text style={styles.yearText}>{viewYear}</Text>
+              <Text style={styles.monthText}>
+                {MONTHS[viewMonth]} {viewYear}
+              </Text>
             </View>
 
             <TouchableOpacity
               onPress={() => navigateMonth("next")}
               style={styles.navButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
             >
-              <Ionicons name="chevron-forward" size={22} color="#333" />
+              <Text style={styles.navText}>→</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
 
-          {/* Weekday Headers */}
-          <View style={styles.weekdayRow}>
+          {/* Weekday Headers - ultra light */}
+          <Animated.View
+            entering={FadeInDown.delay(100).duration(400)}
+            style={styles.weekdayRow}
+          >
             {WEEKDAYS.map((day, index) => (
               <View key={index} style={styles.weekdayCell}>
-                <Text
-                  style={[
-                    styles.weekdayText,
-                    (index === 0 || index === 6) && styles.weekendText,
-                  ]}
-                >
-                  {day}
-                </Text>
+                <Text style={styles.weekdayText}>{day}</Text>
               </View>
             ))}
-          </View>
+          </Animated.View>
 
           {/* Calendar Grid */}
-          <View style={styles.calendarGrid}>
+          <Animated.View
+            entering={FadeInDown.delay(150).duration(400)}
+            style={styles.calendarGrid}
+          >
             {calendarDays.map((item, index) => {
               const dateStr = formatDate(item.date);
               const isSelected = isSameDay(dateStr, selectedDate);
               const isTodayDate = isSameDay(dateStr, todayStr);
-              const isWeekend =
-                item.date.getDay() === 0 || item.date.getDay() === 6;
 
               return (
                 <TouchableOpacity
                   key={index}
                   style={styles.dayCell}
                   onPress={() => handleSelectDate(item.date)}
-                  activeOpacity={0.6}
+                  activeOpacity={0.5}
                 >
                   <View
                     style={[
                       styles.dayInner,
-                      isSelected && styles.selectedDay,
                       isTodayDate && !isSelected && styles.todayDay,
+                      isSelected && styles.selectedDay,
                     ]}
                   >
                     <Text
                       style={[
                         styles.dayText,
                         !item.isCurrentMonth && styles.otherMonthText,
-                        isWeekend && item.isCurrentMonth && styles.weekendDayText,
-                        isSelected && styles.selectedDayText,
                         isTodayDate && !isSelected && styles.todayDayText,
+                        isSelected && styles.selectedDayText,
                       ]}
                     >
                       {item.date.getDate()}
@@ -267,19 +280,22 @@ export function Calendar({
                 </TouchableOpacity>
               );
             })}
-          </View>
+          </Animated.View>
 
-          {/* Footer with Today button */}
-          <View style={styles.footer}>
+          {/* Footer - minimal today link */}
+          <Animated.View
+            entering={FadeInDown.delay(200).duration(400)}
+            style={styles.footer}
+          >
             <TouchableOpacity
               style={styles.todayButton}
               onPress={goToToday}
-              activeOpacity={0.7}
+              activeOpacity={0.6}
             >
               <Text style={styles.todayButtonText}>Today</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -299,78 +315,58 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     paddingHorizontal: CALENDAR_PADDING,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 20,
   },
   handleContainer: {
     alignItems: "center",
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 6,
   },
   handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#ddd",
+    width: 32,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: "#e0e0e0",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 16,
-    paddingHorizontal: 4,
+    paddingVertical: 20,
   },
   navButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#fafaf8",
-    alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+  },
+  navText: {
+    fontSize: 20,
+    color: "#1A6872",
+    fontWeight: "300",
   },
   monthYearContainer: {
     alignItems: "center",
   },
   monthText: {
-    fontSize: 20,
-    fontFamily: "System",
-    fontWeight: "600",
-    color: "#1a1a1a",
-    letterSpacing: -0.3,
-  },
-  yearText: {
-    fontSize: 13,
-    fontFamily: "System",
+    fontSize: 17,
     fontWeight: "500",
-    color: "#888",
-    marginTop: 2,
+    color: "#1a1a1a",
+    letterSpacing: 0.3,
   },
   weekdayRow: {
     flexDirection: "row",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    marginBottom: 8,
+    paddingBottom: 12,
   },
   weekdayCell: {
     width: DAY_SIZE,
     alignItems: "center",
   },
   weekdayText: {
-    fontSize: 13,
-    fontFamily: "System",
-    fontWeight: "600",
-    color: "#666",
-    textTransform: "uppercase",
-  },
-  weekendText: {
-    color: "#bbb",
+    fontSize: 11,
+    fontWeight: "400",
+    color: "#999",
+    letterSpacing: 0.5,
   },
   calendarGrid: {
     flexDirection: "row",
@@ -383,54 +379,50 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   dayInner: {
-    width: DAY_SIZE - 8,
-    height: DAY_SIZE - 8,
-    borderRadius: (DAY_SIZE - 8) / 2,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
   dayText: {
-    fontSize: 16,
-    fontFamily: "System",
-    fontWeight: "500",
+    fontSize: 15,
+    fontWeight: "400",
     color: "#333",
   },
   otherMonthText: {
     color: "#ccc",
   },
-  weekendDayText: {
-    color: "#999",
+  todayDay: {
+    backgroundColor: "rgba(26, 104, 114, 0.12)",
+  },
+  todayDayText: {
+    color: "#1A6872",
+    fontWeight: "500",
   },
   selectedDay: {
     backgroundColor: "#1A6872",
   },
   selectedDayText: {
     color: "#fff",
-    fontWeight: "600",
-  },
-  todayDay: {
-    backgroundColor: "#E0F2F1",
-  },
-  todayDayText: {
-    color: "#1A6872",
-    fontWeight: "600",
+    fontWeight: "500",
   },
   footer: {
     paddingTop: 16,
-    paddingBottom: 8,
+    paddingBottom: 4,
     alignItems: "center",
   },
   todayButton: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: "#fafaf8",
+    backgroundColor: "rgba(26, 104, 114, 0.1)",
     borderRadius: 20,
   },
   todayButtonText: {
-    fontSize: 15,
-    fontFamily: "System",
+    fontSize: 14,
     fontWeight: "600",
     color: "#1A6872",
+    letterSpacing: 0.2,
   },
 });
 

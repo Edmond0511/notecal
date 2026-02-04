@@ -113,6 +113,22 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     includeFontPadding: false,
   },
+  inlineError: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFEBEE",
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 12,
+  },
+  errorText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: "#C62828",
+    fontFamily: "System",
+    fontWeight: "600",
+    includeFontPadding: false,
+  },
 });
 
 // Memoized calorie badge - only re-renders when kcal changes
@@ -137,6 +153,14 @@ const WaterBadge = React.memo<{ amountL: number }>(({ amountL }) => (
   </View>
 ));
 WaterBadge.displayName = "WaterBadge";
+
+// Memoized error badge - shown when nutrition resolution fails
+const ErrorBadge = React.memo(() => (
+  <View style={styles.inlineError}>
+    <Text style={styles.errorText}>error</Text>
+  </View>
+));
+ErrorBadge.displayName = "ErrorBadge";
 
 // Memoized indicator row - only re-renders when entry data changes
 const IndicatorRow = React.memo<{
@@ -167,6 +191,8 @@ const IndicatorRow = React.memo<{
             )}
             {hasWater && <WaterBadge amountL={waterAmount} />}
           </>
+        ) : entry.status === "error" ? (
+          <ErrorBadge />
         ) : null}
       </View>
     );

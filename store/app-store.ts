@@ -166,7 +166,7 @@ export const useAppStore = create<AppState>()(
             ? {
                 ...entry,
                 inlineKcal: nutritionData.totals.kcal,
-                status: nutritionData.errors ? 'error' : 'ok',
+                status: nutritionData.error ? 'error' : 'ok',
                 items: nutritionData.resolved,
                 updatedAt: new Date(),
               }
@@ -239,7 +239,7 @@ export const useAppStore = create<AppState>()(
         }
 
         updatedEntry.inlineKcal = nutritionData.totals.kcal;
-        updatedEntry.status = nutritionData.errors ? 'error' : 'ok';
+        updatedEntry.status = nutritionData.error ? 'error' : 'ok';
         updatedEntry.items = nutritionData.resolved;
       } else {
         updatedEntry.inlineKcal = null;

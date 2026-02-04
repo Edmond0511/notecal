@@ -60,3 +60,7 @@ claude.md
 todo.md
 
 .vscode
+
+__tests__/
+jest.config.js
+jest.setup.js

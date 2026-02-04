@@ -459,7 +459,20 @@ function SomethingOffPopup({
 
           {/* Header */}
           <View style={styles.somethingOffHeader}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={handleClose}
+              activeOpacity={0.7}
+              disabled={isLoading}
+            >
+              <Ionicons
+                name="chevron-back"
+                size={20}
+                color={isLoading ? "#bbb" : "#666"}
+              />
+            </TouchableOpacity>
             <Text style={styles.somethingOffTitle}>Fix Issue</Text>
+            <View style={styles.headerRightSpacer} />
           </View>
 
           {/* Content */}
@@ -659,15 +672,25 @@ function EditNutrientPopup({
 
           {/* Header */}
           <View style={styles.editNutrientHeader}>
-            <View
-              style={[
-                styles.editNutrientIconContainer,
-                { backgroundColor: colors.secondary },
-              ]}
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={handleClose}
+              activeOpacity={0.7}
             >
-              <FontAwesomeIcon icon={icon} size={18} color={colors.primary} />
+              <Ionicons name="chevron-back" size={20} color="#666" />
+            </TouchableOpacity>
+            <View style={styles.editNutrientTitleRow}>
+              <View
+                style={[
+                  styles.editNutrientIconContainer,
+                  { backgroundColor: colors.secondary },
+                ]}
+              >
+                <FontAwesomeIcon icon={icon} size={18} color={colors.primary} />
+              </View>
+              <Text style={styles.editNutrientTitle}>Edit {label}</Text>
             </View>
-            <Text style={styles.editNutrientTitle}>Edit {label}</Text>
+            <View style={styles.headerRightSpacer} />
           </View>
 
           {/* Content */}
@@ -1071,7 +1094,7 @@ export function NutritionReasoningPopup({
               {/* Original Input */}
               <Animated.View entering={FadeInDown.delay(100).duration(400)}>
                 <Text style={styles.inputText}>
-                  {displayEntry.rawText.replace(/^-\s*/, "")}
+                  {displayEntry.rawText.replace(/^[-—]\s*/, "")}
                 </Text>
                 {/* Metadata Row - Time & Save */}
                 <View style={styles.metadataRow}>
@@ -1992,9 +2015,13 @@ const styles = StyleSheet.create({
   editNutrientHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  editNutrientTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   editNutrientIconContainer: {
@@ -2142,9 +2169,9 @@ const styles = StyleSheet.create({
   somethingOffHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   somethingOffTitle: {
     fontSize: 18,

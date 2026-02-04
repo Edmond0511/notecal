@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 const USE_AI_API = true; // Use AI-powered nutrition API
+const EM_DASH = "—"; // U+2014 - Apple Notes-style list marker
 
 // Water entry parsing utilities
 // Pattern 1: "water 500ml" or "sparkling water 1l" (water first)
@@ -54,12 +55,13 @@ export const useAppStore = create<AppState>()(
       savedEntries: [],
 
   addEntry: async (rawText: string) => {
-    // Only process lines that start with "- "
-    if (!rawText.trim().startsWith('-')) {
+    // Only process lines that start with "- " or "— " (em-dash)
+    const trimmed = rawText.trim();
+    if (!trimmed.startsWith('-') && !trimmed.startsWith(EM_DASH)) {
       return;
     }
 
-    const textLine = rawText.trim().substring(1).trim(); // Remove "- " prefix
+    const textLine = trimmed.substring(1).trim(); // Remove "-" or "—" prefix
 
     // Don't create an entry if there's no food text after the dash
     if (!textLine) {
@@ -207,9 +209,10 @@ export const useAppStore = create<AppState>()(
 
       let updatedEntry = { ...entries[entryIndex], rawText, updatedAt: new Date() };
 
-      // Only process if line starts with "- " and has food text after the dash
-      const textLine = rawText.trim().startsWith('-')
-        ? rawText.trim().substring(1).trim()
+      // Only process if line starts with "- " or "— " and has food text after the marker
+      const trimmed = rawText.trim();
+      const textLine = (trimmed.startsWith('-') || trimmed.startsWith(EM_DASH))
+        ? trimmed.substring(1).trim()
         : '';
 
       if (textLine) {
@@ -484,8 +487,8 @@ export const useAppStore = create<AppState>()(
   },
 
   createSavedEntry: async (rawText: string): Promise<{ success: boolean; error?: string }> => {
-    // Remove "- " prefix if present and trim
-    const foodText = rawText.replace(/^-\s*/, '').trim();
+    // Remove "- " or "— " prefix if present and trim
+    const foodText = rawText.replace(/^[-—]\s*/, '').trim();
     if (!foodText) {
       return { success: false, error: 'Empty input' };
     }

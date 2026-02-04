@@ -26,6 +26,10 @@ const FONT_VERTICAL_OFFSET = 4;
 const INDICATOR_VERTICAL_OFFSET = 2;
 const EM_DASH = "—"; // U+2014
 
+// Adaptive debounce delays based on entry completeness
+const DELAY_COMPLETE_ENTRY = 1500; // Entry appears complete → responsive feedback
+const DELAY_INCOMPLETE_ENTRY = 2500; // Entry appears incomplete → wait for user to finish
+
 // Text diff utilities for detecting user actions
 interface TextDiff {
   type: "insert" | "delete" | "replace" | "none";
@@ -95,6 +99,83 @@ function getLineAtPosition(text: string, position: number) {
     }
     charCount = lineEnd + 1; // +1 for the newline character
   }
+  return null;
+}
+
+// Assess whether a food entry appears complete or incomplete
+// Returns the appropriate debounce delay
+function assessEntryCompleteness(entryText: string): number {
+  // Strip the leading marker (— or -)
+  const text = entryText.replace(/^[—-]\s*/, "").trim();
+
+  // Too short - likely incomplete
+  if (text.length < 5) {
+    return DELAY_INCOMPLETE_ENTRY;
+  }
+
+  // Trailing comma - user is adding quantity
+  if (text.endsWith(",")) {
+    return DELAY_INCOMPLETE_ENTRY;
+  }
+
+  // Trailing space - mid-typing
+  if (entryText.endsWith(" ")) {
+    return DELAY_INCOMPLETE_ENTRY;
+  }
+
+  // Number without unit at end (e.g., "chicken 150" but not "chicken 150g")
+  // Matches: ends with number not followed by unit letters
+  if (/\d$/.test(text) && !/\d+\s*(g|kg|mg|oz|lb|ml|l|cup|cups|tbsp|tsp|piece|pieces|slice|slices)$/i.test(text)) {
+    return DELAY_INCOMPLETE_ENTRY;
+  }
+
+  // Check for quantity+unit patterns or count patterns (these are complete)
+  // Patterns: "150g", "2 cups", "100ml", "2 eggs", etc.
+  const hasQuantityUnit = /\d+\s*(g|kg|mg|oz|lb|ml|l|cup|cups|tbsp|tsp|piece|pieces|slice|slices)\s*$/i.test(text);
+  const hasCountPattern = /^\d+\s+\w+/.test(text); // "2 eggs", "3 bananas"
+
+  if (hasQuantityUnit || hasCountPattern) {
+    return DELAY_COMPLETE_ENTRY;
+  }
+
+  // Standalone food with reasonable length (e.g., "banana", "apple")
+  // If it's a single word or simple phrase without quantity, it's likely complete
+  if (text.length >= 5 && !text.includes(",")) {
+    return DELAY_COMPLETE_ENTRY;
+  }
+
+  // Default to incomplete for safety
+  return DELAY_INCOMPLETE_ENTRY;
+}
+
+// Find the most recently edited entry line from text
+function findMostRecentEntryLine(text: string, cursorPosition?: number): string | null {
+  const lines = text.split("\n");
+  let charCount = 0;
+
+  // If we have cursor position, find the line at that position
+  if (cursorPosition !== undefined) {
+    for (const line of lines) {
+      const lineEnd = charCount + line.length;
+      if (cursorPosition >= charCount && cursorPosition <= lineEnd) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("-") || trimmed.startsWith(EM_DASH)) {
+          return trimmed;
+        }
+        break;
+      }
+      charCount = lineEnd + 1;
+    }
+  }
+
+  // Fallback: return the last entry line
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const trimmed = lines[i].trim();
+    if (trimmed.startsWith("-") || trimmed.startsWith(EM_DASH)) {
+      return trimmed;
+    }
+  }
+
   return null;
 }
 
@@ -561,10 +642,28 @@ export function NotesEditor({
         clearTimeout(debounceTimeoutRef.current);
       }
 
-      // Debounce processing to avoid too many API calls
+      const finalText = result?.transformedText ?? newText;
+
+      // Check for Enter-key instant trigger:
+      // If user pressed Enter after an entry line with content, process immediately
+      if (diff.type === "insert" && diff.insertedText.includes("\n")) {
+        const lineBeforeEnter = getLineAtPosition(oldText, diff.position);
+        if (lineBeforeEnter?.isEntryLine && lineBeforeEnter.textAfterMarker.trim()) {
+          // User pressed Enter after completing an entry line - process immediately
+          processDocumentChanges(finalText);
+          return;
+        }
+      }
+
+      // Adaptive debounce based on entry completeness
+      const mostRecentEntry = findMostRecentEntryLine(finalText);
+      const delay = mostRecentEntry
+        ? assessEntryCompleteness(mostRecentEntry)
+        : DELAY_COMPLETE_ENTRY;
+
       debounceTimeoutRef.current = setTimeout(() => {
-        processDocumentChanges(result?.transformedText ?? newText);
-      }, 1500); // Wait 1.5 seconds after user stops typing
+        processDocumentChanges(finalText);
+      }, delay);
     },
     [processDocumentChanges, onDocumentTextChange],
   );

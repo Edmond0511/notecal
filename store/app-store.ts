@@ -43,6 +43,16 @@ function parseWaterEntry(text: string): { isWater: boolean; amountL: number } {
   return { isWater: false, amountL: 0 };
 }
 
+// Helper to assign unique IDs to items received from the API
+// This ensures items can be individually targeted for corrections
+function assignItemIds(items: any[], entryId: string): any[] {
+  return items.map((item, index) => ({
+    ...item,
+    id: item.id || `${entryId}-item-${index}-${Date.now()}`,
+    entryId: entryId,
+  }));
+}
+
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -169,7 +179,7 @@ export const useAppStore = create<AppState>()(
                 ...entry,
                 inlineKcal: nutritionData.totals.kcal,
                 status: nutritionData.error ? 'error' : 'ok',
-                items: nutritionData.resolved,
+                items: assignItemIds(nutritionData.resolved, entryId),
                 updatedAt: new Date(),
               }
             : entry
@@ -243,7 +253,7 @@ export const useAppStore = create<AppState>()(
 
         updatedEntry.inlineKcal = nutritionData.totals.kcal;
         updatedEntry.status = nutritionData.error ? 'error' : 'ok';
-        updatedEntry.items = nutritionData.resolved;
+        updatedEntry.items = assignItemIds(nutritionData.resolved, id);
       } else {
         updatedEntry.inlineKcal = null;
         updatedEntry.status = 'error';
@@ -516,11 +526,13 @@ export const useAppStore = create<AppState>()(
       }
 
       // Create SavedEntry from the response
+      const savedEntryId = Date.now().toString();
       const newSavedEntry: SavedEntry = {
-        id: Date.now().toString(),
+        id: savedEntryId,
         rawText: `- ${foodText}`,
-        items: response.resolved.map((item) => ({
+        items: response.resolved.map((item, index) => ({
           ...item,
+          id: item.id || `saved-${savedEntryId}-item-${index}`,
           entryId: '', // Clear entryId since this is a template
         })),
         totalKcal: response.totals?.kcal ?? 0,

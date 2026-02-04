@@ -27,6 +27,7 @@ export interface FoodItem {
   prep?: string;
   qty: number;
   unit: string;
+  servings?: number; // Multiplier for the portion (1 = as entered, 2 = double, etc.)
   source: 'FDC' | 'CNF' | 'OFF' | 'fallback' | 'local';
   sourceId: string;
   macros: Macros;
@@ -186,6 +187,8 @@ export interface AppState {
   updateEntryItemMacro: (entryId: string, itemId: string, macroKey: keyof Macros, value: number) => void;
   revertEntryItemSingleMacro: (entryId: string, itemId: string, macroKey: keyof Macros) => void;
   revertEntryItemMacros: (entryId: string, itemId: string) => void;
+  // Quantity editing action (servings multiplier)
+  updateEntryItemQuantity: (entryId: string, itemId: string, newServings: number) => void;
   // Correction action
   correctEntryItem: (entryId: string, itemId: string, feedback: string) => Promise<void>;
 }

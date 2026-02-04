@@ -769,6 +769,142 @@ function EditNutrientPopup({
   );
 }
 
+// Edit Quantity Popup component
+function EditQuantityPopup({
+  currentServings,
+  onSave,
+  onClose,
+}: {
+  currentServings: number;
+  onSave: (servings: number) => void;
+  onClose: () => void;
+}) {
+  const inputRef = useRef<TextInput>(null);
+  const insets = useSafeAreaInsets();
+  const translateY = useSharedValue(0);
+
+  const formatServings = (val: number) =>
+    Number.isInteger(val) ? val.toString() : val.toFixed(1);
+
+  const [inputValue, setInputValue] = useState(formatServings(currentServings));
+
+  const handleSave = () => {
+    const numValue = parseFloat(inputValue);
+    if (!isNaN(numValue) && numValue > 0) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      onSave(numValue);
+      onClose();
+    }
+  };
+
+  const handleClose = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Keyboard.dismiss();
+    onClose();
+  };
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      if (event.translationY > 0) {
+        translateY.value = event.translationY;
+      }
+    })
+    .onEnd((event) => {
+      if (event.translationY > DISMISS_THRESHOLD) {
+        translateY.value = withSpring(SCREEN_HEIGHT, {
+          damping: 20,
+          stiffness: 200,
+        });
+        runOnJS(handleClose)();
+      } else {
+        translateY.value = withSpring(0, {
+          damping: 20,
+          stiffness: 400,
+        });
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateY.value,
+      [0, SCREEN_HEIGHT * 0.5],
+      [1, 0],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
+  return (
+    <Animated.View
+      entering={FadeIn.duration(200)}
+      style={styles.editQuantityRoot}
+    >
+      <Animated.View style={[styles.editQuantityBackdrop, backdropStyle]}>
+        <TouchableOpacity
+          style={styles.backdropPressable}
+          activeOpacity={1}
+          onPress={handleClose}
+        />
+      </Animated.View>
+
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
+          style={[
+            styles.editQuantityContainer,
+            { marginTop: insets.top },
+            animatedStyle,
+          ]}
+        >
+          <View style={styles.editQuantityDragIndicatorContainer}>
+            <View style={styles.dragIndicator} />
+          </View>
+
+          <View style={styles.editQuantityHeader}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={handleClose}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chevron-back" size={20} color="#666" />
+            </TouchableOpacity>
+            <Text style={styles.editQuantityTitle}>Edit Quantity</Text>
+            <View style={styles.headerRightSpacer} />
+          </View>
+
+          <View style={styles.editQuantityContent}>
+            <View style={styles.editQuantityInputContainer}>
+              <TextInput
+                ref={inputRef}
+                style={styles.editQuantityInput}
+                value={inputValue}
+                onChangeText={setInputValue}
+                keyboardType="decimal-pad"
+                selectTextOnFocus
+                autoFocus
+              />
+            </View>
+
+            <Text style={styles.editQuantityHint}>
+              Nutrients will scale proportionally
+            </Text>
+
+            <TouchableOpacity
+              style={styles.editQuantitySaveButton}
+              onPress={handleSave}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.editQuantitySaveText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </GestureDetector>
+    </Animated.View>
+  );
+}
+
 interface NutritionReasoningPopupProps {
   visible: boolean;
   onClose: () => void;
@@ -804,6 +940,10 @@ export function NutritionReasoningPopup({
     macros: Macros;
   } | null>(null);
   const [isCorrecting, setIsCorrecting] = useState(false);
+  const [editQuantityPopup, setEditQuantityPopup] = useState<{
+    itemId: string;
+    currentServings: number;
+  } | null>(null);
 
   // Get goals to check which micronutrients are enabled
   const goals = useAppStore((state) => state.goals);
@@ -820,6 +960,9 @@ export function NutritionReasoningPopup({
     (state) => state.revertEntryItemMacros,
   );
   const correctEntryItem = useAppStore((state) => state.correctEntryItem);
+  const updateEntryItemQuantity = useAppStore(
+    (state) => state.updateEntryItemQuantity,
+  );
 
   // Subscribe directly to the store entry to get live updates after edits
   const storeEntry = useAppStore((state) =>
@@ -956,6 +1099,7 @@ export function NutritionReasoningPopup({
     setEditNutrientPopup(null);
     setSomethingOffItem(null);
     setIsCorrecting(false);
+    setEditQuantityPopup(null);
   }, [visible]);
 
   // Handler for when a nutrient is clicked
@@ -1029,6 +1173,28 @@ export function NutritionReasoningPopup({
       }
     },
     [displayEntry, somethingOffItem, correctEntryItem],
+  );
+
+  // Handler for when quantity badge is pressed
+  const handleQuantityPress = useCallback(
+    (itemId: string, currentServings: number) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setEditQuantityPopup({ itemId, currentServings });
+    },
+    [],
+  );
+
+  // Handler for saving edited quantity value
+  const handleSaveQuantity = useCallback(
+    (newServings: number) => {
+      if (!displayEntry || !editQuantityPopup) return;
+      updateEntryItemQuantity(
+        displayEntry.id,
+        editQuantityPopup.itemId,
+        newServings,
+      );
+    },
+    [displayEntry, editQuantityPopup, updateEntryItemQuantity],
   );
 
   if (!displayEntry) return null;
@@ -1148,7 +1314,30 @@ export function NutritionReasoningPopup({
                 >
                   {/* Item Header */}
                   <View style={styles.itemHeader}>
-                    <Text style={styles.itemLabel}>{item.label}</Text>
+                    <View style={styles.itemLabelRow}>
+                      <Text style={styles.itemLabel}>{item.label}</Text>
+                      {/* Quantity Badge */}
+                      <TouchableOpacity
+                        style={styles.quantityBadge}
+                        onPress={() =>
+                          handleQuantityPress(item.id, item.servings ?? 1)
+                        }
+                        activeOpacity={0.6}
+                      >
+                        <Text style={styles.quantityText}>
+                          ×
+                          {Number.isInteger(item.servings ?? 1)
+                            ? item.servings ?? 1
+                            : (item.servings ?? 1).toFixed(1)}
+                        </Text>
+                        <Ionicons
+                          name="pencil"
+                          size={10}
+                          color="#6B7280"
+                          style={{ marginLeft: 3 }}
+                        />
+                      </TouchableOpacity>
+                    </View>
                     <View>
                       <TouchableOpacity
                         onPress={() => {
@@ -1539,6 +1728,15 @@ export function NutritionReasoningPopup({
             isLoading={isCorrecting}
           />
         )}
+
+        {/* Edit Quantity Popup */}
+        {editQuantityPopup && (
+          <EditQuantityPopup
+            currentServings={editQuantityPopup.currentServings}
+            onSave={handleSaveQuantity}
+            onClose={() => setEditQuantityPopup(null)}
+          />
+        )}
       </View>
     </Modal>
   );
@@ -1753,14 +1951,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  itemLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 12,
+    gap: 8,
+  },
   itemLabel: {
     fontSize: 19,
     fontFamily: "System",
     fontWeight: "700",
     color: "#1a1a1a",
-    flex: 1,
-    marginRight: 12,
+    flexShrink: 1,
     lineHeight: 26,
+  },
+  quantityBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  quantityText: {
+    fontSize: 13,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#6B7280",
   },
   confidenceBadge: {
     paddingHorizontal: 12,
@@ -2261,6 +2479,88 @@ const styles = StyleSheet.create({
     backgroundColor: "#9CA3AF",
   },
   somethingOffSubmitText: {
+    fontSize: 16,
+    fontFamily: "System",
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  // Edit Quantity Popup styles
+  editQuantityRoot: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
+    zIndex: 9999,
+    elevation: 20,
+  },
+  editQuantityBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+  editQuantityContainer: {
+    flex: 1,
+    backgroundColor: "#f8f8f8",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  editQuantityDragIndicatorContainer: {
+    alignItems: "center",
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  editQuantityHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  editQuantityTitle: {
+    fontSize: 18,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#1a1a1a",
+    textAlign: "center",
+    letterSpacing: -0.3,
+  },
+  editQuantityContent: {
+    paddingHorizontal: 20,
+  },
+  editQuantityInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 8,
+  },
+  editQuantityInput: {
+    flex: 1,
+    height: 56,
+    borderWidth: 2,
+    borderColor: "#6B7280",
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    fontSize: 24,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#1a1a1a",
+    backgroundColor: "#ffffff",
+    letterSpacing: -0.5,
+  },
+  editQuantityHint: {
+    fontSize: 13,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: "#888",
+    marginBottom: 24,
+    lineHeight: 18,
+    paddingHorizontal: 4,
+  },
+  editQuantitySaveButton: {
+    height: 52,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1A6872",
+  },
+  editQuantitySaveText: {
     fontSize: 16,
     fontFamily: "System",
     fontWeight: "700",

@@ -675,6 +675,69 @@ export const useAppStore = create<AppState>()(
     }));
   },
 
+  updateEntryItemQuantity: (entryId: string, itemId: string, newServings: number) => {
+    set((state) => ({
+      entries: state.entries.map((entry) => {
+        if (entry.id !== entryId) return entry;
+
+        const updatedItems = entry.items.map((item) => {
+          if (item.id !== itemId) return item;
+
+          // Get current servings (default to 1 if not set)
+          const currentServings = item.servings ?? 1;
+
+          // Prevent division by zero
+          if (currentServings <= 0) return item;
+
+          // Calculate scale factor based on servings change
+          const scaleFactor = newServings / currentServings;
+
+          // Scale all macros proportionally
+          const scaledMacros = {
+            kcal: Math.round(item.macros.kcal * scaleFactor),
+            protein: Math.round(item.macros.protein * scaleFactor * 10) / 10,
+            fat: Math.round(item.macros.fat * scaleFactor * 10) / 10,
+            carbs: Math.round(item.macros.carbs * scaleFactor * 10) / 10,
+            // Scale optional micros if they exist
+            ...(item.macros.fiber !== undefined && {
+              fiber: Math.round(item.macros.fiber * scaleFactor * 10) / 10,
+            }),
+            ...(item.macros.sugar !== undefined && {
+              sugar: Math.round(item.macros.sugar * scaleFactor * 10) / 10,
+            }),
+            ...(item.macros.sodium !== undefined && {
+              sodium: Math.round(item.macros.sodium * scaleFactor),
+            }),
+            ...(item.macros.potassium !== undefined && {
+              potassium: Math.round(item.macros.potassium * scaleFactor),
+            }),
+            ...(item.macros.water !== undefined && {
+              water: Math.round(item.macros.water * scaleFactor * 100) / 100,
+            }),
+          };
+
+          return {
+            ...item,
+            servings: newServings,
+            macros: scaledMacros,
+            // Clear originalMacros since quantity change is a deliberate recalculation
+            originalMacros: undefined,
+          };
+        });
+
+        // Recalculate inlineKcal
+        const newInlineKcal = updatedItems.reduce((sum, item) => sum + item.macros.kcal, 0);
+
+        return {
+          ...entry,
+          items: updatedItems,
+          inlineKcal: newInlineKcal,
+          updatedAt: new Date(),
+        };
+      }),
+    }));
+  },
+
   correctEntryItem: async (entryId: string, itemId: string, feedback: string) => {
     const entry = get().entries.find((e) => e.id === entryId);
     const item = entry?.items.find((i) => i.id === itemId);

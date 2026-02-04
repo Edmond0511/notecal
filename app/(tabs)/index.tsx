@@ -24,6 +24,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, {
+  useAnimatedKeyboard,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const icons = {
@@ -161,6 +165,12 @@ export default function HomeScreen() {
     [currentDocumentText, currentDate, saveDocument]
   );
 
+  // Keyboard-aware animation for bottom bar
+  const keyboard = useAnimatedKeyboard();
+  const animatedBottomBarStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -keyboard.height.value }],
+  }));
+
   // Calculate daily totals from entries
   const dailyTotals = React.useMemo(() => {
     return entries.reduce(
@@ -258,18 +268,20 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <NotesEditor
-        entries={entries}
-        initialDocumentText={currentDocumentText}
-        onDocumentTextChange={handleDocumentTextChange}
-        onAddEntry={addEntry}
-        onUpdateEntry={updateEntry}
-        onDeleteEntry={deleteEntry}
-        currentDate={currentDate}
-      />
+      <View style={styles.editorWrapper}>
+        <NotesEditor
+          entries={entries}
+          initialDocumentText={currentDocumentText}
+          onDocumentTextChange={handleDocumentTextChange}
+          onAddEntry={addEntry}
+          onUpdateEntry={updateEntry}
+          onDeleteEntry={deleteEntry}
+          currentDate={currentDate}
+        />
+      </View>
 
       {/* Bottom Bar Container with Add Button and Totals */}
-      <View style={styles.bottomBarContainer}>
+      <Animated.View style={[styles.bottomBarContainer, animatedBottomBarStyle]}>
         {/* Add saved entry button */}
         <TouchableOpacity
           style={styles.addSavedButton}
@@ -307,7 +319,7 @@ export default function HomeScreen() {
             <FontAwesomeIcon icon={icons.carbs} size={14} color="#9B6B9E" style={styles.totalIcon} />
           </View>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
       {/* Custom Calendar */}
       <Calendar
@@ -403,12 +415,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
+  editorWrapper: {
+    flex: 1,
+    paddingBottom: 88,
+  },
   bottomBarContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    paddingBottom: 28,
     paddingHorizontal: 16,
+    backgroundColor: "#fff",
   },
   addSavedButton: {
     marginRight: 12,

@@ -166,7 +166,7 @@ export function SavedEntriesPopup({
   }));
 
   const getDisplayLabel = (entry: SavedEntry) => {
-    return entry.rawText.replace(/^-\s*/, "");
+    return entry.rawText.replace(/^[-—]\s*/, "");
   };
 
   const handleScrollBeginDrag = (event: any) => {

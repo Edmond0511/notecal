@@ -2,48 +2,28 @@ import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef } from "react";
 import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 
-// Shimmer dimensions
-const SHIMMER_WIDTH = 50; // Smaller width for subtle shimmer effect
-const TEXT_WIDTH = 67; // Approximate width of "calculating" text
+// Shimmer dimensions - full container sweep
+const SHIMMER_WIDTH = 40;
+const CONTAINER_WIDTH = 79; // text width + padding
 
 export const ThinkingIndicator: React.FC = React.memo(() => {
-  const shimmerTranslate = useRef(new Animated.Value(-SHIMMER_WIDTH)).current;
-  const shimmerOpacity = useRef(new Animated.Value(0)).current;
+  const shimmerTranslate = useRef(
+    new Animated.Value(-SHIMMER_WIDTH),
+  ).current;
 
   useEffect(() => {
-    // Parallel animation for translate and opacity
     const shimmerAnimation = Animated.loop(
       Animated.sequence([
-        // Sweep across with fade in/out
-        Animated.parallel([
-          Animated.timing(shimmerTranslate, {
-            toValue: TEXT_WIDTH + SHIMMER_WIDTH,
-            duration: 2000,
-            easing: Easing.ease,
-            useNativeDriver: true,
-          }),
-          Animated.sequence([
-            // Fade in during first quarter
-            Animated.timing(shimmerOpacity, {
-              toValue: 0.6,
-              duration: 500,
-              easing: Easing.ease,
-              useNativeDriver: true,
-            }),
-            // Stay visible during middle
-            Animated.delay(1000),
-            // Fade out during last quarter
-            Animated.timing(shimmerOpacity, {
-              toValue: 0,
-              duration: 500,
-              easing: Easing.ease,
-              useNativeDriver: true,
-            }),
-          ]),
-        ]),
-        // Small delay before next loop (avoids instant reset issues)
-        Animated.delay(100),
-        // Reset position (instant but with delay buffer)
+        // Sweep left to right across entire container
+        Animated.timing(shimmerTranslate, {
+          toValue: CONTAINER_WIDTH,
+          duration: 1800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        // Pause before next sweep
+        Animated.delay(500),
+        // Reset position instantly
         Animated.timing(shimmerTranslate, {
           toValue: -SHIMMER_WIDTH,
           duration: 0,
@@ -57,39 +37,32 @@ export const ThinkingIndicator: React.FC = React.memo(() => {
     return () => {
       shimmerAnimation.stop();
     };
-  }, [shimmerTranslate, shimmerOpacity]);
+  }, [shimmerTranslate]);
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
-        {/* Two-layer shimmer: base text + animated overlay */}
-        <View style={styles.shimmerContainer}>
-          {/* Base layer: always-visible blue text */}
-          <Text style={styles.baseText}>calculating</Text>
+      <Text style={styles.baseText}>calculating</Text>
 
-          {/* Shimmer overlay: animated white highlight */}
-          <Animated.View
-            style={[
-              styles.shimmerOverlay,
-              {
-                transform: [{ translateX: shimmerTranslate }],
-                opacity: shimmerOpacity,
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={[
-                "rgba(255, 255, 255, 0)",
-                "rgba(255, 255, 255, 0.8)",
-                "rgba(255, 255, 255, 0)",
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.gradient}
-            />
-          </Animated.View>
-        </View>
-      </View>
+      {/* Bold shimmer overlay - sweeps across entire container */}
+      <Animated.View
+        style={[
+          styles.shimmerOverlay,
+          {
+            transform: [{ translateX: shimmerTranslate }],
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={[
+            "rgba(255, 255, 255, 0)",
+            "rgba(255, 255, 255, 0.7)",
+            "rgba(255, 255, 255, 0)",
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.gradient}
+        />
+      </Animated.View>
     </View>
   );
 });
@@ -97,24 +70,13 @@ ThinkingIndicator.displayName = "ThinkingIndicator";
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row",
-    alignItems: "center",
+    position: "relative",
+    overflow: "hidden",
     backgroundColor: "#E0F2F1",
     borderRadius: 12,
     alignSelf: "flex-start",
     paddingHorizontal: 6,
     paddingVertical: 1,
-  },
-  content: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  shimmerContainer: {
-    position: "relative",
-    overflow: "hidden",
-    width: TEXT_WIDTH,
-    height: 16,
-    justifyContent: "center",
   },
   baseText: {
     fontSize: 12,
@@ -128,14 +90,11 @@ const styles = StyleSheet.create({
   shimmerOverlay: {
     position: "absolute",
     top: 0,
-    left: 0,
+    bottom: 0,
     width: SHIMMER_WIDTH,
-    height: 16,
   },
   gradient: {
     flex: 1,
-    width: SHIMMER_WIDTH,
-    height: 16,
   },
 });
 

@@ -64,3 +64,5 @@ todo.md
 __tests__/
 jest.config.js
 jest.setup.js
+
+.vscode

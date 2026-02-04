@@ -97,7 +97,6 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
 
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<WizardFormData>(initialFormData);
-  const [resetManualTargets, setResetManualTargets] = useState(false);
 
   // Initialize form with existing goals or defaults
   useEffect(() => {
@@ -126,7 +125,6 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
         });
       }
       setCurrentStep(1);
-      setResetManualTargets(false);
       translateY.value = 0;
     }
   }, [visible, existingGoals, preferredUnits]);
@@ -258,11 +256,9 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
     };
 
     const calculatedGoals = calculateGoals(input);
-
-    // Preserve existing manual targets when editing via wizard (unless user chose to reset)
-    if (existingGoals?.manualTargets && !resetManualTargets) {
-      calculatedGoals.manualTargets = existingGoals.manualTargets;
-    }
+    // Note: Manual targets are NOT preserved when recalculating via wizard.
+    // The calculateGoals() function returns fresh goals without manual targets,
+    // so the new calculated values always take precedence.
 
     setGoals(calculatedGoals);
     setPreferredUnits(formData.useImperial ? 'imperial' : 'metric');
@@ -344,11 +340,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
           <Step5Review
             goals={getCalculatedGoals()}
             formData={formData}
-            existingGoals={resetManualTargets ? undefined : existingGoals}
-            onResetManualTargets={() => {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              setResetManualTargets(true);
-            }}
+            existingGoals={existingGoals}
           />
         );
       default:

@@ -57,7 +57,6 @@ interface Step5ReviewProps {
   goals: UserGoals | null;
   formData: WizardFormData;
   existingGoals?: UserGoals | null;
-  onResetManualTargets?: () => void;
 }
 
 const OTHER_NUTRIENTS = [
@@ -134,7 +133,7 @@ function CalorieExplanationPopup({
   );
 }
 
-export function Step5Review({ goals, formData, existingGoals, onResetManualTargets }: Step5ReviewProps) {
+export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps) {
   const [activeExplanation, setActiveExplanation] = useState<"bmr" | "tdee" | null>(null);
   const lastExplanationType = useRef<"bmr" | "tdee">("bmr");
 
@@ -164,7 +163,7 @@ export function Step5Review({ goals, formData, existingGoals, onResetManualTarge
 
   if (manualTargets) {
     if (manualTargets.kcal !== undefined && manualTargets.kcal !== goals.targetKcal) {
-      modifications.push({ label: "Calories", calculated: goals.targetKcal, manual: manualTargets.kcal, unit: "kcal" });
+      modifications.push({ label: "Calories", calculated: goals.targetKcal, manual: manualTargets.kcal, unit: "cal" });
     }
     if (manualTargets.protein !== undefined && manualTargets.protein !== goals.targetProtein) {
       modifications.push({ label: "Protein", calculated: goals.targetProtein, manual: manualTargets.protein, unit: "g" });
@@ -178,10 +177,6 @@ export function Step5Review({ goals, formData, existingGoals, onResetManualTarge
   }
 
   const hasModifications = modifications.length > 0;
-
-  const handleResetToCalculated = () => {
-    onResetManualTargets?.();
-  };
 
   // Format height display
   const heightDisplay = formData.useImperial
@@ -205,36 +200,44 @@ export function Step5Review({ goals, formData, existingGoals, onResetManualTarge
         Here's your daily nutrition plan based on your inputs
       </Text>
 
-      {/* Manual modifications notice */}
+      {/* Previous custom targets notice - informs user these will be replaced */}
       {hasModifications && (
         <View style={styles.modificationNotice}>
           <View style={styles.modificationHeader}>
-            <Ionicons name="information-circle" size={20} color="#1A6872" />
-            <Text style={styles.modificationTitle}>Custom Targets Active</Text>
+            <View style={styles.modificationIconContainer}>
+              <Ionicons name="swap-horizontal" size={16} color="#666" />
+            </View>
+            <Text style={styles.modificationTitle}>Custom targets will update</Text>
           </View>
-          <Text style={styles.modificationDescription}>
-            You have manually adjusted some values. The calculated values based on your profile are:
-          </Text>
-          <View style={styles.modificationList}>
-            {modifications.map((mod, index) => (
-              <View key={mod.label} style={styles.modificationItem}>
-                <Text style={styles.modificationLabel}>{mod.label}:</Text>
-                <Text style={styles.modificationValues}>
-                  <Text style={styles.calculatedValue}>{mod.calculated}{mod.unit}</Text>
-                  <Text style={styles.modificationArrow}> → </Text>
-                  <Text style={styles.manualValue}>{mod.manual}{mod.unit}</Text>
-                </Text>
+          {modifications.map((mod, index) => {
+            const iconConfig = {
+              Calories: { icon: icons.fire, color: "#FF6B35" },
+              Protein: { icon: icons.drumstickBite, color: "#4A90D9" },
+              Fat: { icon: icons.droplet, color: "#F5A623" },
+              Carbs: { icon: icons.wheatAwn, color: "#9B6B9E" },
+            }[mod.label] || { icon: icons.fire, color: "#666" };
+
+            return (
+              <View
+                key={mod.label}
+                style={[
+                  styles.modificationItem,
+                  index < modifications.length - 1 && styles.modificationItemBorder
+                ]}
+              >
+                <View style={styles.modificationLabelRow}>
+                  <FontAwesomeIcon icon={iconConfig.icon} size={14} color={iconConfig.color} />
+                  <Text style={styles.modificationLabel}>{mod.label}</Text>
+                </View>
+                <View style={styles.modificationValuesRow}>
+                  <Text style={styles.oldValue}>{mod.manual}</Text>
+                  <Ionicons name="arrow-forward" size={12} color="#ccc" style={styles.modificationArrowIcon} />
+                  <Text style={styles.newValue}>{mod.calculated}</Text>
+                  <Text style={styles.modificationUnit}>{mod.unit}</Text>
+                </View>
               </View>
-            ))}
-          </View>
-          <TouchableOpacity
-            style={styles.resetToCalculatedButton}
-            onPress={handleResetToCalculated}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="refresh" size={16} color="#1A6872" />
-            <Text style={styles.resetToCalculatedText}>Reset to Calculated Values</Text>
-          </TouchableOpacity>
+            );
+          })}
         </View>
       )}
 
@@ -572,73 +575,80 @@ const styles = StyleSheet.create({
     color: "#1A6872",
   },
   modificationNotice: {
-    backgroundColor: "#E0F2F1",
-    borderRadius: 12,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
     padding: 16,
     marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   modificationHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
+    gap: 10,
+    marginBottom: 14,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  modificationIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "#f5f5f5",
+    alignItems: "center",
+    justifyContent: "center",
   },
   modificationTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
-    color: "#1A6872",
-  },
-  modificationDescription: {
-    fontSize: 13,
-    color: "#2A8A8A",
-    lineHeight: 18,
-    marginBottom: 12,
-  },
-  modificationList: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
+    color: "#333",
+    letterSpacing: -0.2,
   },
   modificationItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 4,
+    paddingVertical: 10,
   },
-  modificationLabel: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#1A6872",
+  modificationItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#f5f5f5",
   },
-  modificationValues: {
-    fontSize: 13,
-  },
-  calculatedValue: {
-    color: "#6B9E9E",
-    textDecorationLine: "line-through",
-  },
-  modificationArrow: {
-    color: "#1A6872",
-  },
-  manualValue: {
-    color: "#1A6872",
-    fontWeight: "600",
-  },
-  resetToCalculatedButton: {
+  modificationLabelRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: "#B2DFDB",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    gap: 8,
   },
-  resetToCalculatedText: {
+  modificationLabel: {
     fontSize: 14,
+    fontWeight: "500",
+    color: "#666",
+  },
+  modificationValuesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  oldValue: {
+    fontSize: 14,
+    color: "#aaa",
+    textDecorationLine: "line-through",
+  },
+  modificationArrowIcon: {
+    marginHorizontal: 6,
+  },
+  newValue: {
+    fontSize: 15,
     fontWeight: "600",
-    color: "#1A6872",
+    color: "#333",
+  },
+  modificationUnit: {
+    fontSize: 12,
+    color: "#999",
+    marginLeft: 2,
   },
   explanationPopupOverlay: {
     flex: 1,

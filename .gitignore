@@ -51,7 +51,7 @@ supabase/.temp/
 /migrations
 
 /.claude
-claude.md
+CLAUDE.md
 
 /supabase
 

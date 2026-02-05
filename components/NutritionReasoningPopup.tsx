@@ -1314,8 +1314,10 @@ export function NutritionReasoningPopup({
                 >
                   {/* Item Header */}
                   <View style={styles.itemHeader}>
-                    <View style={styles.itemLabelRow}>
-                      <Text style={styles.itemLabel}>{item.label}</Text>
+                    <Text style={styles.itemLabel} numberOfLines={2}>
+                      {item.label}
+                    </Text>
+                    <View style={styles.headerBadges}>
                       {/* Quantity Badge */}
                       <TouchableOpacity
                         style={styles.quantityBadge}
@@ -1337,8 +1339,6 @@ export function NutritionReasoningPopup({
                           style={{ marginLeft: 3 }}
                         />
                       </TouchableOpacity>
-                    </View>
-                    <View>
                       <TouchableOpacity
                         onPress={() => {
                           Haptics.impactAsync(
@@ -1951,20 +1951,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  itemLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    marginRight: 12,
-    gap: 8,
-  },
   itemLabel: {
     fontSize: 19,
     fontFamily: "System",
     fontWeight: "700",
     color: "#1a1a1a",
+    flex: 1,
     flexShrink: 1,
+    marginRight: 12,
     lineHeight: 26,
+  },
+  headerBadges: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 0,
+    gap: 8,
   },
   quantityBadge: {
     flexDirection: "row",

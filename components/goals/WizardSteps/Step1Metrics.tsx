@@ -239,6 +239,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
                 placeholderTextColor="#bbb"
                 maxLength={5}
               />
+              <Text style={styles.inputUnit}>cm</Text>
             </View>
           )}
         </View>
@@ -299,6 +300,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
                 placeholderTextColor="#bbb"
                 maxLength={5}
               />
+              <Text style={styles.inputUnit}>lbs</Text>
             </View>
           ) : (
             <View style={styles.inputRow}>
@@ -313,6 +315,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
                 placeholderTextColor="#bbb"
                 maxLength={5}
               />
+              <Text style={styles.inputUnit}>kg</Text>
             </View>
           )}
         </View>

@@ -63,7 +63,6 @@ export interface WizardFormData {
   heightInches: string;
   weightKg: string;
   weightLbs: string;
-  bodyFatPercentage: string;
   activityLevel: ActivityLevel | null;
   goalType: GoalType | null;
   proteinPreference: ProteinPreference;
@@ -79,7 +78,6 @@ const initialFormData: WizardFormData = {
   heightInches: '',
   weightKg: '',
   weightLbs: '',
-  bodyFatPercentage: '',
   activityLevel: null,
   goalType: null,
   proteinPreference: 'standard',
@@ -111,7 +109,6 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
           heightInches: Math.round((existingGoals.heightCm % 30.48) / 2.54).toString(),
           weightKg: existingGoals.weightKg.toString(),
           weightLbs: Math.round(existingGoals.weightKg * 2.20462).toString(),
-          bodyFatPercentage: existingGoals.bodyFatPercentage?.toString() || '',
           activityLevel: existingGoals.activityLevel,
           goalType: existingGoals.goalType,
           proteinPreference: existingGoals.proteinPreference || 'standard',
@@ -246,9 +243,6 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
       age: parseInt(formData.age, 10),
       heightCm,
       weightKg,
-      bodyFatPercentage: formData.bodyFatPercentage
-        ? parseFloat(formData.bodyFatPercentage)
-        : null,
       activityLevel: formData.activityLevel!,
       goalType: formData.goalType!,
       proteinPreference: formData.proteinPreference,
@@ -291,9 +285,6 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
       age: parseInt(formData.age, 10),
       heightCm,
       weightKg,
-      bodyFatPercentage: formData.bodyFatPercentage
-        ? parseFloat(formData.bodyFatPercentage)
-        : null,
       activityLevel: formData.activityLevel,
       goalType: formData.goalType,
       proteinPreference: formData.proteinPreference,

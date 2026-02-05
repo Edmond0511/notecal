@@ -44,21 +44,13 @@ const MIN_CALORIES: Record<Sex, number> = {
 
 /**
  * Calculate Basal Metabolic Rate using Mifflin-St Jeor equation
- * If body fat percentage is provided, uses Katch-McArdle formula instead
  */
 export function calculateBMR(
   sex: Sex,
   weightKg: number,
   heightCm: number,
-  age: number,
-  bodyFatPct?: number | null
+  age: number
 ): number {
-  // Use Katch-McArdle formula if body fat percentage is provided
-  if (bodyFatPct !== null && bodyFatPct !== undefined) {
-    const leanBodyMass = weightKg * (1 - bodyFatPct / 100);
-    return Math.round(370 + 21.6 * leanBodyMass);
-  }
-
   // Mifflin-St Jeor equation
   const baseBMR = 10 * weightKg + 6.25 * heightCm - 5 * age;
 
@@ -148,7 +140,6 @@ export function calculateGoals(input: UserGoalsInput): UserGoals {
     age,
     heightCm,
     weightKg,
-    bodyFatPercentage,
     activityLevel,
     goalType,
     proteinPreference = 'standard',
@@ -156,7 +147,7 @@ export function calculateGoals(input: UserGoalsInput): UserGoals {
   } = input;
 
   // Step 1: Calculate BMR
-  const bmr = calculateBMR(sex, weightKg, heightCm, age, bodyFatPercentage);
+  const bmr = calculateBMR(sex, weightKg, heightCm, age);
 
   // Step 2: Calculate TDEE
   const tdee = calculateTDEE(bmr, activityLevel);

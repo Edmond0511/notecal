@@ -225,32 +225,6 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
         )}
       </View>
 
-      {/* Body Fat (Optional) */}
-      <View style={styles.fieldContainer}>
-        <View style={styles.labelRow}>
-          <Text style={styles.fieldLabel}>Body Fat %</Text>
-          <Text style={styles.optionalLabel}>Optional</Text>
-        </View>
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            value={formData.bodyFatPercentage}
-            onChangeText={(text) =>
-              updateFormData({
-                bodyFatPercentage: text.replace(/[^0-9.]/g, ""),
-              })
-            }
-            keyboardType="decimal-pad"
-            placeholder="20"
-            placeholderTextColor="#aaa"
-            maxLength={4}
-          />
-          <Text style={styles.inputUnit}>%</Text>
-        </View>
-        <Text style={styles.fieldHint}>
-          Adding body fat % enables more accurate calculations
-        </Text>
-      </View>
     </View>
   );
 }
@@ -303,20 +277,10 @@ const styles = StyleSheet.create({
   fieldContainer: {
     marginBottom: 20,
   },
-  labelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   fieldLabel: {
     fontSize: 14,
     fontWeight: "600",
     color: "#333",
-    marginBottom: 8,
-  },
-  optionalLabel: {
-    fontSize: 12,
-    color: "#888",
     marginBottom: 8,
   },
   sexContainer: {
@@ -367,11 +331,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     minWidth: 30,
-  },
-  fieldHint: {
-    fontSize: 12,
-    color: "#888",
-    marginTop: 6,
-    fontStyle: "italic",
   },
 });

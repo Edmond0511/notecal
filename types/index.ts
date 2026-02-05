@@ -100,7 +100,6 @@ export interface UserGoalsInput {
   age: number;
   heightCm: number;
   weightKg: number;
-  bodyFatPercentage?: number | null;
   activityLevel: ActivityLevel;
   goalType: GoalType;
   proteinPreference?: ProteinPreference;

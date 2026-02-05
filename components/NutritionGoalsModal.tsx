@@ -346,7 +346,6 @@ export function NutritionGoalsModal({
           age: 30,
           heightCm: 175,
           weightKg: 70,
-          bodyFatPercentage: null,
           activityLevel: "moderate" as const,
           goalType: "maintain" as const,
           proteinPreference: "standard" as const,

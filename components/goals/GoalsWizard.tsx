@@ -67,7 +67,9 @@ export interface WizardFormData {
   goalType: GoalType | null;
   proteinPreference: ProteinPreference;
   carbPreference: CarbPreference;
-  useImperial: boolean;
+  useImperial: boolean; // Legacy - kept for compatibility
+  heightUseImperial: boolean;
+  weightUseImperial: boolean;
 }
 
 const initialFormData: WizardFormData = {
@@ -83,6 +85,8 @@ const initialFormData: WizardFormData = {
   proteinPreference: 'standard',
   carbPreference: 'standard',
   useImperial: false,
+  heightUseImperial: false,
+  weightUseImperial: false,
 };
 
 export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProps) {
@@ -114,11 +118,16 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
           proteinPreference: existingGoals.proteinPreference || 'standard',
           carbPreference: existingGoals.carbPreference || 'standard',
           useImperial: isImperial,
+          heightUseImperial: isImperial,
+          weightUseImperial: isImperial,
         });
       } else {
+        const isImperial = preferredUnits === 'imperial';
         setFormData({
           ...initialFormData,
-          useImperial: preferredUnits === 'imperial',
+          useImperial: isImperial,
+          heightUseImperial: isImperial,
+          weightUseImperial: isImperial,
         });
       }
       setCurrentStep(1);
@@ -179,21 +188,15 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
 
   const canProceed = (): boolean => {
     switch (currentStep) {
-      case 1:
-        if (formData.useImperial) {
-          return !!(
-            formData.sex &&
-            formData.age &&
-            formData.heightFeet &&
-            formData.weightLbs
-          );
-        }
-        return !!(
-          formData.sex &&
-          formData.age &&
-          formData.heightCm &&
-          formData.weightKg
-        );
+      case 1: {
+        const hasHeight = formData.heightUseImperial
+          ? !!formData.heightFeet
+          : !!formData.heightCm;
+        const hasWeight = formData.weightUseImperial
+          ? !!formData.weightLbs
+          : !!formData.weightKg;
+        return !!(formData.sex && formData.age && hasHeight && hasWeight);
+      }
       case 2:
         return !!formData.activityLevel;
       case 3:
@@ -228,13 +231,17 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
     let heightCm: number;
     let weightKg: number;
 
-    if (formData.useImperial) {
+    if (formData.heightUseImperial) {
       const feet = parseFloat(formData.heightFeet) || 0;
       const inches = parseFloat(formData.heightInches) || 0;
       heightCm = Math.round((feet * 12 + inches) * 2.54 * 10) / 10;
-      weightKg = Math.round((parseFloat(formData.weightLbs) || 0) * 0.453592 * 10) / 10;
     } else {
       heightCm = parseFloat(formData.heightCm) || 0;
+    }
+
+    if (formData.weightUseImperial) {
+      weightKg = Math.round((parseFloat(formData.weightLbs) || 0) * 0.453592 * 10) / 10;
+    } else {
       weightKg = parseFloat(formData.weightKg) || 0;
     }
 
@@ -255,7 +262,8 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
     // so the new calculated values always take precedence.
 
     setGoals(calculatedGoals);
-    setPreferredUnits(formData.useImperial ? 'imperial' : 'metric');
+    // Use weight unit preference as the "dominant" preference for display elsewhere
+    setPreferredUnits(formData.weightUseImperial ? 'imperial' : 'metric');
     onClose();
   };
 
@@ -265,13 +273,17 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
     let heightCm: number;
     let weightKg: number;
 
-    if (formData.useImperial) {
+    if (formData.heightUseImperial) {
       const feet = parseFloat(formData.heightFeet) || 0;
       const inches = parseFloat(formData.heightInches) || 0;
       heightCm = Math.round((feet * 12 + inches) * 2.54 * 10) / 10;
-      weightKg = Math.round((parseFloat(formData.weightLbs) || 0) * 0.453592 * 10) / 10;
     } else {
       heightCm = parseFloat(formData.heightCm) || 0;
+    }
+
+    if (formData.weightUseImperial) {
+      weightKg = Math.round((parseFloat(formData.weightLbs) || 0) * 0.453592 * 10) / 10;
+    } else {
       weightKg = parseFloat(formData.weightKg) || 0;
     }
 

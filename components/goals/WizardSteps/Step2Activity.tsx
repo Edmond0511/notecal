@@ -19,7 +19,7 @@ const activityLevels: ActivityLevel[] = [
 ];
 
 const activityIcons: Record<ActivityLevel, keyof typeof Ionicons.glyphMap> = {
-  sedentary: "desktop-outline",
+  sedentary: "body-outline",
   light: "walk-outline",
   moderate: "bicycle-outline",
   active: "fitness-outline",
@@ -76,15 +76,18 @@ export function Step2Activity({
                 >
                   {title}
                 </Text>
-                <Text
-                  style={[
-                    styles.optionDescription,
-                    isSelected && styles.optionDescriptionSelected,
-                  ]}
-                >
+                <Text style={styles.optionDescription}>
                   {description}
                 </Text>
               </View>
+              {isSelected && (
+                <Ionicons
+                  name="checkmark-circle"
+                  size={22}
+                  color="#1A6872"
+                  style={styles.checkIcon}
+                />
+              )}
             </TouchableOpacity>
           );
         })}
@@ -124,6 +127,11 @@ const styles = StyleSheet.create({
   optionCardSelected: {
     backgroundColor: "#E0F2F1",
     borderColor: "#1A6872",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   iconContainer: {
     width: 48,
@@ -153,7 +161,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#666",
   },
-  optionDescriptionSelected: {
-    color: "#1A6872",
+  checkIcon: {
+    marginLeft: 8,
   },
 });

@@ -179,12 +179,12 @@ export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps
   const hasModifications = modifications.length > 0;
 
   // Format height display
-  const heightDisplay = formData.useImperial
+  const heightDisplay = formData.heightUseImperial
     ? `${formData.heightFeet}'${formData.heightInches}"`
     : `${goals.heightCm} cm`;
 
   // Format weight display
-  const weightDisplay = formData.useImperial
+  const weightDisplay = formData.weightUseImperial
     ? `${formData.weightLbs} lbs`
     : `${goals.weightKg} kg`;
 

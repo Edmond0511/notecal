@@ -144,11 +144,16 @@ const styles = StyleSheet.create({
   },
   optionCardSelected: {
     backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -170,7 +175,13 @@ const styles = StyleSheet.create({
   weeklyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
     gap: 4,
+    marginTop: 2,
   },
   weeklyText: {
     fontSize: 11,

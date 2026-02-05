@@ -217,7 +217,7 @@ export function getActivityLevelDescription(level: ActivityLevel): {
   const descriptions: Record<ActivityLevel, { title: string; description: string }> = {
     sedentary: {
       title: 'Sedentary',
-      description: 'Desk job with little or no exercise',
+      description: 'Little to no regular exercise',
     },
     light: {
       title: 'Lightly Active',

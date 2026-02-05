@@ -9,6 +9,9 @@ import React, {
   useState,
 } from "react";
 import {
+  Dimensions,
+  Keyboard,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -473,6 +476,7 @@ export function NotesEditor({
 }: NotesEditorProps) {
   const [documentText, setDocumentText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
@@ -487,6 +491,8 @@ export function NotesEditor({
   const [selection, setSelection] = useState<{ start: number; end: number } | undefined>(undefined);
   // Flag to prevent recursive text change handling during transforms
   const isTransformingRef = useRef<boolean>(false);
+  // Keyboard height for dynamic bottom padding
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Handle TextInput scroll to sync indicator positions
   const handleScroll = useCallback((event: any) => {
@@ -494,15 +500,14 @@ export function NotesEditor({
   }, []);
 
 
-  // Handle text layout - extract y positions for lines starting with "-" or "—"
+  // Handle text layout - extract y positions for indicator positioning
   const handleTextLayout = useCallback(
     (event: any) => {
       const { lines } = event.nativeEvent;
       if (!lines?.length) return;
 
-      // Group y-positions by text prefix (first 20 chars) to handle duplicates
+      // Group y-positions by text prefix for indicator positioning
       const yMap = new Map<string, number[]>();
-
       for (const line of lines) {
         const text = (line.text || "").trim();
         if (text.startsWith("-") || text.startsWith(EM_DASH)) {
@@ -512,9 +517,8 @@ export function NotesEditor({
           yMap.set(prefix, positions);
         }
       }
-
       setEntryYMap(yMap);
-      setMeasuredText(documentText); // Mark these measurements as current
+      setMeasuredText(documentText);
     },
     [documentText],
   );
@@ -535,6 +539,65 @@ export function NotesEditor({
       }
     };
   }, []);
+
+  // Keyboard listeners for dynamic bottom padding
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showListener = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+
+    const hideListener = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, []);
+
+  // Handle selection changes - no-op, scroll handled in handleTextChange
+  const handleSelectionChange = useCallback((_event: any) => {
+    // Selection tracking not needed - cursor position passed directly to scroll function
+  }, []);
+
+  // Calculate Y position of cursor based on character position
+  const getCursorLineY = useCallback((cursorPos: number, text: string): number => {
+    const textBeforeCursor = text.substring(0, cursorPos);
+    const lineIndex = textBeforeCursor.split('\n').length - 1;
+    return lineIndex * LINE_HEIGHT + TEXT_INPUT_PADDING_TOP;
+  }, []);
+
+  // Scroll to keep caret visible at specified position
+  const scrollToKeepCaretVisible = useCallback((cursorPos: number, text: string) => {
+    if (keyboardHeight === 0 || !scrollViewRef.current) return;
+
+    // Get cursor Y from the provided cursor position
+    const cursorY = getCursorLineY(cursorPos, text);
+
+    // Calculate visible area above keyboard
+    const screenHeight = Dimensions.get('window').height;
+    const HEADER_HEIGHT = 100;
+    const BOTTOM_BAR_HEIGHT = 88;
+    const visibleHeight = screenHeight - HEADER_HEIGHT - keyboardHeight - BOTTOM_BAR_HEIGHT;
+
+    const visibleTop = scrollOffset;
+    const visibleBottom = scrollOffset + visibleHeight;
+    const SCROLL_MARGIN = LINE_HEIGHT;
+
+    // Only scroll if cursor is outside visible area
+    if (cursorY + LINE_HEIGHT > visibleBottom - SCROLL_MARGIN) {
+      // Cursor below visible area - scroll down
+      const targetScroll = cursorY - visibleHeight + LINE_HEIGHT + SCROLL_MARGIN;
+      scrollViewRef.current.scrollTo({ y: Math.max(0, targetScroll), animated: true });
+    } else if (cursorY < visibleTop + SCROLL_MARGIN) {
+      // Cursor above visible area - scroll up
+      scrollViewRef.current.scrollTo({ y: Math.max(0, cursorY - SCROLL_MARGIN), animated: true });
+    }
+  }, [keyboardHeight, scrollOffset, getCursorLineY]);
 
   // Parse document text to find lines that start with "-" or "—"
   const parseDocumentForFoodEntries = useCallback((text: string): string[] => {
@@ -624,17 +687,27 @@ export function NotesEditor({
         previousTextRef.current = result.transformedText;
         onDocumentTextChange(result.transformedText);
 
-        // Clear selection control after render to return to natural cursor behavior
+        // Clear selection control after render and scroll if newline was added
         requestAnimationFrame(() => {
           setTimeout(() => {
             setSelection(undefined);
             isTransformingRef.current = false;
+            // Scroll after transform (often includes newline insertion)
+            if (diff.type === 'insert' && diff.insertedText.includes('\n')) {
+              scrollToKeepCaretVisible(result.newCursor, result.transformedText);
+            }
           }, 50);
         });
       } else {
         setDocumentText(newText);
         previousTextRef.current = newText;
         onDocumentTextChange(newText);
+
+        // Scroll if newline was inserted - cursor is after the inserted newline
+        if (diff.type === 'insert' && diff.insertedText.includes('\n')) {
+          const newCursorPos = diff.position + diff.insertedText.length;
+          requestAnimationFrame(() => scrollToKeepCaretVisible(newCursorPos, newText));
+        }
       }
 
       // Clear previous timeout to properly debounce
@@ -665,7 +738,7 @@ export function NotesEditor({
         processDocumentChanges(finalText);
       }, delay);
     },
-    [processDocumentChanges, onDocumentTextChange],
+    [processDocumentChanges, onDocumentTextChange, scrollToKeepCaretVisible],
   );
 
   // Handle indicator tap
@@ -733,6 +806,13 @@ export function NotesEditor({
     return indicators;
   }, [documentText, entries, entryYMap]);
 
+  // Dynamic scroll content style with keyboard-based bottom padding
+  // This allows native TextInput to keep the caret visible automatically
+  const scrollContentStyle = useMemo(() => ({
+    flexGrow: 1,
+    paddingBottom: keyboardHeight > 0 ? keyboardHeight : 0,
+  }), [keyboardHeight]);
+
   return (
     <View style={styles.container}>
       {/* Hidden Text component for reliable layout measurement */}
@@ -743,10 +823,13 @@ export function NotesEditor({
 
       {/* ScrollView wrapper enables keyboard dismiss on drag */}
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={scrollContentStyle}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
+        onScroll={handleScroll}
       >
         {/* Document editor - full screen */}
         <TextInput
@@ -754,7 +837,7 @@ export function NotesEditor({
           style={styles.documentInput}
           value={documentText}
           onChangeText={handleTextChange}
-          onScroll={handleScroll}
+          onSelectionChange={handleSelectionChange}
           selection={selection}
           placeholder={
             entries.length === 0

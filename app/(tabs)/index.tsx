@@ -485,6 +485,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 16,
     backgroundColor: "transparent",
+    
   },
   addSavedButton: {
     marginRight: 12,

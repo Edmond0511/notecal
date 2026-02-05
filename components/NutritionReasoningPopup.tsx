@@ -305,7 +305,7 @@ function ConfidencePopup({
               {confidencePercent}%
             </Text>
           </View>
-          <Text style={styles.popupTitle} numberOfLines={1}>
+          <Text style={styles.popupTitle}>
             {getConfidenceLevel()} Confidence
           </Text>
         </View>
@@ -479,7 +479,7 @@ function SomethingOffPopup({
           <View style={styles.somethingOffContent}>
             {/* Item Label */}
             <View style={styles.somethingOffItemRow}>
-              <Text style={styles.somethingOffItemLabel} numberOfLines={2}>
+              <Text style={styles.somethingOffItemLabel} numberOfLines={3}>
                 {item.label}
               </Text>
             </View>
@@ -1314,10 +1314,11 @@ export function NutritionReasoningPopup({
                 >
                   {/* Item Header */}
                   <View style={styles.itemHeader}>
-                    <Text style={styles.itemLabel} numberOfLines={2}>
-                      {item.label}
-                    </Text>
-                    <View style={styles.headerBadges}>
+                    <View style={styles.itemLabelRow}>
+                      <Text style={styles.itemLabel} numberOfLines={3}>
+                        {item.label}
+                      </Text>
+                      <View style={styles.headerBadges}>
                       {/* Quantity Badge */}
                       <TouchableOpacity
                         style={styles.quantityBadge}
@@ -1388,6 +1389,7 @@ export function NutritionReasoningPopup({
                           />
                         </View>
                       </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
 
@@ -1946,26 +1948,28 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   itemHeader: {
+    marginBottom: 16,
+  },
+  itemLabelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+    alignItems: "flex-start",
+    gap: 12,
   },
   itemLabel: {
     fontSize: 19,
     fontFamily: "System",
     fontWeight: "700",
     color: "#1a1a1a",
-    flex: 1,
-    flexShrink: 1,
-    marginRight: 12,
     lineHeight: 26,
+    flex: 1,
   },
   headerBadges: {
     flexDirection: "row",
     alignItems: "center",
     flexShrink: 0,
     gap: 8,
+    marginTop: 2,
   },
   quantityBadge: {
     flexDirection: "row",

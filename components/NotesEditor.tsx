@@ -493,10 +493,34 @@ export function NotesEditor({
   const isTransformingRef = useRef<boolean>(false);
   // Keyboard height for dynamic bottom padding
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  // Track when user is actively scrolling to suppress auto-scroll
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const scrollCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Handle TextInput scroll to sync indicator positions
   const handleScroll = useCallback((event: any) => {
     setScrollOffset(event.nativeEvent.contentOffset.y);
+  }, []);
+
+  // Scroll gesture handlers - track when user is manually scrolling
+  const handleScrollBeginDrag = useCallback(() => {
+    setIsUserScrolling(true);
+    if (scrollCooldownRef.current) {
+      clearTimeout(scrollCooldownRef.current);
+    }
+  }, []);
+
+  const handleScrollEndDrag = useCallback(() => {
+    // Add cooldown before re-enabling auto-scroll
+    scrollCooldownRef.current = setTimeout(() => {
+      setIsUserScrolling(false);
+    }, 500);
+  }, []);
+
+  const handleMomentumScrollEnd = useCallback(() => {
+    scrollCooldownRef.current = setTimeout(() => {
+      setIsUserScrolling(false);
+    }, 500);
   }, []);
 
 
@@ -531,11 +555,14 @@ export function NotesEditor({
     setMeasuredText(""); // Clear so indicators wait for fresh measurements
   }, [initialDocumentText]);
 
-  // Cleanup debounce timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
+      }
+      if (scrollCooldownRef.current) {
+        clearTimeout(scrollCooldownRef.current);
       }
     };
   }, []);
@@ -573,7 +600,8 @@ export function NotesEditor({
 
   // Scroll to keep caret visible at specified position
   const scrollToKeepCaretVisible = useCallback((cursorPos: number, text: string) => {
-    if (keyboardHeight === 0 || !scrollViewRef.current) return;
+    // Skip if user is actively scrolling or keyboard is not open
+    if (isUserScrolling || keyboardHeight === 0 || !scrollViewRef.current) return;
 
     // Get cursor Y from the provided cursor position
     const cursorY = getCursorLineY(cursorPos, text);
@@ -597,7 +625,7 @@ export function NotesEditor({
       // Cursor above visible area - scroll up
       scrollViewRef.current.scrollTo({ y: Math.max(0, cursorY - SCROLL_MARGIN), animated: true });
     }
-  }, [keyboardHeight, scrollOffset, getCursorLineY]);
+  }, [isUserScrolling, keyboardHeight, scrollOffset, getCursorLineY]);
 
   // Parse document text to find lines that start with "-" or "—"
   const parseDocumentForFoodEntries = useCallback((text: string): string[] => {
@@ -830,6 +858,9 @@ export function NotesEditor({
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
         onScroll={handleScroll}
+        onScrollBeginDrag={handleScrollBeginDrag}
+        onScrollEndDrag={handleScrollEndDrag}
+        onMomentumScrollEnd={handleMomentumScrollEnd}
       >
         {/* Document editor - full screen */}
         <TextInput

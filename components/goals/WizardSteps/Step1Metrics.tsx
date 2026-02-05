@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React from "react";
 import {
+  Keyboard,
   StyleSheet,
   Text,
   TextInput,
@@ -17,12 +18,14 @@ interface Step1MetricsProps {
 }
 
 export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
-  const toggleUnits = () => {
+  const toggleUnits = (useImperial: boolean) => {
+    Keyboard.dismiss();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    updateFormData({ useImperial: !formData.useImperial });
+    updateFormData({ useImperial });
   };
 
   const selectSex = (sex: Sex) => {
+    Keyboard.dismiss();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     updateFormData({ sex });
   };
@@ -41,7 +44,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
             styles.unitOption,
             !formData.useImperial && styles.unitOptionActive,
           ]}
-          onPress={() => updateFormData({ useImperial: false })}
+          onPress={() => toggleUnits(false)}
         >
           <Text
             style={[
@@ -57,7 +60,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
             styles.unitOption,
             formData.useImperial && styles.unitOptionActive,
           ]}
-          onPress={() => updateFormData({ useImperial: true })}
+          onPress={() => toggleUnits(true)}
         >
           <Text
             style={[

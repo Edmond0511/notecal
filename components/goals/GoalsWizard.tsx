@@ -427,6 +427,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
                 onScroll={handleScroll}
                 scrollEventThrottle={16}
                 keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="interactive"
                 bounces={true}
               >
                 <Animated.View entering={FadeInDown.delay(100).duration(400)}>

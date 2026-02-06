@@ -756,6 +756,13 @@ export function NotesEditor({
         }
       }
 
+      // Instant trigger: all food entries removed from document
+      const currentFoodLines = parseDocumentForFoodEntries(finalText);
+      if (currentFoodLines.length === 0 && entries.length > 0) {
+        processDocumentChanges(finalText);
+        return;
+      }
+
       // Adaptive debounce based on entry completeness
       const mostRecentEntry = findMostRecentEntryLine(finalText);
       const delay = mostRecentEntry
@@ -766,7 +773,7 @@ export function NotesEditor({
         processDocumentChanges(finalText);
       }, delay);
     },
-    [processDocumentChanges, onDocumentTextChange, scrollToKeepCaretVisible],
+    [processDocumentChanges, onDocumentTextChange, scrollToKeepCaretVisible, parseDocumentForFoodEntries, entries],
   );
 
   // Handle indicator tap
@@ -870,11 +877,7 @@ export function NotesEditor({
           onChangeText={handleTextChange}
           onSelectionChange={handleSelectionChange}
           selection={selection}
-          placeholder={
-            entries.length === 0
-              ? "Enter food items starting with '-'"
-              : "Continue writing..."
-          }
+          placeholder="Enter food items starting with '-'"
           placeholderTextColor="#ccc"
           multiline
           autoFocus

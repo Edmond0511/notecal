@@ -103,9 +103,7 @@ export default function HomeScreen() {
 
   // Save current document before navigation
   const saveCurrentDocument = () => {
-    if (currentDocumentText.trim()) {
-      saveDocument(currentDate, currentDocumentText.trim());
-    }
+    saveDocument(currentDate, currentDocumentText.trim());
   };
 
   const navigateDate = (direction: "prev" | "next") => {

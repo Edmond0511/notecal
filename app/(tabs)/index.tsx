@@ -142,6 +142,7 @@ export default function HomeScreen() {
   // Handle document text changes from NotesEditor
   const handleDocumentTextChange = (text: string) => {
     setCurrentDocumentText(text);
+    saveDocument(currentDate, text);
   };
 
   // Handle saved entry selection

@@ -1,5 +1,4 @@
 import { Sex } from "@/types";
-import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { faMars, faVenus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -84,14 +83,6 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
             >
               Male
             </Text>
-            {formData.sex === "male" && (
-              <Ionicons
-                name="checkmark-circle"
-                size={20}
-                color="#1A6872"
-                style={styles.checkIcon}
-              />
-            )}
           </TouchableOpacity>
           <TouchableOpacity
             style={[
@@ -121,14 +112,6 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
             >
               Female
             </Text>
-            {formData.sex === "female" && (
-              <Ionicons
-                name="checkmark-circle"
-                size={20}
-                color="#1A6872"
-                style={styles.checkIcon}
-              />
-            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -401,9 +384,11 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   sexContainer: {
+    flexDirection: "row",
     gap: 12,
   },
   sexOption: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     padding: 14,
@@ -441,9 +426,6 @@ const styles = StyleSheet.create({
   },
   sexOptionTextActive: {
     color: "#1A6872",
-  },
-  checkIcon: {
-    marginLeft: 8,
   },
   inputRow: {
     flexDirection: "row",

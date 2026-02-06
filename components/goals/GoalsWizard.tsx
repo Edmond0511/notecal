@@ -482,7 +482,6 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
                   onPress={handleSave}
                 >
                   <Text style={styles.saveButtonText}>Save Goals</Text>
-                  <Ionicons name="checkmark" size={20} color="#fff" />
                 </TouchableOpacity>
               )}
             </View>

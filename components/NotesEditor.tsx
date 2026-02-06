@@ -9,6 +9,7 @@ import React, {
   useState,
 } from "react";
 import {
+  Animated,
   Dimensions,
   Keyboard,
   Platform,
@@ -434,7 +435,7 @@ const QueuedBadge = React.memo(() => (
 ));
 QueuedBadge.displayName = "QueuedBadge";
 
-// Memoized indicator row - only re-renders when entry data changes
+// Memoized indicator row with fade transitions between states
 const IndicatorRow = React.memo<{
   entry: Entry;
   yPosition: number;
@@ -444,6 +445,11 @@ const IndicatorRow = React.memo<{
 }>(
   ({ entry, yPosition, opacity, isOnline, onTap }) => {
     const handlePress = useCallback(() => onTap(entry), [entry, onTap]);
+    // displayedStatus controls which content is rendered, lagging behind
+    // entry.status during fade-out so the old content stays visible
+    const [displayedStatus, setDisplayedStatus] = useState(entry.status);
+    const prevEntryStatusRef = useRef(entry.status);
+    const contentOpacity = useRef(new Animated.Value(1)).current;
 
     // Calculate water amount from entry items
     const waterAmount = useMemo(() => {
@@ -453,20 +459,48 @@ const IndicatorRow = React.memo<{
     const hasCalories = entry.inlineKcal != null && entry.inlineKcal > 0;
     const hasWater = waterAmount > 0;
 
+    useEffect(() => {
+      if (prevEntryStatusRef.current === entry.status) return;
+      prevEntryStatusRef.current = entry.status;
+
+      const newStatus = entry.status;
+
+      // Cancel any in-progress animation before starting fade-out
+      contentOpacity.stopAnimation();
+
+      // Fade out old content (displayedStatus still shows old indicator)
+      Animated.timing(contentOpacity, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        // Only swap content and fade in if this animation wasn't interrupted
+        if (!finished) return;
+        setDisplayedStatus(newStatus);
+        Animated.timing(contentOpacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, [entry.status]);
+
     return (
       <View style={[styles.indicatorWrapper, { top: yPosition, opacity }]}>
-        {entry.status === "pending" ? (
-          isOnline ? <ThinkingIndicator /> : <QueuedBadge />
-        ) : entry.status === "ok" ? (
-          <>
-            {hasCalories && (
-              <CaloriesBadge kcal={entry.inlineKcal!} onPress={handlePress} />
-            )}
-            {hasWater && <WaterBadge amountL={waterAmount} />}
-          </>
-        ) : entry.status === "error" ? (
-          <ErrorBadge />
-        ) : null}
+        <Animated.View style={{ flexDirection: "row", alignItems: "center", opacity: contentOpacity }}>
+          {displayedStatus === "pending" ? (
+            isOnline ? <ThinkingIndicator /> : <QueuedBadge />
+          ) : displayedStatus === "ok" ? (
+            <>
+              {hasCalories && (
+                <CaloriesBadge kcal={entry.inlineKcal!} onPress={handlePress} />
+              )}
+              {hasWater && <WaterBadge amountL={waterAmount} />}
+            </>
+          ) : displayedStatus === "error" ? (
+            <ErrorBadge />
+          ) : null}
+        </Animated.View>
       </View>
     );
   },

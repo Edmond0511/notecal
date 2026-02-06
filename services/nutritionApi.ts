@@ -53,17 +53,31 @@ export async function resolveNutrition(
     }
 
     // Call the Supabase Edge Function
+    const requestBody = {
+      foodText: foodText.trim(),
+      userId
+    };
+
+    if (__DEV__) {
+      console.log('[nutritionApi] REQ:', JSON.stringify(requestBody));
+    }
+
     const { data, error } = await supabase.functions.invoke<NutritionResolveResponse>('nutrition-resolve', {
-      body: {
-        foodText: foodText.trim(),
-        userId
-      }
+      body: requestBody,
     });
+
+    if (__DEV__) {
+      if (error) {
+        console.log('[nutritionApi] ERR:', JSON.stringify({ message: error.message, status: (error as any).status, context: (error as any).context?.message }));
+      } else {
+        console.log('[nutritionApi] RES:', JSON.stringify({ items: data?.resolved?.length, totals: data?.totals }));
+      }
+    }
 
     if (error) {
       throw new NutritionApiError(
         error.message || 'Failed to resolve nutrition',
-        error.status
+        (error as any).status
       );
     }
 
@@ -83,6 +97,10 @@ export async function resolveNutrition(
     return data;
 
   } catch (error) {
+    if (__DEV__) {
+      console.log('[nutritionApi] CATCH:', error?.message, '| context:', (error as any)?.context?.message);
+    }
+
     if (error instanceof NutritionApiError) {
       throw error;
     }
@@ -392,20 +410,34 @@ export async function correctNutrition(
     }
 
     // Call the Supabase Edge Function with correction mode
+    const correctionBody = {
+      correctionMode: true,
+      foodText: item.label,
+      currentMacros: item.macros,
+      userFeedback: feedback.trim(),
+      userId
+    };
+
+    if (__DEV__) {
+      console.log('[nutritionApi] CORRECTION REQ:', JSON.stringify(correctionBody));
+    }
+
     const { data, error } = await supabase.functions.invoke<CorrectionResponse>('nutrition-resolve', {
-      body: {
-        correctionMode: true,
-        foodText: item.label,
-        currentMacros: item.macros,
-        userFeedback: feedback.trim(),
-        userId
-      }
+      body: correctionBody,
     });
+
+    if (__DEV__) {
+      if (error) {
+        console.log('[nutritionApi] CORRECTION ERR:', JSON.stringify({ message: error.message, status: (error as any).status, context: (error as any).context?.message }));
+      } else {
+        console.log('[nutritionApi] CORRECTION RES:', JSON.stringify({ kcal: data?.correctedMacros?.kcal, label: data?.correctedLabel }));
+      }
+    }
 
     if (error) {
       throw new NutritionApiError(
         error.message || 'Failed to correct nutrition',
-        error.status
+        (error as any).status
       );
     }
 

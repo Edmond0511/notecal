@@ -504,14 +504,14 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   totalsBar: {
-    flex: 1,
+    flexShrink: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-evenly",
     backgroundColor: "#ffffffee",
     paddingVertical: 14,
     paddingHorizontal: 8,
-    borderRadius: 28,
+    borderRadius: 26,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -523,11 +523,12 @@ const styles = StyleSheet.create({
   },
   totalItem: {
     flex: 1,
+    maxWidth: 64,
     alignItems: "center",
     paddingHorizontal: 4,
   },
   totalValue: {
-    fontSize: 17,
+    fontSize: 16,
     fontFamily: "System",
     fontWeight: "600",
     color: "#222",

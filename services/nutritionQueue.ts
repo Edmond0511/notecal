@@ -31,6 +31,12 @@ class NutritionQueue {
     return false;
   }
 
+  /** Check if an entryId is already queued or in-flight */
+  hasById(entryId: string): boolean {
+    if (this.queue.some((q) => q.entryId === entryId)) return true;
+    return this.active.has(entryId);
+  }
+
   /** Remove a queued item by entryId (no-op if already in-flight) */
   cancel(entryId: string) {
     this.queue = this.queue.filter((q) => q.entryId !== entryId);

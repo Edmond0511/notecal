@@ -379,6 +379,20 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     includeFontPadding: false,
   },
+  queuedBadge: {
+    backgroundColor: "#F5F5F5",
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 12,
+  },
+  queuedText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: "#9E9E9E",
+    fontFamily: "System",
+    fontWeight: "500",
+    includeFontPadding: false,
+  },
 });
 
 // Memoized calorie badge - only re-renders when kcal changes
@@ -412,14 +426,23 @@ const ErrorBadge = React.memo(() => (
 ));
 ErrorBadge.displayName = "ErrorBadge";
 
+// Static "queued" badge for offline pending entries
+const QueuedBadge = React.memo(() => (
+  <View style={styles.queuedBadge}>
+    <Text style={styles.queuedText}>queued</Text>
+  </View>
+));
+QueuedBadge.displayName = "QueuedBadge";
+
 // Memoized indicator row - only re-renders when entry data changes
 const IndicatorRow = React.memo<{
   entry: Entry;
   yPosition: number;
   opacity: number;
+  isOnline: boolean;
   onTap: (entry: Entry) => void;
 }>(
-  ({ entry, yPosition, opacity, onTap }) => {
+  ({ entry, yPosition, opacity, isOnline, onTap }) => {
     const handlePress = useCallback(() => onTap(entry), [entry, onTap]);
 
     // Calculate water amount from entry items
@@ -433,7 +456,7 @@ const IndicatorRow = React.memo<{
     return (
       <View style={[styles.indicatorWrapper, { top: yPosition, opacity }]}>
         {entry.status === "pending" ? (
-          <ThinkingIndicator />
+          isOnline ? <ThinkingIndicator /> : <QueuedBadge />
         ) : entry.status === "ok" ? (
           <>
             {hasCalories && (
@@ -453,7 +476,8 @@ const IndicatorRow = React.memo<{
     prev.entry.inlineKcal === next.entry.inlineKcal &&
     prev.entry.items === next.entry.items &&
     prev.yPosition === next.yPosition &&
-    prev.opacity === next.opacity,
+    prev.opacity === next.opacity &&
+    prev.isOnline === next.isOnline,
 );
 IndicatorRow.displayName = "IndicatorRow";
 
@@ -465,6 +489,7 @@ interface NotesEditorProps {
   onUpdateEntry?: (id: string, text: string) => Promise<void>;
   onDeleteEntry: (id: string) => void;
   currentDate?: string;
+  isOnline?: boolean;
 }
 
 export function NotesEditor({
@@ -473,6 +498,7 @@ export function NotesEditor({
   onDocumentTextChange,
   onAddEntry,
   onDeleteEntry,
+  isOnline = true,
 }: NotesEditorProps) {
   const [documentText, setDocumentText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
@@ -901,6 +927,7 @@ export function NotesEditor({
             entry={item.entry}
             yPosition={item.yPosition - scrollOffset}
             opacity={hasFreshMeasurements ? 1 : 0}
+            isOnline={isOnline}
             onTap={handleIndicatorTap}
           />
         ))}

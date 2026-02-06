@@ -1,5 +1,6 @@
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { offlineReconnectService } from '@/services/offlineReconnectService';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -27,6 +28,14 @@ function RootLayoutNav() {
       router.replace('/');
     }
   }, [isAuthenticated, isLoading, segments]);
+
+  // Start offline reconnect service after auth loading resolves
+  useEffect(() => {
+    if (!isLoading) {
+      offlineReconnectService.start();
+    }
+    return () => offlineReconnectService.stop();
+  }, [isLoading]);
 
   // Show loading screen while checking auth
   if (isLoading) {

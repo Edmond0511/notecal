@@ -117,143 +117,160 @@ export const useAppStore = create<AppState>()(
       return;
     }
 
-    // Check network + fetch user in parallel, then enqueue
-    Promise.all([
-      NetInfo.fetch(),
-      supabase.auth.getUser(),
-    ]).then(([netState, { data: { user } }]) => {
-      if (!netState.isConnected) return;
+    const entryId = Date.now().toString();
 
-      const entryId = Date.now().toString();
+    // Create entry with pending status immediately (for UI loading indicator)
+    const pendingEntry: Entry = {
+      id: entryId,
+      date: get().currentDate,
+      rawText,
+      inlineKcal: null,
+      status: 'pending',
+      items: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-      // Create entry with pending status immediately (for UI loading indicator)
-      const pendingEntry: Entry = {
-        id: entryId,
-        date: get().currentDate,
-        rawText,
-        inlineKcal: null,
-        status: 'pending',
-        items: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    // Add pending entry to state immediately — persists even if offline
+    set((state: AppState) => ({
+      entries: [...state.entries, pendingEntry],
+    }));
 
-      // Add pending entry to state immediately
-      set((state: AppState) => ({
-        entries: [...state.entries, pendingEntry],
-      }));
+    // Check network, then enqueue if online (offline entries drain on reconnect)
+    NetInfo.fetch().then((netState) => {
+      if (!netState.isConnected) {
+        console.log('[addEntry] Offline — entry saved as pending, will resolve on reconnect');
+        return;
+      }
 
-      // Enqueue the API call — queue handles concurrency (max 3)
-      nutritionQueue.enqueue({
-        entryId,
-        rawText,
-        textLine,
-        userId: user?.id,
-        onResolved: (nutritionData) => {
-          set((state: AppState) => ({
-            entries: state.entries.map((entry: Entry) =>
-              entry.id === entryId
-                ? {
-                    ...entry,
-                    inlineKcal: nutritionData.totals.kcal,
-                    status: (nutritionData as any).error ? 'error' as const : 'ok' as const,
-                    items: assignItemIds(nutritionData.resolved, entryId),
-                    updatedAt: new Date(),
-                  }
-                : entry
-            ),
-          }));
-        },
-        onError: (error) => {
-          console.error('Error resolving entry:', error);
-          set((state: AppState) => ({
-            entries: state.entries.map((entry: Entry) =>
-              entry.id === entryId
-                ? {
-                    ...entry,
-                    status: 'error' as const,
-                    updatedAt: new Date(),
-                  }
-                : entry
-            ),
-          }));
-        },
-        isEntryDeleted: () => {
-          return !get().entries.some((e: Entry) => e.id === entryId);
-        },
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        // Guard: entry may have been deleted while awaiting network/auth
+        if (!get().entries.some((e: Entry) => e.id === entryId)) return;
+
+        // Enqueue the API call — queue handles concurrency (max 3)
+        nutritionQueue.enqueue({
+          entryId,
+          rawText,
+          textLine,
+          userId: user?.id,
+          onResolved: (nutritionData) => {
+            set((state: AppState) => ({
+              entries: state.entries.map((entry: Entry) =>
+                entry.id === entryId
+                  ? {
+                      ...entry,
+                      inlineKcal: nutritionData.totals.kcal,
+                      status: (nutritionData as any).error ? 'error' as const : 'ok' as const,
+                      items: assignItemIds(nutritionData.resolved, entryId),
+                      updatedAt: new Date(),
+                    }
+                  : entry
+              ),
+            }));
+          },
+          onError: (error) => {
+            console.error('Error resolving entry:', error);
+            set((state: AppState) => ({
+              entries: state.entries.map((entry: Entry) =>
+                entry.id === entryId
+                  ? {
+                      ...entry,
+                      status: 'error' as const,
+                      updatedAt: new Date(),
+                    }
+                  : entry
+              ),
+            }));
+          },
+          isEntryDeleted: () => {
+            return !get().entries.some((e: Entry) => e.id === entryId);
+          },
+        });
       });
     });
   },
 
   updateEntry: async (id: string, rawText: string) => {
-    // Check network before attempting API call
-    const netState = await NetInfo.fetch();
-    if (!netState.isConnected) return;
+    const entries = get().entries;
+    const entryIndex = entries.findIndex(e => e.id === id);
+    if (entryIndex === -1) return;
 
-    set({ isLoading: true });
+    // Cancel any existing queued item for this entry
+    nutritionQueue.cancel(id);
 
-    try {
-      const entries = get().entries;
-      const entryIndex = entries.findIndex(e => e.id === id);
+    // Only process if line starts with "- " or "— " and has food text after the marker
+    const trimmed = rawText.trim();
+    const textLine = (trimmed.startsWith('-') || trimmed.startsWith(EM_DASH))
+      ? trimmed.substring(1).trim()
+      : '';
 
-      if (entryIndex === -1) {
-        set({ isLoading: false });
-        return;
-      }
-
-      let updatedEntry = { ...entries[entryIndex], rawText, updatedAt: new Date() };
-
-      // Only process if line starts with "- " or "— " and has food text after the marker
-      const trimmed = rawText.trim();
-      const textLine = (trimmed.startsWith('-') || trimmed.startsWith(EM_DASH))
-        ? trimmed.substring(1).trim()
-        : '';
-
-      if (textLine) {
-        let nutritionData: NutritionResolveResponse;
-
-        if (USE_AI_API) {
-          try {
-            // Get current user ID if available (from auth state)
-            const { data: { user } } = await supabase.auth.getUser();
-            nutritionData = await resolveNutrition(textLine, {
-              userId: user?.id
-            });
-          } catch (error) {
-            if (error instanceof NutritionQuotaExceededError) {
-              console.warn('Quota exceeded:', error.message);
-              throw new Error('Monthly quota exceeded. Please upgrade your plan or try again next month.');
-            } else if (error instanceof NutritionRateLimitError) {
-              console.warn('Rate limited:', error.message);
-              throw new Error('Too many requests. Please try again in a moment.');
-            } else {
-              console.error('AI API error:', error);
-              throw new Error('Unable to process nutrition data. Please try again.');
-            }
-          }
-        } else {
-          throw new Error('AI API is disabled. Please enable AI-powered nutrition analysis.');
-        }
-
-        updatedEntry.inlineKcal = nutritionData.totals.kcal;
-        updatedEntry.status = nutritionData.error ? 'error' : 'ok';
-        updatedEntry.items = assignItemIds(nutritionData.resolved, id);
-      } else {
-        updatedEntry.inlineKcal = null;
-        updatedEntry.status = 'error';
-        updatedEntry.items = [];
-      }
-
+    if (!textLine) {
+      // No food text — mark as error
       set((state) => ({
-        entries: state.entries.map((e, index) =>
-          index === entryIndex ? updatedEntry : e
+        entries: state.entries.map((e) =>
+          e.id === id
+            ? { ...e, rawText, inlineKcal: null, status: 'error' as const, items: [], updatedAt: new Date() }
+            : e
         ),
-        isLoading: false,
       }));
-    } catch (error) {
-      console.error('Error updating entry:', error);
-      set({ isLoading: false });
+      return;
     }
+
+    // Update rawText and set pending immediately
+    set((state) => ({
+      entries: state.entries.map((e) =>
+        e.id === id
+          ? { ...e, rawText, status: 'pending' as const, updatedAt: new Date() }
+          : e
+      ),
+    }));
+
+    // Check network — if offline, entry stays pending (reconnect service handles later)
+    const netState = await NetInfo.fetch();
+    if (!netState.isConnected) {
+      console.log('[updateEntry] Offline — entry updated as pending, will resolve on reconnect');
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Guard: entry may have been deleted while awaiting network/auth
+    if (!get().entries.some((e: Entry) => e.id === id)) return;
+
+    nutritionQueue.enqueue({
+      entryId: id,
+      rawText,
+      textLine,
+      userId: user?.id,
+      onResolved: (nutritionData) => {
+        set((state: AppState) => ({
+          entries: state.entries.map((entry: Entry) =>
+            entry.id === id
+              ? {
+                  ...entry,
+                  inlineKcal: nutritionData.totals.kcal,
+                  status: (nutritionData as any).error ? 'error' as const : 'ok' as const,
+                  items: assignItemIds(nutritionData.resolved, id),
+                  updatedAt: new Date(),
+                }
+              : entry
+          ),
+        }));
+      },
+      onError: (error) => {
+        console.error('Error resolving updated entry:', error);
+        set((state: AppState) => ({
+          entries: state.entries.map((entry: Entry) =>
+            entry.id === id
+              ? { ...entry, status: 'error' as const, updatedAt: new Date() }
+              : entry
+          ),
+        }));
+      },
+      isEntryDeleted: () => {
+        return !get().entries.some((e: Entry) => e.id === id);
+      },
+    });
   },
 
   deleteEntry: (id: string) => {
@@ -482,6 +499,12 @@ export const useAppStore = create<AppState>()(
   },
 
   createSavedEntry: async (rawText: string): Promise<{ success: boolean; error?: string }> => {
+    // Saved entries need immediate resolution — bail if offline
+    const netState = await NetInfo.fetch();
+    if (!netState.isConnected) {
+      return { success: false, error: 'No connection — saved entries require network to resolve' };
+    }
+
     // Remove "- " or "— " prefix if present and trim
     const foodText = rawText.replace(/^[-—]\s*/, '').trim();
     if (!foodText) {
@@ -721,6 +744,80 @@ export const useAppStore = create<AppState>()(
         };
       }),
     }));
+  },
+
+  enqueuePendingEntries: () => {
+    const pendingEntries = get().entries.filter((e) => {
+      if (e.status !== 'pending') return false;
+      // Skip water entries (already resolved locally as 'ok', but just in case)
+      if (e.items.length === 1 && e.items[0].source === 'local') return false;
+      // Skip entries already in queue
+      if (nutritionQueue.has(e.rawText) || nutritionQueue.hasById(e.id)) return false;
+      return true;
+    });
+
+    if (pendingEntries.length === 0) return;
+
+    console.log(`[enqueuePendingEntries] Found ${pendingEntries.length} pending entries to drain`);
+
+    // Fetch user once, then enqueue all pending entries
+    // userId is optional — enqueue even if auth fails
+    supabase.auth.getUser()
+      .then(({ data: { user } }) => user?.id)
+      .catch(() => undefined)
+      .then((userId: string | undefined) => {
+        for (const entry of pendingEntries) {
+          // Re-check: entry may have been deleted/resolved while awaiting auth
+          if (!get().entries.some((e) => e.id === entry.id && e.status === 'pending')) continue;
+
+          // Read current rawText from state (user may have edited while offline)
+          const current = get().entries.find((e) => e.id === entry.id);
+          if (!current) continue;
+
+          const trimmed = current.rawText.trim();
+          const textLine = (trimmed.startsWith('-') || trimmed.startsWith(EM_DASH))
+            ? trimmed.substring(1).trim()
+            : '';
+          if (!textLine) continue;
+
+          console.log(`[enqueuePendingEntries] Enqueuing: "${textLine}" (id=${entry.id})`);
+
+          nutritionQueue.enqueue({
+            entryId: entry.id,
+            rawText: current.rawText,
+            textLine,
+            userId,
+            onResolved: (nutritionData) => {
+              set((state: AppState) => ({
+                entries: state.entries.map((e: Entry) =>
+                  e.id === entry.id
+                    ? {
+                        ...e,
+                        inlineKcal: nutritionData.totals.kcal,
+                        status: (nutritionData as any).error ? 'error' as const : 'ok' as const,
+                        items: assignItemIds(nutritionData.resolved, entry.id),
+                        updatedAt: new Date(),
+                      }
+                    : e
+                ),
+              }));
+            },
+            onError: (error) => {
+              console.error('[enqueuePendingEntries] Error resolving entry:', error);
+              set((state: AppState) => ({
+                entries: state.entries.map((e: Entry) =>
+                  e.id === entry.id
+                    ? { ...e, status: 'error' as const, updatedAt: new Date() }
+                    : e
+                ),
+              }));
+            },
+            isEntryDeleted: () => {
+              return !get().entries.some((e: Entry) => e.id === entry.id);
+            },
+          });
+        }
+      });
   },
 
   correctEntryItem: async (entryId: string, itemId: string, feedback: string) => {

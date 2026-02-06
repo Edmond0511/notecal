@@ -190,4 +190,6 @@ export interface AppState {
   updateEntryItemQuantity: (entryId: string, itemId: string, newServings: number) => void;
   // Correction action
   correctEntryItem: (entryId: string, itemId: string, feedback: string) => Promise<void>;
+  // Offline queue drain
+  enqueuePendingEntries: () => void;
 }

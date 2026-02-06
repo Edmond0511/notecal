@@ -307,6 +307,7 @@ export default function HomeScreen() {
             onUpdateEntry={updateEntry}
             onDeleteEntry={deleteEntry}
             currentDate={currentDate}
+            isOnline={isOnline}
           />
         </Animated.View>
       </GestureDetector>

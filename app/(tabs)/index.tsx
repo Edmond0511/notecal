@@ -327,7 +327,7 @@ export default function HomeScreen() {
           activeOpacity={0.8}
         >
           <View style={styles.totalItem}>
-            <Text style={styles.totalValue}>
+            <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
               {truncateNumber(dailyTotals.kcal, 5)}
             </Text>
             <FontAwesomeIcon
@@ -339,7 +339,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
-            <Text style={styles.totalValue}>
+            <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
               {truncateNumber(dailyTotals.protein, 4)}
             </Text>
             <FontAwesomeIcon
@@ -351,7 +351,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
-            <Text style={styles.totalValue}>
+            <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
               {truncateNumber(dailyTotals.fat, 4)}
             </Text>
             <FontAwesomeIcon
@@ -363,7 +363,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
-            <Text style={styles.totalValue}>
+            <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
               {truncateNumber(dailyTotals.carbs, 4)}
             </Text>
             <FontAwesomeIcon
@@ -504,12 +504,13 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   totalsBar: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-evenly",
     backgroundColor: "#ffffffee",
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     borderRadius: 28,
     shadowColor: "#000",
     shadowOffset: {
@@ -521,8 +522,9 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   totalItem: {
+    flex: 1,
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 4,
   },
   totalValue: {
     fontSize: 17,

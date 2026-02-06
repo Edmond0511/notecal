@@ -202,7 +202,7 @@ function CalorieRing({ current, target }: CalorieRingProps) {
             gradientId="calorieGradient"
           />
           <View style={styles.calorieCenter}>
-            <Text style={styles.calorieValue}>{truncateNumber(current, 5)}</Text>
+            <Text style={styles.calorieValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{truncateNumber(current, 5)}</Text>
             <Text style={styles.calorieUnit}>cal</Text>
           </View>
         </View>
@@ -210,17 +210,17 @@ function CalorieRing({ current, target }: CalorieRingProps) {
         <View style={styles.calorieInfo}>
           <View style={styles.calorieTargetRow}>
             <Text style={styles.calorieTargetLabel}>of</Text>
-            <Text style={styles.calorieTargetValue}>{truncateNumber(target, 5)}</Text>
+            <Text style={styles.calorieTargetValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{truncateNumber(target, 5)}</Text>
             <Text style={styles.calorieTargetLabel}>daily goal</Text>
           </View>
 
           <View style={styles.calorieRemainingContainer}>
             {isOver ? (
-              <Text style={styles.calorieOverText}>
+              <Text style={styles.calorieOverText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                 {truncateNumber(current - target, 5)} over target
               </Text>
             ) : (
-              <Text style={styles.calorieRemainingText}>
+              <Text style={styles.calorieRemainingText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                 {truncateNumber(remaining, 5)} remaining
               </Text>
             )}
@@ -285,7 +285,7 @@ function MacroCard({ label, current, target, color, delay, unit = "g", icon }: M
           animationDelay={delay}
         />
         <View style={styles.macroCenter}>
-          <Text style={[styles.macroValue, { color: color.primary }]}>
+          <Text style={[styles.macroValue, { color: color.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
             {truncateNumber(current, 4)}
           </Text>
           <Text style={[styles.macroUnit, { color: color.primary }]}>{unit}</Text>
@@ -295,7 +295,7 @@ function MacroCard({ label, current, target, color, delay, unit = "g", icon }: M
       <Text style={styles.macroLabel}>{label}</Text>
 
       <View style={styles.macroTargetContainer}>
-        <Text style={[styles.macroProgressText, isOver && styles.macroOverText]}>
+        <Text style={[styles.macroProgressText, isOver && styles.macroOverText]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
           <Text style={styles.macroConsumed}>{truncateNumber(current, 4)}{unit}</Text>
           <Text style={styles.macroDivider}> / </Text>
           <Text style={styles.macroTotal}>{truncateNumber(target, 4)}{unit}</Text>
@@ -515,6 +515,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     justifyContent: "center",
     alignItems: "center",
+    width: 100,
   },
   calorieValue: {
     fontSize: 32,
@@ -593,6 +594,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     justifyContent: "center",
     alignItems: "center",
+    width: 50,
   },
   macroValue: {
     fontSize: 18,

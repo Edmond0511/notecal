@@ -581,6 +581,7 @@ export function NotesEditor({
   onDocumentTextChange,
   onAddEntry,
   onDeleteEntry,
+  currentDate,
   isOnline = true,
 }: NotesEditorProps) {
   const [documentText, setDocumentText] = useState(initialDocumentText);
@@ -593,7 +594,7 @@ export function NotesEditor({
   // Map of entry text prefix -> y position (for entries starting with "-" or "—")
   const [entryYMap, setEntryYMap] = useState<Map<string, number[]>>(new Map());
   // Track the text that was measured, so we know if positions are stale
-  const [measuredText, setMeasuredText] = useState<string>("");
+  const [layoutStale, setLayoutStale] = useState(true);
   // Track previous text for detecting user actions via text diffing
   const previousTextRef = useRef<string>(initialDocumentText);
   // Controlled selection for cursor positioning after transforms
@@ -652,18 +653,22 @@ export function NotesEditor({
         }
       }
       setEntryYMap(yMap);
-      setMeasuredText(documentText);
+      setLayoutStale(false);
     },
-    [documentText],
+    [],
   );
 
-  // Update document text when initialDocumentText changes (date navigation)
+  // Sync document text from parent (typing reflection + date navigation)
   useEffect(() => {
     setDocumentText(initialDocumentText);
-    previousTextRef.current = initialDocumentText; // Sync for text diffing
-    setEntryYMap(new Map());
-    setMeasuredText(""); // Clear so indicators wait for fresh measurements
+    previousTextRef.current = initialDocumentText;
   }, [initialDocumentText]);
+
+  // Reset layout measurements on date change only
+  useEffect(() => {
+    setEntryYMap(new Map());
+    setLayoutStale(true);
+  }, [currentDate]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -930,7 +935,7 @@ export function NotesEditor({
   }, []);
 
   // Check if current measurements are fresh (match current text)
-  const hasFreshMeasurements = measuredText === documentText;
+  const hasFreshMeasurements = !layoutStale;
 
   // Compute indicator data only when dependencies change
   const indicatorData = useMemo(() => {

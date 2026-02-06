@@ -1,6 +1,5 @@
 import { resolveNutrition } from '@/services/nutritionApi';
 import { NutritionResolveResponse } from '@/types';
-import { supabase } from '@/lib/supabase';
 
 const MAX_CONCURRENT = 3;
 
@@ -8,6 +7,7 @@ export interface QueueItem {
   entryId: string;
   rawText: string;   // full line including "- " prefix
   textLine: string;   // food text after stripping marker
+  userId?: string;    // pre-fetched from supabase auth
   onResolved: (data: NutritionResolveResponse) => void;
   onError: (error: Error) => void;
   isEntryDeleted: () => boolean;
@@ -50,11 +50,8 @@ class NutritionQueue {
       // Skip if entry was deleted while waiting in queue
       if (item.isEntryDeleted()) return;
 
-      // Get current user ID (may be null for anonymous)
-      const { data: { user } } = await supabase.auth.getUser();
-
       const data = await resolveNutrition(item.textLine, {
-        userId: user?.id,
+        userId: item.userId,
       });
 
       // Skip callback if entry was deleted mid-flight

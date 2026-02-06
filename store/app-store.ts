@@ -117,8 +117,11 @@ export const useAppStore = create<AppState>()(
       return;
     }
 
-    // Check network before attempting API call
-    NetInfo.fetch().then((netState) => {
+    // Check network + fetch user in parallel, then enqueue
+    Promise.all([
+      NetInfo.fetch(),
+      supabase.auth.getUser(),
+    ]).then(([netState, { data: { user } }]) => {
       if (!netState.isConnected) return;
 
       const entryId = Date.now().toString();
@@ -145,6 +148,7 @@ export const useAppStore = create<AppState>()(
         entryId,
         rawText,
         textLine,
+        userId: user?.id,
         onResolved: (nutritionData) => {
           set((state: AppState) => ({
             entries: state.entries.map((entry: Entry) =>

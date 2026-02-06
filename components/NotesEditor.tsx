@@ -69,13 +69,28 @@ function computeTextDiff(oldText: string, newText: string): TextDiff {
   const insertedText = newText.slice(prefixEnd, newSuffixStart);
 
   if (!deletedText && !insertedText) {
-    return { type: "none", position: prefixEnd, deletedText: "", insertedText: "" };
+    return {
+      type: "none",
+      position: prefixEnd,
+      deletedText: "",
+      insertedText: "",
+    };
   }
   if (!deletedText) {
-    return { type: "insert", position: prefixEnd, deletedText: "", insertedText };
+    return {
+      type: "insert",
+      position: prefixEnd,
+      deletedText: "",
+      insertedText,
+    };
   }
   if (!insertedText) {
-    return { type: "delete", position: prefixEnd, deletedText, insertedText: "" };
+    return {
+      type: "delete",
+      position: prefixEnd,
+      deletedText,
+      insertedText: "",
+    };
   }
   return { type: "replace", position: prefixEnd, deletedText, insertedText };
 }
@@ -98,7 +113,11 @@ function getLineAtPosition(text: string, position: number) {
         lineText,
         isEntryLine: isEmDash || isDash,
         markerType: isEmDash ? EM_DASH : isDash ? "-" : null,
-        textAfterMarker: isEmDash ? trimmed.slice(2) : isDash ? trimmed.slice(2) : "",
+        textAfterMarker: isEmDash
+          ? trimmed.slice(2)
+          : isDash
+            ? trimmed.slice(2)
+            : "",
       };
     }
     charCount = lineEnd + 1; // +1 for the newline character
@@ -129,13 +148,21 @@ function assessEntryCompleteness(entryText: string): number {
 
   // Number without unit at end (e.g., "chicken 150" but not "chicken 150g")
   // Matches: ends with number not followed by unit letters
-  if (/\d$/.test(text) && !/\d+\s*(g|kg|mg|oz|lb|ml|l|cup|cups|tbsp|tsp|piece|pieces|slice|slices)$/i.test(text)) {
+  if (
+    /\d$/.test(text) &&
+    !/\d+\s*(g|kg|mg|oz|lb|ml|l|cup|cups|tbsp|tsp|piece|pieces|slice|slices)$/i.test(
+      text,
+    )
+  ) {
     return DELAY_INCOMPLETE_ENTRY;
   }
 
   // Check for quantity+unit patterns or count patterns (these are complete)
   // Patterns: "150g", "2 cups", "100ml", "2 eggs", etc.
-  const hasQuantityUnit = /\d+\s*(g|kg|mg|oz|lb|ml|l|cup|cups|tbsp|tsp|piece|pieces|slice|slices)\s*$/i.test(text);
+  const hasQuantityUnit =
+    /\d+\s*(g|kg|mg|oz|lb|ml|l|cup|cups|tbsp|tsp|piece|pieces|slice|slices)\s*$/i.test(
+      text,
+    );
   const hasCountPattern = /^\d+\s+\w+/.test(text); // "2 eggs", "3 bananas"
 
   if (hasQuantityUnit || hasCountPattern) {
@@ -153,7 +180,10 @@ function assessEntryCompleteness(entryText: string): number {
 }
 
 // Find the most recently edited entry line from text
-function findMostRecentEntryLine(text: string, cursorPosition?: number): string | null {
+function findMostRecentEntryLine(
+  text: string,
+  cursorPosition?: number,
+): string | null {
   const lines = text.split("\n");
   let charCount = 0;
 
@@ -187,7 +217,7 @@ function findMostRecentEntryLine(text: string, cursorPosition?: number): string 
 function checkDashSpaceTransform(
   oldText: string,
   newText: string,
-  diff: TextDiff
+  diff: TextDiff,
 ): { transformedText: string; newCursor: number } | null {
   if (diff.type !== "insert" || diff.insertedText !== " ") return null;
 
@@ -205,14 +235,17 @@ function checkDashSpaceTransform(
     `${EM_DASH} ` +
     newText.slice(diff.position + 1);
 
-  return { transformedText, newCursor: line.lineStart + leadingSpace.length + 2 };
+  return {
+    transformedText,
+    newCursor: line.lineStart + leadingSpace.length + 2,
+  };
 }
 
 // Auto-insert "— " on Enter after a non-empty entry line
 function checkEnterAutoInsert(
   oldText: string,
   newText: string,
-  diff: TextDiff
+  diff: TextDiff,
 ): { transformedText: string; newCursor: number } | null {
   if (diff.type !== "insert" || !diff.insertedText.includes("\n")) return null;
 
@@ -221,7 +254,8 @@ function checkEnterAutoInsert(
   if (!currentLine) return null;
 
   // Only auto-insert if currently on an entry line with content
-  if (!currentLine.isEntryLine || !currentLine.textAfterMarker.trim()) return null;
+  if (!currentLine.isEntryLine || !currentLine.textAfterMarker.trim())
+    return null;
 
   // Only apply when Enter is pressed at end of line
   if (diff.position < currentLine.lineEnd) return null;
@@ -236,7 +270,7 @@ function checkEnterAutoInsert(
 function checkRevertEmDash(
   oldText: string,
   newText: string,
-  diff: TextDiff
+  diff: TextDiff,
 ): { transformedText: string; newCursor: number } | null {
   if (diff.type !== "delete" || diff.deletedText !== " ") return null;
 
@@ -245,10 +279,12 @@ function checkRevertEmDash(
 
   // Check if line now has "—" without space after (user backspaced the space)
   const trimmed = line.lineText.trim();
-  if (!trimmed.startsWith(EM_DASH) || trimmed.startsWith(`${EM_DASH} `)) return null;
+  if (!trimmed.startsWith(EM_DASH) || trimmed.startsWith(`${EM_DASH} `))
+    return null;
 
   const dashPos = line.lineStart + line.lineText.indexOf(EM_DASH);
-  const transformedText = newText.slice(0, dashPos) + "-" + newText.slice(dashPos + 1);
+  const transformedText =
+    newText.slice(0, dashPos) + "-" + newText.slice(dashPos + 1);
   return { transformedText, newCursor: dashPos + 1 };
 }
 
@@ -257,7 +293,7 @@ function checkRevertEmDash(
 function checkDoubleEnterExit(
   oldText: string,
   newText: string,
-  diff: TextDiff
+  diff: TextDiff,
 ): { transformedText: string; newCursor: number } | null {
   if (diff.type !== "insert" || diff.insertedText !== "\n") return null;
 
@@ -453,10 +489,13 @@ const IndicatorRow = React.memo<{
 
     // Calculate water amount from entry items
     const waterAmount = useMemo(() => {
-      return entry.items.reduce((sum, item) => sum + (item.macros.water ?? 0), 0);
+      return entry.items.reduce(
+        (sum, item) => sum + (item.macros.water ?? 0),
+        0,
+      );
     }, [entry.items]);
 
-    const hasCalories = entry.inlineKcal != null && entry.inlineKcal > 0;
+    const hasCalories = entry.inlineKcal != null;
     const hasWater = waterAmount > 0;
 
     useEffect(() => {
@@ -479,7 +518,7 @@ const IndicatorRow = React.memo<{
         setDisplayedStatus(newStatus);
         Animated.timing(contentOpacity, {
           toValue: 1,
-          duration: 400,
+          duration: 300,
           useNativeDriver: true,
         }).start();
       });
@@ -487,9 +526,19 @@ const IndicatorRow = React.memo<{
 
     return (
       <View style={[styles.indicatorWrapper, { top: yPosition, opacity }]}>
-        <Animated.View style={{ flexDirection: "row", alignItems: "center", opacity: contentOpacity }}>
+        <Animated.View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            opacity: contentOpacity,
+          }}
+        >
           {displayedStatus === "pending" ? (
-            isOnline ? <ThinkingIndicator /> : <QueuedBadge />
+            isOnline ? (
+              <ThinkingIndicator />
+            ) : (
+              <QueuedBadge />
+            )
           ) : displayedStatus === "ok" ? (
             <>
               {hasCalories && (
@@ -548,7 +597,9 @@ export function NotesEditor({
   // Track previous text for detecting user actions via text diffing
   const previousTextRef = useRef<string>(initialDocumentText);
   // Controlled selection for cursor positioning after transforms
-  const [selection, setSelection] = useState<{ start: number; end: number } | undefined>(undefined);
+  const [selection, setSelection] = useState<
+    { start: number; end: number } | undefined
+  >(undefined);
   // Flag to prevent recursive text change handling during transforms
   const isTransformingRef = useRef<boolean>(false);
   // Keyboard height for dynamic bottom padding
@@ -582,7 +633,6 @@ export function NotesEditor({
       setIsUserScrolling(false);
     }, 500);
   }, []);
-
 
   // Handle text layout - extract y positions for indicator positioning
   const handleTextLayout = useCallback(
@@ -629,8 +679,10 @@ export function NotesEditor({
 
   // Keyboard listeners for dynamic bottom padding
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
 
     const showListener = Keyboard.addListener(showEvent, (e) => {
       setKeyboardHeight(e.endCoordinates.height);
@@ -652,40 +704,55 @@ export function NotesEditor({
   }, []);
 
   // Calculate Y position of cursor based on character position
-  const getCursorLineY = useCallback((cursorPos: number, text: string): number => {
-    const textBeforeCursor = text.substring(0, cursorPos);
-    const lineIndex = textBeforeCursor.split('\n').length - 1;
-    return lineIndex * LINE_HEIGHT + TEXT_INPUT_PADDING_TOP;
-  }, []);
+  const getCursorLineY = useCallback(
+    (cursorPos: number, text: string): number => {
+      const textBeforeCursor = text.substring(0, cursorPos);
+      const lineIndex = textBeforeCursor.split("\n").length - 1;
+      return lineIndex * LINE_HEIGHT + TEXT_INPUT_PADDING_TOP;
+    },
+    [],
+  );
 
   // Scroll to keep caret visible at specified position
-  const scrollToKeepCaretVisible = useCallback((cursorPos: number, text: string) => {
-    // Skip if user is actively scrolling or keyboard is not open
-    if (isUserScrolling || keyboardHeight === 0 || !scrollViewRef.current) return;
+  const scrollToKeepCaretVisible = useCallback(
+    (cursorPos: number, text: string) => {
+      // Skip if user is actively scrolling or keyboard is not open
+      if (isUserScrolling || keyboardHeight === 0 || !scrollViewRef.current)
+        return;
 
-    // Get cursor Y from the provided cursor position
-    const cursorY = getCursorLineY(cursorPos, text);
+      // Get cursor Y from the provided cursor position
+      const cursorY = getCursorLineY(cursorPos, text);
 
-    // Calculate visible area above keyboard
-    const screenHeight = Dimensions.get('window').height;
-    const HEADER_HEIGHT = 100;
-    const BOTTOM_BAR_HEIGHT = 88;
-    const visibleHeight = screenHeight - HEADER_HEIGHT - keyboardHeight - BOTTOM_BAR_HEIGHT;
+      // Calculate visible area above keyboard
+      const screenHeight = Dimensions.get("window").height;
+      const HEADER_HEIGHT = 100;
+      const BOTTOM_BAR_HEIGHT = 88;
+      const visibleHeight =
+        screenHeight - HEADER_HEIGHT - keyboardHeight - BOTTOM_BAR_HEIGHT;
 
-    const visibleTop = scrollOffset;
-    const visibleBottom = scrollOffset + visibleHeight;
-    const SCROLL_MARGIN = LINE_HEIGHT;
+      const visibleTop = scrollOffset;
+      const visibleBottom = scrollOffset + visibleHeight;
+      const SCROLL_MARGIN = LINE_HEIGHT;
 
-    // Only scroll if cursor is outside visible area
-    if (cursorY + LINE_HEIGHT > visibleBottom - SCROLL_MARGIN) {
-      // Cursor below visible area - scroll down
-      const targetScroll = cursorY - visibleHeight + LINE_HEIGHT + SCROLL_MARGIN;
-      scrollViewRef.current.scrollTo({ y: Math.max(0, targetScroll), animated: true });
-    } else if (cursorY < visibleTop + SCROLL_MARGIN) {
-      // Cursor above visible area - scroll up
-      scrollViewRef.current.scrollTo({ y: Math.max(0, cursorY - SCROLL_MARGIN), animated: true });
-    }
-  }, [isUserScrolling, keyboardHeight, scrollOffset, getCursorLineY]);
+      // Only scroll if cursor is outside visible area
+      if (cursorY + LINE_HEIGHT > visibleBottom - SCROLL_MARGIN) {
+        // Cursor below visible area - scroll down
+        const targetScroll =
+          cursorY - visibleHeight + LINE_HEIGHT + SCROLL_MARGIN;
+        scrollViewRef.current.scrollTo({
+          y: Math.max(0, targetScroll),
+          animated: true,
+        });
+      } else if (cursorY < visibleTop + SCROLL_MARGIN) {
+        // Cursor above visible area - scroll up
+        scrollViewRef.current.scrollTo({
+          y: Math.max(0, cursorY - SCROLL_MARGIN),
+          animated: true,
+        });
+      }
+    },
+    [isUserScrolling, keyboardHeight, scrollOffset, getCursorLineY],
+  );
 
   // Parse document text to find lines that start with "-" or "—"
   const parseDocumentForFoodEntries = useCallback((text: string): string[] => {
@@ -781,8 +848,11 @@ export function NotesEditor({
             setSelection(undefined);
             isTransformingRef.current = false;
             // Scroll after transform (often includes newline insertion)
-            if (diff.type === 'insert' && diff.insertedText.includes('\n')) {
-              scrollToKeepCaretVisible(result.newCursor, result.transformedText);
+            if (diff.type === "insert" && diff.insertedText.includes("\n")) {
+              scrollToKeepCaretVisible(
+                result.newCursor,
+                result.transformedText,
+              );
             }
           }, 50);
         });
@@ -792,9 +862,11 @@ export function NotesEditor({
         onDocumentTextChange(newText);
 
         // Scroll if newline was inserted - cursor is after the inserted newline
-        if (diff.type === 'insert' && diff.insertedText.includes('\n')) {
+        if (diff.type === "insert" && diff.insertedText.includes("\n")) {
           const newCursorPos = diff.position + diff.insertedText.length;
-          requestAnimationFrame(() => scrollToKeepCaretVisible(newCursorPos, newText));
+          requestAnimationFrame(() =>
+            scrollToKeepCaretVisible(newCursorPos, newText),
+          );
         }
       }
 
@@ -809,7 +881,10 @@ export function NotesEditor({
       // If user pressed Enter after an entry line with content, process immediately
       if (diff.type === "insert" && diff.insertedText.includes("\n")) {
         const lineBeforeEnter = getLineAtPosition(oldText, diff.position);
-        if (lineBeforeEnter?.isEntryLine && lineBeforeEnter.textAfterMarker.trim()) {
+        if (
+          lineBeforeEnter?.isEntryLine &&
+          lineBeforeEnter.textAfterMarker.trim()
+        ) {
           // User pressed Enter after completing an entry line - process immediately
           processDocumentChanges(finalText);
           return;
@@ -833,7 +908,13 @@ export function NotesEditor({
         processDocumentChanges(finalText);
       }, delay);
     },
-    [processDocumentChanges, onDocumentTextChange, scrollToKeepCaretVisible, parseDocumentForFoodEntries, entries],
+    [
+      processDocumentChanges,
+      onDocumentTextChange,
+      scrollToKeepCaretVisible,
+      parseDocumentForFoodEntries,
+      entries,
+    ],
   );
 
   // Handle indicator tap
@@ -865,7 +946,8 @@ export function NotesEditor({
 
     lines.forEach((line, index) => {
       const trimmedLine = line.trim();
-      if (!trimmedLine.startsWith("-") && !trimmedLine.startsWith(EM_DASH)) return;
+      if (!trimmedLine.startsWith("-") && !trimmedLine.startsWith(EM_DASH))
+        return;
 
       const matchedEntry = entries.find(
         (e) => e.rawText === trimmedLine && !usedEntryIds.has(e.id),
@@ -903,10 +985,13 @@ export function NotesEditor({
 
   // Dynamic scroll content style with keyboard-based bottom padding
   // This allows native TextInput to keep the caret visible automatically
-  const scrollContentStyle = useMemo(() => ({
-    flexGrow: 1,
-    paddingBottom: keyboardHeight > 0 ? keyboardHeight : 0,
-  }), [keyboardHeight]);
+  const scrollContentStyle = useMemo(
+    () => ({
+      flexGrow: 1,
+      paddingBottom: keyboardHeight > 0 ? keyboardHeight : 0,
+    }),
+    [keyboardHeight],
+  );
 
   return (
     <View style={styles.container}>

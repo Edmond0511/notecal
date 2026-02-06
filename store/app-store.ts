@@ -3,7 +3,9 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStateStorage } from '@/lib/mmkv';
 import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets, SavedEntry, Macros } from '@/types';
 import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
+import { nutritionQueue } from '@/services/nutritionQueue';
 import { supabase } from '@/lib/supabase';
+import NetInfo from '@react-native-community/netinfo';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 const USE_AI_API = true; // Use AI-powered nutrition API
@@ -64,7 +66,7 @@ export const useAppStore = create<AppState>()(
       preferredUnits: 'metric' as UnitSystem,
       savedEntries: [],
 
-  addEntry: async (rawText: string) => {
+  addEntry: (rawText: string) => {
     // Only process lines that start with "- " or "— " (em-dash)
     const trimmed = rawText.trim();
     if (!trimmed.startsWith('-') && !trimmed.startsWith(EM_DASH)) {
@@ -110,102 +112,80 @@ export const useAppStore = create<AppState>()(
       return;
     }
 
-    const entryId = Date.now().toString();
-
-    // Create entry with pending status immediately (for UI loading indicator)
-    const pendingEntry: Entry = {
-      id: entryId,
-      date: get().currentDate,
-      rawText,
-      inlineKcal: null,
-      status: 'pending',
-      items: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    // Add pending entry to state immediately
-    set((state) => ({
-      entries: [...state.entries, pendingEntry],
-      isLoading: true,
-    }));
-
-    try {
-      // Call AI API to resolve nutrition
-      let nutritionData: NutritionResolveResponse;
-
-      if (USE_AI_API) {
-        try {
-          // Get current user ID if available (from auth state)
-          const { data: { user } } = await supabase.auth.getUser();
-          console.log('🔍 Calling nutrition API for:', textLine);
-          nutritionData = await resolveNutrition(textLine, {
-            userId: user?.id
-          });
-          console.log('✅ Nutrition API response:', nutritionData);
-        } catch (error) {
-          if (error instanceof NutritionQuotaExceededError) {
-            // Handle quota exceeded with user-friendly message
-            console.warn('Quota exceeded:', error.message);
-            throw new Error('Monthly quota exceeded. Please upgrade your plan or try again next month.');
-          } else if (error instanceof NutritionRateLimitError) {
-            // Handle rate limiting with retry suggestion
-            console.warn('Rate limited:', error.message);
-            throw new Error('Too many requests. Please try again in a moment.');
-          } else {
-            // Handle other API errors
-            console.error('AI API error:', error);
-            throw new Error('Unable to process nutrition data. Please try again.');
-          }
-        }
-      } else {
-        // Fallback to a simple estimation (you could keep mockResolveLine as fallback)
-        throw new Error('AI API is disabled. Please enable AI-powered nutrition analysis.');
-      }
-
-      // Update entry with resolved nutrition data
-      console.log('📝 Updating entry to ok:', {
-        id: entryId,
-        rawText: rawText,
-        inlineKcal: nutritionData.totals.kcal,
-        itemsCount: nutritionData.resolved.length,
-        totals: nutritionData.totals
-      });
-
-      set((state) => ({
-        entries: state.entries.map(entry =>
-          entry.id === entryId
-            ? {
-                ...entry,
-                inlineKcal: nutritionData.totals.kcal,
-                status: nutritionData.error ? 'error' : 'ok',
-                items: assignItemIds(nutritionData.resolved, entryId),
-                updatedAt: new Date(),
-              }
-            : entry
-        ),
-        isLoading: false,
-      }));
-    } catch (error) {
-      console.error('Error resolving entry:', error);
-
-      // Update entry to error status
-      set((state) => ({
-        entries: state.entries.map(entry =>
-          entry.id === entryId
-            ? {
-                ...entry,
-                status: 'error',
-                updatedAt: new Date(),
-              }
-            : entry
-        ),
-        isLoading: false,
-      }));
+    // Skip if this rawText is already queued or in-flight (dedup)
+    if (nutritionQueue.has(rawText)) {
+      return;
     }
+
+    // Check network before attempting API call
+    NetInfo.fetch().then((netState) => {
+      if (!netState.isConnected) return;
+
+      const entryId = Date.now().toString();
+
+      // Create entry with pending status immediately (for UI loading indicator)
+      const pendingEntry: Entry = {
+        id: entryId,
+        date: get().currentDate,
+        rawText,
+        inlineKcal: null,
+        status: 'pending',
+        items: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Add pending entry to state immediately
+      set((state: AppState) => ({
+        entries: [...state.entries, pendingEntry],
+      }));
+
+      // Enqueue the API call — queue handles concurrency (max 3)
+      nutritionQueue.enqueue({
+        entryId,
+        rawText,
+        textLine,
+        onResolved: (nutritionData) => {
+          set((state: AppState) => ({
+            entries: state.entries.map((entry: Entry) =>
+              entry.id === entryId
+                ? {
+                    ...entry,
+                    inlineKcal: nutritionData.totals.kcal,
+                    status: (nutritionData as any).error ? 'error' as const : 'ok' as const,
+                    items: assignItemIds(nutritionData.resolved, entryId),
+                    updatedAt: new Date(),
+                  }
+                : entry
+            ),
+          }));
+        },
+        onError: (error) => {
+          console.error('Error resolving entry:', error);
+          set((state: AppState) => ({
+            entries: state.entries.map((entry: Entry) =>
+              entry.id === entryId
+                ? {
+                    ...entry,
+                    status: 'error' as const,
+                    updatedAt: new Date(),
+                  }
+                : entry
+            ),
+          }));
+        },
+        isEntryDeleted: () => {
+          return !get().entries.some((e: Entry) => e.id === entryId);
+        },
+      });
+    });
   },
 
   updateEntry: async (id: string, rawText: string) => {
+    // Check network before attempting API call
+    const netState = await NetInfo.fetch();
+    if (!netState.isConnected) return;
+
     set({ isLoading: true });
 
     try {
@@ -273,6 +253,7 @@ export const useAppStore = create<AppState>()(
   },
 
   deleteEntry: (id: string) => {
+    nutritionQueue.cancel(id);
     set((state) => ({
       entries: state.entries.filter(e => e.id !== id),
     }));

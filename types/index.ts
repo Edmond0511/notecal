@@ -161,7 +161,7 @@ export interface AppState {
   // Saved entries state
   savedEntries: SavedEntry[];
   // Actions
-  addEntry: (rawText: string) => Promise<void>;
+  addEntry: (rawText: string) => void;
   updateEntry: (id: string, rawText: string) => Promise<void>;
   deleteEntry: (id: string) => void;
   setCurrentDate: (date: string) => void;

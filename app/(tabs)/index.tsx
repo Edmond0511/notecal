@@ -2,8 +2,10 @@ import { Calendar } from "@/components/Calendar";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
 import { GoalsPopup } from "@/components/GoalsPopup";
 import { NotesEditor } from "@/components/NotesEditor";
+import { OfflinePill } from "@/components/OfflinePill";
 import { SavedEntriesPopup } from "@/components/SavedEntriesPopup";
 import { SettingsModal } from "@/components/SettingsModal";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { useSwipeDateNavigation } from "@/hooks/useSwipeDateNavigation";
 import { useAppStore } from "@/store/app-store";
 import { SavedEntry } from "@/types";
@@ -51,12 +53,14 @@ export default function HomeScreen() {
   const saveDocument = useAppStore((state) => state.saveDocument);
   const getDocument = useAppStore((state) => state.getDocument);
   const goals = useAppStore((state) => state.goals);
+  const { isOnline } = useNetworkStatus();
 
   // Filter entries for current date - memoized to prevent unnecessary re-renders
   const entries = React.useMemo(
     () => allEntries.filter((entry) => entry.date === currentDate),
     [allEntries, currentDate],
   );
+
   const [showCalendar, setShowCalendar] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showGoalsPopup, setShowGoalsPopup] = useState(false);
@@ -311,69 +315,73 @@ export default function HomeScreen() {
       <Animated.View
         style={[styles.bottomBarContainer, animatedBottomBarStyle]}
       >
-        {/* Add saved entry button */}
-        <TouchableOpacity
-          style={styles.addSavedButton}
-          onPress={() => setShowSavedEntriesPopup(true)}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add" size={24} color="#1A6872" />
-        </TouchableOpacity>
+        <OfflinePill visible={!isOnline} />
 
-        {/* Daily Totals Bar - Tap to open goals popup */}
-        <TouchableOpacity
-          style={styles.totalsBar}
-          onPress={() => setShowGoalsPopup(true)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.totalItem}>
-            <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-              {truncateNumber(dailyTotals.kcal, 5)}
-            </Text>
-            <FontAwesomeIcon
-              icon={icons.fire}
-              size={14}
-              color="#FF6B35"
-              style={styles.totalIcon}
-            />
-          </View>
-          <View style={styles.totalDivider} />
-          <View style={styles.totalItem}>
-            <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-              {truncateNumber(dailyTotals.protein, 4)}
-            </Text>
-            <FontAwesomeIcon
-              icon={icons.protein}
-              size={14}
-              color="#4A90D9"
-              style={styles.totalIcon}
-            />
-          </View>
-          <View style={styles.totalDivider} />
-          <View style={styles.totalItem}>
-            <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-              {truncateNumber(dailyTotals.fat, 4)}
-            </Text>
-            <FontAwesomeIcon
-              icon={icons.fat}
-              size={14}
-              color="#F5A623"
-              style={styles.totalIcon}
-            />
-          </View>
-          <View style={styles.totalDivider} />
-          <View style={styles.totalItem}>
-            <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-              {truncateNumber(dailyTotals.carbs, 4)}
-            </Text>
-            <FontAwesomeIcon
-              icon={icons.carbs}
-              size={14}
-              color="#9B6B9E"
-              style={styles.totalIcon}
-            />
-          </View>
-        </TouchableOpacity>
+        <View style={styles.bottomBarRow}>
+          {/* Add saved entry button */}
+          <TouchableOpacity
+            style={styles.addSavedButton}
+            onPress={() => setShowSavedEntriesPopup(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add" size={24} color="#1A6872" />
+          </TouchableOpacity>
+
+          {/* Daily Totals Bar - Tap to open goals popup */}
+          <TouchableOpacity
+            style={styles.totalsBar}
+            onPress={() => setShowGoalsPopup(true)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.totalItem}>
+              <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                {truncateNumber(dailyTotals.kcal, 5)}
+              </Text>
+              <FontAwesomeIcon
+                icon={icons.fire}
+                size={14}
+                color="#FF6B35"
+                style={styles.totalIcon}
+              />
+            </View>
+            <View style={styles.totalDivider} />
+            <View style={styles.totalItem}>
+              <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                {truncateNumber(dailyTotals.protein, 4)}
+              </Text>
+              <FontAwesomeIcon
+                icon={icons.protein}
+                size={14}
+                color="#4A90D9"
+                style={styles.totalIcon}
+              />
+            </View>
+            <View style={styles.totalDivider} />
+            <View style={styles.totalItem}>
+              <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                {truncateNumber(dailyTotals.fat, 4)}
+              </Text>
+              <FontAwesomeIcon
+                icon={icons.fat}
+                size={14}
+                color="#F5A623"
+                style={styles.totalIcon}
+              />
+            </View>
+            <View style={styles.totalDivider} />
+            <View style={styles.totalItem}>
+              <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                {truncateNumber(dailyTotals.carbs, 4)}
+              </Text>
+              <FontAwesomeIcon
+                icon={icons.carbs}
+                size={14}
+                color="#9B6B9E"
+                style={styles.totalIcon}
+              />
+            </View>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
 
       {/* Custom Calendar */}
@@ -479,12 +487,15 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    flexDirection: "column",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    backgroundColor: "transparent",
+  },
+  bottomBarRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
-    backgroundColor: "transparent",
-    
   },
   addSavedButton: {
     marginRight: 12,

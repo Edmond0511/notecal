@@ -461,7 +461,7 @@ interface NotesEditorProps {
   entries: Entry[];
   initialDocumentText: string;
   onDocumentTextChange: (text: string) => void;
-  onAddEntry: (text: string) => Promise<void>;
+  onAddEntry: (text: string) => void;
   onUpdateEntry?: (id: string, text: string) => Promise<void>;
   onDeleteEntry: (id: string) => void;
   currentDate?: string;
@@ -637,7 +637,7 @@ export function NotesEditor({
 
   // Process document changes and update nutrition data
   const processDocumentChanges = useCallback(
-    async (newText: string) => {
+    (newText: string) => {
       const foodLines = parseDocumentForFoodEntries(newText);
 
       // Count occurrences of each line in the document
@@ -686,7 +686,7 @@ export function NotesEditor({
 
       // Add new entries
       for (const line of linesToAdd) {
-        await onAddEntry(line);
+        onAddEntry(line);
       }
     },
     [entries, parseDocumentForFoodEntries, onAddEntry, onDeleteEntry],

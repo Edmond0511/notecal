@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { mmkvStateStorage } from '@/lib/mmkv';
 import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets, SavedEntry, Macros } from '@/types';
 import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
 import { supabase } from '@/lib/supabase';
@@ -806,7 +806,7 @@ export const useAppStore = create<AppState>()(
 }),
     {
       name: 'note-cal-storage', // unique name for the storage
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => mmkvStateStorage),
       // Only persist the data we need (exclude functions and non-serializable data)
       partialize: (state) => ({
         entries: state.entries,

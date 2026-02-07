@@ -9,17 +9,24 @@ import React, {
   useState,
 } from "react";
 import {
-  Animated,
+  Animated as RNAnimated,
   Dimensions,
-  Keyboard,
-  Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, {
+  runOnJS,
+  scrollTo,
+  useAnimatedKeyboard,
+  useAnimatedReaction,
+  useAnimatedRef,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
 import { NutritionReasoningPopup } from "./NutritionReasoningPopup";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
@@ -342,7 +349,7 @@ const styles = StyleSheet.create({
     pointerEvents: "none",
   },
   documentInput: {
-    flex: 1,
+    flexGrow: 1,
     fontSize: 16,
     lineHeight: LINE_HEIGHT,
     paddingLeft: 20,
@@ -485,7 +492,7 @@ const IndicatorRow = React.memo<{
     // entry.status during fade-out so the old content stays visible
     const [displayedStatus, setDisplayedStatus] = useState(entry.status);
     const prevEntryStatusRef = useRef(entry.status);
-    const contentOpacity = useRef(new Animated.Value(1)).current;
+    const contentOpacity = useRef(new RNAnimated.Value(1)).current;
 
     // Calculate water amount from entry items
     const waterAmount = useMemo(() => {
@@ -508,7 +515,7 @@ const IndicatorRow = React.memo<{
       contentOpacity.stopAnimation();
 
       // Fade out old content (displayedStatus still shows old indicator)
-      Animated.timing(contentOpacity, {
+      RNAnimated.timing(contentOpacity, {
         toValue: 0,
         duration: 150,
         useNativeDriver: true,
@@ -516,7 +523,7 @@ const IndicatorRow = React.memo<{
         // Only swap content and fade in if this animation wasn't interrupted
         if (!finished) return;
         setDisplayedStatus(newStatus);
-        Animated.timing(contentOpacity, {
+        RNAnimated.timing(contentOpacity, {
           toValue: 1,
           duration: 300,
           useNativeDriver: true,
@@ -526,7 +533,7 @@ const IndicatorRow = React.memo<{
 
     return (
       <View style={[styles.indicatorWrapper, { top: yPosition, opacity }]}>
-        <Animated.View
+        <RNAnimated.View
           style={{
             flexDirection: "row",
             alignItems: "center",
@@ -549,7 +556,7 @@ const IndicatorRow = React.memo<{
           ) : displayedStatus === "error" ? (
             <ErrorBadge />
           ) : null}
-        </Animated.View>
+        </RNAnimated.View>
       </View>
     );
   },
@@ -586,11 +593,12 @@ export function NotesEditor({
 }: NotesEditorProps) {
   const [documentText, setDocumentText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
-  const [scrollOffset, setScrollOffset] = useState(0);
+  const scrollOffset = useSharedValue(0);
+  const keyboard = useAnimatedKeyboard();
   // Map of entry text prefix -> y position (for entries starting with "-" or "—")
   const [entryYMap, setEntryYMap] = useState<Map<string, number[]>>(new Map());
   // Track the text that was measured, so we know if positions are stale
@@ -601,39 +609,21 @@ export function NotesEditor({
   const [selection, setSelection] = useState<
     { start: number; end: number } | undefined
   >(undefined);
+  // Track cursor position for keyboard-open scroll adjustment
+  const cursorPosRef = useRef(0);
   // Flag to prevent recursive text change handling during transforms
   const isTransformingRef = useRef<boolean>(false);
-  // Keyboard height for dynamic bottom padding
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  // Track when user is actively scrolling to suppress auto-scroll
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
-  const scrollCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Reanimated scroll handler - runs on UI thread, no JS re-renders
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollOffset.value = event.contentOffset.y;
+    },
+  });
 
-  // Handle TextInput scroll to sync indicator positions
-  const handleScroll = useCallback((event: any) => {
-    setScrollOffset(event.nativeEvent.contentOffset.y);
-  }, []);
-
-  // Scroll gesture handlers - track when user is manually scrolling
-  const handleScrollBeginDrag = useCallback(() => {
-    setIsUserScrolling(true);
-    if (scrollCooldownRef.current) {
-      clearTimeout(scrollCooldownRef.current);
-    }
-  }, []);
-
-  const handleScrollEndDrag = useCallback(() => {
-    // Add cooldown before re-enabling auto-scroll
-    scrollCooldownRef.current = setTimeout(() => {
-      setIsUserScrolling(false);
-    }, 500);
-  }, []);
-
-  const handleMomentumScrollEnd = useCallback(() => {
-    scrollCooldownRef.current = setTimeout(() => {
-      setIsUserScrolling(false);
-    }, 500);
-  }, []);
+  // Animated style for overlay - translates indicators to match scroll position
+  const animatedOverlayStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -scrollOffset.value }],
+  }));
 
   // Handle text layout - extract y positions for indicator positioning
   const handleTextLayout = useCallback(
@@ -676,36 +666,7 @@ export function NotesEditor({
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
       }
-      if (scrollCooldownRef.current) {
-        clearTimeout(scrollCooldownRef.current);
-      }
     };
-  }, []);
-
-  // Keyboard listeners for dynamic bottom padding
-  useEffect(() => {
-    const showEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-
-    const showListener = Keyboard.addListener(showEvent, (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-
-    const hideListener = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      showListener.remove();
-      hideListener.remove();
-    };
-  }, []);
-
-  // Handle selection changes - no-op, scroll handled in handleTextChange
-  const handleSelectionChange = useCallback((_event: any) => {
-    // Selection tracking not needed - cursor position passed directly to scroll function
   }, []);
 
   // Calculate Y position of cursor based on character position
@@ -718,45 +679,60 @@ export function NotesEditor({
     [],
   );
 
-  // Scroll to keep caret visible at specified position
+  // Scroll to keep caret visible when typing (e.g. after pressing Enter)
+  // Safe with Reanimated: reads scrollOffset.value (shared value, no React dep)
+  // so this callback doesn't change on every scroll frame.
   const scrollToKeepCaretVisible = useCallback(
     (cursorPos: number, text: string) => {
-      // Skip if user is actively scrolling or keyboard is not open
-      if (isUserScrolling || keyboardHeight === 0 || !scrollViewRef.current)
-        return;
+      const kbHeight = keyboard.height.value;
+      if (kbHeight === 0) return;
 
-      // Get cursor Y from the provided cursor position
       const cursorY = getCursorLineY(cursorPos, text);
 
-      // Calculate visible area above keyboard
       const screenHeight = Dimensions.get("window").height;
       const HEADER_HEIGHT = 100;
       const BOTTOM_BAR_HEIGHT = 88;
       const visibleHeight =
-        screenHeight - HEADER_HEIGHT - keyboardHeight - BOTTOM_BAR_HEIGHT;
+        screenHeight - HEADER_HEIGHT - kbHeight - BOTTOM_BAR_HEIGHT;
 
-      const visibleTop = scrollOffset;
-      const visibleBottom = scrollOffset + visibleHeight;
+      const visibleTop = scrollOffset.value;
+      const visibleBottom = visibleTop + visibleHeight;
       const SCROLL_MARGIN = LINE_HEIGHT;
 
-      // Only scroll if cursor is outside visible area
       if (cursorY + LINE_HEIGHT > visibleBottom - SCROLL_MARGIN) {
         // Cursor below visible area - scroll down
         const targetScroll =
           cursorY - visibleHeight + LINE_HEIGHT + SCROLL_MARGIN;
-        scrollViewRef.current.scrollTo({
-          y: Math.max(0, targetScroll),
-          animated: true,
-        });
+        scrollTo(scrollRef, 0, Math.max(0, targetScroll), true);
       } else if (cursorY < visibleTop + SCROLL_MARGIN) {
         // Cursor above visible area - scroll up
-        scrollViewRef.current.scrollTo({
-          y: Math.max(0, cursorY - SCROLL_MARGIN),
-          animated: true,
-        });
+        scrollTo(scrollRef, 0, Math.max(0, cursorY - SCROLL_MARGIN), true);
       }
     },
-    [isUserScrolling, keyboardHeight, scrollOffset, getCursorLineY],
+    [getCursorLineY, scrollRef, keyboard],
+  );
+
+  // Track cursor position for keyboard-open scroll adjustment
+  const handleSelectionChange = useCallback((event: any) => {
+    cursorPosRef.current = event.nativeEvent.selection.start;
+  }, []);
+
+  // When keyboard opens, fire a supplementary scroll to account for the
+  // totals bar that sits above the keyboard. automaticallyAdjustKeyboardInsets
+  // only scrolls the caret to the keyboard top — this pushes it above the bar.
+  const onKeyboardOpen = useCallback(() => {
+    setTimeout(() => {
+      scrollToKeepCaretVisible(cursorPosRef.current, previousTextRef.current);
+    }, 350);
+  }, [scrollToKeepCaretVisible]);
+
+  useAnimatedReaction(
+    () => keyboard.height.value,
+    (current, previous) => {
+      if (current > 0 && (previous === null || previous === 0)) {
+        runOnJS(onKeyboardOpen)();
+      }
+    },
   );
 
   // Parse document text to find lines that start with "-" or "—"
@@ -852,7 +828,6 @@ export function NotesEditor({
           setTimeout(() => {
             setSelection(undefined);
             isTransformingRef.current = false;
-            // Scroll after transform (often includes newline insertion)
             if (diff.type === "insert" && diff.insertedText.includes("\n")) {
               scrollToKeepCaretVisible(
                 result.newCursor,
@@ -866,7 +841,7 @@ export function NotesEditor({
         previousTextRef.current = newText;
         onDocumentTextChange(newText);
 
-        // Scroll if newline was inserted - cursor is after the inserted newline
+        // Scroll if newline was inserted
         if (diff.type === "insert" && diff.insertedText.includes("\n")) {
           const newCursorPos = diff.position + diff.insertedText.length;
           requestAnimationFrame(() =>
@@ -988,16 +963,6 @@ export function NotesEditor({
     return indicators;
   }, [documentText, entries, entryYMap]);
 
-  // Dynamic scroll content style with keyboard-based bottom padding
-  // This allows native TextInput to keep the caret visible automatically
-  const scrollContentStyle = useMemo(
-    () => ({
-      flexGrow: 1,
-      paddingBottom: keyboardHeight > 0 ? keyboardHeight : 0,
-    }),
-    [keyboardHeight],
-  );
-
   return (
     <View style={styles.container}>
       {/* Hidden Text component for reliable layout measurement */}
@@ -1007,17 +972,15 @@ export function NotesEditor({
       </Text>
 
       {/* ScrollView wrapper enables keyboard dismiss on drag */}
-      <ScrollView
-        ref={scrollViewRef}
+      <Animated.ScrollView
+        ref={scrollRef}
         style={styles.scrollContainer}
-        contentContainerStyle={scrollContentStyle}
+        contentContainerStyle={styles.scrollContent}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
-        onScroll={handleScroll}
-        onScrollBeginDrag={handleScrollBeginDrag}
-        onScrollEndDrag={handleScrollEndDrag}
-        onMomentumScrollEnd={handleMomentumScrollEnd}
+        onScroll={scrollHandler}
+        automaticallyAdjustKeyboardInsets
       >
         {/* Document editor - full screen */}
         <TextInput
@@ -1030,6 +993,7 @@ export function NotesEditor({
           placeholder="Enter food items starting with '-'"
           placeholderTextColor="#ccc"
           multiline
+          scrollEnabled={false}
           autoFocus
           textAlignVertical="top"
           autoCorrect={false}
@@ -1041,21 +1005,24 @@ export function NotesEditor({
           selectTextOnFocus={false}
           clearTextOnFocus={false}
         />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Overlay for inline nutrition indicators */}
-      <View style={styles.overlay} pointerEvents="box-none">
+      <Animated.View
+        style={[styles.overlay, animatedOverlayStyle]}
+        pointerEvents="box-none"
+      >
         {indicatorData.map((item) => (
           <IndicatorRow
             key={item.entryId}
             entry={item.entry}
-            yPosition={item.yPosition - scrollOffset}
+            yPosition={item.yPosition}
             opacity={hasFreshMeasurements ? 1 : 0}
             isOnline={isOnline}
             onTap={handleIndicatorTap}
           />
         ))}
-      </View>
+      </Animated.View>
 
       {/* Reasoning Popup */}
       <NutritionReasoningPopup

@@ -10,9 +10,10 @@ import { useSwipeDateNavigation } from "@/hooks/useSwipeDateNavigation";
 import { useAppStore } from "@/store/app-store";
 import { SavedEntry } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   InputAccessoryView,
+  Keyboard,
   Platform,
   StatusBar,
   StyleSheet,
@@ -21,11 +22,7 @@ import {
   View,
 } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
-import Animated, {
-  runOnJS,
-  useAnimatedKeyboard,
-  useAnimatedReaction,
-} from "react-native-reanimated";
+import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const INPUT_ACCESSORY_VIEW_ID = "totals-bar-accessory";
@@ -159,17 +156,28 @@ export default function HomeScreen() {
     [currentDocumentText, currentDate, saveDocument],
   );
 
-  // Track keyboard open/close for dual-rendering the totals bar
-  const keyboard = useAnimatedKeyboard();
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
-  useAnimatedReaction(
-    () => keyboard.height.value > 0,
-    (open, prev) => {
-      if (open !== prev) {
-        runOnJS(setIsKeyboardOpen)(open);
-      }
-    },
-  );
+  // Track keyboard open/close for dual-rendering the totals bar.
+  // Uses discrete Keyboard events instead of animated values to avoid
+  // oscillation/flicker during the dismiss animation.
+  const [showStaticBar, setShowStaticBar] = useState(true);
+  const [showAccessoryBar, setShowAccessoryBar] = useState(false);
+  useEffect(() => {
+    const willShowSub = Keyboard.addListener("keyboardWillShow", () => {
+      setShowStaticBar(false);
+      setShowAccessoryBar(true);
+    });
+    const willHideSub = Keyboard.addListener("keyboardWillHide", () => {
+      setShowAccessoryBar(false);
+    });
+    const didHideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setShowStaticBar(true);
+    });
+    return () => {
+      willShowSub.remove();
+      willHideSub.remove();
+      didHideSub.remove();
+    };
+  }, []);
 
   // Swipe gesture for date navigation
   const { gesture: swipeGesture, animatedStyle: swipeAnimatedStyle } =
@@ -306,19 +314,21 @@ export default function HomeScreen() {
       {/* iOS: Totals bar as native keyboard accessory */}
       {Platform.OS === "ios" && (
         <InputAccessoryView nativeID={INPUT_ACCESSORY_VIEW_ID}>
-          <View style={styles.inputAccessoryWrapper}>
-            <TotalsBar
-              dailyTotals={dailyTotals}
-              isOnline={isOnline}
-              onAddSavedPress={() => setShowSavedEntriesPopup(true)}
-              onTotalsPress={() => setShowGoalsPopup(true)}
-            />
-          </View>
+          {showAccessoryBar && (
+            <View style={styles.inputAccessoryWrapper}>
+              <TotalsBar
+                dailyTotals={dailyTotals}
+                isOnline={isOnline}
+                onAddSavedPress={() => setShowSavedEntriesPopup(true)}
+                onTotalsPress={() => setShowGoalsPopup(true)}
+              />
+            </View>
+          )}
         </InputAccessoryView>
       )}
 
       {/* Static bottom bar: visible when keyboard is closed (or always on Android) */}
-      {(!isKeyboardOpen || Platform.OS !== "ios") && (
+      {(showStaticBar || Platform.OS !== "ios") && (
         <View style={styles.bottomBarContainer}>
           <TotalsBar
             dailyTotals={dailyTotals}

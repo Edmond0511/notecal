@@ -2,25 +2,18 @@ import { Calendar } from "@/components/Calendar";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
 import { GoalsPopup } from "@/components/GoalsPopup";
 import { NotesEditor } from "@/components/NotesEditor";
-import { OfflinePill } from "@/components/OfflinePill";
 import { SavedEntriesPopup } from "@/components/SavedEntriesPopup";
 import { SettingsModal } from "@/components/SettingsModal";
+import { TotalsBar } from "@/components/TotalsBar";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { useSwipeDateNavigation } from "@/hooks/useSwipeDateNavigation";
 import { useAppStore } from "@/store/app-store";
 import { SavedEntry } from "@/types";
-import { truncateNumber } from "@/utils/formatNumber";
 import { Ionicons } from "@expo/vector-icons";
-import { IconProp } from "@fortawesome/fontawesome-svg-core";
-import {
-  faDroplet,
-  faDrumstickBite,
-  faFireFlameCurved,
-  faWheatAwn,
-} from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import React, { useCallback, useState } from "react";
 import {
+  InputAccessoryView,
+  Platform,
   StatusBar,
   StyleSheet,
   Text,
@@ -29,18 +22,13 @@ import {
 } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-  interpolate,
+  runOnJS,
   useAnimatedKeyboard,
-  useAnimatedStyle,
+  useAnimatedReaction,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const icons = {
-  fire: faFireFlameCurved as IconProp,
-  protein: faDrumstickBite as IconProp,
-  fat: faDroplet as IconProp,
-  carbs: faWheatAwn as IconProp,
-};
+const INPUT_ACCESSORY_VIEW_ID = "totals-bar-accessory";
 
 export default function HomeScreen() {
   // Get all entries and currentDate from store - single subscription
@@ -171,17 +159,17 @@ export default function HomeScreen() {
     [currentDocumentText, currentDate, saveDocument],
   );
 
-  // Keyboard-aware animation for bottom bar
+  // Track keyboard open/close for dual-rendering the totals bar
   const keyboard = useAnimatedKeyboard();
-  const animatedBottomBarStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: -keyboard.height.value }],
-    paddingBottom: interpolate(
-      keyboard.height.value,
-      [0, 200],
-      [50, 12],
-      "clamp",
-    ),
-  }));
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  useAnimatedReaction(
+    () => keyboard.height.value > 0,
+    (open, prev) => {
+      if (open !== prev) {
+        runOnJS(setIsKeyboardOpen)(open);
+      }
+    },
+  );
 
   // Swipe gesture for date navigation
   const { gesture: swipeGesture, animatedStyle: swipeAnimatedStyle } =
@@ -308,82 +296,36 @@ export default function HomeScreen() {
             onDeleteEntry={deleteEntry}
             currentDate={currentDate}
             isOnline={isOnline}
+            inputAccessoryViewID={
+              Platform.OS === "ios" ? INPUT_ACCESSORY_VIEW_ID : undefined
+            }
           />
         </Animated.View>
       </GestureDetector>
 
-      {/* Bottom Bar Container with Add Button and Totals */}
-      <Animated.View
-        style={[styles.bottomBarContainer, animatedBottomBarStyle]}
-      >
-        <OfflinePill visible={!isOnline} />
+      {/* iOS: Totals bar as native keyboard accessory */}
+      {Platform.OS === "ios" && (
+        <InputAccessoryView nativeID={INPUT_ACCESSORY_VIEW_ID}>
+          <TotalsBar
+            dailyTotals={dailyTotals}
+            isOnline={isOnline}
+            onAddSavedPress={() => setShowSavedEntriesPopup(true)}
+            onTotalsPress={() => setShowGoalsPopup(true)}
+          />
+        </InputAccessoryView>
+      )}
 
-        <View style={styles.bottomBarRow}>
-          {/* Add saved entry button */}
-          <TouchableOpacity
-            style={styles.addSavedButton}
-            onPress={() => setShowSavedEntriesPopup(true)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add" size={24} color="#1A6872" />
-          </TouchableOpacity>
-
-          {/* Daily Totals Bar - Tap to open goals popup */}
-          <TouchableOpacity
-            style={styles.totalsBar}
-            onPress={() => setShowGoalsPopup(true)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.totalItem}>
-              <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                {truncateNumber(dailyTotals.kcal, 5)}
-              </Text>
-              <FontAwesomeIcon
-                icon={icons.fire}
-                size={14}
-                color="#FF6B35"
-                style={styles.totalIcon}
-              />
-            </View>
-            <View style={styles.totalDivider} />
-            <View style={styles.totalItem}>
-              <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                {truncateNumber(dailyTotals.protein, 4)}
-              </Text>
-              <FontAwesomeIcon
-                icon={icons.protein}
-                size={14}
-                color="#4A90D9"
-                style={styles.totalIcon}
-              />
-            </View>
-            <View style={styles.totalDivider} />
-            <View style={styles.totalItem}>
-              <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                {truncateNumber(dailyTotals.fat, 4)}
-              </Text>
-              <FontAwesomeIcon
-                icon={icons.fat}
-                size={14}
-                color="#F5A623"
-                style={styles.totalIcon}
-              />
-            </View>
-            <View style={styles.totalDivider} />
-            <View style={styles.totalItem}>
-              <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                {truncateNumber(dailyTotals.carbs, 4)}
-              </Text>
-              <FontAwesomeIcon
-                icon={icons.carbs}
-                size={14}
-                color="#9B6B9E"
-                style={styles.totalIcon}
-              />
-            </View>
-          </TouchableOpacity>
+      {/* Static bottom bar: visible when keyboard is closed (or always on Android) */}
+      {(!isKeyboardOpen || Platform.OS !== "ios") && (
+        <View style={styles.bottomBarContainer}>
+          <TotalsBar
+            dailyTotals={dailyTotals}
+            isOnline={isOnline}
+            onAddSavedPress={() => setShowSavedEntriesPopup(true)}
+            onTotalsPress={() => setShowGoalsPopup(true)}
+          />
         </View>
-      </Animated.View>
+      )}
 
       {/* Custom Calendar */}
       <Calendar
@@ -488,70 +430,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: "column",
-    alignItems: "center",
-    paddingHorizontal: 16,
+    paddingBottom: 50,
     backgroundColor: "transparent",
-  },
-  bottomBarRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addSavedButton: {
-    marginRight: 12,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#E0F2F1",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  totalsBar: {
-    flexShrink: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-evenly",
-    backgroundColor: "#ffffffee",
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    borderRadius: 26,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  totalItem: {
-    flex: 1,
-    maxWidth: 64,
-    alignItems: "center",
-    paddingHorizontal: 4,
-  },
-  totalValue: {
-    fontSize: 16,
-    fontFamily: "System",
-    fontWeight: "600",
-    color: "#222",
-    letterSpacing: -0.3,
-  },
-  totalIcon: {
-    marginTop: 3,
-  },
-  totalDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: "#e0e0e0",
   },
 });

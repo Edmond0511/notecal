@@ -18,10 +18,8 @@ import {
   View,
 } from "react-native";
 import Animated, {
-  runOnJS,
   scrollTo,
   useAnimatedKeyboard,
-  useAnimatedReaction,
   useAnimatedRef,
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -580,6 +578,7 @@ interface NotesEditorProps {
   onDeleteEntry: (id: string) => void;
   currentDate?: string;
   isOnline?: boolean;
+  inputAccessoryViewID?: string;
 }
 
 export function NotesEditor({
@@ -590,6 +589,7 @@ export function NotesEditor({
   onDeleteEntry,
   currentDate,
   isOnline = true,
+  inputAccessoryViewID,
 }: NotesEditorProps) {
   const [documentText, setDocumentText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
@@ -609,8 +609,6 @@ export function NotesEditor({
   const [selection, setSelection] = useState<
     { start: number; end: number } | undefined
   >(undefined);
-  // Track cursor position for keyboard-open scroll adjustment
-  const cursorPosRef = useRef(0);
   // Flag to prevent recursive text change handling during transforms
   const isTransformingRef = useRef<boolean>(false);
   // Reanimated scroll handler - runs on UI thread, no JS re-renders
@@ -691,9 +689,7 @@ export function NotesEditor({
 
       const screenHeight = Dimensions.get("window").height;
       const HEADER_HEIGHT = 100;
-      const BOTTOM_BAR_HEIGHT = 88;
-      const visibleHeight =
-        screenHeight - HEADER_HEIGHT - kbHeight - BOTTOM_BAR_HEIGHT;
+      const visibleHeight = screenHeight - HEADER_HEIGHT - kbHeight;
 
       const visibleTop = scrollOffset.value;
       const visibleBottom = visibleTop + visibleHeight;
@@ -710,29 +706,6 @@ export function NotesEditor({
       }
     },
     [getCursorLineY, scrollRef, keyboard],
-  );
-
-  // Track cursor position for keyboard-open scroll adjustment
-  const handleSelectionChange = useCallback((event: any) => {
-    cursorPosRef.current = event.nativeEvent.selection.start;
-  }, []);
-
-  // When keyboard opens, fire a supplementary scroll to account for the
-  // totals bar that sits above the keyboard. automaticallyAdjustKeyboardInsets
-  // only scrolls the caret to the keyboard top — this pushes it above the bar.
-  const onKeyboardOpen = useCallback(() => {
-    setTimeout(() => {
-      scrollToKeepCaretVisible(cursorPosRef.current, previousTextRef.current);
-    }, 350);
-  }, [scrollToKeepCaretVisible]);
-
-  useAnimatedReaction(
-    () => keyboard.height.value,
-    (current, previous) => {
-      if (current > 0 && (previous === null || previous === 0)) {
-        runOnJS(onKeyboardOpen)();
-      }
-    },
   );
 
   // Parse document text to find lines that start with "-" or "—"
@@ -988,7 +961,6 @@ export function NotesEditor({
           style={styles.documentInput}
           value={documentText}
           onChangeText={handleTextChange}
-          onSelectionChange={handleSelectionChange}
           selection={selection}
           placeholder="Enter food items starting with '-'"
           placeholderTextColor="#ccc"
@@ -1004,6 +976,7 @@ export function NotesEditor({
           contextMenuHidden={false}
           selectTextOnFocus={false}
           clearTextOnFocus={false}
+          inputAccessoryViewID={inputAccessoryViewID}
         />
       </Animated.ScrollView>
 

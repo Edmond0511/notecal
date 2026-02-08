@@ -11,6 +11,7 @@ import React, {
 import {
   Animated as RNAnimated,
   Dimensions,
+  Keyboard,
   StyleSheet,
   Text,
   TextInput,
@@ -611,6 +612,21 @@ export function NotesEditor({
   >(undefined);
   // Flag to prevent recursive text change handling during transforms
   const isTransformingRef = useRef<boolean>(false);
+  // Scroll-vs-tap guard: prevent keyboard from opening on scroll.
+  // showSoftInputOnFocus=false lets the TextInput receive focus (cursor placed)
+  // without triggering the keyboard animation. We only flip it to true after
+  // confirming the touch was a tap (no movement), which triggers
+  // native reloadInputViews and opens the keyboard in-place.
+  const isKeyboardVisibleRef = useRef(false);
+  const pendingFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFocusPendingRef = useRef(false);
+  const isScrollingRef = useRef(false);
+  const [showSoftInput, setShowSoftInput] = useState(true);
+  // Touch movement tracking for reliable tap-vs-scroll detection.
+  // onScrollBeginDrag can fire late for slow scrolls, so we also track
+  // raw touch movement to cancel pending keyboard open immediately.
+  const touchStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const hasTouchMovedRef = useRef(false);
   // Reanimated scroll handler - runs on UI thread, no JS re-renders
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -664,7 +680,98 @@ export function NotesEditor({
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
       }
+      if (pendingFocusTimerRef.current) {
+        clearTimeout(pendingFocusTimerRef.current);
+      }
     };
+  }, []);
+
+  // Track keyboard visibility and gate showSoftInputOnFocus.
+  // When keyboard hides, disable soft-input so the next focus (from a touch)
+  // places the cursor without starting the keyboard animation.
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", () => {
+      isKeyboardVisibleRef.current = true;
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      isKeyboardVisibleRef.current = false;
+      setShowSoftInput(false);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // Track touch start position; clear movement flag.
+  const handleTouchStart = useCallback((e: any) => {
+    const touch = e.nativeEvent;
+    touchStartRef.current = { x: touch.pageX, y: touch.pageY };
+    hasTouchMovedRef.current = false;
+  }, []);
+
+  // Detect finger movement (>5px) and cancel pending keyboard open immediately.
+  // This fires much earlier than onScrollBeginDrag for slow scrolls.
+  const handleTouchMove = useCallback((e: any) => {
+    if (hasTouchMovedRef.current) return;
+    const touch = e.nativeEvent;
+    const dx = Math.abs(touch.pageX - touchStartRef.current.x);
+    const dy = Math.abs(touch.pageY - touchStartRef.current.y);
+    if (dx > 5 || dy > 5) {
+      hasTouchMovedRef.current = true;
+      // Cancel pending focus immediately
+      if (isFocusPendingRef.current) {
+        isFocusPendingRef.current = false;
+        if (pendingFocusTimerRef.current) {
+          clearTimeout(pendingFocusTimerRef.current);
+          pendingFocusTimerRef.current = null;
+        }
+        textInputRef.current?.blur();
+      }
+    }
+  }, []);
+
+  // On focus while keyboard is hidden: start 150ms guard.
+  // If the timer expires without a scroll or touch movement → it was a tap →
+  // flip showSoftInputOnFocus to true, which triggers native reloadInputViews
+  // and opens the keyboard with the cursor already in place.
+  const handleFocus = useCallback(() => {
+    if (isKeyboardVisibleRef.current) return; // already editing, no guard
+    // If a scroll is already active or touch has moved, blur immediately.
+    if (isScrollingRef.current || hasTouchMovedRef.current) {
+      textInputRef.current?.blur();
+      return;
+    }
+    isFocusPendingRef.current = true;
+    pendingFocusTimerRef.current = setTimeout(() => {
+      isFocusPendingRef.current = false;
+      pendingFocusTimerRef.current = null;
+      // Re-check touch movement — it may have moved during the wait
+      if (hasTouchMovedRef.current) {
+        textInputRef.current?.blur();
+        return;
+      }
+      // Tap confirmed — open keyboard via native reloadInputViews
+      setShowSoftInput(true);
+    }, 150);
+  }, []);
+
+  // If a scroll begins while focus is pending, cancel — it was a scroll.
+  // Also sets isScrollingRef so that any later-arriving onFocus is rejected.
+  const handleScrollBeginDrag = useCallback(() => {
+    isScrollingRef.current = true;
+    if (isFocusPendingRef.current) {
+      isFocusPendingRef.current = false;
+      if (pendingFocusTimerRef.current) {
+        clearTimeout(pendingFocusTimerRef.current);
+        pendingFocusTimerRef.current = null;
+      }
+      textInputRef.current?.blur();
+    }
+  }, []);
+
+  const handleScrollEnd = useCallback(() => {
+    isScrollingRef.current = false;
   }, []);
 
   // Calculate Y position of cursor based on character position
@@ -953,6 +1060,11 @@ export function NotesEditor({
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
         onScroll={scrollHandler}
+        onScrollBeginDrag={handleScrollBeginDrag}
+        onScrollEndDrag={handleScrollEnd}
+        onMomentumScrollEnd={handleScrollEnd}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         automaticallyAdjustKeyboardInsets
       >
         {/* Document editor - full screen */}
@@ -961,6 +1073,8 @@ export function NotesEditor({
           style={styles.documentInput}
           value={documentText}
           onChangeText={handleTextChange}
+          onFocus={handleFocus}
+          showSoftInputOnFocus={showSoftInput}
           selection={selection}
           placeholder="Enter food items starting with '-'"
           placeholderTextColor="#ccc"

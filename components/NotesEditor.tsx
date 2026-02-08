@@ -687,8 +687,10 @@ export function NotesEditor({
   }, []);
 
   // Track keyboard visibility and gate showSoftInputOnFocus.
-  // When keyboard hides, disable soft-input so the next focus (from a touch)
-  // places the cursor without starting the keyboard animation.
+  // When keyboard hides, disable soft-input AND blur the TextInput so the
+  // cursor is removed. Without blurring, the focused TextInput's native
+  // scroll-to-cursor behavior fights the user's scroll gestures, making
+  // scrolling feel "locked" to the caret position.
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", () => {
       isKeyboardVisibleRef.current = true;
@@ -696,6 +698,7 @@ export function NotesEditor({
     const hideSub = Keyboard.addListener("keyboardDidHide", () => {
       isKeyboardVisibleRef.current = false;
       setShowSoftInput(false);
+      textInputRef.current?.blur();
     });
     return () => {
       showSub.remove();

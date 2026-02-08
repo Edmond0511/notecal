@@ -306,12 +306,14 @@ export default function HomeScreen() {
       {/* iOS: Totals bar as native keyboard accessory */}
       {Platform.OS === "ios" && (
         <InputAccessoryView nativeID={INPUT_ACCESSORY_VIEW_ID}>
-          <TotalsBar
-            dailyTotals={dailyTotals}
-            isOnline={isOnline}
-            onAddSavedPress={() => setShowSavedEntriesPopup(true)}
-            onTotalsPress={() => setShowGoalsPopup(true)}
-          />
+          <View style={styles.inputAccessoryWrapper}>
+            <TotalsBar
+              dailyTotals={dailyTotals}
+              isOnline={isOnline}
+              onAddSavedPress={() => setShowSavedEntriesPopup(true)}
+              onTotalsPress={() => setShowGoalsPopup(true)}
+            />
+          </View>
         </InputAccessoryView>
       )}
 
@@ -431,6 +433,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingBottom: 50,
+    backgroundColor: "transparent",
+  },
+  inputAccessoryWrapper: {
+    paddingTop: 0,
+    paddingBottom: 12,
     backgroundColor: "transparent",
   },
 });

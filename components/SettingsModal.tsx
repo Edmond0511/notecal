@@ -91,7 +91,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       translateY.value,
       [0, SCREEN_HEIGHT * 0.5],
       [1, 0],
-      Extrapolation.CLAMP
+      Extrapolation.CLAMP,
     ),
   }));
 
@@ -115,7 +115,9 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const fetchUser = async () => {
     setIsLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         const provider = user.app_metadata?.provider || "email";
         setUser({
@@ -170,7 +172,11 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           </Animated.View>
           <GestureDetector gesture={panGesture}>
             <Animated.View
-              style={[styles.container, { marginTop: insets.top }, animatedStyle]}
+              style={[
+                styles.container,
+                { marginTop: insets.top },
+                animatedStyle,
+              ]}
             >
               {/* Drag Indicator */}
               <View style={styles.dragIndicatorContainer}>
@@ -255,7 +261,11 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                       activeOpacity={0.8}
                     >
                       <View style={styles.signInIconContainer}>
-                        <Ionicons name="person-outline" size={24} color="#22C55E" />
+                        <Ionicons
+                          name="person-outline"
+                          size={24}
+                          color="#22C55E"
+                        />
                       </View>
                       <View style={styles.signInContent}>
                         <Text style={styles.signInTitle}>Sign In</Text>
@@ -286,9 +296,13 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                       }}
                     >
                       <View style={styles.menuIconContainer}>
-                        <Ionicons name="nutrition-outline" size={20} color="#666" />
+                        <Ionicons
+                          name="nutrition-outline"
+                          size={20}
+                          color="#666"
+                        />
                       </View>
-                      <Text style={styles.menuItemText}>Nutrition Goals</Text>
+                      <Text style={styles.menuItemText}>Nutrition Targets</Text>
                       <Ionicons name="chevron-forward" size={18} color="#ccc" />
                     </TouchableOpacity>
                   </View>
@@ -304,7 +318,11 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                   <View style={styles.menuCard}>
                     <View style={styles.menuItem}>
                       <View style={styles.menuIconContainer}>
-                        <Ionicons name="information-circle-outline" size={20} color="#666" />
+                        <Ionicons
+                          name="information-circle-outline"
+                          size={20}
+                          color="#666"
+                        />
                       </View>
                       <Text style={styles.menuItemText}>Version</Text>
                       <Text style={styles.menuItemValue}>1.0.0</Text>

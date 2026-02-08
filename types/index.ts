@@ -84,12 +84,7 @@ export type ActivityLevel =
   | 'active'         // 6-7 days/week (1.725)
   | 'extra_active';  // Physical job + exercise (1.9)
 
-export type GoalType =
-  | 'lose_fast'  // -1000 kcal/day
-  | 'lose'       // -500 kcal/day
-  | 'maintain'   // 0
-  | 'gain'       // +250 kcal/day
-  | 'gain_fast'; // +500 kcal/day
+export type GoalType = 'lose' | 'maintain' | 'gain';
 
 export type ProteinPreference = 'low' | 'standard' | 'high';
 export type CarbPreference = 'low' | 'standard' | 'high';
@@ -104,6 +99,8 @@ export interface UserGoalsInput {
   goalType: GoalType;
   proteinPreference?: ProteinPreference;
   carbPreference?: CarbPreference;
+  targetWeightKg?: number;
+  timelineWeeks?: number;
 }
 
 export interface ManualTargets {

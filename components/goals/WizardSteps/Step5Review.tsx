@@ -2,6 +2,7 @@ import { UserGoals } from "@/types";
 import {
   getActivityLevelDescription,
   getGoalTypeDescription,
+  kgToLbs,
 } from "@/utils/goalsCalculator";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
@@ -376,11 +377,53 @@ export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps
         </View>
       </View>
 
+      {/* Weight target info (when set) */}
+      {goals.targetWeightKg != null && goals.timelineWeeks != null && (
+        (() => {
+          const useImperial = formData.weightUseImperial;
+          const currentDisplay = useImperial
+            ? `${formData.weightLbs} lbs`
+            : `${goals.weightKg} kg`;
+          const targetDisplay = useImperial
+            ? `${Math.round(kgToLbs(goals.targetWeightKg))} lbs`
+            : `${goals.targetWeightKg} kg`;
+          const isLosing = goals.goalType === 'lose';
+
+          return (
+            <View style={styles.weightTargetCard}>
+              <Text style={styles.cardTitle}>Weight Target</Text>
+              <View style={styles.weightTargetRow}>
+                <View style={styles.weightTargetItem}>
+                  <Text style={styles.weightTargetLabel}>Current</Text>
+                  <Text style={styles.weightTargetValue}>{currentDisplay}</Text>
+                </View>
+                <Ionicons name="arrow-forward" size={16} color="#ccc" />
+                <View style={styles.weightTargetItem}>
+                  <Text style={styles.weightTargetLabel}>Target</Text>
+                  <Text style={[styles.weightTargetValue, { color: isLosing ? '#FB8C00' : '#1E88E5' }]}>
+                    {targetDisplay}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          );
+        })()
+      )}
+
       {/* Goal expectation */}
       <View style={styles.expectationBox}>
         <FontAwesomeIcon icon={icons.arrowTrendUp} size={20} color="#1A6872" />
         <Text style={styles.expectationText}>
-          Expected: {goalInfo.weeklyChange}
+          {goals.targetWeightKg != null && goals.timelineWeeks != null
+            ? (() => {
+                const diffKg = Math.abs(goals.weightKg - goals.targetWeightKg);
+                const diffDisplay = formData.weightUseImperial
+                  ? `${kgToLbs(diffKg)} lbs`
+                  : `${Math.round(diffKg * 10) / 10} kg`;
+                const months = Math.round(goals.timelineWeeks! / (52 / 12));
+                return `${goals.goalType === 'lose' ? 'Lose' : 'Gain'} ${diffDisplay} in ${months} ${months === 1 ? 'month' : 'months'}`;
+              })()
+            : `Expected: ${goalInfo.weeklyChange}`}
         </Text>
       </View>
 
@@ -558,6 +601,32 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 14,
     fontWeight: "600",
+    color: "#333",
+  },
+  weightTargetCard: {
+    backgroundColor: "#f8f8f8",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  weightTargetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+    marginBottom: 12,
+  },
+  weightTargetItem: {
+    alignItems: "center",
+  },
+  weightTargetLabel: {
+    fontSize: 12,
+    color: "#888",
+    marginBottom: 4,
+  },
+  weightTargetValue: {
+    fontSize: 18,
+    fontWeight: "700",
     color: "#333",
   },
   expectationBox: {

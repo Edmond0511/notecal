@@ -25,13 +25,13 @@ const proteinOptions: {
   label: string;
   description: string;
 }[] = [
-  { value: "low", label: "Lower", description: "Minimal focus on protein" },
+  { value: "low", label: "Lower", description: "Lower protein (~1.2g/kg body weight)" },
   {
     value: "standard",
     label: "Standard",
-    description: "Balanced protein intake",
+    description: "Balanced protein intake (~1.6-2.0g/kg)",
   },
-  { value: "high", label: "Higher", description: "Extra protein for muscle" },
+  { value: "high", label: "Higher", description: "Extra protein for muscle (~2.0-2.2g/kg)" },
 ];
 
 const carbOptions: {
@@ -39,9 +39,9 @@ const carbOptions: {
   label: string;
   description: string;
 }[] = [
-  { value: "low", label: "Low Carb", description: "Keto-friendly approach" },
-  { value: "standard", label: "Standard", description: "Balanced carb intake" },
-  { value: "high", label: "High Carb", description: "For active lifestyles" },
+  { value: "low", label: "Low Carb", description: "Low carb, higher fat approach" },
+  { value: "standard", label: "Standard", description: "Balanced macro split" },
+  { value: "high", label: "High Carb", description: "High carb for fuel, lower fat" },
 ];
 
 export function Step4Macros({
@@ -150,8 +150,8 @@ export function Step4Macros({
       <View style={styles.infoBox}>
         <Ionicons name="information-circle" size={18} color="#1A6872" />
         <Text style={styles.infoText}>
-          These preferences adjust your macro percentages. You can always change
-          them later in Settings.
+          These preferences fine-tune your macros based on your body weight and
+          goals. You can always change them later in Settings.
         </Text>
       </View>
     </View>

@@ -43,11 +43,11 @@ import { Step1Metrics } from './WizardSteps/Step1Metrics';
 import { Step2Activity } from './WizardSteps/Step2Activity';
 import { Step3Goal } from './WizardSteps/Step3Goal';
 import { Step4Macros } from './WizardSteps/Step4Macros';
+import { StepWeightTarget } from './WizardSteps/StepWeightTarget';
 import { Step5Review } from './WizardSteps/Step5Review';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DISMISS_THRESHOLD = 150;
-const TOTAL_STEPS = 5;
 
 interface GoalsWizardProps {
   visible: boolean;
@@ -70,6 +70,9 @@ export interface WizardFormData {
   useImperial: boolean; // Legacy - kept for compatibility
   heightUseImperial: boolean;
   weightUseImperial: boolean;
+  targetWeightKg: string;
+  targetWeightLbs: string;
+  timelineMonths: string;
 }
 
 const initialFormData: WizardFormData = {
@@ -87,6 +90,9 @@ const initialFormData: WizardFormData = {
   useImperial: false,
   heightUseImperial: false,
   weightUseImperial: false,
+  targetWeightKg: '',
+  targetWeightLbs: '',
+  timelineMonths: '',
 };
 
 export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProps) {
@@ -105,6 +111,11 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
     if (visible) {
       if (existingGoals) {
         const isImperial = preferredUnits === 'imperial';
+        // Backward compatibility: map removed goal types
+        let goalType = existingGoals.goalType;
+        if ((goalType as string) === 'lose_fast') goalType = 'lose';
+        if ((goalType as string) === 'gain_fast') goalType = 'gain';
+
         setFormData({
           sex: existingGoals.sex,
           age: existingGoals.age.toString(),
@@ -114,12 +125,19 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
           weightKg: existingGoals.weightKg.toString(),
           weightLbs: Math.round(existingGoals.weightKg * 2.20462).toString(),
           activityLevel: existingGoals.activityLevel,
-          goalType: existingGoals.goalType,
+          goalType,
           proteinPreference: existingGoals.proteinPreference || 'standard',
           carbPreference: existingGoals.carbPreference || 'standard',
           useImperial: isImperial,
           heightUseImperial: isImperial,
           weightUseImperial: isImperial,
+          targetWeightKg: existingGoals.targetWeightKg?.toString() ?? '',
+          targetWeightLbs: existingGoals.targetWeightKg
+            ? Math.round(existingGoals.targetWeightKg * 2.20462).toString()
+            : '',
+          timelineMonths: existingGoals.timelineWeeks
+            ? Math.round(existingGoals.timelineWeeks / (52 / 12)).toString()
+            : '',
         });
       } else {
         const isImperial = preferredUnits === 'imperial';
@@ -186,9 +204,25 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
     setFormData((prev) => ({ ...prev, ...updates }));
   };
 
+  // Whether the weight target step should be shown
+  const hasWeightTargetStep = formData.goalType === 'lose' || formData.goalType === 'gain';
+  const totalSteps = hasWeightTargetStep ? 6 : 5;
+
+  // Map logical step to content:
+  // With weight target: 1-Metrics, 2-Activity, 3-Goal, 4-WeightTarget, 5-Macros, 6-Review
+  // Without:            1-Metrics, 2-Activity, 3-Goal, 4-Macros, 5-Review
+  const getStepContent = (step: number): string => {
+    if (step <= 3) return ['metrics', 'activity', 'goal'][step - 1];
+    if (hasWeightTargetStep) {
+      return ['weight_target', 'macros', 'review'][step - 4];
+    }
+    return ['macros', 'review'][step - 4];
+  };
+
   const canProceed = (): boolean => {
-    switch (currentStep) {
-      case 1: {
+    const content = getStepContent(currentStep);
+    switch (content) {
+      case 'metrics': {
         const hasHeight = formData.heightUseImperial
           ? !!formData.heightFeet
           : !!formData.heightCm;
@@ -197,13 +231,19 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
           : !!formData.weightKg;
         return !!(formData.sex && formData.age && hasHeight && hasWeight);
       }
-      case 2:
+      case 'activity':
         return !!formData.activityLevel;
-      case 3:
+      case 'goal':
         return !!formData.goalType;
-      case 4:
+      case 'weight_target': {
+        const hasTarget = formData.weightUseImperial
+          ? !!formData.targetWeightLbs
+          : !!formData.targetWeightKg;
+        return hasTarget && !!formData.timelineMonths;
+      }
+      case 'macros':
         return true; // Optional step
-      case 5:
+      case 'review':
         return true;
       default:
         return false;
@@ -211,7 +251,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
   };
 
   const goToNextStep = () => {
-    if (currentStep < TOTAL_STEPS && canProceed()) {
+    if (currentStep < totalSteps && canProceed()) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setCurrentStep((prev) => prev + 1);
     }
@@ -224,10 +264,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
     }
   };
 
-  const handleSave = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-    // Convert form data to UserGoalsInput
+  const buildInput = (): { heightCm: number; weightKg: number; targetWeightKg?: number; timelineWeeks?: number } => {
     let heightCm: number;
     let weightKg: number;
 
@@ -244,6 +281,30 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
     } else {
       weightKg = parseFloat(formData.weightKg) || 0;
     }
+
+    // Weight target (only for lose/gain with values)
+    let targetWeightKg: number | undefined;
+    let timelineWeeks: number | undefined;
+
+    if (hasWeightTargetStep) {
+      if (formData.weightUseImperial) {
+        const tw = parseFloat(formData.targetWeightLbs);
+        if (tw) targetWeightKg = Math.round(tw * 0.453592 * 10) / 10;
+      } else {
+        const tw = parseFloat(formData.targetWeightKg);
+        if (tw) targetWeightKg = tw;
+      }
+      const months = parseInt(formData.timelineMonths, 10);
+      if (months > 0) timelineWeeks = Math.round(months * (52 / 12));
+    }
+
+    return { heightCm, weightKg, targetWeightKg, timelineWeeks };
+  };
+
+  const handleSave = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    const { heightCm, weightKg, targetWeightKg, timelineWeeks } = buildInput();
 
     const input: UserGoalsInput = {
       sex: formData.sex!,
@@ -254,38 +315,19 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
       goalType: formData.goalType!,
       proteinPreference: formData.proteinPreference,
       carbPreference: formData.carbPreference,
+      targetWeightKg,
+      timelineWeeks,
     };
 
     const calculatedGoals = calculateGoals(input);
-    // Note: Manual targets are NOT preserved when recalculating via wizard.
-    // The calculateGoals() function returns fresh goals without manual targets,
-    // so the new calculated values always take precedence.
 
     setGoals(calculatedGoals);
-    // Use weight unit preference as the "dominant" preference for display elsewhere
     setPreferredUnits(formData.weightUseImperial ? 'imperial' : 'metric');
     onClose();
   };
 
   const getCalculatedGoals = (): UserGoals | null => {
-    if (!canProceed()) return null;
-
-    let heightCm: number;
-    let weightKg: number;
-
-    if (formData.heightUseImperial) {
-      const feet = parseFloat(formData.heightFeet) || 0;
-      const inches = parseFloat(formData.heightInches) || 0;
-      heightCm = Math.round((feet * 12 + inches) * 2.54 * 10) / 10;
-    } else {
-      heightCm = parseFloat(formData.heightCm) || 0;
-    }
-
-    if (formData.weightUseImperial) {
-      weightKg = Math.round((parseFloat(formData.weightLbs) || 0) * 0.453592 * 10) / 10;
-    } else {
-      weightKg = parseFloat(formData.weightKg) || 0;
-    }
+    const { heightCm, weightKg, targetWeightKg, timelineWeeks } = buildInput();
 
     if (!formData.sex || !formData.age || !heightCm || !weightKg ||
         !formData.activityLevel || !formData.goalType) {
@@ -301,35 +343,45 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
       goalType: formData.goalType,
       proteinPreference: formData.proteinPreference,
       carbPreference: formData.carbPreference,
+      targetWeightKg,
+      timelineWeeks,
     };
 
     return calculateGoals(input);
   };
 
   const renderStep = () => {
-    switch (currentStep) {
-      case 1:
+    const content = getStepContent(currentStep);
+    switch (content) {
+      case 'metrics':
         return (
           <Step1Metrics
             formData={formData}
             updateFormData={updateFormData}
           />
         );
-      case 2:
+      case 'activity':
         return (
           <Step2Activity
             selectedActivity={formData.activityLevel}
             onSelect={(level) => updateFormData({ activityLevel: level })}
           />
         );
-      case 3:
+      case 'goal':
         return (
           <Step3Goal
             selectedGoal={formData.goalType}
             onSelect={(goal) => updateFormData({ goalType: goal })}
           />
         );
-      case 4:
+      case 'weight_target':
+        return (
+          <StepWeightTarget
+            formData={formData}
+            updateFormData={updateFormData}
+          />
+        );
+      case 'macros':
         return (
           <Step4Macros
             proteinPreference={formData.proteinPreference}
@@ -338,7 +390,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
             onCarbChange={(pref) => updateFormData({ carbPreference: pref })}
           />
         );
-      case 5:
+      case 'review':
         return (
           <Step5Review
             goals={getCalculatedGoals()}
@@ -397,7 +449,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
                   {existingGoals ? 'Edit Goals' : 'Set Up Goals'}
                 </Text>
                 <Text style={styles.headerSubtitle}>
-                  Step {currentStep} of {TOTAL_STEPS}
+                  Step {currentStep} of {totalSteps}
                 </Text>
               </View>
               <View style={styles.headerRightSpacer} />
@@ -405,7 +457,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
 
             {/* Progress indicator */}
             <View style={styles.progressContainer}>
-              {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
+              {Array.from({ length: totalSteps }).map((_, index) => (
                 <View
                   key={index}
                   style={[
@@ -453,7 +505,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
                 <View style={styles.backButton} />
               )}
 
-              {currentStep < TOTAL_STEPS ? (
+              {currentStep < totalSteps ? (
                 <TouchableOpacity
                   style={[
                     styles.nextButton,

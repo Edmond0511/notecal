@@ -17,24 +17,36 @@ const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
   extra_active: 1.9,
 };
 
-// Calorie adjustments for different goals
+// Default calorie adjustments for goals (used when no weight target is set)
 const GOAL_ADJUSTMENTS: Record<GoalType, number> = {
-  lose_fast: -1000,
   lose: -500,
   maintain: 0,
-  gain: 250,
-  gain_fast: 500,
+  gain: 300,
 };
 
-// Macro percentages based on goal type
-// Format: { protein: %, fat: %, carbs: % }
-const MACRO_PERCENTAGES: Record<GoalType, { protein: number; fat: number; carbs: number }> = {
-  lose_fast: { protein: 35, fat: 30, carbs: 35 },
-  lose: { protein: 30, fat: 30, carbs: 40 },
-  maintain: { protein: 25, fat: 30, carbs: 45 },
-  gain: { protein: 30, fat: 25, carbs: 45 },
-  gain_fast: { protein: 25, fat: 25, carbs: 50 },
+// Protein multipliers (g per kg body weight) anchored to goal type
+const PROTEIN_MULTIPLIERS: Record<GoalType, number> = {
+  lose: 2.0,
+  maintain: 1.6,
+  gain: 1.8,
 };
+
+// Protein preference adjustments (g/kg)
+const PROTEIN_PREF_ADJUSTMENTS: Record<ProteinPreference, number> = {
+  low: -0.4,
+  standard: 0,
+  high: 0.2,
+};
+
+// Fat percentage of total calories based on carb preference
+const FAT_PERCENTAGE: Record<CarbPreference, number> = {
+  low: 35,
+  standard: 25,
+  high: 20,
+};
+
+const MAX_PROTEIN_G = 220;
+const MIN_CARBS_G = 50;
 
 // Minimum calorie floors for safety
 const MIN_CALORIES: Record<Sex, number> = {
@@ -71,62 +83,98 @@ export function calculateTDEE(bmr: number, activityLevel: ActivityLevel): number
 }
 
 /**
+ * Calculate calorie adjustment based on weight target and timeline.
+ * Uses 7700 kcal per kg of body weight change.
+ * Clamps to safe bounds: max deficit -1000 kcal/day, max surplus +500 kcal/day.
+ */
+export function calculateGoalAdjustment(
+  currentWeightKg: number,
+  targetWeightKg: number,
+  timelineWeeks: number
+): number {
+  const weeklyChangeKg = (targetWeightKg - currentWeightKg) / timelineWeeks;
+  const dailyAdjustment = Math.round((weeklyChangeKg * 7700) / 7);
+  // Clamp: max deficit -1000, max surplus +500
+  return Math.max(-1000, Math.min(500, dailyAdjustment));
+}
+
+/**
  * Calculate target calories based on TDEE and goal type
- * Applies safety floor to prevent dangerously low calorie targets
+ * When targetWeightKg and timelineWeeks are provided, uses dynamic adjustment.
+ * Otherwise uses default GOAL_ADJUSTMENTS.
+ * Applies safety floor to prevent dangerously low calorie targets.
  */
 export function calculateTargetCalories(
   tdee: number,
   goalType: GoalType,
-  sex: Sex
+  sex: Sex,
+  targetWeightKg?: number,
+  currentWeightKg?: number,
+  timelineWeeks?: number
 ): number {
-  const adjustment = GOAL_ADJUSTMENTS[goalType];
-  const targetCalories = tdee + adjustment;
-  const minCalories = MIN_CALORIES[sex];
+  let adjustment: number;
+
+  if (targetWeightKg != null && currentWeightKg != null && timelineWeeks != null && timelineWeeks > 0) {
+    adjustment = calculateGoalAdjustment(currentWeightKg, targetWeightKg, timelineWeeks);
+  } else {
+    adjustment = GOAL_ADJUSTMENTS[goalType];
+  }
+
+  let targetCalories = tdee + adjustment;
 
   // Enforce minimum calorie floor for safety
+  const minCalories = MIN_CALORIES[sex];
   return Math.max(targetCalories, minCalories);
 }
 
 /**
- * Calculate macro targets in grams based on calorie target and goal type
- * Optionally adjusts based on protein/carb preferences
+ * Calculate macro targets using the "Protein Anchor" method:
+ * 1. Protein is anchored to body weight (g/kg), not calorie percentage
+ * 2. Fat is set as a percentage of calories with a hormonal health floor
+ * 3. Carbs fill the remaining calories
  */
 export function calculateMacros(
   targetKcal: number,
   goalType: GoalType,
+  weightKg: number,
   proteinPref: ProteinPreference = 'standard',
   carbPref: CarbPreference = 'standard'
 ): { protein: number; fat: number; carbs: number } {
-  let { protein: proteinPct, fat: fatPct, carbs: carbsPct } = MACRO_PERCENTAGES[goalType];
+  // Step A: Protein (anchored to body weight)
+  const baseMultiplier = PROTEIN_MULTIPLIERS[goalType];
+  const prefAdjustment = PROTEIN_PREF_ADJUSTMENTS[proteinPref];
+  let proteinG = Math.round(weightKg * (baseMultiplier + prefAdjustment));
+  proteinG = Math.min(proteinG, MAX_PROTEIN_G);
 
-  // Adjust protein based on preference
-  if (proteinPref === 'high') {
-    proteinPct += 10;
-    carbsPct -= 10;
-  } else if (proteinPref === 'low') {
-    proteinPct -= 5;
-    carbsPct += 5;
+  // Step B: Fat (percentage of calories with hormonal floor)
+  const fatPct = FAT_PERCENTAGE[carbPref];
+  const fatFromPct = Math.round((targetKcal * (fatPct / 100)) / 9);
+  const fatFloor = Math.round(weightKg * 0.8);
+  let fatG = Math.max(fatFromPct, fatFloor);
+
+  // Step C: Carbs (fill remaining calories)
+  let remainingCal = targetKcal - (proteinG * 4) - (fatG * 9);
+  let carbsG = Math.round(remainingCal / 4);
+
+  // If carbs go below minimum, reduce fat to 20% first, then reduce protein
+  if (carbsG < MIN_CARBS_G) {
+    const fatAt20Pct = Math.round((targetKcal * 0.20) / 9);
+    fatG = Math.max(fatAt20Pct, fatFloor);
+    remainingCal = targetKcal - (proteinG * 4) - (fatG * 9);
+    carbsG = Math.round(remainingCal / 4);
+
+    if (carbsG < MIN_CARBS_G) {
+      // Reduce protein to make room for minimum carbs
+      const calForProtein = targetKcal - (fatG * 9) - (MIN_CARBS_G * 4);
+      proteinG = Math.max(Math.round(calForProtein / 4), 0);
+      carbsG = MIN_CARBS_G;
+    }
   }
-
-  // Adjust carbs based on preference
-  if (carbPref === 'low') {
-    carbsPct -= 15;
-    fatPct += 15;
-  } else if (carbPref === 'high') {
-    carbsPct += 10;
-    fatPct -= 10;
-  }
-
-  // Convert percentages to grams
-  // Protein: 4 cal/g, Carbs: 4 cal/g, Fat: 9 cal/g
-  const proteinGrams = Math.round((targetKcal * (proteinPct / 100)) / 4);
-  const fatGrams = Math.round((targetKcal * (fatPct / 100)) / 9);
-  const carbsGrams = Math.round((targetKcal * (carbsPct / 100)) / 4);
 
   return {
-    protein: proteinGrams,
-    fat: fatGrams,
-    carbs: carbsGrams,
+    protein: proteinG,
+    fat: fatG,
+    carbs: carbsG,
   };
 }
 
@@ -144,6 +192,8 @@ export function calculateGoals(input: UserGoalsInput): UserGoals {
     goalType,
     proteinPreference = 'standard',
     carbPreference = 'standard',
+    targetWeightKg,
+    timelineWeeks,
   } = input;
 
   // Step 1: Calculate BMR
@@ -152,11 +202,13 @@ export function calculateGoals(input: UserGoalsInput): UserGoals {
   // Step 2: Calculate TDEE
   const tdee = calculateTDEE(bmr, activityLevel);
 
-  // Step 3: Calculate target calories
-  const targetKcal = calculateTargetCalories(tdee, goalType, sex);
+  // Step 3: Calculate target calories (with optional weight-based adjustment)
+  const targetKcal = calculateTargetCalories(
+    tdee, goalType, sex, targetWeightKg, weightKg, timelineWeeks
+  );
 
   // Step 4: Calculate macros
-  const macros = calculateMacros(targetKcal, goalType, proteinPreference, carbPreference);
+  const macros = calculateMacros(targetKcal, goalType, weightKg, proteinPreference, carbPreference);
 
   const now = new Date();
 
@@ -217,11 +269,11 @@ export function getActivityLevelDescription(level: ActivityLevel): {
   const descriptions: Record<ActivityLevel, { title: string; description: string }> = {
     sedentary: {
       title: 'Sedentary',
-      description: 'Little to no regular exercise',
+      description: 'Office job, mostly sitting',
     },
     light: {
-      title: 'Lightly Active',
-      description: 'Light exercise 1-3 days/week',
+      title: 'Light Activity',
+      description: 'Exercise 1-3 days OR standing job',
     },
     moderate: {
       title: 'Moderately Active',
@@ -248,15 +300,10 @@ export function getGoalTypeDescription(goal: GoalType): {
   weeklyChange: string;
 } {
   const descriptions: Record<GoalType, { title: string; description: string; weeklyChange: string }> = {
-    lose_fast: {
-      title: 'Lose Fast',
-      description: 'Aggressive calorie deficit',
-      weeklyChange: '~2 lb/week loss',
-    },
     lose: {
       title: 'Lose Weight',
-      description: 'Moderate calorie deficit',
-      weeklyChange: '~1 lb/week loss',
+      description: 'Calorie deficit to lose weight',
+      weeklyChange: 'Set your own target',
     },
     maintain: {
       title: 'Maintain',
@@ -265,13 +312,8 @@ export function getGoalTypeDescription(goal: GoalType): {
     },
     gain: {
       title: 'Gain Weight',
-      description: 'Lean muscle building',
-      weeklyChange: '~0.5 lb/week gain',
-    },
-    gain_fast: {
-      title: 'Gain Fast',
-      description: 'Bulk phase',
-      weeklyChange: '~1 lb/week gain',
+      description: 'Calorie surplus to build muscle',
+      weeklyChange: 'Set your own target',
     },
   };
   return descriptions[goal];

@@ -10,28 +10,18 @@ interface Step3GoalProps {
   onSelect: (goal: GoalType) => void;
 }
 
-const goalTypes: GoalType[] = [
-  'lose_fast',
-  'lose',
-  'maintain',
-  'gain',
-  'gain_fast',
-];
+const goalTypes: GoalType[] = ['lose', 'maintain', 'gain'];
 
 const goalIcons: Record<GoalType, keyof typeof Ionicons.glyphMap> = {
-  lose_fast: 'trending-down',
-  lose: 'arrow-down-outline',
+  lose: 'trending-down',
   maintain: 'remove-outline',
-  gain: 'arrow-up-outline',
-  gain_fast: 'trending-up',
+  gain: 'trending-up',
 };
 
 const goalColors: Record<GoalType, string> = {
-  lose_fast: '#E53935',
   lose: '#FB8C00',
   maintain: '#43A047',
   gain: '#1E88E5',
-  gain_fast: '#7B1FA2',
 };
 
 export function Step3Goal({ selectedGoal, onSelect }: Step3GoalProps) {
@@ -49,7 +39,7 @@ export function Step3Goal({ selectedGoal, onSelect }: Step3GoalProps) {
 
       <View style={styles.optionsContainer}>
         {goalTypes.map((goal) => {
-          const { title, description, weeklyChange } = getGoalTypeDescription(goal);
+          const { title, description } = getGoalTypeDescription(goal);
           const isSelected = selectedGoal === goal;
           const color = goalColors[goal];
 
@@ -89,14 +79,6 @@ export function Step3Goal({ selectedGoal, onSelect }: Step3GoalProps) {
                 <Text style={styles.optionDescription}>
                   {description}
                 </Text>
-                <View style={styles.weeklyBadge}>
-                  <Ionicons
-                    name="calendar-outline"
-                    size={12}
-                    color="#888"
-                  />
-                  <Text style={styles.weeklyText}>{weeklyChange}</Text>
-                </View>
               </View>
               {isSelected && (
                 <Ionicons
@@ -170,23 +152,6 @@ const styles = StyleSheet.create({
   optionDescription: {
     fontSize: 13,
     color: '#666',
-    marginBottom: 4,
-  },
-  weeklyBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    gap: 4,
-    marginTop: 2,
-  },
-  weeklyText: {
-    fontSize: 11,
-    color: '#888',
-    fontStyle: 'italic',
   },
   checkIcon: {
     marginLeft: 8,

@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   segmentedControl: {
     flexDirection: "row",
     backgroundColor: "#e8e8e8",
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 2,
   },
   segmentOption: {
@@ -360,12 +360,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   segmentOptionLeft: {
-    borderTopLeftRadius: 16,
-    borderBottomLeftRadius: 16,
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
   },
   segmentOptionRight: {
-    borderTopRightRadius: 16,
-    borderBottomRightRadius: 16,
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 10,
   },
   segmentOptionActive: {
     backgroundColor: "#fff",

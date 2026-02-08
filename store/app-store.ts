@@ -893,7 +893,6 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({
         entries: state.entries,
         documents: state.documents,
-        currentDate: state.currentDate,
         goals: state.goals,
         preferredUnits: state.preferredUnits,
         savedEntries: state.savedEntries,
@@ -914,6 +913,7 @@ export const useAppStore = create<AppState>()(
       merge: (persistedState: any, currentState: any) => ({
         ...currentState,
         ...persistedState,
+        currentDate: currentState.currentDate, // Always reset to today on cold start
         // Ensure savedEntries is always an array
         savedEntries: persistedState?.savedEntries ?? currentState.savedEntries ?? [],
       }),

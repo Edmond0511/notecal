@@ -1,4 +1,8 @@
-import { calculateGoalAdjustment, kgToLbs, lbsToKg } from "@/utils/goalsCalculator";
+import {
+  calculateGoalAdjustment,
+  kgToLbs,
+  lbsToKg,
+} from "@/utils/goalsCalculator";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
@@ -49,13 +53,12 @@ export function StepWeightTarget({
       return null;
     }
 
-    const weeklyChangeKg =
-      (targetWeightKg - currentWeightKg) / timelineWeeks;
+    const weeklyChangeKg = (targetWeightKg - currentWeightKg) / timelineWeeks;
     const weeklyChangeLbs = kgToLbs(Math.abs(weeklyChangeKg));
     const dailyAdjustment = calculateGoalAdjustment(
       currentWeightKg,
       targetWeightKg,
-      timelineWeeks
+      timelineWeeks,
     );
 
     const isGaining = formData.goalType === "gain";
@@ -81,8 +84,11 @@ export function StepWeightTarget({
 
     // Weekly rate display
     const weeklyDisplay = useImperial
-      ? `~${weeklyChangeLbs.toFixed(1)} lb/wk`
-      : `~${Math.abs(weeklyChangeKg).toFixed(1)} kg/wk`;
+      ? `${weeklyChangeLbs.toFixed(1)} lbs`
+      : `${Math.abs(weeklyChangeKg).toFixed(1)} kg`;
+
+    // Extreme adjustment: beyond the old clamp bounds
+    const extremeAdjustment = dailyAdjustment < -1000 || dailyAdjustment > 500;
 
     return {
       weeklyChangeKg: Math.abs(weeklyChangeKg),
@@ -93,6 +99,7 @@ export function StepWeightTarget({
       wrongDirection,
       aggressiveLoss,
       aggressiveGain,
+      extremeAdjustment,
     };
   }, [targetWeightKg, timelineWeeks, currentWeightKg, formData.goalType]);
 
@@ -126,9 +133,9 @@ export function StepWeightTarget({
           {/* Target weight (editable) */}
           <View style={styles.weightColumn}>
             <Text style={styles.fieldLabel}>Target</Text>
-            <View style={styles.inputRow}>
+            <View style={styles.targetInput}>
               <TextInput
-                style={styles.input}
+                style={styles.targetTextInput}
                 value={
                   useImperial
                     ? formData.targetWeightLbs
@@ -143,11 +150,19 @@ export function StepWeightTarget({
                   }
                 }}
                 keyboardType="decimal-pad"
-                placeholder={isLosing ? (useImperial ? "140" : "60") : (useImperial ? "180" : "80")}
+                placeholder={
+                  isLosing
+                    ? useImperial
+                      ? "140"
+                      : "60"
+                    : useImperial
+                      ? "180"
+                      : "80"
+                }
                 placeholderTextColor="#bbb"
                 maxLength={5}
               />
-              <Text style={styles.inputUnit}>{weightUnit}</Text>
+              <Text style={styles.targetUnit}>{weightUnit}</Text>
             </View>
           </View>
         </View>
@@ -158,19 +173,23 @@ export function StepWeightTarget({
         <Text style={styles.cardLabel}>Timeline</Text>
 
         <View style={styles.fieldContainer}>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              value={formData.timelineMonths}
-              onChangeText={(text) =>
-                updateFormData({ timelineMonths: text.replace(/[^0-9]/g, "") })
-              }
-              keyboardType="number-pad"
-              placeholder="3"
-              placeholderTextColor="#bbb"
-              maxLength={2}
-            />
-            <Text style={styles.inputUnit}>months</Text>
+          <View style={styles.timelineRow}>
+            <View style={styles.timelineInput}>
+              <TextInput
+                style={styles.timelineTextInput}
+                value={formData.timelineMonths}
+                onChangeText={(text) =>
+                  updateFormData({
+                    timelineMonths: text.replace(/[^0-9]/g, ""),
+                  })
+                }
+                keyboardType="number-pad"
+                placeholder="3"
+                placeholderTextColor="#bbb"
+                maxLength={2}
+              />
+              <Text style={styles.timelineUnit}>months</Text>
+            </View>
           </View>
           {calcInfo && !calcInfo.wrongDirection && (
             <Text style={styles.helperText}>
@@ -200,11 +219,6 @@ export function StepWeightTarget({
             </View>
           </View>
 
-          <View style={styles.planMeta}>
-            <Text style={styles.planMetaText}>
-              {timelineMonths} {timelineMonths === 1 ? "month" : "months"}  ·  {calcInfo.weeklyDisplay} {isLosing ? "loss" : "gain"}
-            </Text>
-          </View>
         </View>
       )}
 
@@ -220,19 +234,17 @@ export function StepWeightTarget({
         </View>
       )}
 
-      {/* Aggressive rate caution */}
-      {calcInfo &&
-        !calcInfo.wrongDirection &&
-        (calcInfo.aggressiveLoss || calcInfo.aggressiveGain) && (
-          <View style={styles.infoBox}>
-            <Ionicons name="information-circle" size={18} color="#1A6872" />
-            <Text style={styles.infoText}>
-              {calcInfo.aggressiveLoss
-                ? "This rate exceeds ~0.9 kg/week (~2 lb/week). Consider a longer timeline for sustainable results."
-                : "This rate exceeds ~0.45 kg/week (~1 lb/week). Consider a longer timeline to minimize fat gain."}
-            </Text>
-          </View>
-        )}
+      {/* Extreme daily adjustment warning */}
+      {calcInfo && !calcInfo.wrongDirection && calcInfo.extremeAdjustment && (
+        <View style={styles.warningBox}>
+          <Ionicons name="warning" size={18} color="#C62828" />
+          <Text style={styles.warningText}>
+            This is an aggressive daily
+            {calcInfo.dailyAdjustment < 0 ? " deficit" : " surplus"}. Consider
+            extending your timeline for more sustainable results.
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -254,7 +266,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   card: {
-    backgroundColor: "#f8f8f8",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -268,7 +279,7 @@ const styles = StyleSheet.create({
   weightRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 8,
+    gap: 10,
   },
   weightColumn: {
     flex: 1,
@@ -287,8 +298,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     height: 48,
-    backgroundColor: "#eee",
-    borderRadius: 16,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 12,
     paddingHorizontal: 16,
     gap: 4,
   },
@@ -301,25 +312,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#999",
   },
-  inputRow: {
+  targetInput: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-  },
-  input: {
-    flex: 1,
     height: 48,
-    backgroundColor: "#fff",
-    borderRadius: 16,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 12,
     paddingHorizontal: 16,
+    gap: 4,
+  },
+  targetTextInput: {
+    flex: 1,
     fontSize: 18,
     fontWeight: "500",
     color: "#333",
+    height: 48,
+    padding: 0,
   },
-  inputUnit: {
+  targetUnit: {
     fontSize: 14,
-    color: "#666",
-    minWidth: 30,
+    color: "#999",
+  },
+  timelineRow: {
+    flexDirection: "row",
+  },
+  timelineInput: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 48,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    gap: 4,
+    flex: 1,
+  },
+  timelineTextInput: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: "500",
+    color: "#333",
+    height: 48,
+    padding: 0,
+  },
+  timelineUnit: {
+    fontSize: 14,
+    color: "#999",
   },
   helperText: {
     fontSize: 12,
@@ -331,7 +368,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 16,
-    marginBottom: 12,
   },
   planItem: {
     alignItems: "center",
@@ -346,18 +382,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#333",
   },
-  planMeta: {
-    alignItems: "center",
-    backgroundColor: "#E0F2F1",
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  planMetaText: {
-    fontSize: 13,
-    color: "#1A6872",
-    fontWeight: "500",
-  },
   warningBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -371,20 +395,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: "#C62828",
-    lineHeight: 18,
-  },
-  infoBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#E0F2F1",
-    padding: 14,
-    borderRadius: 16,
-    gap: 10,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 13,
-    color: "#1A6872",
     lineHeight: 18,
   },
 });

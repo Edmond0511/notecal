@@ -85,7 +85,7 @@ export function calculateTDEE(bmr: number, activityLevel: ActivityLevel): number
 /**
  * Calculate calorie adjustment based on weight target and timeline.
  * Uses 7700 kcal per kg of body weight change.
- * Clamps to safe bounds: max deficit -1000 kcal/day, max surplus +500 kcal/day.
+ * Returns raw value — calorie floor in calculateTargetCalories prevents dangerous targets.
  */
 export function calculateGoalAdjustment(
   currentWeightKg: number,
@@ -93,9 +93,7 @@ export function calculateGoalAdjustment(
   timelineWeeks: number
 ): number {
   const weeklyChangeKg = (targetWeightKg - currentWeightKg) / timelineWeeks;
-  const dailyAdjustment = Math.round((weeklyChangeKg * 7700) / 7);
-  // Clamp: max deficit -1000, max surplus +500
-  return Math.max(-1000, Math.min(500, dailyAdjustment));
+  return Math.round((weeklyChangeKg * 7700) / 7);
 }
 
 /**

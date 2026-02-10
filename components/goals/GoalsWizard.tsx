@@ -277,7 +277,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
     }
 
     if (formData.weightUseImperial) {
-      weightKg = Math.round((parseFloat(formData.weightLbs) || 0) * 0.453592 * 10) / 10;
+      weightKg = (parseFloat(formData.weightLbs) || 0) * 0.453592;
     } else {
       weightKg = parseFloat(formData.weightKg) || 0;
     }
@@ -289,13 +289,13 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
     if (hasWeightTargetStep) {
       if (formData.weightUseImperial) {
         const tw = parseFloat(formData.targetWeightLbs);
-        if (tw) targetWeightKg = Math.round(tw * 0.453592 * 10) / 10;
+        if (tw) targetWeightKg = tw * 0.453592;
       } else {
         const tw = parseFloat(formData.targetWeightKg);
         if (tw) targetWeightKg = tw;
       }
       const months = parseInt(formData.timelineMonths, 10);
-      if (months > 0) timelineWeeks = Math.round(months * (52 / 12));
+      if (months > 0) timelineWeeks = months * (52 / 12);
     }
 
     return { heightCm, weightKg, targetWeightKg, timelineWeeks };

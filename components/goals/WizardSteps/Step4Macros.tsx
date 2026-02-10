@@ -1,17 +1,9 @@
 import { CarbPreference, ProteinPreference } from "@/types";
-import { Ionicons } from "@expo/vector-icons";
-import { IconProp } from "@fortawesome/fontawesome-svg-core";
-import { faDrumstickBite, faWheatAwn } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import * as Haptics from "expo-haptics";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 // Cast icons to IconProp to fix type mismatch between FA packages
-const icons = {
-  drumstickBite: faDrumstickBite as IconProp,
-  wheatAwn: faWheatAwn as IconProp,
-};
 
 interface Step4MacrosProps {
   proteinPreference: ProteinPreference;
@@ -25,13 +17,21 @@ const proteinOptions: {
   label: string;
   description: string;
 }[] = [
-  { value: "low", label: "Lower", description: "Lower protein (~1.2g/kg body weight)" },
+  {
+    value: "low",
+    label: "Lower",
+    description: "Lower protein (1.2g/kg body weight)",
+  },
   {
     value: "standard",
     label: "Standard",
-    description: "Balanced protein intake (~1.6-2.0g/kg)",
+    description: "Balanced protein intake (1.6-2.0g/kg)",
   },
-  { value: "high", label: "Higher", description: "Extra protein for muscle (~2.0-2.2g/kg)" },
+  {
+    value: "high",
+    label: "Higher",
+    description: "Extra protein for muscle (2.0-2.2g/kg)",
+  },
 ];
 
 const carbOptions: {
@@ -39,9 +39,17 @@ const carbOptions: {
   label: string;
   description: string;
 }[] = [
-  { value: "low", label: "Low Carb", description: "Low carb, higher fat approach" },
+  {
+    value: "low",
+    label: "Low Carb",
+    description: "Low carb, higher fat approach",
+  },
   { value: "standard", label: "Standard", description: "Balanced macro split" },
-  { value: "high", label: "High Carb", description: "High carb for fuel, lower fat" },
+  {
+    value: "high",
+    label: "High Carb",
+    description: "High carb for fuel, lower fat",
+  },
 ];
 
 export function Step4Macros({
@@ -70,9 +78,6 @@ export function Step4Macros({
       {/* Protein preference card */}
       <View style={styles.card}>
         <View style={styles.sectionHeader}>
-          <View style={[styles.sectionIconContainer, { backgroundColor: "#E3F2FD" }]}>
-            <FontAwesomeIcon icon={icons.drumstickBite} size={16} color="#4A90D9" />
-          </View>
           <Text style={styles.sectionTitle}>Protein Level</Text>
         </View>
         <View style={styles.optionsRow}>
@@ -111,9 +116,6 @@ export function Step4Macros({
       {/* Carb preference card */}
       <View style={styles.card}>
         <View style={styles.sectionHeader}>
-          <View style={[styles.sectionIconContainer, { backgroundColor: "#F3E5F5" }]}>
-            <FontAwesomeIcon icon={icons.wheatAwn} size={16} color="#9B6B9E" />
-          </View>
           <Text style={styles.sectionTitle}>Carb Level</Text>
         </View>
         <View style={styles.optionsRow}>
@@ -143,15 +145,6 @@ export function Step4Macros({
         </View>
         <Text style={styles.optionDescription}>
           {carbOptions.find((o) => o.value === carbPreference)?.description}
-        </Text>
-      </View>
-
-      {/* Info note */}
-      <View style={styles.infoBox}>
-        <Ionicons name="information-circle" size={18} color="#1A6872" />
-        <Text style={styles.infoText}>
-          These preferences fine-tune your macros based on your body weight and
-          goals. You can always change them later in Settings.
         </Text>
       </View>
     </View>

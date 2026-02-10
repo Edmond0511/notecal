@@ -1,7 +1,6 @@
 import {
   calculateGoalAdjustment,
   kgToLbs,
-  lbsToKg,
 } from "@/utils/goalsCalculator";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
@@ -22,9 +21,9 @@ export function StepWeightTarget({
   const useImperial = formData.weightUseImperial;
   const isLosing = formData.goalType === "lose";
 
-  // Current weight in kg
+  // Current weight in kg (full precision for internal math)
   const currentWeightKg = useImperial
-    ? lbsToKg(parseFloat(formData.weightLbs) || 0)
+    ? (parseFloat(formData.weightLbs) || 0) * 0.453592
     : parseFloat(formData.weightKg) || 0;
 
   // Current weight display
@@ -34,13 +33,13 @@ export function StepWeightTarget({
 
   const weightUnit = useImperial ? "lbs" : "kg";
 
-  // Target weight in kg
+  // Target weight in kg (full precision for internal math)
   const targetWeightKg = useImperial
-    ? lbsToKg(parseFloat(formData.targetWeightLbs) || 0)
+    ? (parseFloat(formData.targetWeightLbs) || 0) * 0.453592
     : parseFloat(formData.targetWeightKg) || 0;
 
   const timelineMonths = parseInt(formData.timelineMonths, 10) || 0;
-  const timelineWeeks = Math.round(timelineMonths * WEEKS_PER_MONTH);
+  const timelineWeeks = timelineMonths * WEEKS_PER_MONTH;
 
   // Calculate info
   const calcInfo = useMemo(() => {
@@ -54,7 +53,10 @@ export function StepWeightTarget({
     }
 
     const weeklyChangeKg = (targetWeightKg - currentWeightKg) / timelineWeeks;
-    const weeklyChangeLbs = kgToLbs(Math.abs(weeklyChangeKg));
+    // Compute imperial rate directly from lbs to avoid double-rounding
+    const weeklyChangeLbs = useImperial
+      ? Math.abs((parseFloat(formData.targetWeightLbs) || 0) - (parseFloat(formData.weightLbs) || 0)) / timelineWeeks
+      : kgToLbs(Math.abs(weeklyChangeKg));
     const dailyAdjustment = calculateGoalAdjustment(
       currentWeightKg,
       targetWeightKg,
@@ -297,11 +299,11 @@ const styles = StyleSheet.create({
   readOnlyInput: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     height: 48,
     backgroundColor: "#f0f0f0",
     borderRadius: 12,
     paddingHorizontal: 16,
-    gap: 4,
   },
   readOnlyValue: {
     fontSize: 18,

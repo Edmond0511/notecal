@@ -61,6 +61,15 @@ export interface SavedEntry {
   usageCount: number;
 }
 
+export interface WeightEntry {
+  id: string;
+  date: string;        // YYYYMMDD
+  weightKg: number;    // always stored in kg
+  note?: string;
+  photoUri?: string;   // local file URI
+  createdAt: string;   // ISO string
+}
+
 export interface DailyTotals {
   date: string;
   kcal: number;
@@ -157,6 +166,8 @@ export interface AppState {
   preferredUnits: UnitSystem;
   // Saved entries state
   savedEntries: SavedEntry[];
+  // Weight tracking state
+  weightEntries: WeightEntry[];
   // Actions
   addEntry: (rawText: string) => void;
   updateEntry: (id: string, rawText: string) => Promise<void>;
@@ -187,6 +198,10 @@ export interface AppState {
   updateEntryItemQuantity: (entryId: string, itemId: string, newServings: number) => void;
   // Correction action
   correctEntryItem: (entryId: string, itemId: string, feedback: string) => Promise<void>;
+  // Weight tracking actions
+  addWeightEntry: (entry: Omit<WeightEntry, 'id' | 'createdAt'>) => void;
+  updateWeightEntry: (id: string, updates: Partial<Pick<WeightEntry, 'weightKg' | 'note' | 'photoUri'>>) => void;
+  deleteWeightEntry: (id: string) => void;
   // Offline queue drain
   enqueuePendingEntries: () => void;
 }

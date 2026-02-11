@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStateStorage } from '@/lib/mmkv';
-import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets, SavedEntry, Macros } from '@/types';
+import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets, SavedEntry, Macros, WeightEntry } from '@/types';
 import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
 import { nutritionQueue } from '@/services/nutritionQueue';
 import { supabase } from '@/lib/supabase';
@@ -65,6 +65,7 @@ export const useAppStore = create<AppState>()(
       goals: null,
       preferredUnits: 'metric' as UnitSystem,
       savedEntries: [],
+      weightEntries: [],
 
   addEntry: (rawText: string) => {
     // Only process lines that start with "- " or "— " (em-dash)
@@ -747,6 +748,32 @@ export const useAppStore = create<AppState>()(
     }));
   },
 
+  // Weight tracking CRUD
+  addWeightEntry: (entry: Omit<WeightEntry, 'id' | 'createdAt'>) => {
+    const newEntry: WeightEntry = {
+      ...entry,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+    };
+    set((state) => ({
+      weightEntries: [...state.weightEntries, newEntry],
+    }));
+  },
+
+  updateWeightEntry: (id: string, updates: Partial<Pick<WeightEntry, 'weightKg' | 'note' | 'photoUri'>>) => {
+    set((state) => ({
+      weightEntries: state.weightEntries.map((e) =>
+        e.id === id ? { ...e, ...updates } : e
+      ),
+    }));
+  },
+
+  deleteWeightEntry: (id: string) => {
+    set((state) => ({
+      weightEntries: state.weightEntries.filter((e) => e.id !== id),
+    }));
+  },
+
   enqueuePendingEntries: () => {
     const pendingEntries = get().entries.filter((e) => {
       if (e.status !== 'pending') return false;
@@ -897,15 +924,21 @@ export const useAppStore = create<AppState>()(
         goals: state.goals,
         preferredUnits: state.preferredUnits,
         savedEntries: state.savedEntries,
+        weightEntries: state.weightEntries,
       }),
       // Handle version migrations
-      version: 2,
+      version: 3,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
-          // Add savedEntries if it doesn't exist
-          return {
+          persistedState = {
             ...persistedState,
             savedEntries: persistedState.savedEntries || [],
+          };
+        }
+        if (version < 3) {
+          persistedState = {
+            ...persistedState,
+            weightEntries: persistedState.weightEntries || [],
           };
         }
         return persistedState;
@@ -917,6 +950,8 @@ export const useAppStore = create<AppState>()(
         currentDate: currentState.currentDate, // Always reset to today on cold start
         // Ensure savedEntries is always an array
         savedEntries: persistedState?.savedEntries ?? currentState.savedEntries ?? [],
+        // Ensure weightEntries is always an array
+        weightEntries: persistedState?.weightEntries ?? currentState.weightEntries ?? [],
       }),
     }
   )

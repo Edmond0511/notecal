@@ -639,6 +639,8 @@ export function NotesEditor({
   const isTouchActiveRef = useRef(false);
   // Flag: scroll to top after next content sync (set on date change)
   const scrollToTopOnContentRef = useRef(false);
+  // Cooldown: block focus briefly after date change to prevent native scroll-to-cursor
+  const dateChangeCooldownRef = useRef(false);
   // Reanimated scroll handler - runs on UI thread, no JS re-renders
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -699,6 +701,11 @@ export function NotesEditor({
     setEntryYMap(new Map());
     setLayoutStale(true);
     scrollTo(scrollRef, 0, 0, false);
+    // Block focus for a short window so native scroll-to-cursor can't fire
+    dateChangeCooldownRef.current = true;
+    setTimeout(() => {
+      dateChangeCooldownRef.current = false;
+    }, 300);
   }, [currentDate]);
 
   // Cleanup timeouts on unmount
@@ -759,6 +766,11 @@ export function NotesEditor({
   // If touch is still active, defer (focus fired mid-touch). If touch already ended
   // (focus fired after touchEnd due to ScrollView gesture recognition), resolve immediately.
   const handleFocus = useCallback(() => {
+    // After date change, block focus to prevent native scroll-to-cursor
+    if (dateChangeCooldownRef.current) {
+      textInputRef.current?.blur();
+      return;
+    }
     if (isKeyboardVisibleRef.current) return; // already editing, no guard
     // If a scroll is already active or touch has moved, blur immediately.
     if (isScrollingRef.current || hasTouchMovedRef.current) {
@@ -766,8 +778,10 @@ export function NotesEditor({
       return;
     }
     if (isTouchActiveRef.current) {
-      // Touch is still in progress — defer to handleTouchEnd
+      // Touch is still in progress — blur immediately to prevent native
+      // scroll-to-cursor, then re-focus in handleTouchEnd if it was a tap
       isFocusPendingRef.current = true;
+      textInputRef.current?.blur();
     } else {
       // Touch already ended (focus fired after touchEnd) — resolve immediately
       setShowSoftInput(true);
@@ -784,8 +798,10 @@ export function NotesEditor({
       textInputRef.current?.blur();
       return;
     }
-    // Tap confirmed — open keyboard via native reloadInputViews
+    // Tap confirmed — re-focus (was blurred in handleFocus to block
+    // native scroll-to-cursor) and open keyboard
     setShowSoftInput(true);
+    textInputRef.current?.focus();
   }, []);
 
   // Handle system touch cancellation (incoming call, gesture override).

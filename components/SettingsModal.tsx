@@ -31,6 +31,7 @@ import { useAppStore } from "@/store/app-store";
 import { AuthModal } from "./AuthModal";
 import { GoalsWizard } from "./goals/GoalsWizard";
 import { NutritionGoalsModal } from "./NutritionGoalsModal";
+import { WeightTrackingModal } from "./WeightTrackingModal";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
@@ -52,6 +53,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showNutritionGoals, setShowNutritionGoals] = useState(false);
   const [showGoalsWizard, setShowGoalsWizard] = useState(false);
+  const [showWeightTracking, setShowWeightTracking] = useState(false);
   const goals = useAppStore((s) => s.goals);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -329,6 +331,27 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                       <Text style={styles.menuItemText}>Goals Setup</Text>
                       <Ionicons name="chevron-forward" size={18} color="#ccc" />
                     </TouchableOpacity>
+
+                    <View style={styles.menuDivider} />
+
+                    <TouchableOpacity
+                      style={styles.menuItem}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setShowWeightTracking(true);
+                      }}
+                    >
+                      <View style={styles.menuIconContainer}>
+                        <Ionicons
+                          name="scale-outline"
+                          size={20}
+                          color="#666"
+                        />
+                      </View>
+                      <Text style={styles.menuItemText}>Weight Tracking</Text>
+                      <Ionicons name="chevron-forward" size={18} color="#ccc" />
+                    </TouchableOpacity>
                   </View>
                 </Animated.View>
 
@@ -374,6 +397,11 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           visible={showGoalsWizard}
           onClose={() => setShowGoalsWizard(false)}
           existingGoals={goals}
+        />
+
+        <WeightTrackingModal
+          visible={showWeightTracking}
+          onClose={() => setShowWeightTracking(false)}
         />
       </Modal>
     </>

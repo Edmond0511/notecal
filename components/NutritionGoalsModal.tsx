@@ -43,7 +43,7 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withSpring
+  withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -185,6 +185,10 @@ export function NutritionGoalsModal({
   const [waterEnabled, setWaterEnabled] = useState(false);
 
 
+  const scrollViewRef = React.useRef<any>(null);
+  const scrollY = React.useRef(0);
+  const waterTipHeight = React.useRef(154); // fallback estimate; refined by onLayout
+
   // Refs for each input field
   const kcalInputRef = React.useRef<TextInput>(null);
   const proteinInputRef = React.useRef<TextInput>(null);
@@ -312,6 +316,7 @@ export function NutritionGoalsModal({
 
   const handleScroll = (event: any) => {
     isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
+    scrollY.current = event.nativeEvent.contentOffset.y;
   };
 
   const handleSaveGoals = () => {
@@ -434,6 +439,7 @@ export function NutritionGoalsModal({
     nutrient: "fiber" | "sugar" | "sodium" | "potassium" | "water",
   ) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const currentlyEnabled = isNutrientEnabled(nutrient);
     switch (nutrient) {
       case "fiber":
         setFiberEnabled(!fiberEnabled);
@@ -450,6 +456,19 @@ export function NutritionGoalsModal({
       case "water":
         setWaterEnabled(!waterEnabled);
         break;
+    }
+    // When enabling, compensate scroll offset for content added above the toggles
+    if (!currentlyEnabled) {
+      // 52px for the new target row; water also adds a tooltip above the toggles
+      const offset = nutrient === 'water'
+        ? 52 + waterTipHeight.current + 12  // +12 for tooltip marginBottom
+        : 52;
+      requestAnimationFrame(() => {
+        scrollViewRef.current?.scrollTo({
+          y: scrollY.current + offset,
+          animated: false,
+        });
+      });
     }
   };
 
@@ -617,6 +636,7 @@ export function NutritionGoalsModal({
               style={styles.keyboardView}
             >
               <Animated.ScrollView
+                ref={scrollViewRef}
                 style={styles.content}
                 contentContainerStyle={[
                   styles.contentContainer,
@@ -632,6 +652,7 @@ export function NutritionGoalsModal({
                 {/* Daily Targets Section */}
                 <Animated.View
                   entering={FadeInDown.delay(100).duration(400)}
+                  layout={Layout.springify()}
                   style={styles.section}
                 >
                   <View style={styles.sectionHeader}>
@@ -696,6 +717,7 @@ export function NutritionGoalsModal({
                 {/* Other Nutrients Section */}
                 <Animated.View
                   entering={FadeInDown.delay(200).duration(400)}
+                  layout={Layout.springify()}
                   style={styles.section}
                 >
                   <View style={styles.sectionHeader}>
@@ -708,6 +730,9 @@ export function NutritionGoalsModal({
                       entering={FadeIn.duration(200)}
                       exiting={FadeOut.duration(200)}
                       style={styles.waterTip}
+                      onLayout={(e) => {
+                        waterTipHeight.current = e.nativeEvent.layout.height;
+                      }}
                     >
                       <Text style={styles.waterTipTitle}>Track Water Intake</Text>
                       <Text style={styles.waterTipText}>

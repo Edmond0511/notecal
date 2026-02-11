@@ -762,9 +762,7 @@ export function NutritionGoalsModal({
                           <Switch
                             value={enabled}
                             onValueChange={() => toggleNutrient(nutrient.key)}
-                            trackColor={{ false: "#E9E9EA", true: "#007AFF" }}
-                            thumbColor="#FFFFFF"
-                            ios_backgroundColor="#E9E9EA"
+                            trackColor={{ true: "#007AFF" }}
                           />
                         </View>
                       );
@@ -967,11 +965,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderRadius: 16,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
   },
   toggleRow: {
     flexDirection: "row",

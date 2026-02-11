@@ -632,6 +632,8 @@ export function NotesEditor({
   const touchStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const hasTouchMovedRef = useRef(false);
   const isTouchActiveRef = useRef(false);
+  // Flag: scroll to top after next content sync (set on date change)
+  const scrollToTopOnContentRef = useRef(false);
   // Reanimated scroll handler - runs on UI thread, no JS re-renders
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -671,12 +673,24 @@ export function NotesEditor({
   useEffect(() => {
     setDocumentText(initialDocumentText);
     previousTextRef.current = initialDocumentText;
+    // Scroll to top after content arrives from a date change
+    if (scrollToTopOnContentRef.current) {
+      scrollToTopOnContentRef.current = false;
+      requestAnimationFrame(() => {
+        scrollTo(scrollRef, 0, 0, false);
+      });
+    }
   }, [initialDocumentText]);
 
-  // Reset layout measurements on date change only
+  // Reset layout measurements and scroll to top on date change.
+  // Blur first so RN's native scroll-to-cursor doesn't fire when the
+  // TextInput value changes.
   useEffect(() => {
+    textInputRef.current?.blur();
+    scrollToTopOnContentRef.current = true;
     setEntryYMap(new Map());
     setLayoutStale(true);
+    scrollTo(scrollRef, 0, 0, false);
   }, [currentDate]);
 
   // Cleanup timeouts on unmount

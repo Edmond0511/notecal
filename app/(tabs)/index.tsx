@@ -10,7 +10,7 @@ import { useSwipeDateNavigation } from "@/hooks/useSwipeDateNavigation";
 import { useAppStore } from "@/store/app-store";
 import { SavedEntry } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   InputAccessoryView,
   Keyboard,
@@ -162,19 +162,32 @@ export default function HomeScreen() {
   const handleTotalsPress = useCallback(() => setShowGoalsPopup(true), []);
 
   // Track keyboard open/close for dual-rendering the totals bar.
-  // Uses discrete Keyboard events instead of animated values to avoid
-  // oscillation/flicker during the dismiss animation.
+  // Debounce the "show" transition to filter out brief keyboardWillShow
+  // events fired when the TextInput momentarily becomes first responder
+  // during swipe gestures (before the gesture handler claims the touch).
+  // The hide transition is immediate so the accessory bar never lingers.
   const [showAccessoryBar, setShowAccessoryBar] = useState(false);
+  const showAccessoryBarRef = useRef(false);
   useEffect(() => {
+    let showTimer: ReturnType<typeof setTimeout> | null = null;
     const willShowSub = Keyboard.addListener("keyboardWillShow", () => {
-      setShowAccessoryBar(true);
+      showTimer = setTimeout(() => {
+        showAccessoryBarRef.current = true;
+        setShowAccessoryBar(true);
+      }, 80);
     });
     const willHideSub = Keyboard.addListener("keyboardWillHide", () => {
+      if (showTimer) {
+        clearTimeout(showTimer);
+        showTimer = null;
+      }
+      showAccessoryBarRef.current = false;
       setShowAccessoryBar(false);
     });
     return () => {
       willShowSub.remove();
       willHideSub.remove();
+      if (showTimer) clearTimeout(showTimer);
     };
   }, []);
 
@@ -314,7 +327,7 @@ export default function HomeScreen() {
       {/* iOS: Totals bar as native keyboard accessory */}
       {Platform.OS === "ios" && (
         <InputAccessoryView nativeID={INPUT_ACCESSORY_VIEW_ID}>
-          {showAccessoryBar && (
+          {showAccessoryBar && showAccessoryBarRef.current && (
             <View style={styles.inputAccessoryWrapper}>
               <TotalsBar
                 dailyTotals={dailyTotals}

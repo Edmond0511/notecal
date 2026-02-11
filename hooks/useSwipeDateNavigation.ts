@@ -5,6 +5,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   runOnJS,
+  cancelAnimation,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
@@ -34,6 +35,14 @@ export function useSwipeDateNavigation({
   const gesture = Gesture.Pan()
     .activeOffsetX([-20, 20])
     .failOffsetY([-15, 15])
+    .onBegin(() => {
+      // Cancel any running spring from a previous swipe so the view is
+      // stationary when gesture recognition begins. Without this, the
+      // animating translateX causes phantom horizontal displacement,
+      // extending the failOffsetY dead zone and locking scrolling.
+      cancelAnimation(translateX);
+      translateX.value = 0;
+    })
     .onStart(() => {
       runOnJS(dismissKeyboard)();
     })

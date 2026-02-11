@@ -27,7 +27,9 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAppStore } from "@/store/app-store";
 import { AuthModal } from "./AuthModal";
+import { GoalsWizard } from "./goals/GoalsWizard";
 import { NutritionGoalsModal } from "./NutritionGoalsModal";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -49,6 +51,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const isScrolledToTop = useSharedValue(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showNutritionGoals, setShowNutritionGoals] = useState(false);
+  const [showGoalsWizard, setShowGoalsWizard] = useState(false);
+  const goals = useAppStore((s) => s.goals);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -304,6 +308,27 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                       <Text style={styles.menuItemText}>Nutrition Targets</Text>
                       <Ionicons name="chevron-forward" size={18} color="#ccc" />
                     </TouchableOpacity>
+
+                    <View style={styles.menuDivider} />
+
+                    <TouchableOpacity
+                      style={styles.menuItem}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setShowGoalsWizard(true);
+                      }}
+                    >
+                      <View style={styles.menuIconContainer}>
+                        <Ionicons
+                          name="flag-outline"
+                          size={20}
+                          color="#666"
+                        />
+                      </View>
+                      <Text style={styles.menuItemText}>Goals Setup</Text>
+                      <Ionicons name="chevron-forward" size={18} color="#ccc" />
+                    </TouchableOpacity>
                   </View>
                 </Animated.View>
 
@@ -343,6 +368,12 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
         <NutritionGoalsModal
           visible={showNutritionGoals}
           onClose={() => setShowNutritionGoals(false)}
+        />
+
+        <GoalsWizard
+          visible={showGoalsWizard}
+          onClose={() => setShowGoalsWizard(false)}
+          existingGoals={goals}
         />
       </Modal>
     </>

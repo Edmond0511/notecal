@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { syncService } from "@/services/syncService";
 import { Session, User } from "@supabase/supabase-js";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
@@ -37,6 +38,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
+
+      if (event === "SIGNED_IN" && session?.user) {
+        syncService.setUser(session.user.id);
+        syncService.fullSync();
+      } else if (event === "SIGNED_OUT") {
+        syncService.setUser(null);
+      }
     });
 
     return () => subscription.unsubscribe();

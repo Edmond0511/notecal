@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabase";
+import { mmkv } from "@/lib/mmkv";
 import { Ionicons } from "@expo/vector-icons";
+import { formatDistanceToNow } from "date-fns";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
 import {
@@ -58,6 +60,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -115,6 +118,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       translateY.value = 0;
       isScrolledToTop.value = true;
       fetchUser();
+      setLastSynced(mmkv.getString("sync-last-pull") ?? null);
     }
   }, [visible]);
 
@@ -227,6 +231,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                     </View>
                   ) : user ? (
                     /* Signed In State */
+                    <>
                     <View style={styles.accountCard}>
                       <View style={styles.accountInfo}>
                         <View style={styles.avatarContainer}>
@@ -256,6 +261,15 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         )}
                       </TouchableOpacity>
                     </View>
+                    {lastSynced && (
+                      <View style={styles.syncStatus}>
+                        <Ionicons name="cloud-done-outline" size={14} color="#999" />
+                        <Text style={styles.syncStatusText}>
+                          Last synced {formatDistanceToNow(new Date(lastSynced), { addSuffix: true })}
+                        </Text>
+                      </View>
+                    )}
+                    </>
                   ) : (
                     /* Signed Out State */
                     <TouchableOpacity
@@ -615,5 +629,16 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#f0f0f0",
     marginLeft: 60,
+  },
+  syncStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+    gap: 5,
+  },
+  syncStatusText: {
+    fontSize: 12,
+    color: "#999",
   },
 });

@@ -1,11 +1,13 @@
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { offlineReconnectService } from '@/services/offlineReconnectService';
+import { syncService } from '@/services/syncService';
+import { startSyncSubscriber, stopSyncSubscriber } from '@/services/syncSubscriber';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { ActivityIndicator, AppState as RNAppState, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
@@ -36,6 +38,26 @@ function RootLayoutNav() {
     }
     return () => offlineReconnectService.stop();
   }, [isLoading]);
+
+  // Start sync subscriber + foreground sync when authenticated
+  const appStateRef = useRef(RNAppState.currentState);
+  useEffect(() => {
+    if (isLoading || !isAuthenticated) return;
+
+    startSyncSubscriber();
+
+    const sub = RNAppState.addEventListener('change', (nextState) => {
+      if (appStateRef.current.match(/inactive|background/) && nextState === 'active') {
+        syncService.fullSync();
+      }
+      appStateRef.current = nextState;
+    });
+
+    return () => {
+      stopSyncSubscriber();
+      sub.remove();
+    };
+  }, [isLoading, isAuthenticated]);
 
   // Show loading screen while checking auth
   if (isLoading) {

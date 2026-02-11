@@ -461,11 +461,15 @@ const WaterBadge = React.memo<{ amountL: number }>(({ amountL }) => (
 ));
 WaterBadge.displayName = "WaterBadge";
 
-// Memoized error badge - shown when nutrition resolution fails
-const ErrorBadge = React.memo(() => (
-  <View style={styles.inlineError}>
+// Memoized error badge - tap to retry resolution
+const ErrorBadge = React.memo<{ onPress: () => void }>(({ onPress }) => (
+  <TouchableOpacity
+    style={styles.inlineError}
+    onPress={onPress}
+    activeOpacity={0.7}
+  >
     <Text style={styles.errorText}>error</Text>
-  </View>
+  </TouchableOpacity>
 ));
 ErrorBadge.displayName = "ErrorBadge";
 
@@ -555,7 +559,7 @@ const IndicatorRow = React.memo<{
               {hasWater && <WaterBadge amountL={waterAmount} />}
             </>
           ) : displayedStatus === "error" ? (
-            <ErrorBadge />
+            <ErrorBadge onPress={handlePress} />
           ) : null}
         </RNAnimated.View>
       </View>
@@ -591,6 +595,7 @@ export function NotesEditor({
   initialDocumentText,
   onDocumentTextChange,
   onAddEntry,
+  onUpdateEntry,
   onDeleteEntry,
   currentDate,
   isOnline = true,
@@ -646,6 +651,16 @@ export function NotesEditor({
     transform: [{ translateY: -scrollOffset.value }],
   }));
 
+  // Scroll to top after date change content renders.
+  // Called by ScrollView's onContentSizeChange, which fires after the native
+  // layout pass — late enough to override any TextInput scroll-to-cursor.
+  const handleContentSizeChange = useCallback(() => {
+    if (scrollToTopOnContentRef.current) {
+      scrollToTopOnContentRef.current = false;
+      scrollTo(scrollRef, 0, 0, false);
+    }
+  }, [scrollRef]);
+
   // Handle text layout - extract y positions for indicator positioning
   const handleTextLayout = useCallback(
     (event: any) => {
@@ -673,13 +688,6 @@ export function NotesEditor({
   useEffect(() => {
     setDocumentText(initialDocumentText);
     previousTextRef.current = initialDocumentText;
-    // Scroll to top after content arrives from a date change
-    if (scrollToTopOnContentRef.current) {
-      scrollToTopOnContentRef.current = false;
-      requestAnimationFrame(() => {
-        scrollTo(scrollRef, 0, 0, false);
-      });
-    }
   }, [initialDocumentText]);
 
   // Reset layout measurements and scroll to top on date change.
@@ -1006,12 +1014,16 @@ export function NotesEditor({
     ],
   );
 
-  // Handle indicator tap
+  // Handle indicator tap - retry on error, show reasoning on ok
   const handleIndicatorTap = useCallback((entry: Entry) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (entry.status === "error" && onUpdateEntry) {
+      onUpdateEntry(entry.id, entry.rawText);
+      return;
+    }
     setSelectedEntry(entry);
     setShowReasoningPopup(true);
-  }, []);
+  }, [onUpdateEntry]);
 
   const handleClosePopup = useCallback(() => {
     setShowReasoningPopup(false);
@@ -1089,6 +1101,7 @@ export function NotesEditor({
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
         onScroll={scrollHandler}
+        onContentSizeChange={handleContentSizeChange}
         onScrollBeginDrag={handleScrollBeginDrag}
         onScrollEndDrag={handleScrollEnd}
         onMomentumScrollEnd={handleScrollEnd}

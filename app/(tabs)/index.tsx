@@ -143,6 +143,10 @@ export default function HomeScreen() {
     [currentDocumentText, currentDate, saveDocument],
   );
 
+  // Stable callbacks for TotalsBar (prevents React.memo invalidation on re-render)
+  const handleAddSavedPress = useCallback(() => setShowSavedEntriesPopup(true), []);
+  const handleTotalsPress = useCallback(() => setShowGoalsPopup(true), []);
+
   // Track keyboard open/close for dual-rendering the totals bar.
   // Uses discrete Keyboard events instead of animated values to avoid
   // oscillation/flicker during the dismiss animation.
@@ -312,25 +316,31 @@ export default function HomeScreen() {
               <TotalsBar
                 dailyTotals={dailyTotals}
                 isOnline={isOnline}
-                onAddSavedPress={() => setShowSavedEntriesPopup(true)}
-                onTotalsPress={() => setShowGoalsPopup(true)}
+                onAddSavedPress={handleAddSavedPress}
+                onTotalsPress={handleTotalsPress}
               />
             </View>
           )}
         </InputAccessoryView>
       )}
 
-      {/* Static bottom bar: visible when keyboard is closed (or always on Android) */}
-      {(showStaticBar || Platform.OS !== "ios") && (
-        <View style={styles.bottomBarContainer}>
-          <TotalsBar
-            dailyTotals={dailyTotals}
-            isOnline={isOnline}
-            onAddSavedPress={() => setShowSavedEntriesPopup(true)}
-            onTotalsPress={() => setShowGoalsPopup(true)}
-          />
-        </View>
-      )}
+      {/* Static bottom bar: always mounted, opacity-toggled to avoid mount/unmount flicker */}
+      <View
+        style={[
+          styles.bottomBarContainer,
+          Platform.OS === "ios" && !showStaticBar && styles.bottomBarHidden,
+        ]}
+        pointerEvents={
+          Platform.OS === "ios" && !showStaticBar ? "none" : "auto"
+        }
+      >
+        <TotalsBar
+          dailyTotals={dailyTotals}
+          isOnline={isOnline}
+          onAddSavedPress={handleAddSavedPress}
+          onTotalsPress={handleTotalsPress}
+        />
+      </View>
 
       {/* Custom Calendar */}
       <Calendar
@@ -440,6 +450,9 @@ const styles = StyleSheet.create({
     right: 0,
     paddingBottom: 50,
     backgroundColor: "transparent",
+  },
+  bottomBarHidden: {
+    opacity: 0,
   },
   inputAccessoryWrapper: {
     paddingTop: 0,

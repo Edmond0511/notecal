@@ -31,6 +31,18 @@ interface TotalsBarProps {
   onTotalsPress: () => void;
 }
 
+function arePropsEqual(prev: TotalsBarProps, next: TotalsBarProps) {
+  return (
+    prev.dailyTotals.kcal === next.dailyTotals.kcal &&
+    prev.dailyTotals.protein === next.dailyTotals.protein &&
+    prev.dailyTotals.fat === next.dailyTotals.fat &&
+    prev.dailyTotals.carbs === next.dailyTotals.carbs &&
+    prev.isOnline === next.isOnline &&
+    prev.onAddSavedPress === next.onAddSavedPress &&
+    prev.onTotalsPress === next.onTotalsPress
+  );
+}
+
 export const TotalsBar = React.memo(function TotalsBar({
   dailyTotals,
   isOnline,
@@ -128,7 +140,7 @@ export const TotalsBar = React.memo(function TotalsBar({
       </View>
     </View>
   );
-});
+}, arePropsEqual);
 
 const styles = StyleSheet.create({
   container: {

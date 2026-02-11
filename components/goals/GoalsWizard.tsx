@@ -14,7 +14,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
 import {
-  Dimensions,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -25,18 +24,10 @@ import {
   View,
 } from 'react-native';
 import {
-  Gesture,
-  GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
 import Animated, {
-  Extrapolation,
   FadeInDown,
-  interpolate,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Step1Metrics } from './WizardSteps/Step1Metrics';
@@ -45,9 +36,6 @@ import { Step3Goal } from './WizardSteps/Step3Goal';
 import { Step4Macros } from './WizardSteps/Step4Macros';
 import { StepWeightTarget } from './WizardSteps/StepWeightTarget';
 import { Step5Review } from './WizardSteps/Step5Review';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const DISMISS_THRESHOLD = 150;
 
 interface GoalsWizardProps {
   visible: boolean;
@@ -97,8 +85,6 @@ const initialFormData: WizardFormData = {
 
 export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProps) {
   const insets = useSafeAreaInsets();
-  const translateY = useSharedValue(0);
-  const isScrolledToTop = useSharedValue(true);
   const setGoals = useAppStore((state) => state.setGoals);
   const preferredUnits = useAppStore((state) => state.preferredUnits);
   const setPreferredUnits = useAppStore((state) => state.setPreferredUnits);
@@ -149,55 +135,12 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
         });
       }
       setCurrentStep(1);
-      translateY.value = 0;
     }
   }, [visible, existingGoals, preferredUnits]);
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
-  };
-
-  const panGesture = Gesture.Pan()
-    .onUpdate((event) => {
-      if (isScrolledToTop.value && event.translationY > 0) {
-        translateY.value = event.translationY;
-      }
-    })
-    .onEnd((event) => {
-      if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
-          damping: 20,
-          stiffness: 200,
-        });
-        runOnJS(handleClose)();
-      } else {
-        translateY.value = withSpring(0, {
-          damping: 20,
-          stiffness: 400,
-        });
-      }
-    });
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
-
-  const backdropStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
-      [1, 0],
-      Extrapolation.CLAMP
-    ),
-  }));
-
-  const handleScrollBeginDrag = (event: any) => {
-    isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
-  };
-
-  const handleScroll = (event: any) => {
-    isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
   };
 
   const updateFormData = (updates: Partial<WizardFormData>) => {
@@ -412,30 +355,18 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
     >
       <GestureHandlerRootView style={styles.gestureRoot}>
         <StatusBar barStyle="dark-content" />
-        {/* Backdrop */}
-        <Animated.View style={[styles.backdrop, backdropStyle]}>
-          <TouchableOpacity
-            style={styles.backdropPressable}
-            activeOpacity={1}
-            onPress={handleClose}
-          />
-        </Animated.View>
 
         {/* Modal Content */}
-        <GestureDetector gesture={panGesture}>
-          <Animated.View
-            style={[
-              styles.modalContainer,
-              { marginTop: insets.top, paddingBottom: insets.bottom + 16 },
-              animatedStyle,
-            ]}
-          >
-            {/* Handle */}
-            <View style={styles.handleContainer}>
-              <View style={styles.handle} />
-            </View>
+        <View
+          style={[
+            styles.modalContainer,
+            { paddingBottom: insets.bottom + 16 },
+          ]}
+        >
+          {/* Safe area spacer */}
+          <View style={{ height: insets.top, backgroundColor: '#f8f8f8' }} />
 
-            {/* Header */}
+          {/* Header */}
             <View style={styles.header}>
               <TouchableOpacity
                 style={styles.headerBackButton}
@@ -478,9 +409,6 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
-                onScrollBeginDrag={handleScrollBeginDrag}
-                onScroll={handleScroll}
-                scrollEventThrottle={16}
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="interactive"
                 bounces={true}
@@ -537,8 +465,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
                 </TouchableOpacity>
               )}
             </View>
-          </Animated.View>
-        </GestureDetector>
+        </View>
       </GestureHandlerRootView>
     </Modal>
   );
@@ -547,34 +474,10 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
 const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  backdropPressable: {
-    flex: 1,
   },
   modalContainer: {
     flex: 1,
     backgroundColor: '#f8f8f8',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  handleContainer: {
-    alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 8,
-    backgroundColor: '#f8f8f8',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    backgroundColor: '#ddd',
-    borderRadius: 2,
   },
   header: {
     flexDirection: 'row',

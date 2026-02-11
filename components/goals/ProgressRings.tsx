@@ -72,9 +72,9 @@ const COLORS = {
     track: "#D4E6CF",
   },
   water: {
-    primary: "#4DB6AC",
-    secondary: "#E0F2F1",
-    track: "#B2DFDB",
+    primary: "#7EB3E0",
+    secondary: "#EAF3FB",
+    track: "#C8E0F5",
   },
 };
 

@@ -148,7 +148,7 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
     label: "Water",
     unit: "L",
     placeholder: "3.7",
-    color: "#8B5CF6",
+    color: "#7EB3E0",
     icon: icons.glassWater,
   },
 ];
@@ -1041,18 +1041,18 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   waterTip: {
-    backgroundColor: "#FAF5FF",
+    backgroundColor: "#EAF3FB",
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "rgba(139, 92, 246, 0.12)",
+    borderColor: "rgba(126, 179, 224, 0.2)",
   },
   waterTipTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#8B5CF6",
+    color: "#5A9AC7",
     marginBottom: 6,
   },
   waterTipText: {
@@ -1083,11 +1083,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: "rgba(139, 92, 246, 0.18)",
+    borderColor: "rgba(126, 179, 224, 0.25)",
   },
   waterTipUnitText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#8B5CF6",
+    color: "#5A9AC7",
   },
 });

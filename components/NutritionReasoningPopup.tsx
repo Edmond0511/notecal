@@ -83,8 +83,8 @@ const MICRO_COLORS = {
     secondary: "#EDF5EB",
   },
   water: {
-    primary: "#4DB6AC",
-    secondary: "#E0F2F1",
+    primary: "#7EB3E0",
+    secondary: "#EAF3FB",
   },
 };
 

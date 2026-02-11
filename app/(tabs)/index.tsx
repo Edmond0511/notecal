@@ -1,13 +1,12 @@
 import { Calendar } from "@/components/Calendar";
-import { DatePagePreview } from "@/components/DatePagePreview";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
 import { GoalsPopup } from "@/components/GoalsPopup";
 import { NotesEditor } from "@/components/NotesEditor";
 import { SavedEntriesPopup } from "@/components/SavedEntriesPopup";
 import { SettingsModal } from "@/components/SettingsModal";
 import { TotalsBar } from "@/components/TotalsBar";
-import { useDatePager } from "@/hooks/useDatePager";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useSwipeDateNavigation } from "@/hooks/useSwipeDateNavigation";
 import { useAppStore } from "@/store/app-store";
 import { SavedEntry } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,7 +21,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import PagerView from "react-native-pager-view";
+import { GestureDetector } from "react-native-gesture-handler";
+import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const INPUT_ACCESSORY_VIEW_ID = "totals-bar-accessory";
@@ -34,6 +34,7 @@ export default function HomeScreen() {
   const addEntry = useAppStore((state) => state.addEntry);
   const updateEntry = useAppStore((state) => state.updateEntry);
   const deleteEntry = useAppStore((state) => state.deleteEntry);
+  const setCurrentDate = useAppStore((state) => state.setCurrentDate);
   const saveDocument = useAppStore((state) => state.saveDocument);
   const getDocument = useAppStore((state) => state.getDocument);
   const goals = useAppStore((state) => state.goals);
@@ -90,29 +91,41 @@ export default function HomeScreen() {
   };
 
   // Save current document before navigation
-  const saveCurrentDocument = useCallback(() => {
+  const saveCurrentDocument = () => {
     saveDocument(currentDate, currentDocumentText.trim());
-  }, [saveDocument, currentDate, currentDocumentText]);
+  };
 
-  // Pager-based date navigation
-  const {
-    dates,
-    pagerRef,
-    onPageSelected,
-    onPageScrollStateChanged,
-    navigateByArrow,
-    jumpToDate,
-  } = useDatePager({ onBeforeNavigate: saveCurrentDocument });
+  const navigateDate = (direction: "prev" | "next") => {
+    // Save current document before changing date
+    saveCurrentDocument();
+
+    const current = stringToDate(currentDate);
+
+    const newDate = new Date(current);
+    if (direction === "prev") {
+      newDate.setDate(newDate.getDate() - 1);
+    } else {
+      newDate.setDate(newDate.getDate() + 1);
+    }
+
+    const newDateString =
+      newDate.getFullYear().toString() +
+      (newDate.getMonth() + 1).toString().padStart(2, "0") +
+      newDate.getDate().toString().padStart(2, "0");
+
+    setCurrentDate(newDateString);
+  };
 
   // Calendar picker function
   const openCalendar = () => {
+    // Save current document before opening calendar
     saveCurrentDocument();
     setShowCalendar(true);
   };
 
   // Handle calendar date selection
   const handleCalendarSelect = (newDateString: string) => {
-    jumpToDate(newDateString);
+    setCurrentDate(newDateString);
   };
 
   // Handle document text changes from NotesEditor
@@ -150,25 +163,26 @@ export default function HomeScreen() {
   // Track keyboard open/close for dual-rendering the totals bar.
   // Uses discrete Keyboard events instead of animated values to avoid
   // oscillation/flicker during the dismiss animation.
-  const [showStaticBar, setShowStaticBar] = useState(true);
   const [showAccessoryBar, setShowAccessoryBar] = useState(false);
   useEffect(() => {
     const willShowSub = Keyboard.addListener("keyboardWillShow", () => {
-      setShowStaticBar(false);
       setShowAccessoryBar(true);
     });
     const willHideSub = Keyboard.addListener("keyboardWillHide", () => {
       setShowAccessoryBar(false);
     });
-    const didHideSub = Keyboard.addListener("keyboardDidHide", () => {
-      setShowStaticBar(true);
-    });
     return () => {
       willShowSub.remove();
       willHideSub.remove();
-      didHideSub.remove();
     };
   }, []);
+
+  // Swipe gesture for date navigation
+  const { gesture: swipeGesture, animatedStyle: swipeAnimatedStyle } =
+    useSwipeDateNavigation({
+      onSwipeLeft: () => navigateDate("next"),
+      onSwipeRight: () => navigateDate("prev"),
+    });
 
   // Calculate daily totals from entries
   const dailyTotals = React.useMemo(() => {
@@ -245,7 +259,7 @@ export default function HomeScreen() {
         <View style={styles.dateNavigationContainer}>
           <TouchableOpacity
             style={styles.navButtonCompact}
-            onPress={() => navigateByArrow("prev")}
+            onPress={() => navigateDate("prev")}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="chevron-back" size={20} color="#333" />
@@ -261,7 +275,7 @@ export default function HomeScreen() {
 
           <TouchableOpacity
             style={styles.navButtonCompact}
-            onPress={() => navigateByArrow("next")}
+            onPress={() => navigateDate("next")}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="chevron-forward" size={20} color="#333" />
@@ -277,18 +291,8 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <PagerView
-        ref={pagerRef}
-        style={styles.editorWrapper}
-        initialPage={1}
-        onPageSelected={onPageSelected}
-        onPageScrollStateChanged={onPageScrollStateChanged}
-        overdrag
-      >
-        <View key="prev" style={styles.pagerPage}>
-          <DatePagePreview date={dates[0]} />
-        </View>
-        <View key="current" style={styles.pagerPage}>
+      <GestureDetector gesture={swipeGesture}>
+        <Animated.View style={[styles.editorWrapper, swipeAnimatedStyle]}>
           <NotesEditor
             entries={entries}
             initialDocumentText={currentDocumentText}
@@ -302,11 +306,8 @@ export default function HomeScreen() {
               Platform.OS === "ios" ? INPUT_ACCESSORY_VIEW_ID : undefined
             }
           />
-        </View>
-        <View key="next" style={styles.pagerPage}>
-          <DatePagePreview date={dates[2]} />
-        </View>
-      </PagerView>
+        </Animated.View>
+      </GestureDetector>
 
       {/* iOS: Totals bar as native keyboard accessory */}
       {Platform.OS === "ios" && (
@@ -324,14 +325,11 @@ export default function HomeScreen() {
         </InputAccessoryView>
       )}
 
-      {/* Static bottom bar: always mounted, opacity-toggled to avoid mount/unmount flicker */}
+      {/* Static bottom bar: always visible, keyboard renders on top natively */}
       <View
-        style={[
-          styles.bottomBarContainer,
-          Platform.OS === "ios" && !showStaticBar && styles.bottomBarHidden,
-        ]}
+        style={styles.bottomBarContainer}
         pointerEvents={
-          Platform.OS === "ios" && !showStaticBar ? "none" : "auto"
+          Platform.OS === "ios" && showAccessoryBar ? "none" : "auto"
         }
       >
         <TotalsBar
@@ -440,9 +438,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingBottom: 88,
   },
-  pagerPage: {
-    flex: 1,
-  },
   bottomBarContainer: {
     position: "absolute",
     bottom: 0,
@@ -450,9 +445,6 @@ const styles = StyleSheet.create({
     right: 0,
     paddingBottom: 50,
     backgroundColor: "transparent",
-  },
-  bottomBarHidden: {
-    opacity: 0,
   },
   inputAccessoryWrapper: {
     paddingTop: 0,

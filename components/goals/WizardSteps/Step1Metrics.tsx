@@ -122,7 +122,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
 
         {/* Age */}
         <View style={styles.fieldContainer}>
-          <Text style={styles.fieldLabel}>Age</Text>
+          <Text style={[styles.fieldLabel, styles.fieldLabelStandalone]}>Age</Text>
           <View style={styles.inputRow}>
             <TextInput
               style={styles.input}
@@ -349,39 +349,34 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#666",
   },
+  fieldLabelStandalone: {
+    marginBottom: 18,
+  },
   segmentedControl: {
     flexDirection: "row",
-    backgroundColor: "#e8e8e8",
-    borderRadius: 12,
-    padding: 2,
+    gap: 6,
   },
   segmentOption: {
     paddingVertical: 6,
     paddingHorizontal: 14,
-  },
-  segmentOptionLeft: {
-    borderTopLeftRadius: 10,
-    borderBottomLeftRadius: 10,
-  },
-  segmentOptionRight: {
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 10,
-  },
-  segmentOptionActive: {
+    borderRadius: 20,
     backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
+    borderWidth: 1.5,
+    borderColor: "#e0e0e0",
+  },
+  segmentOptionLeft: {},
+  segmentOptionRight: {},
+  segmentOptionActive: {
+    backgroundColor: "#E0F2F1",
+    borderColor: "#1A6872",
   },
   segmentText: {
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#999",
   },
   segmentTextActive: {
-    color: "#333",
+    color: "#1A6872",
   },
   sexContainer: {
     flexDirection: "row",

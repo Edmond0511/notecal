@@ -80,9 +80,10 @@ export const useAppStore = create<AppState>()(
       return;
     }
 
-    // Check if this is a water entry - handle locally without API call
+    // Check if this is a water entry - handle locally without API call when water tracking is enabled
+    const waterTrackingEnabled = get().goals?.manualTargets?.water !== undefined;
     const waterResult = parseWaterEntry(textLine);
-    if (waterResult.isWater) {
+    if (waterTrackingEnabled && waterResult.isWater) {
       const entryId = Date.now().toString();
       const waterEntry: Entry = {
         id: entryId,

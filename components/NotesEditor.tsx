@@ -483,9 +483,10 @@ const IndicatorRow = React.memo<{
   yPosition: number;
   opacity: number;
   isOnline: boolean;
+  waterTrackingEnabled: boolean;
   onTap: (entry: Entry) => void;
 }>(
-  ({ entry, yPosition, opacity, isOnline, onTap }) => {
+  ({ entry, yPosition, opacity, isOnline, waterTrackingEnabled, onTap }) => {
     const handlePress = useCallback(() => onTap(entry), [entry, onTap]);
     // displayedStatus controls which content is rendered, lagging behind
     // entry.status during fade-out so the old content stays visible
@@ -502,7 +503,8 @@ const IndicatorRow = React.memo<{
     }, [entry.items]);
 
     const hasCalories = entry.inlineKcal != null;
-    const hasWater = waterAmount > 0;
+    const hasWater = waterTrackingEnabled && waterAmount > 0;
+    const isWaterOnly = hasWater && !entry.inlineKcal;
 
     useEffect(() => {
       if (prevEntryStatusRef.current === entry.status) return;
@@ -547,7 +549,7 @@ const IndicatorRow = React.memo<{
             )
           ) : displayedStatus === "ok" ? (
             <>
-              {hasCalories && (
+              {hasCalories && !isWaterOnly && (
                 <CaloriesBadge kcal={entry.inlineKcal!} onPress={handlePress} />
               )}
               {hasWater && <WaterBadge amountL={waterAmount} />}
@@ -566,7 +568,8 @@ const IndicatorRow = React.memo<{
     prev.entry.items === next.entry.items &&
     prev.yPosition === next.yPosition &&
     prev.opacity === next.opacity &&
-    prev.isOnline === next.isOnline,
+    prev.isOnline === next.isOnline &&
+    prev.waterTrackingEnabled === next.waterTrackingEnabled,
 );
 IndicatorRow.displayName = "IndicatorRow";
 
@@ -579,6 +582,7 @@ interface NotesEditorProps {
   onDeleteEntry: (id: string) => void;
   currentDate?: string;
   isOnline?: boolean;
+  waterTrackingEnabled?: boolean;
   inputAccessoryViewID?: string;
 }
 
@@ -590,6 +594,7 @@ export function NotesEditor({
   onDeleteEntry,
   currentDate,
   isOnline = true,
+  waterTrackingEnabled = false,
   inputAccessoryViewID,
 }: NotesEditorProps) {
   const [documentText, setDocumentText] = useState(initialDocumentText);
@@ -1118,6 +1123,7 @@ export function NotesEditor({
             yPosition={item.yPosition}
             opacity={hasFreshMeasurements ? 1 : 0}
             isOnline={isOnline}
+            waterTrackingEnabled={waterTrackingEnabled}
             onTap={handleIndicatorTap}
           />
         ))}

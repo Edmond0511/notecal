@@ -303,6 +303,7 @@ export default function HomeScreen() {
             onDeleteEntry={deleteEntry}
             currentDate={currentDate}
             isOnline={isOnline}
+            waterTrackingEnabled={goals?.manualTargets?.water !== undefined}
             inputAccessoryViewID={
               Platform.OS === "ios" ? INPUT_ACCESSORY_VIEW_ID : undefined
             }

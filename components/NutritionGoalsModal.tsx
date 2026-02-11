@@ -709,17 +709,18 @@ export function NutritionGoalsModal({
                       exiting={FadeOut.duration(200)}
                       style={styles.waterTip}
                     >
-                      <View style={styles.waterTipHeader}>
-                        <FontAwesomeIcon
-                          icon={icons.glassWater}
-                          size={14}
-                          color="#8B5CF6"
-                        />
-                        <Text style={styles.waterTipTitle}>Logging Water</Text>
-                      </View>
+                      <Text style={styles.waterTipTitle}>Track Water Intake</Text>
                       <Text style={styles.waterTipText}>
-                        Add entries like: "- water, 500ml" or "- 2 glasses water"
+                        Log water in your notes using any unit:
                       </Text>
+                      <View style={styles.waterTipExamples}>
+                        <Text style={styles.waterTipExample}>
+                          - water, 500ml
+                        </Text>
+                        <Text style={styles.waterTipExample}>
+                          - 2 glasses water
+                        </Text>
+                      </View>
                       <View style={styles.waterTipUnitsRow}>
                         <View style={styles.waterTipUnit}>
                           <Text style={styles.waterTipUnitText}>L</Text>
@@ -1023,23 +1024,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(139, 92, 246, 0.12)",
   },
-  waterTipHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
   waterTipTitle: {
     fontSize: 14,
     fontWeight: "600",
     color: "#8B5CF6",
+    marginBottom: 6,
   },
   waterTipText: {
     fontSize: 13,
     fontWeight: "500",
     color: "#6B7280",
-    marginBottom: 10,
+    marginBottom: 8,
     lineHeight: 18,
+  },
+  waterTipExamples: {
+    gap: 4,
+    marginBottom: 10,
+  },
+  waterTipExample: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#6B7280",
+    fontStyle: "italic",
   },
   waterTipUnitsRow: {
     flexDirection: "row",

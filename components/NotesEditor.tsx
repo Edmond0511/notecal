@@ -1088,7 +1088,7 @@ export function NotesEditor({
           onFocus={handleFocus}
           showSoftInputOnFocus={showSoftInput}
           selection={selection}
-          placeholder="Enter food items starting with '-'"
+          placeholder="Start logging food items starting with '-'"
           placeholderTextColor="#ccc"
           multiline
           scrollEnabled={false}

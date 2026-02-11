@@ -414,6 +414,8 @@ export async function correctNutrition(
       correctionMode: true,
       foodText: item.label,
       currentMacros: item.macros,
+      qty: item.qty,
+      unit: item.unit,
       userFeedback: feedback.trim(),
       userId
     };

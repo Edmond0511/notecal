@@ -1,12 +1,13 @@
 import { Calendar } from "@/components/Calendar";
+import { DatePagePreview } from "@/components/DatePagePreview";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
 import { GoalsPopup } from "@/components/GoalsPopup";
 import { NotesEditor } from "@/components/NotesEditor";
 import { SavedEntriesPopup } from "@/components/SavedEntriesPopup";
 import { SettingsModal } from "@/components/SettingsModal";
 import { TotalsBar } from "@/components/TotalsBar";
+import { useDatePager } from "@/hooks/useDatePager";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import { useSwipeDateNavigation } from "@/hooks/useSwipeDateNavigation";
 import { useAppStore } from "@/store/app-store";
 import { SavedEntry } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,8 +22,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { GestureDetector } from "react-native-gesture-handler";
-import Animated from "react-native-reanimated";
+import PagerView from "react-native-pager-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const INPUT_ACCESSORY_VIEW_ID = "totals-bar-accessory";
@@ -34,7 +34,6 @@ export default function HomeScreen() {
   const addEntry = useAppStore((state) => state.addEntry);
   const updateEntry = useAppStore((state) => state.updateEntry);
   const deleteEntry = useAppStore((state) => state.deleteEntry);
-  const setCurrentDate = useAppStore((state) => state.setCurrentDate);
   const saveDocument = useAppStore((state) => state.saveDocument);
   const getDocument = useAppStore((state) => state.getDocument);
   const goals = useAppStore((state) => state.goals);
@@ -91,41 +90,29 @@ export default function HomeScreen() {
   };
 
   // Save current document before navigation
-  const saveCurrentDocument = () => {
+  const saveCurrentDocument = useCallback(() => {
     saveDocument(currentDate, currentDocumentText.trim());
-  };
+  }, [saveDocument, currentDate, currentDocumentText]);
 
-  const navigateDate = (direction: "prev" | "next") => {
-    // Save current document before changing date
-    saveCurrentDocument();
-
-    const current = stringToDate(currentDate);
-
-    const newDate = new Date(current);
-    if (direction === "prev") {
-      newDate.setDate(newDate.getDate() - 1);
-    } else {
-      newDate.setDate(newDate.getDate() + 1);
-    }
-
-    const newDateString =
-      newDate.getFullYear().toString() +
-      (newDate.getMonth() + 1).toString().padStart(2, "0") +
-      newDate.getDate().toString().padStart(2, "0");
-
-    setCurrentDate(newDateString);
-  };
+  // Pager-based date navigation
+  const {
+    dates,
+    pagerRef,
+    onPageSelected,
+    onPageScrollStateChanged,
+    navigateByArrow,
+    jumpToDate,
+  } = useDatePager({ onBeforeNavigate: saveCurrentDocument });
 
   // Calendar picker function
   const openCalendar = () => {
-    // Save current document before opening calendar
     saveCurrentDocument();
     setShowCalendar(true);
   };
 
   // Handle calendar date selection
   const handleCalendarSelect = (newDateString: string) => {
-    setCurrentDate(newDateString);
+    jumpToDate(newDateString);
   };
 
   // Handle document text changes from NotesEditor
@@ -178,13 +165,6 @@ export default function HomeScreen() {
       didHideSub.remove();
     };
   }, []);
-
-  // Swipe gesture for date navigation
-  const { gesture: swipeGesture, animatedStyle: swipeAnimatedStyle } =
-    useSwipeDateNavigation({
-      onSwipeLeft: () => navigateDate("next"),
-      onSwipeRight: () => navigateDate("prev"),
-    });
 
   // Calculate daily totals from entries
   const dailyTotals = React.useMemo(() => {
@@ -261,7 +241,7 @@ export default function HomeScreen() {
         <View style={styles.dateNavigationContainer}>
           <TouchableOpacity
             style={styles.navButtonCompact}
-            onPress={() => navigateDate("prev")}
+            onPress={() => navigateByArrow("prev")}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="chevron-back" size={20} color="#333" />
@@ -277,7 +257,7 @@ export default function HomeScreen() {
 
           <TouchableOpacity
             style={styles.navButtonCompact}
-            onPress={() => navigateDate("next")}
+            onPress={() => navigateByArrow("next")}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="chevron-forward" size={20} color="#333" />
@@ -293,8 +273,18 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <GestureDetector gesture={swipeGesture}>
-        <Animated.View style={[styles.editorWrapper, swipeAnimatedStyle]}>
+      <PagerView
+        ref={pagerRef}
+        style={styles.editorWrapper}
+        initialPage={1}
+        onPageSelected={onPageSelected}
+        onPageScrollStateChanged={onPageScrollStateChanged}
+        overdrag
+      >
+        <View key="prev" style={styles.pagerPage}>
+          <DatePagePreview date={dates[0]} />
+        </View>
+        <View key="current" style={styles.pagerPage}>
           <NotesEditor
             entries={entries}
             initialDocumentText={currentDocumentText}
@@ -308,8 +298,11 @@ export default function HomeScreen() {
               Platform.OS === "ios" ? INPUT_ACCESSORY_VIEW_ID : undefined
             }
           />
-        </Animated.View>
-      </GestureDetector>
+        </View>
+        <View key="next" style={styles.pagerPage}>
+          <DatePagePreview date={dates[2]} />
+        </View>
+      </PagerView>
 
       {/* iOS: Totals bar as native keyboard accessory */}
       {Platform.OS === "ios" && (
@@ -436,6 +429,9 @@ const styles = StyleSheet.create({
   editorWrapper: {
     flex: 1,
     paddingBottom: 88,
+  },
+  pagerPage: {
+    flex: 1,
   },
   bottomBarContainer: {
     position: "absolute",

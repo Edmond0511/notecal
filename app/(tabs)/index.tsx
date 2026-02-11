@@ -50,6 +50,7 @@ export default function HomeScreen() {
   const [showSettings, setShowSettings] = useState(false);
   const [showGoalsPopup, setShowGoalsPopup] = useState(false);
   const [showGoalsWizard, setShowGoalsWizard] = useState(false);
+
   const [showSavedEntriesPopup, setShowSavedEntriesPopup] = useState(false);
   const [currentDocumentText, setCurrentDocumentText] = useState("");
 

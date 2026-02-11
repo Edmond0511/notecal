@@ -48,7 +48,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showNutritionGoalsModal, setShowNutritionGoalsModal] = useState(false);
+  const [showNutritionGoals, setShowNutritionGoals] = useState(false);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -291,8 +291,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                       activeOpacity={0.7}
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        onClose(); // Close settings first
-                        setTimeout(() => setShowNutritionGoalsModal(true), 100);
+                        setShowNutritionGoals(true);
                       }}
                     >
                       <View style={styles.menuIconContainer}>
@@ -333,20 +332,19 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             </Animated.View>
           </GestureDetector>
         </GestureHandlerRootView>
+
+        {/* Nested inside Settings Modal — presents on top on iOS */}
+        <AuthModal
+          visible={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onAuthSuccess={handleAuthSuccess}
+        />
+
+        <NutritionGoalsModal
+          visible={showNutritionGoals}
+          onClose={() => setShowNutritionGoals(false)}
+        />
       </Modal>
-
-      {/* Auth Modal */}
-      <AuthModal
-        visible={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={handleAuthSuccess}
-      />
-
-      {/* Nutrition Goals Modal */}
-      <NutritionGoalsModal
-        visible={showNutritionGoalsModal}
-        onClose={() => setShowNutritionGoalsModal(false)}
-      />
     </>
   );
 }

@@ -2,6 +2,7 @@ import { Sex } from "@/types";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { faMars, faVenus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import SegmentedControl from "@react-native-segmented-control/segmented-control";
 import * as Haptics from "expo-haptics";
 import React from "react";
 import {
@@ -143,44 +144,14 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
         <View style={styles.fieldContainer}>
           <View style={styles.fieldHeaderRow}>
             <Text style={styles.fieldLabel}>Height</Text>
-            <View style={styles.segmentedControl}>
-              <TouchableOpacity
-                style={[
-                  styles.segmentOption,
-                  styles.segmentOptionLeft,
-                  !formData.heightUseImperial && styles.segmentOptionActive,
-                ]}
-                onPress={() => toggleHeightUnits(false)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    !formData.heightUseImperial && styles.segmentTextActive,
-                  ]}
-                >
-                  cm
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.segmentOption,
-                  styles.segmentOptionRight,
-                  formData.heightUseImperial && styles.segmentOptionActive,
-                ]}
-                onPress={() => toggleHeightUnits(true)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    formData.heightUseImperial && styles.segmentTextActive,
-                  ]}
-                >
-                  ft/in
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <SegmentedControl
+              values={["cm", "ft/in"]}
+              selectedIndex={formData.heightUseImperial ? 1 : 0}
+              onChange={(event) => {
+                toggleHeightUnits(event.nativeEvent.selectedSegmentIndex === 1);
+              }}
+              style={styles.segmentedControl}
+            />
           </View>
           {formData.heightUseImperial ? (
             <View style={styles.inputRow}>
@@ -231,44 +202,14 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
         <View style={[styles.fieldContainer, { marginBottom: 0 }]}>
           <View style={styles.fieldHeaderRow}>
             <Text style={styles.fieldLabel}>Weight</Text>
-            <View style={styles.segmentedControl}>
-              <TouchableOpacity
-                style={[
-                  styles.segmentOption,
-                  styles.segmentOptionLeft,
-                  !formData.weightUseImperial && styles.segmentOptionActive,
-                ]}
-                onPress={() => toggleWeightUnits(false)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    !formData.weightUseImperial && styles.segmentTextActive,
-                  ]}
-                >
-                  kg
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.segmentOption,
-                  styles.segmentOptionRight,
-                  formData.weightUseImperial && styles.segmentOptionActive,
-                ]}
-                onPress={() => toggleWeightUnits(true)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    formData.weightUseImperial && styles.segmentTextActive,
-                  ]}
-                >
-                  lbs
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <SegmentedControl
+              values={["kg", "lbs"]}
+              selectedIndex={formData.weightUseImperial ? 1 : 0}
+              onChange={(event) => {
+                toggleWeightUnits(event.nativeEvent.selectedSegmentIndex === 1);
+              }}
+              style={styles.segmentedControl}
+            />
           </View>
           {formData.weightUseImperial ? (
             <View style={styles.inputRow}>
@@ -353,30 +294,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   segmentedControl: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  segmentOption: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    backgroundColor: "#fff",
-    borderWidth: 1.5,
-    borderColor: "#e0e0e0",
-  },
-  segmentOptionLeft: {},
-  segmentOptionRight: {},
-  segmentOptionActive: {
-    backgroundColor: "#E0F2F1",
-    borderColor: "#1A6872",
-  },
-  segmentText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#999",
-  },
-  segmentTextActive: {
-    color: "#1A6872",
+    width: 120,
   },
   sexContainer: {
     flexDirection: "row",

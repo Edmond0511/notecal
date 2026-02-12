@@ -3,7 +3,7 @@ import { WeightEntry } from "@/types";
 import { kgToLbs, lbsToKg } from "@/utils/goalsCalculator";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -22,10 +22,10 @@ import {
   Gesture,
   GestureDetector,
   GestureHandlerRootView,
+  Swipeable,
 } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
-  FadeIn,
   FadeInDown,
   interpolate,
   runOnJS,
@@ -34,6 +34,7 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Calendar } from "./Calendar";
 import { WeightChart } from "./weight/WeightChart";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -50,9 +51,11 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
+  const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
 
   const weightEntries = useAppStore((s) => s.weightEntries);
   const addWeightEntry = useAppStore((s) => s.addWeightEntry);
+  const updateWeightEntry = useAppStore((s) => s.updateWeightEntry);
   const deleteWeightEntry = useAppStore((s) => s.deleteWeightEntry);
   const preferredUnits = useAppStore((s) => s.preferredUnits);
   const isImperial = preferredUnits === "imperial";
@@ -62,8 +65,20 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
   const [weightInput, setWeightInput] = useState("");
   const [noteInput, setNoteInput] = useState("");
   const [photoUri, setPhotoUri] = useState<string | undefined>();
+  const [showLogPopup, setShowLogPopup] = useState(false);
+  const [showLogCalendar, setShowLogCalendar] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<WeightEntry | null>(null);
+  const [editWeightInput, setEditWeightInput] = useState("");
+  const [editNoteInput, setEditNoteInput] = useState("");
+  const [editPhotoUri, setEditPhotoUri] = useState<string | undefined>();
+  const [editDateInput, setEditDateInput] = useState("");
+  const [showEditCalendar, setShowEditCalendar] = useState(false);
 
   const todayStr = new Date().toISOString().split("T")[0].replace(/-/g, "");
+  const [logDateInput, setLogDateInput] = useState(todayStr);
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterdayStr = yesterdayDate.toISOString().split("T")[0].replace(/-/g, "");
 
   // Reset form state when modal opens
   useEffect(() => {
@@ -73,6 +88,7 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
       setWeightInput("");
       setNoteInput("");
       setPhotoUri(undefined);
+      setLogDateInput(new Date().toISOString().split("T")[0].replace(/-/g, ""));
     }
   }, [visible]);
 
@@ -139,7 +155,7 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
     const weightKg = isImperial ? lbsToKg(parsed) : parsed;
 
     addWeightEntry({
-      date: todayStr,
+      date: logDateInput,
       weightKg,
       note: noteInput.trim() || undefined,
       photoUri,
@@ -149,30 +165,62 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
     setWeightInput("");
     setNoteInput("");
     setPhotoUri(undefined);
-  }, [weightInput, noteInput, photoUri, isImperial, todayStr, addWeightEntry]);
+    setShowLogPopup(false);
+  }, [weightInput, noteInput, photoUri, isImperial, logDateInput, addWeightEntry]);
 
-  const handlePickPhoto = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    try {
-      const ImagePicker = await import("expo-image-picker");
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setPhotoUri(result.assets[0].uri);
-      }
-    } catch {
-      Alert.alert(
-        "Unavailable",
-        "Photo picker requires a new native build. Run `npx expo run:ios` to rebuild."
-      );
+  const pickFromLibrary = useCallback(async (setUri: (uri: string) => void) => {
+    const ImagePicker = await import("expo-image-picker");
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setUri(result.assets[0].uri);
     }
   }, []);
+
+  const pickFromCamera = useCallback(async (setUri: (uri: string) => void) => {
+    const ImagePicker = await import("expo-image-picker");
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Camera access is required to take a photo.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setUri(result.assets[0].uri);
+    }
+  }, []);
+
+  const showPhotoActionSheet = useCallback((setUri: (uri: string) => void) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert("Add Photo", undefined, [
+      {
+        text: "Take Photo",
+        onPress: () => pickFromCamera(setUri).catch(() =>
+          Alert.alert("Unavailable", "Camera requires a native build. Run `npx expo run:ios` to rebuild.")
+        ),
+      },
+      {
+        text: "Choose from Library",
+        onPress: () => pickFromLibrary(setUri).catch(() =>
+          Alert.alert("Unavailable", "Photo picker requires a native build. Run `npx expo run:ios` to rebuild.")
+        ),
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }, [pickFromCamera, pickFromLibrary]);
+
+  const handlePickPhoto = useCallback(() => {
+    showPhotoActionSheet(setPhotoUri);
+  }, [showPhotoActionSheet]);
 
   const handleDeleteEntry = useCallback(
     (id: string) => {
@@ -210,6 +258,40 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
     []
   );
 
+  const handleTapEntry = useCallback((entry: WeightEntry) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setEditingEntry(entry);
+    setEditWeightInput(displayWeight(entry.weightKg).toString());
+    setEditNoteInput(entry.note || "");
+    setEditPhotoUri(entry.photoUri);
+    setEditDateInput(entry.date);
+  }, [isImperial]);
+
+  const handleSaveEdit = useCallback(() => {
+    if (!editingEntry) return;
+    const parsed = parseFloat(editWeightInput);
+    if (isNaN(parsed) || parsed <= 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    }
+
+    const weightKg = isImperial ? lbsToKg(parsed) : parsed;
+    updateWeightEntry(editingEntry.id, {
+      weightKg,
+      note: editNoteInput.trim() || undefined,
+      photoUri: editPhotoUri,
+      date: editDateInput,
+    });
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setEditingEntry(null);
+  }, [editingEntry, editWeightInput, editNoteInput, editPhotoUri, editDateInput, isImperial, updateWeightEntry]);
+
+
+  const handleEditPickPhoto = useCallback(() => {
+    showPhotoActionSheet(setEditPhotoUri);
+  }, [showPhotoActionSheet]);
+
   const displayWeight = (kg: number) =>
     isImperial ? kgToLbs(kg) : Math.round(kg * 10) / 10;
 
@@ -218,11 +300,25 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
     const m = parseInt(dateStr.substring(4, 6), 10) - 1;
     const d = parseInt(dateStr.substring(6, 8), 10);
     const date = new Date(y, m, d);
+    const currentYear = new Date().getFullYear();
     if (dateStr === todayStr) return "Today";
+    if (dateStr === yesterdayStr) return "Yesterday";
+    if (y !== currentYear) {
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
   const chartWidth = SCREEN_WIDTH - 64; // 16 padding on each side + 16 card padding on each side
+
+  const renderDeleteAction = (id: string) => (
+    <TouchableOpacity
+      style={styles.deleteAction}
+      onPress={() => handleDeleteEntry(id)}
+    >
+      <Ionicons name="trash-outline" size={20} color="#fff" />
+    </TouchableOpacity>
+  );
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
@@ -245,253 +341,407 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
             </View>
 
             <View style={styles.header}>
-              <Text style={styles.title}>Weight Tracking</Text>
+              <Text style={styles.title}>Weight</Text>
             </View>
 
-            <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              style={styles.keyboardView}
+            <Animated.ScrollView
+              style={styles.content}
+              contentContainerStyle={[
+                styles.contentContainer,
+                { paddingBottom: 20 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              onScrollBeginDrag={handleScrollBeginDrag}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              bounces={true}
+              keyboardShouldPersistTaps="handled"
             >
-              <Animated.ScrollView
-                style={styles.content}
-                contentContainerStyle={[
-                  styles.contentContainer,
-                  { paddingBottom: insets.bottom + 20 },
-                ]}
-                showsVerticalScrollIndicator={false}
-                onScrollBeginDrag={handleScrollBeginDrag}
-                onScroll={handleScroll}
-                scrollEventThrottle={16}
-                bounces={true}
-                keyboardShouldPersistTaps="handled"
+              {/* Chart Card */}
+              <Animated.View
+                entering={FadeInDown.delay(80).duration(400)}
+                style={styles.section}
               >
-                {/* Weight Progress Section */}
-                <Animated.View
-                  entering={FadeInDown.delay(100).duration(400)}
-                  style={styles.section}
-                >
-                  <Text style={styles.sectionTitle}>Weight Progress</Text>
-
-                  <View style={styles.card}>
-                    {/* Time range toggle */}
-                    <View style={styles.rangeToggle}>
-                      {(["30d", "90d", "all"] as TimeRange[]).map((r) => (
-                        <TouchableOpacity
-                          key={r}
-                          style={[
-                            styles.rangeButton,
-                            range === r && styles.rangeButtonActive,
-                          ]}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setRange(r);
-                          }}
-                          activeOpacity={0.7}
-                        >
-                          <Text
-                            style={[
-                              styles.rangeButtonText,
-                              range === r && styles.rangeButtonTextActive,
-                            ]}
-                          >
-                            {r === "all" ? "All" : r}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-
-                    <WeightChart
-                      entries={weightEntries}
-                      range={range}
-                      width={chartWidth}
-                    />
-                  </View>
-                </Animated.View>
-
-                {/* Log Weight Section */}
-                <Animated.View
-                  entering={FadeInDown.delay(200).duration(400)}
-                  style={styles.section}
-                >
-                  <Text style={styles.sectionTitle}>Log Weight</Text>
-
-                  <View style={styles.card}>
-                    <View style={styles.inputRow}>
-                      <View style={styles.weightInputContainer}>
-                        <TextInput
-                          style={styles.weightInput}
-                          value={weightInput}
-                          onChangeText={(text) =>
-                            setWeightInput(
-                              text
-                                .replace(/[^0-9.]/g, "")
-                                .replace(/(\..*)\./g, "$1")
-                            )
-                          }
-                          keyboardType="decimal-pad"
-                          placeholder="0.0"
-                          placeholderTextColor="#ccc"
-                        />
-                        <Text style={styles.unitLabel}>{unitLabel}</Text>
-                      </View>
-                    </View>
-
-                    <TextInput
-                      style={styles.noteInput}
-                      value={noteInput}
-                      onChangeText={setNoteInput}
-                      placeholder="Add a note (optional)"
-                      placeholderTextColor="#bbb"
-                      maxLength={100}
-                    />
-
-                    {/* Photo preview / picker */}
-                    {photoUri ? (
-                      <View style={styles.photoPreviewRow}>
-                        <Image source={{ uri: photoUri }} style={styles.photoPreview} />
-                        <TouchableOpacity
-                          style={styles.removePhotoButton}
-                          onPress={() => setPhotoUri(undefined)}
-                        >
-                          <Ionicons name="close-circle" size={22} color="#EF4444" />
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
+                <View style={styles.card}>
+                  <View style={styles.rangeToggle}>
+                    {(["30d", "90d", "all"] as TimeRange[]).map((r) => (
                       <TouchableOpacity
-                        style={styles.addPhotoButton}
-                        onPress={handlePickPhoto}
+                        key={r}
+                        style={[
+                          styles.rangeButton,
+                          range === r && styles.rangeButtonActive,
+                        ]}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setRange(r);
+                        }}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="camera-outline" size={18} color="#1A6872" />
-                        <Text style={styles.addPhotoText}>Add Photo</Text>
-                      </TouchableOpacity>
-                    )}
-
-                    <TouchableOpacity
-                      style={[
-                        styles.logButton,
-                        !weightInput && styles.logButtonDisabled,
-                      ]}
-                      onPress={handleLogWeight}
-                      activeOpacity={0.7}
-                      disabled={!weightInput}
-                    >
-                      <Text style={styles.logButtonText}>Log Weight</Text>
-                    </TouchableOpacity>
-                  </View>
-                </Animated.View>
-
-                {/* Progress Photos Section */}
-                {photoEntries.length > 0 && (
-                  <Animated.View
-                    entering={FadeInDown.delay(300).duration(400)}
-                    style={styles.section}
-                  >
-                    <Text style={styles.sectionTitle}>Progress Photos</Text>
-
-                    <View style={styles.photoGrid}>
-                      {photoEntries.map((entry) => (
-                        <TouchableOpacity
-                          key={entry.id}
-                          style={styles.photoCard}
-                          onLongPress={() => handleDeletePhoto(entry)}
-                          activeOpacity={0.8}
+                        <Text
+                          style={[
+                            styles.rangeButtonText,
+                            range === r && styles.rangeButtonTextActive,
+                          ]}
                         >
-                          <Image
-                            source={{ uri: entry.photoUri }}
-                            style={styles.gridPhoto}
-                          />
-                          <Text style={styles.photoDate}>
-                            {formatDate(entry.date)}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </Animated.View>
-                )}
+                          {r === "all" ? "All" : r}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
 
-                {/* History Section */}
-                {sortedEntries.length > 0 && (
-                  <Animated.View
-                    entering={FadeInDown.delay(400).duration(400)}
-                    style={styles.section}
-                  >
-                    <Text style={styles.sectionTitle}>History</Text>
+                  <WeightChart
+                    entries={weightEntries}
+                    range={range}
+                    width={chartWidth}
+                  />
+                </View>
+              </Animated.View>
 
-                    <View style={styles.card}>
-                      {sortedEntries.map((entry, index) => {
-                        // Find previous entry to calculate delta
-                        const prevEntry = sortedEntries[index + 1];
-                        const delta = prevEntry
-                          ? displayWeight(entry.weightKg) -
-                            displayWeight(prevEntry.weightKg)
-                          : null;
-                        const deltaRounded =
-                          delta !== null
-                            ? Math.round(delta * 10) / 10
-                            : null;
+              {/* History */}
+              {sortedEntries.length > 0 && (
+                <Animated.View
+                  entering={FadeInDown.delay(160).duration(400)}
+                  style={styles.section}
+                >
+                  <Text style={styles.sectionTitle}>History</Text>
 
-                        return (
+                  {sortedEntries.map((entry, index) => {
+                    const prevEntry = sortedEntries[index + 1];
+                    const delta = prevEntry
+                      ? displayWeight(entry.weightKg) -
+                        displayWeight(prevEntry.weightKg)
+                      : null;
+                    const deltaRounded =
+                      delta !== null
+                        ? Math.round(delta * 10) / 10
+                        : null;
+
+                    return (
+                      <Animated.View
+                        key={entry.id}
+                        entering={FadeInDown.delay(index * 30).duration(250)}
+                      >
+                        <Swipeable
+                          ref={(ref) => {
+                            if (ref) swipeableRefs.current.set(entry.id, ref);
+                            else swipeableRefs.current.delete(entry.id);
+                          }}
+                          renderRightActions={() => renderDeleteAction(entry.id)}
+                          overshootRight={false}
+                        >
                           <TouchableOpacity
-                            key={entry.id}
-                            style={[
-                              styles.historyRow,
-                              index === sortedEntries.length - 1 &&
-                                styles.historyRowLast,
-                            ]}
-                            onLongPress={() => handleDeleteEntry(entry.id)}
-                            activeOpacity={0.7}
+                            style={styles.entryCard}
+                            onPress={() => handleTapEntry(entry)}
+                            activeOpacity={0.6}
                           >
-                            <View style={styles.historyLeft}>
-                              <Text style={styles.historyDate}>
-                                {formatDate(entry.date)}
-                              </Text>
-                              {entry.note && (
-                                <Text
-                                  style={styles.historyNote}
-                                  numberOfLines={1}
-                                >
-                                  {entry.note}
-                                </Text>
-                              )}
-                            </View>
-                            <View style={styles.historyRight}>
-                              <Text style={styles.historyWeight}>
+                            {entry.photoUri && (
+                              <Image
+                                source={{ uri: entry.photoUri }}
+                                style={styles.historyThumbnail}
+                              />
+                            )}
+                            <View style={styles.entryContent}>
+                              <Text style={styles.entryLabel}>
                                 {displayWeight(entry.weightKg)} {unitLabel}
+                                {deltaRounded !== null && deltaRounded !== 0 && (
+                                  <Text style={styles.entryDelta}>
+                                    {"  "}{deltaRounded > 0 ? "+" : ""}{deltaRounded}
+                                  </Text>
+                                )}
                               </Text>
-                              {deltaRounded !== null && deltaRounded !== 0 && (
-                                <Text
-                                  style={[
-                                    styles.historyDelta,
-                                    {
-                                      color:
-                                        deltaRounded < 0
-                                          ? "#22C55E"
-                                          : "#EF4444",
-                                    },
-                                  ]}
-                                >
-                                  {deltaRounded > 0 ? "+" : ""}
-                                  {deltaRounded}
-                                </Text>
-                              )}
+                              <Text style={styles.entryDate}>
+                                {formatDate(entry.date)}
+                                {entry.note ? `  ·  ${entry.note}` : ""}
+                              </Text>
+                            </View>
+                            <View style={styles.chevronContainer}>
+                              <Ionicons name="chevron-forward" size={18} color="#ccc" />
                             </View>
                           </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </Animated.View>
-                )}
-              </Animated.ScrollView>
-            </KeyboardAvoidingView>
+                        </Swipeable>
+                      </Animated.View>
+                    );
+                  })}
+                </Animated.View>
+              )}
+
+              {/* Progress Photos */}
+              {photoEntries.length > 0 && (
+                <Animated.View
+                  entering={FadeInDown.delay(240).duration(400)}
+                  style={styles.section}
+                >
+                  <Text style={styles.sectionTitle}>Photos</Text>
+
+                  <View style={styles.photoGrid}>
+                    {photoEntries.map((entry) => (
+                      <TouchableOpacity
+                        key={entry.id}
+                        style={styles.photoCard}
+                        onLongPress={() => handleDeletePhoto(entry)}
+                        activeOpacity={0.8}
+                      >
+                        <Image
+                          source={{ uri: entry.photoUri }}
+                          style={styles.gridPhoto}
+                        />
+                        <Text style={styles.photoDate}>
+                          {formatDate(entry.date)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </Animated.View>
+              )}
+            </Animated.ScrollView>
+
+            {/* Footer */}
+            <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+              <TouchableOpacity
+                style={styles.logButton}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setShowLogPopup(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.logButtonText}>Log Weight</Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         </GestureDetector>
       </GestureHandlerRootView>
+
+      {/* Log Weight Popup */}
+      <Modal
+        visible={showLogPopup}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowLogPopup(false)}
+        statusBarTranslucent
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.popupGestureRoot}
+        >
+          <TouchableOpacity
+            style={styles.popupBackdrop}
+            onPress={() => setShowLogPopup(false)}
+            activeOpacity={1}
+          />
+
+          <View style={[styles.popupContainer, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={styles.popupDragIndicatorContainer}>
+              <View style={styles.dragIndicator} />
+            </View>
+
+            <Text style={styles.popupTitle}>Log Weight</Text>
+
+            <View style={styles.scaleReadout}>
+              <View style={styles.scaleCenter}>
+                <TextInput
+                  style={styles.scaleInput}
+                  value={weightInput}
+                  onChangeText={(text) =>
+                    setWeightInput(
+                      text
+                        .replace(/[^0-9.]/g, "")
+                        .replace(/(\..*)\./g, "$1")
+                    )
+                  }
+                  keyboardType="decimal-pad"
+                  placeholder="0.0"
+                  placeholderTextColor="#ccc"
+                  autoFocus
+                />
+                <Text style={styles.scaleUnitLabel}>{unitLabel}</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.dateLabelContainer}
+              onPress={() => setShowLogCalendar(true)}
+              activeOpacity={0.6}
+            >
+              <Text style={styles.dateSelectorText}>{formatDate(logDateInput)}</Text>
+            </TouchableOpacity>
+
+            <Calendar
+              visible={showLogCalendar}
+              onClose={() => setShowLogCalendar(false)}
+              selectedDate={logDateInput}
+              onSelectDate={setLogDateInput}
+            />
+
+            <View style={styles.notePhotoRow}>
+              <TextInput
+                style={styles.compactNoteInput}
+                value={noteInput}
+                onChangeText={setNoteInput}
+                placeholder="Note (optional)"
+                placeholderTextColor="#bbb"
+                maxLength={100}
+              />
+              {photoUri ? (
+                <View style={styles.photoButtonContainer}>
+                  <Image source={{ uri: photoUri }} style={styles.compactPhotoPreview} />
+                  <TouchableOpacity
+                    style={styles.compactPhotoRemove}
+                    onPress={() => setPhotoUri(undefined)}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.compactPhotoButton}
+                  onPress={handlePickPhoto}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="camera-outline" size={20} color="#1A6872" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.popupSubmitButton,
+                !weightInput && styles.popupSubmitButtonDisabled,
+              ]}
+              onPress={handleLogWeight}
+              activeOpacity={0.8}
+              disabled={!weightInput}
+            >
+              <Text
+                style={[
+                  styles.popupSubmitText,
+                  !weightInput && styles.popupSubmitTextDisabled,
+                ]}
+              >
+                Save
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Edit Entry Popup */}
+      <Modal
+        visible={editingEntry !== null}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setEditingEntry(null)}
+        statusBarTranslucent
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.popupGestureRoot}
+        >
+          <TouchableOpacity
+            style={styles.popupBackdrop}
+            onPress={() => setEditingEntry(null)}
+            activeOpacity={1}
+          />
+
+          <View style={[styles.popupContainer, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={styles.popupDragIndicatorContainer}>
+              <View style={styles.dragIndicator} />
+            </View>
+
+            <Text style={styles.popupTitle}>Edit Entry</Text>
+
+            <View style={styles.scaleReadout}>
+              <View style={styles.scaleCenter}>
+                <TextInput
+                  style={styles.scaleInput}
+                  value={editWeightInput}
+                  onChangeText={(text) =>
+                    setEditWeightInput(
+                      text
+                        .replace(/[^0-9.]/g, "")
+                        .replace(/(\..*)\./g, "$1")
+                    )
+                  }
+                  keyboardType="decimal-pad"
+                  placeholder="0.0"
+                  placeholderTextColor="#ccc"
+                />
+                <Text style={styles.scaleUnitLabel}>{unitLabel}</Text>
+              </View>
+            </View>
+
+            {/* Date selector */}
+            <TouchableOpacity
+              style={styles.dateLabelContainer}
+              onPress={() => setShowEditCalendar(true)}
+              activeOpacity={0.6}
+            >
+              <Text style={styles.dateSelectorText}>{formatDate(editDateInput)}</Text>
+            </TouchableOpacity>
+
+            <Calendar
+              visible={showEditCalendar}
+              onClose={() => setShowEditCalendar(false)}
+              selectedDate={editDateInput}
+              onSelectDate={setEditDateInput}
+            />
+
+            <View style={styles.notePhotoRow}>
+              <TextInput
+                style={styles.compactNoteInput}
+                value={editNoteInput}
+                onChangeText={setEditNoteInput}
+                placeholder="Note (optional)"
+                placeholderTextColor="#bbb"
+                maxLength={100}
+              />
+              {editPhotoUri ? (
+                <View style={styles.photoButtonContainer}>
+                  <Image source={{ uri: editPhotoUri }} style={styles.compactPhotoPreview} />
+                  <TouchableOpacity
+                    style={styles.compactPhotoRemove}
+                    onPress={() => setEditPhotoUri(undefined)}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.compactPhotoButton}
+                  onPress={handleEditPickPhoto}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="camera-outline" size={20} color="#1A6872" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.popupSubmitButton,
+                !editWeightInput && styles.popupSubmitButtonDisabled,
+              ]}
+              onPress={handleSaveEdit}
+              activeOpacity={0.8}
+              disabled={!editWeightInput}
+            >
+              <Text
+                style={[
+                  styles.popupSubmitText,
+                  !editWeightInput && styles.popupSubmitTextDisabled,
+                ]}
+              >
+                Save
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </Modal>
   );
 }
 
-const PHOTO_SIZE = (SCREEN_WIDTH - 64 - 16) / 3; // 3 columns with gaps
+const PHOTO_SIZE = (SCREEN_WIDTH - 64 - 16) / 3;
 
 const styles = StyleSheet.create({
   gestureRoot: {
@@ -508,178 +758,138 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8f8f8",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   dragIndicatorContainer: {
     alignItems: "center",
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 4,
     backgroundColor: "#f8f8f8",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   dragIndicator: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
+    width: 32,
+    height: 3,
+    borderRadius: 1.5,
     backgroundColor: "#ddd",
   },
   header: {
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
     backgroundColor: "#f8f8f8",
   },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "600",
     color: "#1a1a1a",
-    textAlign: "center",
     letterSpacing: -0.3,
-  },
-  keyboardView: {
-    flex: 1,
   },
   content: {
     flex: 1,
   },
   contentContainer: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 4,
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
     color: "#999",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
     marginBottom: 8,
     marginLeft: 4,
   },
   card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 14,
   },
-  // Range toggle
   rangeToggle: {
     flexDirection: "row",
     backgroundColor: "#f5f5f5",
-    borderRadius: 10,
-    padding: 3,
-    marginBottom: 16,
+    borderRadius: 9,
+    padding: 2,
+    marginBottom: 12,
   },
   rangeButton: {
     flex: 1,
-    paddingVertical: 7,
+    paddingVertical: 6,
     alignItems: "center",
-    borderRadius: 8,
+    borderRadius: 7,
   },
   rangeButtonActive: {
     backgroundColor: "#fff",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
     elevation: 1,
   },
   rangeButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
     color: "#999",
   },
   rangeButtonTextActive: {
     color: "#1A6872",
   },
-  // Log Weight
-  inputRow: {
-    marginBottom: 12,
-  },
-  weightInputContainer: {
+  // History entries
+  entryCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f8f8",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 15,
+    marginBottom: 15,
   },
-  weightInput: {
+  entryContent: {
     flex: 1,
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#1a1a1a",
-    padding: 0,
-    letterSpacing: -0.5,
   },
-  unitLabel: {
+  entryLabel: {
     fontSize: 16,
     fontWeight: "600",
+    color: "#1a1a1a",
+    letterSpacing: -0.2,
+    marginBottom: 2,
+  },
+  entryDelta: {
+    fontSize: 13,
+    fontWeight: "400",
     color: "#999",
-    marginLeft: 8,
   },
-  noteInput: {
-    fontSize: 15,
-    color: "#333",
-    backgroundColor: "#f8f8f8",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 12,
+  entryDate: {
+    fontSize: 13,
+    color: "#999",
   },
-  addPhotoButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    backgroundColor: "rgba(26, 104, 114, 0.06)",
-    borderRadius: 10,
-    marginBottom: 16,
-  },
-  addPhotoText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1A6872",
-  },
-  photoPreviewRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 8,
-  },
-  photoPreview: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
+  historyThumbnail: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
     backgroundColor: "#f0f0f0",
+    marginRight: 12,
   },
-  removePhotoButton: {
-    padding: 4,
+  chevronContainer: {
+    marginLeft: 12,
   },
-  logButton: {
-    alignItems: "center",
+  deleteAction: {
+    backgroundColor: "#F87171",
     justifyContent: "center",
-    paddingVertical: 14,
-    borderRadius: 25,
-    backgroundColor: "#1A6872",
+    alignItems: "center",
+    width: 72,
+    borderRadius: 14,
+    marginLeft: 8,
+    marginBottom: 8,
   },
-  logButtonDisabled: {
-    backgroundColor: "#d0d0d0",
-  },
-  logButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  // Progress Photos
+  // Photos
   photoGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -687,12 +897,11 @@ const styles = StyleSheet.create({
   },
   photoCard: {
     width: PHOTO_SIZE,
-    marginBottom: 4,
   },
   gridPhoto: {
     width: PHOTO_SIZE,
     height: PHOTO_SIZE,
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: "#f0f0f0",
   },
   photoDate: {
@@ -701,42 +910,141 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 4,
   },
-  // History
-  historyRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  // Footer
+  footer: {
+    backgroundColor: "#f8f8f8",
+    paddingHorizontal: 16,
+    paddingTop: 14,
+  },
+  logButton: {
     alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#f0f0f0",
+    justifyContent: "center",
+    paddingVertical: 16,
+    borderRadius: 25,
+    backgroundColor: "#1A6872",
   },
-  historyRowLast: {
-    borderBottomWidth: 0,
+  logButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#fff",
   },
-  historyLeft: {
+  // Popup shared
+  popupGestureRoot: {
     flex: 1,
+    justifyContent: "flex-end",
   },
-  historyDate: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#333",
+  popupBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
-  historyNote: {
-    fontSize: 13,
-    color: "#999",
-    marginTop: 2,
+  popupContainer: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
   },
-  historyRight: {
-    alignItems: "flex-end",
+  popupDragIndicatorContainer: {
+    alignItems: "center",
+    paddingTop: 10,
+    paddingBottom: 12,
   },
-  historyWeight: {
-    fontSize: 15,
+  popupTitle: {
+    fontSize: 17,
     fontWeight: "600",
     color: "#1a1a1a",
+    textAlign: "center",
+    marginBottom: 16,
   },
-  historyDelta: {
-    fontSize: 12,
+  scaleReadout: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  scaleCenter: {
+    alignItems: "center",
+  },
+  scaleInput: {
+    fontSize: 40,
+    fontWeight: "700",
+    color: "#1a1a1a",
+    textAlign: "center",
+    padding: 0,
+    letterSpacing: -1,
+    minWidth: 120,
+  },
+  scaleUnitLabel: {
+    fontSize: 13,
     fontWeight: "600",
+    color: "#999",
+    textTransform: "uppercase",
     marginTop: 2,
+  },
+  notePhotoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 16,
+  },
+  compactNoteInput: {
+    flex: 1,
+    fontSize: 15,
+    color: "#333",
+    backgroundColor: "#f8f8f8",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  photoButtonContainer: {
+    position: "relative",
+  },
+  compactPhotoPreview: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: "#f0f0f0",
+  },
+  compactPhotoRemove: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+  },
+  compactPhotoButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: "rgba(26, 104, 114, 0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dateLabelContainer: {
+    alignSelf: "center",
+    backgroundColor: "#f5f5f5",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 9,
+    marginBottom: 12,
+  },
+  dateSelectorText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+  },
+  popupSubmitButton: {
+    backgroundColor: "#1A6872",
+    paddingVertical: 14,
+    borderRadius: 25,
+    alignItems: "center",
+  },
+  popupSubmitButtonDisabled: {
+    backgroundColor: "#E0E0E0",
+    opacity: 0.6,
+  },
+  popupSubmitText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  popupSubmitTextDisabled: {
+    color: "#aaa",
   },
 });

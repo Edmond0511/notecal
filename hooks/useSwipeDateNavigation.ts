@@ -4,6 +4,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
   runOnJS,
   cancelAnimation,
 } from 'react-native-reanimated';
@@ -60,23 +61,19 @@ export function useSwipeDateNavigation({
       if (swipedLeft) {
         runOnJS(triggerHaptic)();
         runOnJS(onSwipeLeft)();
+        translateX.value = 0; // immediate snap — no residual animation
       } else if (swipedRight) {
         runOnJS(triggerHaptic)();
         runOnJS(onSwipeRight)();
+        translateX.value = 0; // immediate snap — no residual animation
+      } else {
+        // No date change — bounce back visually
+        translateX.value = withSpring(0, { damping: 20, stiffness: 300 });
       }
-
-      // Reset position
-      translateX.value = withSpring(0, {
-        damping: 20,
-        stiffness: 300,
-      });
     })
     .onFinalize(() => {
-      // Ensure we reset even if gesture is cancelled
-      translateX.value = withSpring(0, {
-        damping: 20,
-        stiffness: 300,
-      });
+      // Use withTiming to guarantee settling at exactly 0 without spring oscillation
+      translateX.value = withTiming(0, { duration: 150 });
     });
 
   const animatedStyle = useAnimatedStyle(() => {

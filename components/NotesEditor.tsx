@@ -30,10 +30,10 @@ import { NutritionReasoningPopup } from "./NutritionReasoningPopup";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
 // Constants
-const LINE_HEIGHT = 21;
+const LINE_HEIGHT = 24;
 const TEXT_INPUT_PADDING_TOP = 10;
 const FONT_VERTICAL_OFFSET = 4;
-const INDICATOR_VERTICAL_OFFSET = 2;
+const INDICATOR_VERTICAL_OFFSET = 3;
 const EM_DASH = "—"; // U+2014
 
 // Adaptive debounce delays based on entry completeness
@@ -641,6 +641,8 @@ export function NotesEditor({
   const scrollToTopOnContentRef = useRef(false);
   // Cooldown: block focus briefly after date change to prevent native scroll-to-cursor
   const dateChangeCooldownRef = useRef(false);
+  // Pin selection to position 0 after date change to prevent native scroll-to-cursor
+  const selectionPinnedRef = useRef(false);
   // Reanimated scroll handler - runs on UI thread, no JS re-renders
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -656,10 +658,17 @@ export function NotesEditor({
   // Scroll to top after date change content renders.
   // Called by ScrollView's onContentSizeChange, which fires after the native
   // layout pass — late enough to override any TextInput scroll-to-cursor.
+  // Guards against user interaction: if the user is already touching or
+  // scrolling, skip the forced scroll-to-top to avoid snap-back.
   const handleContentSizeChange = useCallback(() => {
     if (scrollToTopOnContentRef.current) {
       scrollToTopOnContentRef.current = false;
-      scrollTo(scrollRef, 0, 0, false);
+      if (isTouchActiveRef.current || isScrollingRef.current) return;
+      // Delay to next frame so native layout adjustments complete first
+      requestAnimationFrame(() => {
+        if (isTouchActiveRef.current || isScrollingRef.current) return;
+        scrollTo(scrollRef, 0, 0, false);
+      });
     }
   }, [scrollRef]);
 
@@ -694,8 +703,15 @@ export function NotesEditor({
 
   // Reset layout measurements and scroll to top on date change.
   // Blur first so RN's native scroll-to-cursor doesn't fire when the
-  // TextInput value changes.
+  // TextInput value changes. Release selection control immediately —
+  // blur alone is sufficient to suppress scroll-to-cursor, and keeping
+  // selection pinned to {start:0,end:0} causes iOS to fight user
+  // scrolling by repeatedly scrolling the parent ScrollView to show
+  // position 0 on every re-render.
   useEffect(() => {
+    setSelection(undefined);
+    selectionPinnedRef.current = false;
+
     textInputRef.current?.blur();
     scrollToTopOnContentRef.current = true;
     setEntryYMap(new Map());
@@ -703,9 +719,10 @@ export function NotesEditor({
     scrollTo(scrollRef, 0, 0, false);
     // Block focus for a short window so native scroll-to-cursor can't fire
     dateChangeCooldownRef.current = true;
-    setTimeout(() => {
+    const cooldownTimer = setTimeout(() => {
       dateChangeCooldownRef.current = false;
     }, 300);
+    return () => clearTimeout(cooldownTimer);
   }, [currentDate]);
 
   // Cleanup timeouts on unmount
@@ -784,6 +801,10 @@ export function NotesEditor({
       textInputRef.current?.blur();
     } else {
       // Touch already ended (focus fired after touchEnd) — resolve immediately
+      if (selectionPinnedRef.current) {
+        selectionPinnedRef.current = false;
+        requestAnimationFrame(() => setTimeout(() => setSelection(undefined), 50));
+      }
       setShowSoftInput(true);
     }
   }, []);
@@ -802,6 +823,11 @@ export function NotesEditor({
     // native scroll-to-cursor) and open keyboard
     setShowSoftInput(true);
     textInputRef.current?.focus();
+    // Clear pinned selection after focus establishes
+    if (selectionPinnedRef.current) {
+      selectionPinnedRef.current = false;
+      requestAnimationFrame(() => setTimeout(() => setSelection(undefined), 50));
+    }
   }, []);
 
   // Handle system touch cancellation (incoming call, gesture override).

@@ -1,6 +1,7 @@
 import { useAppStore } from "@/store/app-store";
 import { kgToLbs } from "@/utils/goalsCalculator";
 import { WeightEntry } from "@/types";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, {
@@ -28,6 +29,38 @@ const PADDING_RIGHT = 16;
 const PADDING_TOP = 24;
 const PADDING_BOTTOM = 28;
 
+/**
+ * Convert an array of {x, y} points into a smooth cubic bezier SVG path
+ * using Catmull-Rom interpolation.
+ */
+function catmullRomToBezier(
+  points: { x: number; y: number }[],
+  tension = 0.3
+): string {
+  if (points.length < 2) return "";
+  if (points.length === 2) {
+    return `M${points[0].x},${points[0].y}L${points[1].x},${points[1].y}`;
+  }
+
+  let path = `M${points[0].x},${points[0].y}`;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[Math.max(i - 1, 0)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(i + 2, points.length - 1)];
+
+    const cp1x = p1.x + ((p2.x - p0.x) * tension) / 3;
+    const cp1y = p1.y + ((p2.y - p0.y) * tension) / 3;
+    const cp2x = p2.x - ((p3.x - p1.x) * tension) / 3;
+    const cp2y = p2.y - ((p3.y - p1.y) * tension) / 3;
+
+    path += `C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+  }
+
+  return path;
+}
+
 export function WeightChart({ entries, range, width }: WeightChartProps) {
   const preferredUnits = useAppStore((s) => s.preferredUnits);
   const goals = useAppStore((s) => s.goals);
@@ -52,13 +85,16 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
   const displayWeight = (kg: number) =>
     isImperial ? kgToLbs(kg) : Math.round(kg * 10) / 10;
 
-  const unitLabel = isImperial ? "lbs" : "kg";
-
   if (filteredEntries.length === 0) {
     return (
       <Animated.View entering={FadeIn.duration(300)} style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No weight data for this period</Text>
-        <Text style={styles.emptySubtext}>Log your first weight below</Text>
+        <View style={styles.emptyIconContainer}>
+          <Ionicons name="scale-outline" size={32} color="#bbb" />
+        </View>
+        <Text style={styles.emptyText}>No weight data yet</Text>
+        <Text style={styles.emptySubtext}>
+          Log your first weight to see your progress
+        </Text>
       </Animated.View>
     );
   }
@@ -93,15 +129,13 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
     return { x, y, weight: displayWeight(entry.weightKg), date: entry.date };
   });
 
-  // Build SVG path
+  // Build smooth bezier SVG path
   const linePath =
     points.length === 1
       ? `M${points[0].x},${points[0].y}L${points[0].x},${points[0].y}`
-      : points
-          .map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`)
-          .join("");
+      : catmullRomToBezier(points, 0.3);
 
-  // Build gradient fill path (area under the line)
+  // Build gradient fill path (area under the curve)
   const areaPath =
     linePath +
     `L${points[points.length - 1].x},${PADDING_TOP + chartHeight}` +
@@ -114,12 +148,12 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
       ((targetDisplay - yMin) / yRange) * chartHeight
     : null;
 
-  // Y-axis labels (3 ticks)
-  const yTicks = [yMin, yMin + yRange / 2, yMax].map((v) =>
-    Math.round(v * 10) / 10
+  // Y-axis labels (5 ticks)
+  const yTicks = Array.from({ length: 5 }, (_, i) =>
+    yMin + (yRange * i) / 4
   );
 
-  // X-axis date labels (first, middle, last)
+  // X-axis date labels (up to 5 evenly distributed)
   const formatDate = (dateStr: string) => {
     const m = parseInt(dateStr.substring(4, 6), 10);
     const d = parseInt(dateStr.substring(6, 8), 10);
@@ -128,65 +162,27 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
   };
 
   const xLabels: { x: number; label: string }[] = [];
-  if (filteredEntries.length >= 1) {
-    xLabels.push({ x: points[0].x, label: formatDate(filteredEntries[0].date) });
-  }
-  if (filteredEntries.length >= 3) {
-    const mid = Math.floor(filteredEntries.length / 2);
-    xLabels.push({ x: points[mid].x, label: formatDate(filteredEntries[mid].date) });
-  }
-  if (filteredEntries.length >= 2) {
-    xLabels.push({
-      x: points[points.length - 1].x,
-      label: formatDate(filteredEntries[filteredEntries.length - 1].date),
+  if (filteredEntries.length <= 5) {
+    filteredEntries.forEach((entry, i) => {
+      xLabels.push({ x: points[i].x, label: formatDate(entry.date) });
     });
+  } else {
+    const labelCount = 5;
+    for (let i = 0; i < labelCount; i++) {
+      const idx = Math.round((i / (labelCount - 1)) * (filteredEntries.length - 1));
+      xLabels.push({ x: points[idx].x, label: formatDate(filteredEntries[idx].date) });
+    }
   }
-
-  // Summary stats
-  const currentWeight = weights[weights.length - 1];
-  const periodStart = weights[0];
-  const change = Math.round((currentWeight - periodStart) * 10) / 10;
-  const changeStr = change > 0 ? `+${change}` : `${change}`;
 
   return (
     <Animated.View entering={FadeIn.duration(400)}>
-      {/* Summary above chart */}
-      <View style={styles.summaryRow}>
-        <View>
-          <Text style={styles.currentWeight}>
-            {currentWeight} {unitLabel}
-          </Text>
-          <Text style={styles.currentLabel}>Current</Text>
-        </View>
-        {filteredEntries.length > 1 && (
-          <View style={styles.changeContainer}>
-            <Text
-              style={[
-                styles.changeValue,
-                { color: change < 0 ? "#22C55E" : change > 0 ? "#EF4444" : "#999" },
-              ]}
-            >
-              {changeStr} {unitLabel}
-            </Text>
-            <Text style={styles.changeLabel}>Change</Text>
-          </View>
-        )}
-        {targetDisplay && (
-          <View style={styles.targetContainer}>
-            <Text style={styles.targetValue}>
-              {targetDisplay} {unitLabel}
-            </Text>
-            <Text style={styles.targetLabel}>Target</Text>
-          </View>
-        )}
-      </View>
-
       {/* Chart */}
       <Svg width={width} height={CHART_HEIGHT}>
         <Defs>
           <LinearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#1A6872" stopOpacity="0.2" />
-            <Stop offset="100%" stopColor="#1A6872" stopOpacity="0.02" />
+            <Stop offset="0%" stopColor="#1A6872" stopOpacity="0.25" />
+            <Stop offset="50%" stopColor="#1A6872" stopOpacity="0.08" />
+            <Stop offset="100%" stopColor="#1A6872" stopOpacity="0.01" />
           </LinearGradient>
         </Defs>
 
@@ -213,7 +209,7 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
                 fill="#999"
                 textAnchor="end"
               >
-                {Math.round(tick)}
+                {tick.toFixed(1)}
               </SvgText>
             </React.Fragment>
           );
@@ -258,17 +254,30 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
         />
 
         {/* Data points */}
-        {points.map((point, i) => (
-          <Circle
-            key={`point-${i}`}
-            cx={point.x}
-            cy={point.y}
-            r={3.5}
-            fill="#fff"
-            stroke="#1A6872"
-            strokeWidth={2}
-          />
-        ))}
+        {points.map((point, i) => {
+          const isLatest = i === points.length - 1;
+          return (
+            <React.Fragment key={`point-${i}`}>
+              {isLatest && (
+                <Circle
+                  cx={point.x}
+                  cy={point.y}
+                  r={8}
+                  fill="#1A6872"
+                  opacity={0.12}
+                />
+              )}
+              <Circle
+                cx={point.x}
+                cy={point.y}
+                r={isLatest ? 5 : 4}
+                fill="#fff"
+                stroke="#1A6872"
+                strokeWidth={2}
+              />
+            </React.Fragment>
+          );
+        })}
 
         {/* X-axis labels */}
         {xLabels.map((label, i) => (
@@ -290,9 +299,18 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
 
 const styles = StyleSheet.create({
   emptyContainer: {
-    height: CHART_HEIGHT,
+    height: CHART_HEIGHT + 40,
     alignItems: "center",
     justifyContent: "center",
+  },
+  emptyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#f5f5f5",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
   },
   emptyText: {
     fontSize: 15,
@@ -303,48 +321,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#bbb",
     marginTop: 4,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    paddingHorizontal: 4,
-    marginBottom: 8,
-  },
-  currentWeight: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#1a1a1a",
-    letterSpacing: -0.5,
-  },
-  currentLabel: {
-    fontSize: 12,
-    color: "#999",
-    marginTop: 1,
-  },
-  changeContainer: {
-    alignItems: "center",
-  },
-  changeValue: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  changeLabel: {
-    fontSize: 12,
-    color: "#999",
-    marginTop: 1,
-  },
-  targetContainer: {
-    alignItems: "flex-end",
-  },
-  targetValue: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#22C55E",
-  },
-  targetLabel: {
-    fontSize: 12,
-    color: "#999",
-    marginTop: 1,
   },
 });

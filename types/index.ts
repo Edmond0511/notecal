@@ -200,7 +200,7 @@ export interface AppState {
   correctEntryItem: (entryId: string, itemId: string, feedback: string) => Promise<void>;
   // Weight tracking actions
   addWeightEntry: (entry: Omit<WeightEntry, 'id' | 'createdAt'>) => void;
-  updateWeightEntry: (id: string, updates: Partial<Pick<WeightEntry, 'weightKg' | 'note' | 'photoUri'>>) => void;
+  updateWeightEntry: (id: string, updates: Partial<Pick<WeightEntry, 'date' | 'weightKg' | 'note' | 'photoUri'>>) => void;
   deleteWeightEntry: (id: string) => void;
   // Offline queue drain
   enqueuePendingEntries: () => void;

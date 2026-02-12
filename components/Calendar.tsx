@@ -9,13 +9,21 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, {
+  Extrapolation,
   FadeIn,
   FadeInDown,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const DISMISS_THRESHOLD = 150;
 const CALENDAR_PADDING = 24;
 const DAY_SIZE = Math.floor((SCREEN_WIDTH - CALENDAR_PADDING * 2) / 7);
 
@@ -162,12 +170,44 @@ export function Calendar({
     onClose();
   }, [onClose]);
 
+  // Pan gesture for swipe-to-dismiss
+  const translateY = useSharedValue(0);
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      if (event.translationY > 0) {
+        translateY.value = event.translationY;
+      }
+    })
+    .onEnd((event) => {
+      if (event.translationY > DISMISS_THRESHOLD) {
+        translateY.value = withSpring(SCREEN_HEIGHT, { damping: 20, stiffness: 200 });
+        runOnJS(handleClose)();
+      } else {
+        translateY.value = withSpring(0, { damping: 20, stiffness: 400 });
+      }
+    });
+
+  const sheetAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const backdropAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateY.value,
+      [0, SCREEN_HEIGHT * 0.5],
+      [1, 0],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
   // Reset view to selected date when opening
   React.useEffect(() => {
     if (visible) {
       const date = parseDate(selectedDate);
       setViewMonth(date.getMonth());
       setViewYear(date.getFullYear());
+      translateY.value = 0;
     }
   }, [visible, selectedDate]);
 
@@ -183,19 +223,20 @@ export function Calendar({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={styles.modalContainer}>
+      <GestureHandlerRootView style={styles.modalContainer}>
         {/* Backdrop */}
         <Animated.View
           entering={FadeIn.duration(200)}
-          style={styles.backdrop}
+          style={[styles.backdrop, backdropAnimatedStyle]}
         >
           <Pressable style={styles.backdropPressable} onPress={handleClose} />
         </Animated.View>
 
         {/* Calendar Sheet */}
+        <GestureDetector gesture={panGesture}>
         <Animated.View
           entering={FadeIn.duration(200)}
-          style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}
+          style={[styles.sheet, { paddingBottom: insets.bottom + 16 }, sheetAnimatedStyle]}
         >
           {/* Minimal handle line */}
           <View style={styles.handleContainer}>
@@ -296,7 +337,8 @@ export function Calendar({
             </TouchableOpacity>
           </Animated.View>
         </Animated.View>
-      </View>
+        </GestureDetector>
+      </GestureHandlerRootView>
     </Modal>
   );
 }

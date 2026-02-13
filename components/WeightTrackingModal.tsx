@@ -79,11 +79,16 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
   const [showEditCalendar, setShowEditCalendar] = useState(false);
   const [previewImageUri, setPreviewImageUri] = useState<string | null>(null);
 
-  const todayStr = new Date().toISOString().split("T")[0].replace(/-/g, "");
+  const toLocalYMD = (d: Date) =>
+    d.getFullYear().toString()
+    + (d.getMonth() + 1).toString().padStart(2, "0")
+    + d.getDate().toString().padStart(2, "0");
+
+  const todayStr = toLocalYMD(new Date());
   const [logDateInput, setLogDateInput] = useState(todayStr);
   const yesterdayDate = new Date();
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-  const yesterdayStr = yesterdayDate.toISOString().split("T")[0].replace(/-/g, "");
+  const yesterdayStr = toLocalYMD(yesterdayDate);
 
   // Reset form state when modal opens
   useEffect(() => {
@@ -92,7 +97,7 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
       isScrolledToTop.value = true;
       setWeightInput("");
       setPhotoUris([]);
-      setLogDateInput(new Date().toISOString().split("T")[0].replace(/-/g, ""));
+      setLogDateInput(toLocalYMD(new Date()));
     }
   }, [visible]);
 
@@ -972,7 +977,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: -4,
     right: -4,
-    backgroundColor: "#1A6872",
+    backgroundColor: "#999",
     borderRadius: 8,
     minWidth: 16,
     height: 16,

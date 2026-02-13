@@ -474,11 +474,21 @@ const ErrorBadge = React.memo<{ onPress: () => void }>(({ onPress }) => (
 ErrorBadge.displayName = "ErrorBadge";
 
 // Static "queued" badge for offline pending entries
-const QueuedBadge = React.memo(() => (
-  <View style={styles.queuedBadge}>
-    <Text style={styles.queuedText}>queued</Text>
-  </View>
-));
+const QueuedBadge = React.memo(() => {
+  const fadeIn = useRef(new RNAnimated.Value(0)).current;
+  useEffect(() => {
+    RNAnimated.timing(fadeIn, {
+      toValue: 1,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+  return (
+    <RNAnimated.View style={[styles.queuedBadge, { opacity: fadeIn }]}>
+      <Text style={styles.queuedText}>queued</Text>
+    </RNAnimated.View>
+  );
+});
 QueuedBadge.displayName = "QueuedBadge";
 
 // Memoized indicator row with fade transitions between states

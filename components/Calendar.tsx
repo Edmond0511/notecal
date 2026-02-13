@@ -21,11 +21,18 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAppStore } from "@/store/app-store";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 const CALENDAR_PADDING = 24;
 const DAY_SIZE = Math.floor((SCREEN_WIDTH - CALENDAR_PADDING * 2) / 7);
+
+const DOT_COLORS = {
+  green: '#4CAF50',
+  yellow: '#FFC107',
+  red: '#EF5350',
+} as const;
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 const MONTHS = [
@@ -74,6 +81,13 @@ const getTodayString = (): string => formatDate(new Date());
 // Check if two date strings are the same day
 const isSameDay = (date1: string, date2: string): boolean => date1 === date2;
 
+function getDotColor(consumed: number, target: number): keyof typeof DOT_COLORS | null {
+  if (target <= 0 || consumed <= 0) return null;
+  const ratio = consumed / target;
+  if (ratio >= 0.90) return 'green';
+  if (ratio >= 0.50) return 'yellow';
+  return 'red';
+}
 
 export function Calendar({
   visible,
@@ -85,6 +99,8 @@ export function Calendar({
   const initialDate = parseDate(selectedDate);
   const [viewMonth, setViewMonth] = useState(initialDate.getMonth());
   const [viewYear, setViewYear] = useState(initialDate.getFullYear());
+  const goals = useAppStore((s) => s.goals);
+  const entries = useAppStore((s) => s.entries);
 
   // Generate calendar days for the current view
   const calendarDays = useMemo(() => {
@@ -126,6 +142,20 @@ export function Calendar({
     return [...prevMonthDays, ...currentMonthDays, ...nextMonthDays];
   }, [viewMonth, viewYear]);
 
+  const dateCalorieMap = useMemo(() => {
+    if (!goals) return null;
+    const targetKcal = goals.manualTargets?.kcal ?? goals.targetKcal;
+    if (!targetKcal || targetKcal <= 0) return null;
+    const visibleDates = new Set(calendarDays.map(d => formatDate(d.date)));
+    const map: Record<string, number> = {};
+    for (const entry of entries) {
+      if (!visibleDates.has(entry.date)) continue;
+      if (entry.status !== 'ok') continue;
+      map[entry.date] = (map[entry.date] || 0) + (entry.inlineKcal ?? 0);
+    }
+    return map;
+  }, [goals, entries, calendarDays]);
+
   const navigateMonth = useCallback((direction: "prev" | "next") => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (direction === "prev") {
@@ -155,15 +185,6 @@ export function Calendar({
     },
     [onSelectDate, onClose]
   );
-
-  const goToToday = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const today = new Date();
-    setViewMonth(today.getMonth());
-    setViewYear(today.getFullYear());
-    onSelectDate(getTodayString());
-    onClose();
-  }, [onSelectDate, onClose]);
 
   const handleClose = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -201,15 +222,15 @@ export function Calendar({
     ),
   }));
 
-  // Reset view to selected date when opening
-  React.useEffect(() => {
-    if (visible) {
-      const date = parseDate(selectedDate);
-      setViewMonth(date.getMonth());
-      setViewYear(date.getFullYear());
-      translateY.value = 0;
-    }
-  }, [visible, selectedDate]);
+  // Reset view to selected date when opening (synchronous to avoid backdrop flicker)
+  const wasVisible = React.useRef(false);
+  if (visible && !wasVisible.current) {
+    translateY.value = 0;
+    const date = parseDate(selectedDate);
+    setViewMonth(date.getMonth());
+    setViewYear(date.getFullYear());
+  }
+  wasVisible.current = visible;
 
   if (!visible) return null;
 
@@ -218,7 +239,7 @@ export function Calendar({
   return (
     <Modal
       visible={visible}
-      animationType="none"
+      animationType="fade"
       transparent
       onRequestClose={onClose}
       statusBarTranslucent
@@ -226,7 +247,6 @@ export function Calendar({
       <GestureHandlerRootView style={styles.modalContainer}>
         {/* Backdrop */}
         <Animated.View
-          entering={FadeIn.duration(200)}
           style={[styles.backdrop, backdropAnimatedStyle]}
         >
           <Pressable style={styles.backdropPressable} onPress={handleClose} />
@@ -293,6 +313,18 @@ export function Calendar({
               const isSelected = isSameDay(dateStr, selectedDate);
               const isTodayDate = isSameDay(dateStr, todayStr);
 
+              let dotColor: keyof typeof DOT_COLORS | null = null;
+              if (dateCalorieMap && item.isCurrentMonth) {
+                const isFuture = dateStr > todayStr;
+                if (!isFuture) {
+                  const consumed = dateCalorieMap[dateStr];
+                  if (consumed && consumed > 0) {
+                    const target = goals!.manualTargets?.kcal ?? goals!.targetKcal;
+                    dotColor = getDotColor(consumed, target);
+                  }
+                }
+              }
+
               return (
                 <TouchableOpacity
                   key={index}
@@ -318,24 +350,12 @@ export function Calendar({
                       {item.date.getDate()}
                     </Text>
                   </View>
+                  {dotColor && <View style={[dotStyles.dot, { backgroundColor: DOT_COLORS[dotColor] }]} />}
                 </TouchableOpacity>
               );
             })}
           </Animated.View>
 
-          {/* Footer - minimal today link */}
-          <Animated.View
-            entering={FadeInDown.delay(200).duration(400)}
-            style={styles.footer}
-          >
-            <TouchableOpacity
-              style={styles.todayButton}
-              onPress={goToToday}
-              activeOpacity={0.6}
-            >
-              <Text style={styles.todayButtonText}>Today</Text>
-            </TouchableOpacity>
-          </Animated.View>
         </Animated.View>
         </GestureDetector>
       </GestureHandlerRootView>
@@ -449,22 +469,14 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "500",
   },
-  footer: {
-    paddingTop: 16,
-    paddingBottom: 4,
-    alignItems: "center",
-  },
-  todayButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: "rgba(26, 104, 114, 0.1)",
-    borderRadius: 20,
-  },
-  todayButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1A6872",
-    letterSpacing: 0.2,
+});
+
+const dotStyles = StyleSheet.create({
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    marginTop: 2,
   },
 });
 

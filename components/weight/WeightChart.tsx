@@ -77,7 +77,9 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
     const days = range === "30d" ? 30 : 90;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
-    const cutoffStr = cutoff.toISOString().split("T")[0].replace(/-/g, "");
+    const cutoffStr = cutoff.getFullYear().toString()
+      + (cutoff.getMonth() + 1).toString().padStart(2, "0")
+      + cutoff.getDate().toString().padStart(2, "0");
 
     return sorted.filter((e) => e.date >= cutoffStr);
   }, [entries, range]);

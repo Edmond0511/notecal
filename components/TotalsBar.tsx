@@ -1,5 +1,5 @@
+import { AnimatedDigits, AnimationMode } from "@/components/AnimatedDigits";
 import { OfflinePill } from "@/components/OfflinePill";
-import { truncateNumber } from "@/utils/formatNumber";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -9,15 +9,11 @@ import {
   faWheatAwn,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import React, { useState, useEffect } from "react";
-import { StyleSheet, Text, TextStyle, TouchableOpacity, View } from "react-native";
-import {
-  useSharedValue,
-  useDerivedValue,
-  withTiming,
-  Easing,
-  runOnJS,
-} from "react-native-reanimated";
+import React from "react";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
+
+// ─── Change this to try different animation styles ───
+const ANIMATION_MODE: AnimationMode = "rolling";
 
 const icons = {
   fire: faFireFlameCurved as IconProp,
@@ -25,45 +21,6 @@ const icons = {
   fat: faDroplet as IconProp,
   carbs: faWheatAwn as IconProp,
 };
-
-function AnimatedValue({
-  value,
-  maxDigits,
-  style,
-}: {
-  value: number;
-  maxDigits: number;
-  style: TextStyle;
-}) {
-  const [display, setDisplay] = useState(() => truncateNumber(value, maxDigits));
-  const shared = useSharedValue(value);
-
-  const updateDisplay = (v: number) => {
-    setDisplay(truncateNumber(v, maxDigits));
-  };
-
-  useEffect(() => {
-    shared.value = withTiming(value, {
-      duration: 300,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [value]);
-
-  useDerivedValue(() => {
-    runOnJS(updateDisplay)(shared.value);
-  });
-
-  return (
-    <Text
-      style={style}
-      numberOfLines={1}
-      adjustsFontSizeToFit
-      minimumFontScale={0.7}
-    >
-      {display}
-    </Text>
-  );
-}
 
 interface TotalsBarProps {
   dailyTotals: {
@@ -116,7 +73,7 @@ export const TotalsBar = React.memo(function TotalsBar({
           activeOpacity={0.8}
         >
           <View style={styles.totalItem}>
-            <AnimatedValue value={dailyTotals.kcal} maxDigits={5} style={styles.totalValue} />
+            <AnimatedDigits value={dailyTotals.kcal} maxDigits={5} style={styles.totalValue} mode={ANIMATION_MODE} />
             <FontAwesomeIcon
               icon={icons.fire}
               size={14}
@@ -126,7 +83,7 @@ export const TotalsBar = React.memo(function TotalsBar({
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
-            <AnimatedValue value={dailyTotals.protein} maxDigits={4} style={styles.totalValue} />
+            <AnimatedDigits value={dailyTotals.protein} maxDigits={4} style={styles.totalValue} mode={ANIMATION_MODE} />
             <FontAwesomeIcon
               icon={icons.protein}
               size={14}
@@ -136,7 +93,7 @@ export const TotalsBar = React.memo(function TotalsBar({
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
-            <AnimatedValue value={dailyTotals.fat} maxDigits={4} style={styles.totalValue} />
+            <AnimatedDigits value={dailyTotals.fat} maxDigits={4} style={styles.totalValue} mode={ANIMATION_MODE} />
             <FontAwesomeIcon
               icon={icons.fat}
               size={14}
@@ -146,7 +103,7 @@ export const TotalsBar = React.memo(function TotalsBar({
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
-            <AnimatedValue value={dailyTotals.carbs} maxDigits={4} style={styles.totalValue} />
+            <AnimatedDigits value={dailyTotals.carbs} maxDigits={4} style={styles.totalValue} mode={ANIMATION_MODE} />
             <FontAwesomeIcon
               icon={icons.carbs}
               size={14}

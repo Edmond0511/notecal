@@ -1,0 +1,133 @@
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeOut,
+  FadeOutDown,
+} from "react-native-reanimated";
+
+interface AddActionMenuProps {
+  visible: boolean;
+  onClose: () => void;
+  onSavedEntriesPress: () => void;
+  onLogWeightPress: () => void;
+}
+
+export function AddActionMenu({
+  visible,
+  onClose,
+  onSavedEntriesPress,
+  onLogWeightPress,
+}: AddActionMenuProps) {
+  return (
+    <View
+      style={styles.overlay}
+      pointerEvents={visible ? "auto" : "none"}
+    >
+      {visible && (
+        <>
+          <Animated.View
+            entering={FadeIn.duration(200)}
+            exiting={FadeOut.duration(200)}
+            style={styles.backdrop}
+          >
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={onClose}
+            />
+          </Animated.View>
+
+          <Animated.View
+            entering={FadeInDown.duration(200)}
+            exiting={FadeOutDown.duration(150)}
+            style={styles.menuContainer}
+          >
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onSavedEntriesPress();
+              }}
+            >
+              <View style={styles.iconCircle}>
+                <Ionicons name="bookmark-outline" size={20} color="#1A6872" />
+              </View>
+              <Text style={styles.menuLabel}>Saved Entries</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onLogWeightPress();
+              }}
+            >
+              <View style={styles.iconCircle}>
+                <Ionicons name="scale-outline" size={20} color="#1A6872" />
+              </View>
+              <Text style={styles.menuLabel}>Log Weight</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    left: 0,
+    bottom: 0,
+    zIndex: 9999,
+    justifyContent: "flex-end",
+    alignItems: "center",
+    elevation: 20,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+  menuContainer: {
+    flexDirection: "row",
+    marginBottom: 110,
+    marginHorizontal: 20,
+    gap: 12,
+  },
+  menuItem: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#E0F2F1",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  menuLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#333",
+    letterSpacing: -0.2,
+  },
+});

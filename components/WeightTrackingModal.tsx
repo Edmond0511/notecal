@@ -9,7 +9,6 @@ import {
   Dimensions,
   Image,
   Modal,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -402,46 +401,6 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
     </View>
   );
 
-  // Larger photo gallery for the edit popup
-  const renderEditPhotoGallery = (
-    uris: string[],
-    onAdd: () => void,
-    onRemove: (index: number) => void,
-  ) => (
-    <View style={styles.editPhotoSection}>
-      {uris.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.editPhotoScroll}
-        >
-          {uris.map((uri, i) => (
-            <View key={uri + i} style={styles.editPhotoWrap}>
-              <Image source={{ uri }} style={styles.editPhotoLarge} />
-              <TouchableOpacity
-                style={styles.editPhotoRemove}
-                onPress={() => onRemove(i)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <View style={styles.editPhotoRemoveBg}>
-                  <Ionicons name="close" size={14} color="#fff" />
-                </View>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-      )}
-      <TouchableOpacity
-        style={styles.editPhotoAddButton}
-        onPress={onAdd}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="camera-outline" size={18} color="#1A6872" />
-        <Text style={styles.editPhotoAddText}>Add Photo</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
       <GestureHandlerRootView style={styles.gestureRoot}>
@@ -484,6 +443,7 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
                 entering={FadeInDown.delay(80).duration(400)}
                 style={styles.section}
               >
+                <Text style={styles.sectionTitle}>Progress</Text>
                 <View style={styles.card}>
                   <View style={styles.rangeToggle}>
                     {(["30d", "90d", "all"] as TimeRange[]).map((r) => (
@@ -776,7 +736,7 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
                     onSelectDate={setEditDateInput}
                   />
 
-                  {renderEditPhotoGallery(editPhotoUris, handleAddEditPhoto, handleRemoveEditPhoto)}
+                  {renderPhotoStrip(editPhotoUris, handleAddEditPhoto, handleRemoveEditPhoto)}
 
                   <TouchableOpacity
                     style={[
@@ -1097,55 +1057,6 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     alignItems: "center",
     justifyContent: "center",
-  },
-  // Edit popup: larger photo gallery
-  editPhotoSection: {
-    marginBottom: 20,
-  },
-  editPhotoScroll: {
-    paddingBottom: 12,
-    gap: 10,
-  },
-  editPhotoWrap: {
-    position: "relative",
-  },
-  editPhotoLarge: {
-    width: 120,
-    height: 120,
-    borderRadius: 14,
-    backgroundColor: "#f0f0f0",
-  },
-  editPhotoRemove: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-  },
-  editPhotoRemoveBg: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  editPhotoAddButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: "rgba(26, 104, 114, 0.06)",
-    borderWidth: 1.5,
-    borderColor: "rgba(26, 104, 114, 0.15)",
-    borderStyle: "dashed",
-    alignSelf: "center",
-  },
-  editPhotoAddText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#1A6872",
   },
   dateLabelContainer: {
     alignSelf: "center",

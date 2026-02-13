@@ -1,3 +1,4 @@
+import { AddActionMenu } from "@/components/AddActionMenu";
 import { Calendar } from "@/components/Calendar";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
 import { GoalsPopup } from "@/components/GoalsPopup";
@@ -5,6 +6,7 @@ import { NotesEditor } from "@/components/NotesEditor";
 import { SavedEntriesPopup } from "@/components/SavedEntriesPopup";
 import { SettingsModal } from "@/components/SettingsModal";
 import { TotalsBar } from "@/components/TotalsBar";
+import { WeightTrackingModal } from "@/components/WeightTrackingModal";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { useSwipeDateNavigation } from "@/hooks/useSwipeDateNavigation";
 import { useAppStore } from "@/store/app-store";
@@ -51,7 +53,9 @@ export default function HomeScreen() {
   const [showGoalsPopup, setShowGoalsPopup] = useState(false);
   const [showGoalsWizard, setShowGoalsWizard] = useState(false);
 
+  const [showAddMenu, setShowAddMenu] = useState(false);
   const [showSavedEntriesPopup, setShowSavedEntriesPopup] = useState(false);
+  const [showWeightModal, setShowWeightModal] = useState(false);
   const [currentDocumentText, setCurrentDocumentText] = useState("");
 
   // Load document text for current date
@@ -158,8 +162,18 @@ export default function HomeScreen() {
   );
 
   // Stable callbacks for TotalsBar (prevents React.memo invalidation on re-render)
-  const handleAddSavedPress = useCallback(() => setShowSavedEntriesPopup(true), []);
+  const handleAddSavedPress = useCallback(() => setShowAddMenu(true), []);
   const handleTotalsPress = useCallback(() => setShowGoalsPopup(true), []);
+
+  const handleMenuSavedEntries = useCallback(() => {
+    setShowAddMenu(false);
+    setShowSavedEntriesPopup(true);
+  }, []);
+
+  const handleMenuLogWeight = useCallback(() => {
+    setShowAddMenu(false);
+    setShowWeightModal(true);
+  }, []);
 
   // Track keyboard open/close for dual-rendering the totals bar.
   // Debounce the "show" transition to filter out brief keyboardWillShow
@@ -386,11 +400,25 @@ export default function HomeScreen() {
         existingGoals={goals}
       />
 
+      {/* Add Action Menu */}
+      <AddActionMenu
+        visible={showAddMenu}
+        onClose={() => setShowAddMenu(false)}
+        onSavedEntriesPress={handleMenuSavedEntries}
+        onLogWeightPress={handleMenuLogWeight}
+      />
+
       {/* Saved Entries Popup */}
       <SavedEntriesPopup
         visible={showSavedEntriesPopup}
         onClose={() => setShowSavedEntriesPopup(false)}
         onSelectEntry={handleSelectSavedEntry}
+      />
+
+      {/* Weight Tracking Modal */}
+      <WeightTrackingModal
+        visible={showWeightModal}
+        onClose={() => setShowWeightModal(false)}
       />
     </SafeAreaView>
   );

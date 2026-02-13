@@ -760,7 +760,7 @@ export const useAppStore = create<AppState>()(
     }));
   },
 
-  updateWeightEntry: (id: string, updates: Partial<Pick<WeightEntry, 'date' | 'weightKg' | 'note' | 'photoUri'>>) => {
+  updateWeightEntry: (id: string, updates: Partial<Pick<WeightEntry, 'date' | 'weightKg' | 'note' | 'photoUri' | 'photoUris'>>) => {
     set((state) => ({
       weightEntries: state.weightEntries.map((e) =>
         e.id === id ? { ...e, ...updates } : e

@@ -9,6 +9,7 @@ import {
   Dimensions,
   Image,
   Modal,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -39,6 +40,13 @@ import { WeightChart } from "./weight/WeightChart";
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
+// Helper to get all photos from a weight entry (handles legacy single photoUri)
+function getEntryPhotos(entry: WeightEntry): string[] {
+  if (entry.photoUris && entry.photoUris.length > 0) return entry.photoUris;
+  if (entry.photoUri) return [entry.photoUri];
+  return [];
+}
+
 type TimeRange = "30d" | "90d" | "all";
 
 interface WeightTrackingModalProps {
@@ -62,12 +70,12 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
 
   const [range, setRange] = useState<TimeRange>("30d");
   const [weightInput, setWeightInput] = useState("");
-  const [photoUri, setPhotoUri] = useState<string | undefined>();
+  const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [showLogPopup, setShowLogPopup] = useState(false);
   const [showLogCalendar, setShowLogCalendar] = useState(false);
   const [editingEntry, setEditingEntry] = useState<WeightEntry | null>(null);
   const [editWeightInput, setEditWeightInput] = useState("");
-  const [editPhotoUri, setEditPhotoUri] = useState<string | undefined>();
+  const [editPhotoUris, setEditPhotoUris] = useState<string[]>([]);
   const [editDateInput, setEditDateInput] = useState("");
   const [showEditCalendar, setShowEditCalendar] = useState(false);
 
@@ -83,7 +91,7 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
       translateY.value = 0;
       isScrolledToTop.value = true;
       setWeightInput("");
-      setPhotoUri(undefined);
+      setPhotoUris([]);
       setLogDateInput(new Date().toISOString().split("T")[0].replace(/-/g, ""));
     }
   }, [visible]);
@@ -217,17 +225,17 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
     addWeightEntry({
       date: logDateInput,
       weightKg,
-      photoUri,
+      photoUris: photoUris.length > 0 ? photoUris : undefined,
     });
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setWeightInput("");
-    setPhotoUri(undefined);
+    setPhotoUris([]);
     setShowLogPopup(false);
-  }, [weightInput, photoUri, isImperial, logDateInput, addWeightEntry]);
+  }, [weightInput, photoUris, isImperial, logDateInput, addWeightEntry]);
 
 
-  const pickFromLibrary = useCallback(async (setUri: (uri: string) => void) => {
+  const pickFromLibrary = useCallback(async (onPick: (uri: string) => void) => {
     const ImagePicker = await import("expo-image-picker");
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
@@ -236,11 +244,11 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
       quality: 0.7,
     });
     if (!result.canceled && result.assets[0]) {
-      setUri(result.assets[0].uri);
+      onPick(result.assets[0].uri);
     }
   }, []);
 
-  const pickFromCamera = useCallback(async (setUri: (uri: string) => void) => {
+  const pickFromCamera = useCallback(async (onPick: (uri: string) => void) => {
     const ImagePicker = await import("expo-image-picker");
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
@@ -253,22 +261,22 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
       quality: 0.7,
     });
     if (!result.canceled && result.assets[0]) {
-      setUri(result.assets[0].uri);
+      onPick(result.assets[0].uri);
     }
   }, []);
 
-  const showPhotoActionSheet = useCallback((setUri: (uri: string) => void) => {
+  const showPhotoActionSheet = useCallback((onPick: (uri: string) => void) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert("Add Photo", undefined, [
       {
         text: "Take Photo",
-        onPress: () => pickFromCamera(setUri).catch(() =>
+        onPress: () => pickFromCamera(onPick).catch(() =>
           Alert.alert("Unavailable", "Camera requires a native build. Run `npx expo run:ios` to rebuild.")
         ),
       },
       {
         text: "Choose from Library",
-        onPress: () => pickFromLibrary(setUri).catch(() =>
+        onPress: () => pickFromLibrary(onPick).catch(() =>
           Alert.alert("Unavailable", "Photo picker requires a native build. Run `npx expo run:ios` to rebuild.")
         ),
       },
@@ -276,9 +284,21 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
     ]);
   }, [pickFromCamera, pickFromLibrary]);
 
-  const handlePickPhoto = useCallback(() => {
-    showPhotoActionSheet(setPhotoUri);
+  const handleAddPhoto = useCallback(() => {
+    showPhotoActionSheet((uri) => setPhotoUris((prev) => [...prev, uri]));
   }, [showPhotoActionSheet]);
+
+  const handleRemovePhoto = useCallback((index: number) => {
+    setPhotoUris((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleAddEditPhoto = useCallback(() => {
+    showPhotoActionSheet((uri) => setEditPhotoUris((prev) => [...prev, uri]));
+  }, [showPhotoActionSheet]);
+
+  const handleRemoveEditPhoto = useCallback((index: number) => {
+    setEditPhotoUris((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
   const handleDeleteEntry = useCallback(
     (id: string) => {
@@ -301,7 +321,7 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditingEntry(entry);
     setEditWeightInput(displayWeight(entry.weightKg).toString());
-    setEditPhotoUri(entry.photoUri);
+    setEditPhotoUris(getEntryPhotos(entry));
     setEditDateInput(entry.date);
   }, [isImperial]);
 
@@ -316,18 +336,14 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
     const weightKg = isImperial ? lbsToKg(parsed) : parsed;
     updateWeightEntry(editingEntry.id, {
       weightKg,
-      photoUri: editPhotoUri,
+      photoUri: undefined,
+      photoUris: editPhotoUris.length > 0 ? editPhotoUris : undefined,
       date: editDateInput,
     });
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setEditingEntry(null);
-  }, [editingEntry, editWeightInput, editPhotoUri, editDateInput, isImperial, updateWeightEntry]);
-
-
-  const handleEditPickPhoto = useCallback(() => {
-    showPhotoActionSheet(setEditPhotoUri);
-  }, [showPhotoActionSheet]);
+  }, [editingEntry, editWeightInput, editPhotoUris, editDateInput, isImperial, updateWeightEntry]);
 
   const displayWeight = (kg: number) =>
     isImperial ? kgToLbs(kg) : Math.round(kg * 10) / 10;
@@ -355,6 +371,75 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
     >
       <Ionicons name="trash-outline" size={20} color="#fff" />
     </TouchableOpacity>
+  );
+
+  // Reusable photo strip for the log popup (compact thumbnails)
+  const renderPhotoStrip = (
+    uris: string[],
+    onAdd: () => void,
+    onRemove: (index: number) => void,
+  ) => (
+    <View style={styles.photoStrip}>
+      {uris.map((uri, i) => (
+        <View key={uri + i} style={styles.photoThumbWrap}>
+          <Image source={{ uri }} style={styles.photoThumb} />
+          <TouchableOpacity
+            style={styles.photoThumbRemove}
+            onPress={() => onRemove(i)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close-circle" size={18} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
+      ))}
+      <TouchableOpacity
+        style={styles.photoAddButton}
+        onPress={onAdd}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="camera-outline" size={20} color="#1A6872" />
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Larger photo gallery for the edit popup
+  const renderEditPhotoGallery = (
+    uris: string[],
+    onAdd: () => void,
+    onRemove: (index: number) => void,
+  ) => (
+    <View style={styles.editPhotoSection}>
+      {uris.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.editPhotoScroll}
+        >
+          {uris.map((uri, i) => (
+            <View key={uri + i} style={styles.editPhotoWrap}>
+              <Image source={{ uri }} style={styles.editPhotoLarge} />
+              <TouchableOpacity
+                style={styles.editPhotoRemove}
+                onPress={() => onRemove(i)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <View style={styles.editPhotoRemoveBg}>
+                  <Ionicons name="close" size={14} color="#fff" />
+                </View>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+      <TouchableOpacity
+        style={styles.editPhotoAddButton}
+        onPress={onAdd}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="camera-outline" size={18} color="#1A6872" />
+        <Text style={styles.editPhotoAddText}>Add Photo</Text>
+      </TouchableOpacity>
+    </View>
   );
 
   return (
@@ -452,6 +537,8 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
                       delta !== null
                         ? Math.round(delta * 10) / 10
                         : null;
+                    const photos = getEntryPhotos(entry);
+                    const photoCount = photos.length;
 
                     return (
                       <Animated.View
@@ -484,11 +571,18 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
                                 {formatDate(entry.date)}
                               </Text>
                             </View>
-                            {entry.photoUri && (
-                              <Image
-                                source={{ uri: entry.photoUri }}
-                                style={styles.historyThumbnail}
-                              />
+                            {photoCount > 0 && (
+                              <View style={styles.historyPhotoGroup}>
+                                <Image
+                                  source={{ uri: photos[0] }}
+                                  style={styles.historyThumbnail}
+                                />
+                                {photoCount > 1 && (
+                                  <View style={styles.historyPhotoBadge}>
+                                    <Text style={styles.historyPhotoBadgeText}>+{photoCount - 1}</Text>
+                                  </View>
+                                )}
+                              </View>
                             )}
                             <View style={styles.chevronContainer}>
                               <Ionicons name="chevron-forward" size={18} color="#ccc" />
@@ -588,27 +682,7 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
                     onSelectDate={setLogDateInput}
                   />
 
-                  <View style={styles.photoRow}>
-                    {photoUri ? (
-                      <View style={styles.photoButtonContainer}>
-                        <Image source={{ uri: photoUri }} style={styles.compactPhotoPreview} />
-                        <TouchableOpacity
-                          style={styles.compactPhotoRemove}
-                          onPress={() => setPhotoUri(undefined)}
-                        >
-                          <Ionicons name="close-circle" size={18} color="#EF4444" />
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
-                      <TouchableOpacity
-                        style={styles.compactPhotoButton}
-                        onPress={handlePickPhoto}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="camera-outline" size={20} color="#1A6872" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                  {renderPhotoStrip(photoUris, handleAddPhoto, handleRemovePhoto)}
 
                   <TouchableOpacity
                     style={[
@@ -702,27 +776,7 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
                     onSelectDate={setEditDateInput}
                   />
 
-                  <View style={styles.photoRow}>
-                    {editPhotoUri ? (
-                      <View style={styles.photoButtonContainer}>
-                        <Image source={{ uri: editPhotoUri }} style={styles.compactPhotoPreview} />
-                        <TouchableOpacity
-                          style={styles.compactPhotoRemove}
-                          onPress={() => setEditPhotoUri(undefined)}
-                        >
-                          <Ionicons name="close-circle" size={18} color="#EF4444" />
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
-                      <TouchableOpacity
-                        style={styles.compactPhotoButton}
-                        onPress={handleEditPickPhoto}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="camera-outline" size={20} color="#1A6872" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                  {renderEditPhotoGallery(editPhotoUris, handleAddEditPhoto, handleRemoveEditPhoto)}
 
                   <TouchableOpacity
                     style={[
@@ -879,12 +933,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#999",
   },
+  historyPhotoGroup: {
+    position: "relative",
+    marginLeft: 12,
+  },
   historyThumbnail: {
     width: 34,
     height: 34,
     borderRadius: 8,
     backgroundColor: "#f0f0f0",
-    marginLeft: 12,
+  },
+  historyPhotoBadge: {
+    position: "absolute",
+    bottom: -4,
+    right: -4,
+    backgroundColor: "#1A6872",
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  historyPhotoBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#fff",
   },
   chevronContainer: {
     marginLeft: 12,
@@ -990,31 +1064,88 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginTop: 2,
   },
-  photoRow: {
+  // Log popup: compact photo strip (horizontal row of thumbs + add button)
+  photoStrip: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    justifyContent: "center",
+    gap: 10,
+    marginBottom: 20,
+    flexWrap: "wrap",
   },
-  photoButtonContainer: {
+  photoThumbWrap: {
     position: "relative",
   },
-  compactPhotoPreview: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
+  photoThumb: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
     backgroundColor: "#f0f0f0",
   },
-  compactPhotoRemove: {
+  photoThumbRemove: {
     position: "absolute",
     top: -6,
     right: -6,
   },
-  compactPhotoButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
+  photoAddButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
     backgroundColor: "rgba(26, 104, 114, 0.06)",
+    borderWidth: 1.5,
+    borderColor: "rgba(26, 104, 114, 0.15)",
+    borderStyle: "dashed",
     alignItems: "center",
     justifyContent: "center",
+  },
+  // Edit popup: larger photo gallery
+  editPhotoSection: {
+    marginBottom: 20,
+  },
+  editPhotoScroll: {
+    paddingBottom: 12,
+    gap: 10,
+  },
+  editPhotoWrap: {
+    position: "relative",
+  },
+  editPhotoLarge: {
+    width: 120,
+    height: 120,
+    borderRadius: 14,
+    backgroundColor: "#f0f0f0",
+  },
+  editPhotoRemove: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+  },
+  editPhotoRemoveBg: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editPhotoAddButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: "rgba(26, 104, 114, 0.06)",
+    borderWidth: 1.5,
+    borderColor: "rgba(26, 104, 114, 0.15)",
+    borderStyle: "dashed",
+    alignSelf: "center",
+  },
+  editPhotoAddText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1A6872",
   },
   dateLabelContainer: {
     alignSelf: "center",

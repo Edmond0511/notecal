@@ -1,6 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef } from "react";
-import { Animated, Easing, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, StyleSheet, Text } from "react-native";
 
 // Shimmer dimensions - full container sweep
 const SHIMMER_WIDTH = 40;
@@ -10,8 +10,15 @@ export const ThinkingIndicator: React.FC = React.memo(() => {
   const shimmerTranslate = useRef(
     new Animated.Value(-SHIMMER_WIDTH),
   ).current;
+  const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    Animated.timing(fadeIn, {
+      toValue: 1,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+
     const shimmerAnimation = Animated.loop(
       Animated.sequence([
         // Sweep left to right across entire container
@@ -40,7 +47,7 @@ export const ThinkingIndicator: React.FC = React.memo(() => {
   }, [shimmerTranslate]);
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, { opacity: fadeIn }]}>
       <Text style={styles.baseText}>calculating</Text>
 
       {/* Bold shimmer overlay - sweeps across entire container */}
@@ -63,7 +70,7 @@ export const ThinkingIndicator: React.FC = React.memo(() => {
           style={styles.gradient}
         />
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 });
 ThinkingIndicator.displayName = "ThinkingIndicator";

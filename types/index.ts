@@ -66,7 +66,8 @@ export interface WeightEntry {
   date: string;        // YYYYMMDD
   weightKg: number;    // always stored in kg
   note?: string;
-  photoUri?: string;   // local file URI
+  photoUri?: string;   // legacy single photo - migrated to photoUris
+  photoUris?: string[]; // multiple photo URIs
   createdAt: string;   // ISO string
 }
 
@@ -200,7 +201,7 @@ export interface AppState {
   correctEntryItem: (entryId: string, itemId: string, feedback: string) => Promise<void>;
   // Weight tracking actions
   addWeightEntry: (entry: Omit<WeightEntry, 'id' | 'createdAt'>) => void;
-  updateWeightEntry: (id: string, updates: Partial<Pick<WeightEntry, 'date' | 'weightKg' | 'note' | 'photoUri'>>) => void;
+  updateWeightEntry: (id: string, updates: Partial<Pick<WeightEntry, 'date' | 'weightKg' | 'note' | 'photoUri' | 'photoUris'>>) => void;
   deleteWeightEntry: (id: string) => void;
   // Offline queue drain
   enqueuePendingEntries: () => void;

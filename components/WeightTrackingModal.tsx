@@ -77,6 +77,7 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
   const [editPhotoUris, setEditPhotoUris] = useState<string[]>([]);
   const [editDateInput, setEditDateInput] = useState("");
   const [showEditCalendar, setShowEditCalendar] = useState(false);
+  const [previewImageUri, setPreviewImageUri] = useState<string | null>(null);
 
   const todayStr = new Date().toISOString().split("T")[0].replace(/-/g, "");
   const [logDateInput, setLogDateInput] = useState(todayStr);
@@ -381,13 +382,18 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
     <View style={styles.photoStrip}>
       {uris.map((uri, i) => (
         <View key={uri + i} style={styles.photoThumbWrap}>
-          <Image source={{ uri }} style={styles.photoThumb} />
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setPreviewImageUri(uri)}
+          >
+            <Image source={{ uri }} style={styles.photoThumb} />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.photoThumbRemove}
             onPress={() => onRemove(i)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="close-circle" size={18} color="#EF4444" />
+            <Ionicons name="close-circle" size={20} color="#EF4444" />
           </TouchableOpacity>
         </View>
       ))}
@@ -396,7 +402,7 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
         onPress={onAdd}
         activeOpacity={0.7}
       >
-        <Ionicons name="camera-outline" size={20} color="#1A6872" />
+        <Ionicons name="camera-outline" size={24} color="#1A6872" />
       </TouchableOpacity>
     </View>
   );
@@ -532,7 +538,14 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
                               </Text>
                             </View>
                             {photoCount > 0 && (
-                              <View style={styles.historyPhotoGroup}>
+                              <TouchableOpacity
+                                style={styles.historyPhotoGroup}
+                                activeOpacity={0.8}
+                                onPress={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewImageUri(photos[0]);
+                                }}
+                              >
                                 <Image
                                   source={{ uri: photos[0] }}
                                   style={styles.historyThumbnail}
@@ -542,7 +555,7 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
                                     <Text style={styles.historyPhotoBadgeText}>+{photoCount - 1}</Text>
                                   </View>
                                 )}
-                              </View>
+                              </TouchableOpacity>
                             )}
                             <View style={styles.chevronContainer}>
                               <Ionicons name="chevron-forward" size={18} color="#ccc" />
@@ -606,34 +619,42 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
                 </View>
 
                 <View style={styles.popupOverlayContent}>
-                  <View style={styles.scaleReadout}>
-                    <View style={styles.scaleCenter}>
-                      <TextInput
-                        style={styles.scaleInput}
-                        value={weightInput}
-                        onChangeText={(text) =>
-                          setWeightInput(
-                            text
-                              .replace(/[^0-9.]/g, "")
-                              .replace(/(\..*)\./g, "$1")
-                          )
-                        }
-                        keyboardType="decimal-pad"
-                        placeholder="0.0"
-                        placeholderTextColor="#ccc"
-                        autoFocus
-                      />
-                      <Text style={styles.scaleUnitLabel}>{unitLabel}</Text>
+                  {/* Weight Section */}
+                  <View style={styles.popupSection}>
+                    <Text style={styles.popupSectionTitle}>Weight</Text>
+                    <View style={styles.popupCard}>
+                      <View style={styles.weightInputRow}>
+                        <TextInput
+                          style={styles.weightInputField}
+                          value={weightInput}
+                          onChangeText={(text) =>
+                            setWeightInput(
+                              text
+                                .replace(/[^0-9.]/g, "")
+                                .replace(/(\..*)\./g, "$1")
+                            )
+                          }
+                          keyboardType="decimal-pad"
+                          placeholder="0.0"
+                          placeholderTextColor="#ccc"
+                          autoFocus
+                        />
+                        <Text style={styles.weightInputUnit}>{unitLabel}</Text>
+                      </View>
+                      <View style={styles.popupCardDivider} />
+                      <TouchableOpacity
+                        style={styles.dateRow}
+                        onPress={() => setShowLogCalendar(true)}
+                        activeOpacity={0.6}
+                      >
+                        <Text style={styles.dateRowLabel}>Date</Text>
+                        <View style={styles.dateRowValue}>
+                          <Text style={styles.dateRowText}>{formatDate(logDateInput)}</Text>
+                          <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                        </View>
+                      </TouchableOpacity>
                     </View>
                   </View>
-
-                  <TouchableOpacity
-                    style={styles.dateLabelContainer}
-                    onPress={() => setShowLogCalendar(true)}
-                    activeOpacity={0.6}
-                  >
-                    <Text style={styles.dateSelectorText}>{formatDate(logDateInput)}</Text>
-                  </TouchableOpacity>
 
                   <Calendar
                     visible={showLogCalendar}
@@ -642,7 +663,13 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
                     onSelectDate={setLogDateInput}
                   />
 
-                  {renderPhotoStrip(photoUris, handleAddPhoto, handleRemovePhoto)}
+                  {/* Photos Section */}
+                  <View style={styles.popupSection}>
+                    <Text style={styles.popupSectionTitle}>Progress Photos</Text>
+                    <View style={styles.popupCard}>
+                      {renderPhotoStrip(photoUris, handleAddPhoto, handleRemovePhoto)}
+                    </View>
+                  </View>
 
                   <TouchableOpacity
                     style={[
@@ -700,34 +727,42 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
                 </View>
 
                 <View style={styles.popupOverlayContent}>
-                  <View style={styles.scaleReadout}>
-                    <View style={styles.scaleCenter}>
-                      <TextInput
-                        style={styles.scaleInput}
-                        value={editWeightInput}
-                        onChangeText={(text) =>
-                          setEditWeightInput(
-                            text
-                              .replace(/[^0-9.]/g, "")
-                              .replace(/(\..*)\./g, "$1")
-                          )
-                        }
-                        keyboardType="decimal-pad"
-                        placeholder="0.0"
-                        placeholderTextColor="#ccc"
-                        autoFocus
-                      />
-                      <Text style={styles.scaleUnitLabel}>{unitLabel}</Text>
+                  {/* Weight Section */}
+                  <View style={styles.popupSection}>
+                    <Text style={styles.popupSectionTitle}>Weight</Text>
+                    <View style={styles.popupCard}>
+                      <View style={styles.weightInputRow}>
+                        <TextInput
+                          style={styles.weightInputField}
+                          value={editWeightInput}
+                          onChangeText={(text) =>
+                            setEditWeightInput(
+                              text
+                                .replace(/[^0-9.]/g, "")
+                                .replace(/(\..*)\./g, "$1")
+                            )
+                          }
+                          keyboardType="decimal-pad"
+                          placeholder="0.0"
+                          placeholderTextColor="#ccc"
+                          autoFocus
+                        />
+                        <Text style={styles.weightInputUnit}>{unitLabel}</Text>
+                      </View>
+                      <View style={styles.popupCardDivider} />
+                      <TouchableOpacity
+                        style={styles.dateRow}
+                        onPress={() => setShowEditCalendar(true)}
+                        activeOpacity={0.6}
+                      >
+                        <Text style={styles.dateRowLabel}>Date</Text>
+                        <View style={styles.dateRowValue}>
+                          <Text style={styles.dateRowText}>{formatDate(editDateInput)}</Text>
+                          <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                        </View>
+                      </TouchableOpacity>
                     </View>
                   </View>
-
-                  <TouchableOpacity
-                    style={styles.dateLabelContainer}
-                    onPress={() => setShowEditCalendar(true)}
-                    activeOpacity={0.6}
-                  >
-                    <Text style={styles.dateSelectorText}>{formatDate(editDateInput)}</Text>
-                  </TouchableOpacity>
 
                   <Calendar
                     visible={showEditCalendar}
@@ -736,7 +771,13 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
                     onSelectDate={setEditDateInput}
                   />
 
-                  {renderPhotoStrip(editPhotoUris, handleAddEditPhoto, handleRemoveEditPhoto)}
+                  {/* Photos Section */}
+                  <View style={styles.popupSection}>
+                    <Text style={styles.popupSectionTitle}>Progress Photos</Text>
+                    <View style={styles.popupCard}>
+                      {renderPhotoStrip(editPhotoUris, handleAddEditPhoto, handleRemoveEditPhoto)}
+                    </View>
+                  </View>
 
                   <TouchableOpacity
                     style={[
@@ -760,6 +801,30 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
               </Animated.View>
             </GestureDetector>
           </Animated.View>
+        )}
+        {/* Full-screen image preview */}
+        {previewImageUri && (
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            onRequestClose={() => setPreviewImageUri(null)}
+          >
+            <TouchableOpacity
+              style={styles.previewOverlay}
+              activeOpacity={1}
+              onPress={() => setPreviewImageUri(null)}
+            >
+              <View style={styles.previewCloseButton}>
+                <Ionicons name="close" size={22} color="#fff" />
+              </View>
+              <Image
+                source={{ uri: previewImageUri }}
+                style={styles.previewImage}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </Modal>
         )}
       </GestureHandlerRootView>
     </Modal>
@@ -998,48 +1063,86 @@ const styles = StyleSheet.create({
     width: 36,
   },
   popupOverlayContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
-  scaleReadout: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
+  popupSection: {
+    marginBottom: 20,
   },
-  scaleCenter: {
-    alignItems: "center",
-  },
-  scaleInput: {
-    fontSize: 40,
-    fontWeight: "700",
-    color: "#1a1a1a",
-    textAlign: "center",
-    padding: 0,
-    letterSpacing: -1,
-    minWidth: 120,
-  },
-  scaleUnitLabel: {
-    fontSize: 13,
+  popupSectionTitle: {
+    fontSize: 12,
     fontWeight: "600",
     color: "#999",
     textTransform: "uppercase",
-    marginTop: 2,
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  popupCard: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+  weightInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  weightInputField: {
+    flex: 1,
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#1a1a1a",
+    padding: 0,
+    letterSpacing: -0.5,
+  },
+  weightInputUnit: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#999",
+    textTransform: "uppercase",
+    marginLeft: 8,
+  },
+  popupCardDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#E8E8E8",
+    marginLeft: 16,
+  },
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  dateRowLabel: {
+    fontSize: 16,
+    color: "#1a1a1a",
+  },
+  dateRowValue: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  dateRowText: {
+    fontSize: 16,
+    color: "#999",
   },
   // Log popup: compact photo strip (horizontal row of thumbs + add button)
   photoStrip: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     gap: 10,
-    marginBottom: 20,
+    padding: 14,
     flexWrap: "wrap",
   },
   photoThumbWrap: {
     position: "relative",
   },
   photoThumb: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
+    width: 80,
+    height: 80,
+    borderRadius: 14,
     backgroundColor: "#f0f0f0",
   },
   photoThumbRemove: {
@@ -1048,28 +1151,15 @@ const styles = StyleSheet.create({
     right: -6,
   },
   photoAddButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
+    width: 80,
+    height: 80,
+    borderRadius: 14,
     backgroundColor: "rgba(26, 104, 114, 0.06)",
     borderWidth: 1.5,
     borderColor: "rgba(26, 104, 114, 0.15)",
     borderStyle: "dashed",
     alignItems: "center",
     justifyContent: "center",
-  },
-  dateLabelContainer: {
-    alignSelf: "center",
-    backgroundColor: "#EBEBEB",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 9,
-    marginBottom: 12,
-  },
-  dateSelectorText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
   },
   popupSubmitButton: {
     backgroundColor: "#1A6872",
@@ -1088,5 +1178,28 @@ const styles = StyleSheet.create({
   },
   popupSubmitTextDisabled: {
     color: "#aaa",
+  },
+  // Full-screen image preview
+  previewOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  previewCloseButton: {
+    position: "absolute",
+    top: 60,
+    right: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  previewImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_WIDTH,
   },
 });

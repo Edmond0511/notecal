@@ -1,4 +1,4 @@
-import { AnimatedDigits, AnimationMode } from "@/components/AnimatedDigits";
+import { AnimatedDigits } from "@/components/AnimatedDigits";
 import { OfflinePill } from "@/components/OfflinePill";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
@@ -11,9 +11,6 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
-
-// ─── Change this to try different animation styles ───
-const ANIMATION_MODE: AnimationMode = "rolling";
 
 const icons = {
   fire: faFireFlameCurved as IconProp,
@@ -73,7 +70,12 @@ export const TotalsBar = React.memo(function TotalsBar({
           activeOpacity={0.8}
         >
           <View style={styles.totalItem}>
-            <AnimatedDigits value={dailyTotals.kcal} maxDigits={5} style={styles.totalValue} mode={ANIMATION_MODE} />
+            <AnimatedDigits
+              value={dailyTotals.kcal}
+              maxDigits={5}
+              style={styles.totalValue}
+
+            />
             <FontAwesomeIcon
               icon={icons.fire}
               size={14}
@@ -83,7 +85,12 @@ export const TotalsBar = React.memo(function TotalsBar({
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
-            <AnimatedDigits value={dailyTotals.protein} maxDigits={4} style={styles.totalValue} mode={ANIMATION_MODE} />
+            <AnimatedDigits
+              value={dailyTotals.protein}
+              maxDigits={4}
+              style={styles.totalValue}
+
+            />
             <FontAwesomeIcon
               icon={icons.protein}
               size={14}
@@ -93,7 +100,12 @@ export const TotalsBar = React.memo(function TotalsBar({
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
-            <AnimatedDigits value={dailyTotals.fat} maxDigits={4} style={styles.totalValue} mode={ANIMATION_MODE} />
+            <AnimatedDigits
+              value={dailyTotals.fat}
+              maxDigits={4}
+              style={styles.totalValue}
+
+            />
             <FontAwesomeIcon
               icon={icons.fat}
               size={14}
@@ -103,7 +115,12 @@ export const TotalsBar = React.memo(function TotalsBar({
           </View>
           <View style={styles.totalDivider} />
           <View style={styles.totalItem}>
-            <AnimatedDigits value={dailyTotals.carbs} maxDigits={4} style={styles.totalValue} mode={ANIMATION_MODE} />
+            <AnimatedDigits
+              value={dailyTotals.carbs}
+              maxDigits={4}
+              style={styles.totalValue}
+
+            />
             <FontAwesomeIcon
               icon={icons.carbs}
               size={14}

@@ -1,19 +1,20 @@
 import { supabase } from '@/lib/supabase';
 import { mmkv } from '@/lib/mmkv';
 import { useAppStore } from '@/store/app-store';
-import { Entry, FoodItem, SavedEntry, WeightEntry, Document } from '@/types';
+import { Entry, FoodItem, SavedEntry, WeightEntry, Document, UserGoals, UnitSystem, ManualTargets } from '@/types';
 
 // ============================================================
 // Types
 // ============================================================
 
-type SyncTable = 'food_entries' | 'documents' | 'saved_entries' | 'weight_entries';
+type SyncTable = 'food_entries' | 'documents' | 'saved_entries' | 'weight_entries' | 'user_goals';
 
 interface DirtySet {
   food_entries: string[];
   documents: string[];   // keys are date strings
   saved_entries: string[];
   weight_entries: string[];
+  user_goals: string[];  // uses 'current' sentinel (one row per user)
 }
 
 // ============================================================
@@ -23,13 +24,17 @@ interface DirtySet {
 const DIRTY_KEY = 'sync-dirty';
 const LAST_PULL_KEY = 'sync-last-pull';
 
+const EMPTY_DIRTY: DirtySet = { food_entries: [], documents: [], saved_entries: [], weight_entries: [], user_goals: [] };
+
 function loadDirty(): DirtySet {
   const raw = mmkv.getString(DIRTY_KEY);
-  if (!raw) return { food_entries: [], documents: [], saved_entries: [], weight_entries: [] };
+  if (!raw) return { ...EMPTY_DIRTY };
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    // Backward compat: old MMKV data may lack user_goals key
+    return { ...EMPTY_DIRTY, ...parsed };
   } catch {
-    return { food_entries: [], documents: [], saved_entries: [], weight_entries: [] };
+    return { ...EMPTY_DIRTY };
   }
 }
 
@@ -126,18 +131,87 @@ function weightEntryToRow(we: WeightEntry, userId: string) {
     weight_kg: we.weightKg,
     note: we.note ?? null,
     photo_uri: we.photoUri ?? null,
+    photo_uris: we.photoUris ? JSON.stringify(we.photoUris) : null,
     created_at: we.createdAt,
+    updated_at: new Date().toISOString(),
   };
 }
 
 function rowToWeightEntry(row: any): WeightEntry {
+  let photoUris: string[] | undefined;
+  if (row.photo_uris) {
+    photoUris = typeof row.photo_uris === 'string' ? JSON.parse(row.photo_uris) : row.photo_uris;
+  }
+
   return {
     id: row.id,
     date: row.date,
     weightKg: Number(row.weight_kg),
     note: row.note ?? undefined,
     photoUri: row.photo_uri ?? undefined,
+    photoUris,
     createdAt: row.created_at,
+  };
+}
+
+function goalsToRow(goals: UserGoals, preferredUnits: UnitSystem, userId: string) {
+  return {
+    user_id: userId,
+    sex: goals.sex,
+    age: goals.age,
+    height_cm: goals.heightCm,
+    weight_kg: goals.weightKg,
+    body_fat_percentage: (goals as any).bodyFatPercentage ?? null,
+    activity_level: goals.activityLevel,
+    goal_type: goals.goalType,
+    protein_preference: goals.proteinPreference ?? 'standard',
+    carb_preference: goals.carbPreference ?? 'standard',
+    preferred_units: preferredUnits,
+    bmr: goals.bmr,
+    tdee: goals.tdee,
+    target_kcal: goals.targetKcal,
+    target_protein: goals.targetProtein,
+    target_fat: goals.targetFat,
+    target_carbs: goals.targetCarbs,
+    manual_targets: goals.manualTargets ? JSON.stringify(goals.manualTargets) : null,
+    target_weight_kg: goals.targetWeightKg ?? null,
+    timeline_weeks: goals.timelineWeeks ?? null,
+    created_at: new Date(goals.createdAt).toISOString(),
+    updated_at: new Date(goals.updatedAt).toISOString(),
+  };
+}
+
+function rowToGoals(row: any): { goals: UserGoals; preferredUnits: UnitSystem } {
+  let manualTargets: ManualTargets | null = null;
+  if (row.manual_targets) {
+    manualTargets = typeof row.manual_targets === 'string'
+      ? JSON.parse(row.manual_targets)
+      : row.manual_targets;
+  }
+
+  return {
+    goals: {
+      sex: row.sex,
+      age: row.age,
+      heightCm: Number(row.height_cm),
+      weightKg: Number(row.weight_kg),
+      activityLevel: row.activity_level,
+      goalType: row.goal_type,
+      proteinPreference: row.protein_preference ?? 'standard',
+      carbPreference: row.carb_preference ?? 'standard',
+      targetWeightKg: row.target_weight_kg != null ? Number(row.target_weight_kg) : undefined,
+      timelineWeeks: row.timeline_weeks != null ? Number(row.timeline_weeks) : undefined,
+      bmr: row.bmr,
+      tdee: row.tdee,
+      targetKcal: row.target_kcal,
+      targetProtein: row.target_protein,
+      targetFat: row.target_fat,
+      targetCarbs: row.target_carbs,
+      manualTargets,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    },
+    preferredUnits: row.preferred_units ?? 'metric',
   };
 }
 
@@ -159,6 +233,9 @@ class SyncService {
       // Clear all pending debounce timers on sign-out
       for (const timer of this.debounceTimers.values()) clearTimeout(timer);
       this.debounceTimers.clear();
+      // Clear sync metadata so old user's dirty items aren't pushed under new user
+      mmkv.remove(DIRTY_KEY);
+      mmkv.remove(LAST_PULL_KEY);
     }
   }
 
@@ -218,15 +295,27 @@ class SyncService {
       const row = weightEntryToRow(we, userId);
       const { error } = await supabase.from('weight_entries').upsert(row, { onConflict: 'id' });
       if (error) throw error;
+    } else if (table === 'user_goals') {
+      const goals = state.goals;
+      if (!goals) return; // cleared locally, handled by pushDelete
+      const row = goalsToRow(goals, state.preferredUnits, userId);
+      const { error } = await supabase.from('user_goals').upsert(row, { onConflict: 'user_id' });
+      if (error) throw error;
     }
   }
 
-  /** Soft-delete a remote row */
+  /** Soft-delete a remote row (or hard-delete for tables without deleted_at) */
   async pushDelete(table: SyncTable, id: string) {
     if (!this.userId) return;
 
     try {
-      if (table === 'documents') {
+      if (table === 'user_goals') {
+        // user_goals has no deleted_at column — hard delete by user_id
+        await supabase
+          .from('user_goals')
+          .delete()
+          .eq('user_id', this.userId);
+      } else if (table === 'documents') {
         await supabase
           .from('documents')
           .update({ deleted_at: new Date().toISOString() })
@@ -265,7 +354,7 @@ class SyncService {
 
     const dirty = loadDirty();
     let anyFailed = false;
-    const remaining: DirtySet = { food_entries: [], documents: [], saved_entries: [], weight_entries: [] };
+    const remaining: DirtySet = { ...EMPTY_DIRTY };
 
     for (const table of Object.keys(dirty) as SyncTable[]) {
       const ids = dirty[table];
@@ -306,6 +395,7 @@ class SyncService {
       this.pullDocuments(lastPull),
       this.pullSavedEntries(lastPull),
       this.pullWeightEntries(lastPull),
+      this.pullGoals(lastPull),
     ]);
 
     setLastPull(pullTimestamp);
@@ -460,13 +550,12 @@ class SyncService {
 
   private async pullWeightEntries(since: string | null) {
     const userId = this.userId!;
-    // weight_entries has no updated_at; use created_at for incremental pull
     let query = supabase
       .from('weight_entries')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: true });
-    if (since) query = query.gt('created_at', since);
+      .order('updated_at', { ascending: true });
+    if (since) query = query.gt('updated_at', since);
 
     const { data, error } = await query;
     if (error) { console.error('[sync] Pull weight_entries failed:', error.message); return; }
@@ -488,8 +577,16 @@ class SyncService {
         continue;
       }
 
-      if (localIdx === -1) {
-        // Weight entries are immutable (no update), just add new ones
+      if (localIdx !== -1) {
+        // Exists locally — skip if dirty (local wins), otherwise update if remote is newer
+        if (dirty.weight_entries.includes(row.id)) continue;
+        const remoteUpdated = new Date(row.updated_at).getTime();
+        const localCreated = new Date(localWeight[localIdx].createdAt).getTime();
+        if (remoteUpdated > localCreated) {
+          localWeight[localIdx] = rowToWeightEntry(row);
+          changed = true;
+        }
+      } else {
         localWeight.push(rowToWeightEntry(row));
         changed = true;
       }
@@ -497,6 +594,44 @@ class SyncService {
 
     if (changed) {
       useAppStore.setState({ weightEntries: localWeight });
+    }
+  }
+
+  private async pullGoals(since: string | null) {
+    const userId = this.userId!;
+    let query = supabase
+      .from('user_goals')
+      .select('*')
+      .eq('user_id', userId);
+    if (since) query = query.gt('updated_at', since);
+
+    const { data, error } = await query;
+    if (error) { console.error('[sync] Pull user_goals failed:', error.message); return; }
+
+    const dirty = loadDirty();
+    // If local goals are dirty, skip pull (local wins)
+    if (dirty.user_goals.includes('current')) return;
+
+    if (!data?.length) {
+      // No remote goals — if we had local goals that aren't dirty, remote was deleted
+      // Only clear on incremental pull (since !== null), not on first pull
+      if (since) {
+        const state = useAppStore.getState();
+        if (state.goals) {
+          useAppStore.setState({ goals: null });
+        }
+      }
+      return;
+    }
+
+    const row = data[0]; // One row per user
+    const state = useAppStore.getState();
+    const remoteUpdated = new Date(row.updated_at).getTime();
+    const localUpdated = state.goals ? new Date(state.goals.updatedAt).getTime() : 0;
+
+    if (remoteUpdated > localUpdated) {
+      const { goals, preferredUnits } = rowToGoals(row);
+      useAppStore.setState({ goals, preferredUnits });
     }
   }
 
@@ -556,6 +691,9 @@ class SyncService {
       if (!dirty.weight_entries.includes(we.id)) {
         dirty.weight_entries.push(we.id);
       }
+    }
+    if (state.goals && !dirty.user_goals.includes('current')) {
+      dirty.user_goals.push('current');
     }
 
     saveDirty(dirty);

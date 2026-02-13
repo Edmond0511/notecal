@@ -1,7 +1,12 @@
 import { supabase } from "@/lib/supabase";
+import { mmkv, saveUserSnapshot, restoreUserSnapshot } from "@/lib/mmkv";
 import { syncService } from "@/services/syncService";
+import { nutritionQueue } from "@/services/nutritionQueue";
+import { useAppStore } from "@/store/app-store";
 import { Session, User } from "@supabase/supabase-js";
 import React, { createContext, useContext, useEffect, useState } from "react";
+
+const LAST_USER_KEY = "last-signed-in-user-id";
 
 interface AuthContextType {
   user: User | null;
@@ -40,10 +45,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
 
       if (event === "SIGNED_IN" && session?.user) {
+        const lastUserId = mmkv.getString(LAST_USER_KEY);
+        // If a different user was active, archive their data first
+        if (lastUserId && lastUserId !== session.user.id) {
+          nutritionQueue.clearAll();
+          saveUserSnapshot(lastUserId);
+          syncService.setUser(null);
+          useAppStore.getState().clearUserData();
+        }
+        // Restore new user's snapshot if one exists
+        const restored = restoreUserSnapshot(session.user.id);
+        if (restored) {
+          useAppStore.persist.rehydrate();
+        }
+        mmkv.set(LAST_USER_KEY, session.user.id);
         syncService.setUser(session.user.id);
         syncService.fullSync();
       } else if (event === "SIGNED_OUT") {
+        nutritionQueue.clearAll();
+        // Archive outgoing user's data before clearing
+        const outgoingUserId = mmkv.getString(LAST_USER_KEY);
+        if (outgoingUserId) {
+          saveUserSnapshot(outgoingUserId);
+        }
         syncService.setUser(null);
+        useAppStore.getState().clearUserData();
+        mmkv.remove(LAST_USER_KEY);
       }
     });
 

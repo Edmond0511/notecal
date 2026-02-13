@@ -184,6 +184,7 @@ export interface AppState {
   // Goals actions
   setGoals: (goals: UserGoals) => void;
   clearGoals: () => void;
+  clearUserData: () => void;
   setPreferredUnits: (units: UnitSystem) => void;
   setManualTargets: (targets: ManualTargets | null) => void;
   // Saved entries actions

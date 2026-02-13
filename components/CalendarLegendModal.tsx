@@ -44,7 +44,7 @@ const LEGEND_ITEMS = [
     color: "#FFC107",
     type: "filled" as const,
     title: "Partial",
-    subtitle: "50–89% of daily calorie goal",
+    subtitle: "within 50–89% of daily calorie goal",
   },
   {
     color: "#EF5350",
@@ -186,7 +186,9 @@ export function CalendarLegendModal({
                         )}
                         <View style={styles.rowTextContainer}>
                           <Text style={styles.rowTitle}>{item.title}</Text>
-                          <Text style={styles.rowSubtitle}>{item.subtitle}</Text>
+                          <Text style={styles.rowSubtitle}>
+                            {item.subtitle}
+                          </Text>
                         </View>
                       </View>
                     </React.Fragment>

@@ -6,8 +6,8 @@ import { startSyncSubscriber, stopSyncSubscriber } from '@/services/syncSubscrib
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef } from 'react';
-import { ActivityIndicator, AppState as RNAppState, StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
@@ -39,23 +39,15 @@ function RootLayoutNav() {
     return () => offlineReconnectService.stop();
   }, [isLoading]);
 
-  // Start sync subscriber + foreground sync when authenticated
-  const appStateRef = useRef(RNAppState.currentState);
+  // Start sync subscriber + cold-start sync when authenticated
   useEffect(() => {
     if (isLoading || !isAuthenticated) return;
 
     startSyncSubscriber();
-
-    const sub = RNAppState.addEventListener('change', (nextState) => {
-      if (appStateRef.current.match(/inactive|background/) && nextState === 'active') {
-        syncService.fullSync();
-      }
-      appStateRef.current = nextState;
-    });
+    syncService.fullSync(); // Sync on cold start
 
     return () => {
       stopSyncSubscriber();
-      sub.remove();
     };
   }, [isLoading, isAuthenticated]);
 

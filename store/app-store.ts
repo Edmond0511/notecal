@@ -378,6 +378,16 @@ export const useAppStore = create<AppState>()(
     set({ goals: null });
   },
 
+  clearUserData: () => {
+    set({
+      entries: [],
+      documents: [],
+      goals: null,
+      savedEntries: [],
+      weightEntries: [],
+    });
+  },
+
   setPreferredUnits: (units: UnitSystem) => {
     set({ preferredUnits: units });
   },

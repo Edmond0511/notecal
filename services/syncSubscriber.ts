@@ -1,8 +1,19 @@
 import { useAppStore } from '@/store/app-store';
 import { syncService } from '@/services/syncService';
-import { Entry, Document, SavedEntry, WeightEntry } from '@/types';
+import { Entry, Document, SavedEntry, WeightEntry, UserGoals, UnitSystem } from '@/types';
 
 let unsubscribe: (() => void) | null = null;
+
+/** Check if a weight entry was meaningfully edited */
+function weightEntryChanged(a: WeightEntry, b: WeightEntry): boolean {
+  return (
+    a.weightKg !== b.weightKg ||
+    a.date !== b.date ||
+    a.note !== b.note ||
+    a.photoUri !== b.photoUri ||
+    JSON.stringify(a.photoUris) !== JSON.stringify(b.photoUris)
+  );
+}
 
 export function startSyncSubscriber() {
   if (unsubscribe) return; // already running
@@ -73,7 +84,8 @@ export function startSyncSubscriber() {
       const currIds = new Set(state.weightEntries.map((w: WeightEntry) => w.id));
 
       for (const we of state.weightEntries) {
-        if (!prevIds.has(we.id)) {
+        const prev = prevState.weightEntries.find((w: WeightEntry) => w.id === we.id);
+        if (!prev || weightEntryChanged(we, prev)) {
           syncService.debouncedPush('weight_entries', we.id);
         }
       }
@@ -82,6 +94,17 @@ export function startSyncSubscriber() {
         if (!currIds.has(id)) {
           syncService.pushDelete('weight_entries', id);
         }
+      }
+    }
+
+    // --- Goals ---
+    if (state.goals !== prevState.goals || state.preferredUnits !== prevState.preferredUnits) {
+      if (state.goals) {
+        // Goals set or updated → push
+        syncService.debouncedPush('user_goals', 'current');
+      } else if (prevState.goals) {
+        // Goals cleared → delete remote row
+        syncService.pushDelete('user_goals', 'current');
       }
     }
   });

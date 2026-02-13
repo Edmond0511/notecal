@@ -38,15 +38,16 @@ import { WeightTrackingModal } from "./WeightTrackingModal";
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
-function timeAgo(isoString: string): string {
-  const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+function formatSyncTime(isoString: string): string {
+  const date = new Date(isoString);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (isToday) return time;
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return `yesterday at ${time}`;
+  return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${time}`;
 }
 
 interface SettingsModalProps {
@@ -265,7 +266,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                       <View style={styles.syncStatus}>
                         <Ionicons name="cloud-done-outline" size={14} color="#999" />
                         <Text style={styles.syncStatusText}>
-                          Last synced {timeAgo(lastSynced)}
+                          Last synced {formatSyncTime(lastSynced)}
                         </Text>
                       </View>
                     )}

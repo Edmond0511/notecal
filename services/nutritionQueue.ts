@@ -42,6 +42,11 @@ class NutritionQueue {
     this.queue = this.queue.filter((q) => q.entryId !== entryId);
   }
 
+  /** Clear all queued items (in-flight requests are safe — isEntryDeleted() handles them) */
+  clearAll() {
+    this.queue = [];
+  }
+
   private drain() {
     while (this.active.size < MAX_CONCURRENT && this.queue.length > 0) {
       const item = this.queue.shift()!;

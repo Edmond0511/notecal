@@ -32,6 +32,7 @@ import { useAppStore } from "@/store/app-store";
 import { AuthModal } from "./AuthModal";
 import { GoalsWizard } from "./goals/GoalsWizard";
 import { NutritionGoalsModal } from "./NutritionGoalsModal";
+import { CalendarLegendModal } from "./CalendarLegendModal";
 import { WeightTrackingModal } from "./WeightTrackingModal";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -66,6 +67,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [showNutritionGoals, setShowNutritionGoals] = useState(false);
   const [showGoalsWizard, setShowGoalsWizard] = useState(false);
   const [showWeightTracking, setShowWeightTracking] = useState(false);
+  const [showCalendarLegend, setShowCalendarLegend] = useState(false);
   const goals = useAppStore((s) => s.goals);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -258,18 +260,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           </Text>
                         </View>
                       </View>
-                      <TouchableOpacity
-                        style={styles.signOutButton}
-                        onPress={handleSignOut}
-                        disabled={isSigningOut}
-                        activeOpacity={0.7}
-                      >
-                        {isSigningOut ? (
-                          <ActivityIndicator size="small" color="#DC2626" />
-                        ) : (
-                          <Text style={styles.signOutText}>Sign Out</Text>
-                        )}
-                      </TouchableOpacity>
                     </View>
                     {lastSynced && (
                       <View style={styles.syncStatus}>
@@ -376,6 +366,27 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                       <Text style={styles.menuItemText}>Weight Tracking</Text>
                       <Ionicons name="chevron-forward" size={18} color="#ccc" />
                     </TouchableOpacity>
+
+                    <View style={styles.menuDivider} />
+
+                    <TouchableOpacity
+                      style={styles.menuItem}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setShowCalendarLegend(true);
+                      }}
+                    >
+                      <View style={styles.menuIconContainer}>
+                        <Ionicons
+                          name="calendar-outline"
+                          size={20}
+                          color="#666"
+                        />
+                      </View>
+                      <Text style={styles.menuItemText}>Calendar Legend</Text>
+                      <Ionicons name="chevron-forward" size={18} color="#ccc" />
+                    </TouchableOpacity>
                   </View>
                 </Animated.View>
 
@@ -400,6 +411,26 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                     </View>
                   </View>
                 </Animated.View>
+
+                {user && (
+                  <Animated.View
+                    entering={FadeInDown.delay(400).duration(400)}
+                    style={styles.section}
+                  >
+                    <TouchableOpacity
+                      style={styles.signOutButton}
+                      onPress={handleSignOut}
+                      disabled={isSigningOut}
+                      activeOpacity={0.7}
+                    >
+                      {isSigningOut ? (
+                        <ActivityIndicator size="small" color="#DC2626" />
+                      ) : (
+                        <Text style={styles.signOutText}>Sign Out</Text>
+                      )}
+                    </TouchableOpacity>
+                  </Animated.View>
+                )}
               </Animated.ScrollView>
             </Animated.View>
           </GestureDetector>
@@ -426,6 +457,11 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
         <WeightTrackingModal
           visible={showWeightTracking}
           onClose={() => setShowWeightTracking(false)}
+        />
+
+        <CalendarLegendModal
+          visible={showCalendarLegend}
+          onClose={() => setShowCalendarLegend(false)}
         />
       </Modal>
     </>
@@ -526,7 +562,6 @@ const styles = StyleSheet.create({
   accountInfo: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
   },
   avatarContainer: {
     width: 48,
@@ -557,9 +592,9 @@ const styles = StyleSheet.create({
   },
   signOutButton: {
     alignItems: "center",
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
+    paddingVertical: 14,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
   },
   signOutText: {
     fontSize: 15,

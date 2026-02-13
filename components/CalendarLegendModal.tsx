@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useEffect } from "react";
 import {
@@ -38,22 +37,26 @@ const LEGEND_ITEMS = [
   {
     color: "#4CAF50",
     type: "filled" as const,
-    description: "On target (90%+ of calorie goal)",
+    title: "On target",
+    subtitle: "90% or more of daily calorie goal",
   },
   {
     color: "#FFC107",
     type: "filled" as const,
-    description: "Partial (50-89% of calorie goal)",
+    title: "Partial",
+    subtitle: "50–89% of daily calorie goal",
   },
   {
     color: "#EF5350",
     type: "filled" as const,
-    description: "Under target (<50% of calorie goal)",
+    title: "Under target",
+    subtitle: "Less than 50% of daily calorie goal",
   },
   {
     color: "#ccc",
     type: "empty" as const,
-    description: "No food logged or no goal set",
+    title: "No data",
+    subtitle: "No food logged or no goal set",
   },
 ];
 
@@ -134,11 +137,7 @@ export function CalendarLegendModal({
 
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[
-              styles.container,
-              { marginTop: insets.top },
-              animatedStyle,
-            ]}
+            style={[styles.container, { marginTop: insets.top }, animatedStyle]}
           >
             <View style={styles.dragIndicatorContainer}>
               <View style={styles.dragIndicator} />
@@ -170,24 +169,25 @@ export function CalendarLegendModal({
                     <React.Fragment key={index}>
                       {index > 0 && <View style={styles.divider} />}
                       <View style={styles.row}>
-                        <View style={styles.dotContainer}>
-                          {item.type === "filled" ? (
-                            <View
-                              style={[
-                                styles.dot,
-                                { backgroundColor: item.color },
-                              ]}
-                            />
-                          ) : (
-                            <View
-                              style={[
-                                styles.dotEmpty,
-                                { borderColor: item.color },
-                              ]}
-                            />
-                          )}
+                        {item.type === "filled" ? (
+                          <View
+                            style={[
+                              styles.dot,
+                              { backgroundColor: item.color },
+                            ]}
+                          />
+                        ) : (
+                          <View
+                            style={[
+                              styles.dotEmpty,
+                              { borderColor: item.color },
+                            ]}
+                          />
+                        )}
+                        <View style={styles.rowTextContainer}>
+                          <Text style={styles.rowTitle}>{item.title}</Text>
+                          <Text style={styles.rowSubtitle}>{item.subtitle}</Text>
                         </View>
-                        <Text style={styles.rowText}>{item.description}</Text>
                       </View>
                     </React.Fragment>
                   ))}
@@ -292,21 +292,13 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: "#f0f0f0",
-    marginLeft: 60,
-  },
-  dotContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "#f5f5f5",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
+    marginLeft: 38,
   },
   dot: {
     width: 10,
     height: 10,
     borderRadius: 5,
+    marginRight: 12,
   },
   dotEmpty: {
     width: 10,
@@ -314,12 +306,21 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     borderWidth: 1,
     borderStyle: "dashed",
+    marginRight: 12,
   },
-  rowText: {
+  rowTextContainer: {
     flex: 1,
+  },
+  rowTitle: {
     fontSize: 16,
     color: "#1a1a1a",
     fontWeight: "500",
+  },
+  rowSubtitle: {
+    fontSize: 13,
+    color: "#aaa",
+    fontWeight: "400",
+    marginTop: 2,
   },
   hint: {
     fontSize: 14,

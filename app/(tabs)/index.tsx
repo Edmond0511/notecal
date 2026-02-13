@@ -419,6 +419,7 @@ export default function HomeScreen() {
       <WeightTrackingModal
         visible={showWeightModal}
         onClose={() => setShowWeightModal(false)}
+        openToLog
       />
     </SafeAreaView>
   );

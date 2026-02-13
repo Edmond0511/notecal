@@ -51,9 +51,10 @@ type TimeRange = "30d" | "90d" | "all";
 interface WeightTrackingModalProps {
   visible: boolean;
   onClose: () => void;
+  openToLog?: boolean;
 }
 
-export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalProps) {
+export function WeightTrackingModal({ visible, onClose, openToLog }: WeightTrackingModalProps) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
@@ -98,6 +99,9 @@ export function WeightTrackingModal({ visible, onClose }: WeightTrackingModalPro
       setWeightInput("");
       setPhotoUris([]);
       setLogDateInput(toLocalYMD(new Date()));
+      if (openToLog) {
+        setShowLogPopup(true);
+      }
     }
   }, [visible]);
 

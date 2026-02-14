@@ -202,6 +202,7 @@ export interface AppState {
   deleteSavedEntry: (id: string) => void;
   useSavedEntry: (savedEntry: SavedEntry) => Entry;
   addBarcodeEntry: (product: BarcodeProduct, servingGrams: number) => Entry;
+  addPhotoEntry: (items: FoodItem[], totals: Macros) => Entry;
   createSavedEntry: (rawText: string) => Promise<{ success: boolean; error?: string }>;
   // Item editing actions
   updateEntryItemMacro: (entryId: string, itemId: string, macroKey: keyof Macros, value: number) => void;

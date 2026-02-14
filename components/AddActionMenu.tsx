@@ -15,6 +15,7 @@ interface AddActionMenuProps {
   onSavedEntriesPress: () => void;
   onScanBarcodePress: () => void;
   onLogWeightPress: () => void;
+  onSnapFoodPress: () => void;
 }
 
 export function AddActionMenu({
@@ -23,6 +24,7 @@ export function AddActionMenu({
   onSavedEntriesPress,
   onScanBarcodePress,
   onLogWeightPress,
+  onSnapFoodPress,
 }: AddActionMenuProps) {
   return (
     <View
@@ -89,6 +91,20 @@ export function AddActionMenu({
                   <Ionicons name="scale-outline" size={20} color="#1A6872" />
                 </View>
                 <Text style={styles.menuLabel}>Log Weight</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.7}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onSnapFoodPress();
+                }}
+              >
+                <View style={styles.iconCircle}>
+                  <Ionicons name="camera-outline" size={20} color="#1A6872" />
+                </View>
+                <Text style={styles.menuLabel}>Snap Food</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>

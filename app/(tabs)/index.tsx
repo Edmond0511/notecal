@@ -1,6 +1,7 @@
 import { AddActionMenu } from "@/components/AddActionMenu";
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { Calendar } from "@/components/Calendar";
+import { FoodPhotoModal } from "@/components/FoodPhotoModal";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
 import { GoalsPopup } from "@/components/GoalsPopup";
 import { NotesEditor } from "@/components/NotesEditor";
@@ -11,7 +12,7 @@ import { WeightTrackingModal } from "@/components/WeightTrackingModal";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { useSwipeDateNavigation } from "@/hooks/useSwipeDateNavigation";
 import { useAppStore } from "@/store/app-store";
-import { BarcodeProduct, SavedEntry } from "@/types";
+import { BarcodeProduct, FoodItem, Macros, SavedEntry } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -58,6 +59,7 @@ export default function HomeScreen() {
   const [showSavedEntriesPopup, setShowSavedEntriesPopup] = useState(false);
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [showFoodPhoto, setShowFoodPhoto] = useState(false);
   const [currentDocumentText, setCurrentDocumentText] = useState("");
 
   // Load document text for current date
@@ -182,6 +184,28 @@ export default function HomeScreen() {
     setShowBarcodeScanner(true);
   }, []);
 
+  const handleMenuSnapFood = useCallback(() => {
+    setShowAddMenu(false);
+    setShowFoodPhoto(true);
+  }, []);
+
+  const handlePhotoEntryAdd = useCallback(
+    (items: FoodItem[], totals: Macros) => {
+      const storeAddPhotoEntry = useAppStore.getState().addPhotoEntry;
+      const newEntry = storeAddPhotoEntry(items, totals);
+
+      const newLine = newEntry.rawText;
+      const updatedText = currentDocumentText
+        ? `${currentDocumentText}\n${newLine}`
+        : newLine;
+      setCurrentDocumentText(updatedText);
+      saveDocument(currentDate, updatedText);
+
+      setShowFoodPhoto(false);
+    },
+    [currentDocumentText, currentDate, saveDocument],
+  );
+
   const handleBarcodeProductAdd = useCallback(
     (product: BarcodeProduct, servingGrams: number) => {
       const storeAddBarcodeEntry = useAppStore.getState().addBarcodeEntry;
@@ -202,7 +226,7 @@ export default function HomeScreen() {
 
   const handleBarcodeManualEntry = useCallback(
     (text: string) => {
-      const rawText = `- ${text}`;
+      const rawText = `— ${text}`;
       addEntry(rawText);
 
       const updatedText = currentDocumentText
@@ -448,6 +472,7 @@ export default function HomeScreen() {
         onSavedEntriesPress={handleMenuSavedEntries}
         onScanBarcodePress={handleMenuScanBarcode}
         onLogWeightPress={handleMenuLogWeight}
+        onSnapFoodPress={handleMenuSnapFood}
       />
 
       {/* Saved Entries Popup */}
@@ -463,6 +488,13 @@ export default function HomeScreen() {
         onClose={() => setShowBarcodeScanner(false)}
         onAddProduct={handleBarcodeProductAdd}
         onAddManualEntry={handleBarcodeManualEntry}
+      />
+
+      {/* Food Photo Modal */}
+      <FoodPhotoModal
+        visible={showFoodPhoto}
+        onClose={() => setShowFoodPhoto(false)}
+        onAddEntry={handlePhotoEntryAdd}
       />
 
       {/* Weight Tracking Modal */}

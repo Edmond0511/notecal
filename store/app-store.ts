@@ -520,7 +520,7 @@ export const useAppStore = create<AppState>()(
     const label = product.brand
       ? `${product.name} (${product.brand})`
       : product.name;
-    const rawText = `- ${label}, ${servingGrams}g`;
+    const rawText = `— ${label}, ${servingGrams}g`;
 
     const newEntry: Entry = {
       id: entryId,
@@ -529,6 +529,35 @@ export const useAppStore = create<AppState>()(
       inlineKcal: item.macros.kcal,
       status: 'ok',
       items: [item],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    set((state) => ({
+      entries: [...state.entries, newEntry],
+    }));
+
+    return newEntry;
+  },
+
+  addPhotoEntry: (items: import('@/types').FoodItem[], totals: import('@/types').Macros): Entry => {
+    const entryId = Date.now().toString();
+    const currentDate = get().currentDate;
+
+    const rawText = `— ${items.map((i) => i.label).join(', ')}`;
+    const entryItems = items.map((item, index) => ({
+      ...item,
+      id: `${entryId}-photo-${index}`,
+      entryId,
+    }));
+
+    const newEntry: Entry = {
+      id: entryId,
+      date: currentDate,
+      rawText,
+      inlineKcal: totals.kcal,
+      status: 'ok' as const,
+      items: entryItems,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

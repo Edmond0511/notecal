@@ -30,6 +30,13 @@ export class NutritionQuotaExceededError extends NutritionApiError {
   }
 }
 
+export class NutritionNotFoodError extends NutritionApiError {
+  constructor() {
+    super('No food items identified in photo', 422);
+    this.name = 'NutritionNotFoodError';
+  }
+}
+
 /**
  * Resolve nutrition information using Supabase Edge Functions with Gemini AI
  * @param foodText The food text to analyze
@@ -117,6 +124,86 @@ export async function resolveNutrition(
     // Network or other errors
     throw new NutritionApiError(
       `Failed to resolve nutrition: ${error.message}`,
+      undefined,
+      error as Error
+    );
+  }
+}
+
+/**
+ * Resolve nutrition from a photo using Gemini multimodal analysis
+ * @param base64Image Base64-encoded image data
+ * @param mimeType Image MIME type (e.g., 'image/jpeg')
+ * @param options Optional configuration including user ID
+ * @returns NutritionResolveResponse with identified food items
+ */
+export async function resolveNutritionFromPhoto(
+  base64Image: string,
+  mimeType: string,
+  options: NutritionApiOptions = {}
+): Promise<NutritionResolveResponse> {
+  const { userId } = options;
+
+  try {
+    if (userId) {
+      await checkUserQuota(userId);
+    }
+
+    const requestBody = {
+      photoMode: true,
+      base64Image,
+      mimeType,
+      userId,
+    };
+
+    if (__DEV__) {
+      console.log('[nutritionApi] PHOTO REQ: base64 length=', base64Image.length);
+    }
+
+    const { data, error } = await supabase.functions.invoke<NutritionResolveResponse>('nutrition-resolve', {
+      body: requestBody,
+    });
+
+    if (__DEV__) {
+      if (error) {
+        console.log('[nutritionApi] PHOTO ERR:', JSON.stringify({ message: error.message, status: (error as any).status }));
+      } else {
+        console.log('[nutritionApi] PHOTO RES:', JSON.stringify({ items: data?.resolved?.length, totals: data?.totals }));
+      }
+    }
+
+    if (error) {
+      throw new NutritionApiError(
+        error.message || 'Failed to analyze photo',
+        (error as any).status
+      );
+    }
+
+    if (!data) {
+      throw new NutritionApiError('No data returned from photo analysis');
+    }
+
+    // Edge Function returns 200 with { error: "not_food" } when no food detected
+    if ((data as any).error === 'not_food') {
+      throw new NutritionNotFoodError();
+    }
+
+    if (!data.resolved || !Array.isArray(data.resolved)) {
+      throw new NutritionApiError('Invalid response format: missing resolved items');
+    }
+
+    return data;
+  } catch (error) {
+    if (error instanceof NutritionApiError) {
+      throw error;
+    }
+
+    if (error.message?.includes('rate limit')) {
+      throw new NutritionRateLimitError('Rate limit exceeded. Please try again later.');
+    }
+
+    throw new NutritionApiError(
+      `Failed to analyze photo: ${error.message}`,
       undefined,
       error as Error
     );

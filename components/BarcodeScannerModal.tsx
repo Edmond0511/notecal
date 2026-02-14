@@ -1,13 +1,10 @@
 import {
-  BarcodeProduct,
-  Macros,
-} from "@/types";
-import {
-  lookupBarcode,
-  BarcodeNotFoundError,
   BarcodeLookupError,
+  BarcodeNotFoundError,
+  lookupBarcode,
   scaleMacrosToServing,
 } from "@/services/barcodeService";
+import { BarcodeProduct, Macros } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -31,10 +28,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, {
-  FadeIn,
-  FadeInDown,
-} from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Lazy-load expo-camera to avoid crashing before native rebuild
@@ -99,6 +93,7 @@ export function BarcodeScannerModal({
   const [state, setState] = useState<ScannerState>({ type: "scanning" });
   const [servingGrams, setServingGrams] = useState("");
   const [manualText, setManualText] = useState("");
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scanLockRef = useRef(false);
 
   // Reset state when modal opens
@@ -111,6 +106,20 @@ export function BarcodeScannerModal({
     }
   }, [visible]);
 
+  // Track keyboard height for not_found state
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardWillShow", (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener("keyboardWillHide", () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   // Set default serving size when product is found
   useEffect(() => {
     if (state.type === "found") {
@@ -119,30 +128,27 @@ export function BarcodeScannerModal({
     }
   }, [state.type === "found" ? (state as any).product : null]);
 
-  const handleBarcodeScanned = useCallback(
-    async (result: { data: string }) => {
-      if (scanLockRef.current) return;
-      scanLockRef.current = true;
+  const handleBarcodeScanned = useCallback(async (result: { data: string }) => {
+    if (scanLockRef.current) return;
+    scanLockRef.current = true;
 
-      const barcode = result.data;
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setState({ type: "loading", barcode });
+    const barcode = result.data;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setState({ type: "loading", barcode });
 
-      try {
-        const product = await lookupBarcode(barcode);
-        setState({ type: "found", product });
-      } catch (err) {
-        if (err instanceof BarcodeNotFoundError) {
-          setState({ type: "not_found", barcode });
-        } else if (err instanceof BarcodeLookupError) {
-          setState({ type: "error", message: err.message });
-        } else {
-          setState({ type: "error", message: "Something went wrong" });
-        }
+    try {
+      const product = await lookupBarcode(barcode);
+      setState({ type: "found", product });
+    } catch (err) {
+      if (err instanceof BarcodeNotFoundError) {
+        setState({ type: "not_found", barcode });
+      } else if (err instanceof BarcodeLookupError) {
+        setState({ type: "error", message: err.message });
+      } else {
+        setState({ type: "error", message: "Something went wrong" });
       }
-    },
-    [],
-  );
+    }
+  }, []);
 
   const handleAdd = useCallback(() => {
     if (state.type !== "found") return;
@@ -197,7 +203,9 @@ export function BarcodeScannerModal({
 
         {!cameraAvailable ? (
           // Native module not built yet
-          <View style={[styles.permissionContainer, { paddingTop: insets.top }]}>
+          <View
+            style={[styles.permissionContainer, { paddingTop: insets.top }]}
+          >
             <View style={styles.permissionContent}>
               <View style={styles.permissionIconCircle}>
                 <Ionicons name="build-outline" size={48} color="#1A6872" />
@@ -219,7 +227,9 @@ export function BarcodeScannerModal({
           </View>
         ) : !permission.granted ? (
           // Permission denied / not yet granted
-          <View style={[styles.permissionContainer, { paddingTop: insets.top }]}>
+          <View
+            style={[styles.permissionContainer, { paddingTop: insets.top }]}
+          >
             <View style={styles.permissionContent}>
               <View style={styles.permissionIconCircle}>
                 <Ionicons name="camera-outline" size={48} color="#1A6872" />
@@ -251,13 +261,7 @@ export function BarcodeScannerModal({
               style={StyleSheet.absoluteFill}
               facing="back"
               barcodeScannerSettings={{
-                barcodeTypes: [
-                  "ean13",
-                  "ean8",
-                  "upc_a",
-                  "upc_e",
-                  "code128",
-                ],
+                barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e", "code128"],
               }}
               onBarcodeScanned={
                 state.type === "scanning" ? handleBarcodeScanned : undefined
@@ -296,9 +300,7 @@ export function BarcodeScannerModal({
                 entering={FadeIn.duration(300)}
                 style={styles.hintContainer}
               >
-                <Text style={styles.hintText}>
-                  Point camera at a barcode
-                </Text>
+                <Text style={styles.hintText}>Point camera at a barcode</Text>
               </Animated.View>
             )}
 
@@ -319,7 +321,10 @@ export function BarcodeScannerModal({
             {state.type === "found" && previewMacros && (
               <Animated.View
                 entering={FadeInDown.duration(300)}
-                style={[styles.bottomCard, { paddingBottom: insets.bottom + 16 }]}
+                style={[
+                  styles.bottomCard,
+                  { paddingBottom: insets.bottom + 16 },
+                ]}
               >
                 {/* Product info */}
                 <View style={styles.productHeader}>
@@ -425,7 +430,10 @@ export function BarcodeScannerModal({
             {state.type === "not_found" && (
               <Animated.View
                 entering={FadeInDown.duration(300)}
-                style={[styles.bottomCard, { paddingBottom: insets.bottom + 16 }]}
+                style={[
+                  styles.bottomCard,
+                  { paddingBottom: keyboardHeight + insets.bottom + 16 },
+                ]}
               >
                 <View style={styles.notFoundHeader}>
                   <Ionicons
@@ -436,8 +444,8 @@ export function BarcodeScannerModal({
                   <Text style={styles.notFoundTitle}>Product not found</Text>
                 </View>
                 <Text style={styles.notFoundDescription}>
-                  This barcode isn't in our database. Type the product name below
-                  and we'll look it up with AI.
+                  This barcode isn't in our database. Type the product name
+                  below and we'll calculate the macros for you.
                 </Text>
                 <View style={styles.manualInputRow}>
                   <TextInput
@@ -481,14 +489,13 @@ export function BarcodeScannerModal({
             {state.type === "error" && (
               <Animated.View
                 entering={FadeInDown.duration(300)}
-                style={[styles.bottomCard, { paddingBottom: insets.bottom + 16 }]}
+                style={[
+                  styles.bottomCard,
+                  { paddingBottom: insets.bottom + 16 },
+                ]}
               >
                 <View style={styles.notFoundHeader}>
-                  <Ionicons
-                    name="warning-outline"
-                    size={24}
-                    color="#F87171"
-                  />
+                  <Ionicons name="warning-outline" size={24} color="#F87171" />
                   <Text style={styles.notFoundTitle}>{state.message}</Text>
                 </View>
                 <TouchableOpacity

@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
   calorieOverText: {
     fontSize: 14,
     color: "#EF5350",
-    fontWeight: "600",
+    fontWeight: "500",
   },
 
   // Macro Card Styles
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   macroConsumed: {
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#333",
   },
   macroDivider: {
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
   },
   nutrientBarValue: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#333",
   },
   nutrientBarValueOver: {

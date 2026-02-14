@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   },
   setupTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "600",
     color: '#333',
     marginBottom: 8,
     textAlign: 'center',
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   setupButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "400",
   },
   // Progress view styles
   progressContent: {
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   },
   progressTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "600",
     color: '#333',
   },
   editButton: {

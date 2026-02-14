@@ -166,7 +166,10 @@ export default function HomeScreen() {
   );
 
   // Stable callbacks for TotalsBar (prevents React.memo invalidation on re-render)
-  const handleAddSavedPress = useCallback(() => setShowAddMenu(true), []);
+  const handleAddSavedPress = useCallback(() => {
+    Keyboard.dismiss();
+    setShowAddMenu(true);
+  }, []);
   const handleTotalsPress = useCallback(() => setShowGoalsPopup(true), []);
 
   const handleMenuSavedEntries = useCallback(() => {

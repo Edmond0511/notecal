@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#ffffff",
   },
   accountDetails: {
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
   },
   signInTitle: {
     fontSize: 16,
-    fontWeight: "400",
+    fontWeight: "500",
     color: "#1a1a1a",
     marginBottom: 2,
   },
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
   menuItemValue: {
     fontSize: 15,
     color: "#999",
-    fontWeight: "400",
+    fontWeight: "500",
   },
   menuDivider: {
     height: 1,

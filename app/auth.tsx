@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   tagline: {
     fontSize: 15,
     color: "#666",
-    fontWeight: "500",
+    fontWeight: "400",
   },
   buttonsContainer: {
     gap: 12,
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   },
   authButtonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#1a1a1a",
   },
   appleButton: {

@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#C62828",
   },
 });

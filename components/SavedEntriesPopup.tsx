@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
   entryLabel: {
     fontSize: 17,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#1a1a1a",
     marginBottom: 8,
     lineHeight: 22,
@@ -554,7 +554,7 @@ const styles = StyleSheet.create({
   macroValue: {
     fontSize: 13,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#666",
   },
   chevronContainer: {
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#1a1a1a",
     marginBottom: 8,
     textAlign: "center",

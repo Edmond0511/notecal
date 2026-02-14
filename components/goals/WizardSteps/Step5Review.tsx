@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#333",
     marginBottom: 8,
   },
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
   },
   breakdownValue: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#666",
   },
   breakdownValueHighlight: {
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#333",
     marginBottom: 12,
   },
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#333",
   },
   weightTargetCard: {
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   },
   expectationText: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#1A6872",
   },
   modificationNotice: {
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
   },
   modificationTitle: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#333",
     letterSpacing: -0.2,
   },
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
   },
   modificationLabel: {
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "400",
     color: "#666",
   },
   modificationValuesRow: {

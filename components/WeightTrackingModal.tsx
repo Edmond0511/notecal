@@ -900,7 +900,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#999",
     textTransform: "uppercase",
     letterSpacing: 0.8,
@@ -935,7 +935,7 @@ const styles = StyleSheet.create({
   },
   rangeButtonText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#999",
   },
   rangeButtonTextActive: {
@@ -956,7 +956,7 @@ const styles = StyleSheet.create({
   },
   entryLabel: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#1a1a1a",
     letterSpacing: -0.2,
     marginBottom: 2,
@@ -1024,7 +1024,7 @@ const styles = StyleSheet.create({
   },
   logButtonText: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#fff",
   },
   // Popup overlay (full-height sheet)
@@ -1082,7 +1082,7 @@ const styles = StyleSheet.create({
   },
   popupSectionTitle: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#999",
     textTransform: "uppercase",
     letterSpacing: 0.8,
@@ -1110,7 +1110,7 @@ const styles = StyleSheet.create({
   },
   weightInputUnit: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#999",
     textTransform: "uppercase",
     marginLeft: 8,
@@ -1186,7 +1186,7 @@ const styles = StyleSheet.create({
   popupSubmitText: {
     color: "#fff",
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "400",
   },
   popupSubmitTextDisabled: {
     color: "#aaa",

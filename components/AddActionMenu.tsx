@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   },
   menuLabel: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#333",
     letterSpacing: -0.2,
   },

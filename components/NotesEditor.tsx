@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: "#1A6872",
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     includeFontPadding: false,
   },
   inlineWater: {
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: "#1A6872",
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     includeFontPadding: false,
   },
   inlineError: {
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: "#C62828",
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     includeFontPadding: false,
   },
   queuedBadge: {

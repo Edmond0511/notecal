@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     color: '#1a1a1a',
     textAlign: 'center',
     letterSpacing: -0.3,
@@ -656,7 +656,7 @@ const styles = StyleSheet.create({
   },
   nextButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "400",
     color: '#fff',
   },
   nextButtonTextDisabled: {
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "400",
     color: '#fff',
   },
 });

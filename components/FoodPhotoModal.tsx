@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 17,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#333",
     marginTop: 16,
   },
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   },
   resultTitle: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#333",
     marginBottom: 12,
   },
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   },
   macroPillText: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "500",
   },
   itemCard: {
     backgroundColor: "#f9f9f8",
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
   },
   itemLabel: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#333",
     flex: 1,
     marginRight: 12,
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   },
   retakeButtonText: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#1A6872",
   },
   addButton: {
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#fff",
   },
   errorTitle: {

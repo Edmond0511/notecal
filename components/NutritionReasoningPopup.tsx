@@ -1898,7 +1898,7 @@ const styles = StyleSheet.create({
   entryTimeText: {
     fontSize: 12,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#8B7355",
   },
   saveButton: {
@@ -1916,7 +1916,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 12,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#1A6872",
   },
   saveButtonTextSaved: {
@@ -1932,7 +1932,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: "#1a1a1a",
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     lineHeight: 32,
     marginBottom: 12,
     letterSpacing: -0.5,
@@ -1960,7 +1960,7 @@ const styles = StyleSheet.create({
   itemLabel: {
     fontSize: 19,
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#1a1a1a",
     lineHeight: 26,
     flex: 1,
@@ -1983,7 +1983,7 @@ const styles = StyleSheet.create({
   quantityText: {
     fontSize: 13,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#6B7280",
   },
   confidenceBadge: {
@@ -2000,7 +2000,7 @@ const styles = StyleSheet.create({
   confidenceText: {
     fontSize: 13,
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     letterSpacing: 0.5,
   },
   macrosRow: {
@@ -2038,7 +2038,7 @@ const styles = StyleSheet.create({
   macroLabel: {
     fontSize: 10,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     textTransform: "uppercase",
     letterSpacing: 0.3,
     color: "#888",
@@ -2085,7 +2085,7 @@ const styles = StyleSheet.create({
     color: "#4A90D9",
     flex: 1,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     lineHeight: 22,
   },
   totalsSection: {
@@ -2111,7 +2111,7 @@ const styles = StyleSheet.create({
   totalsLabel: {
     fontSize: 18,
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#1a1a1a",
     letterSpacing: -0.3,
   },
@@ -2180,7 +2180,7 @@ const styles = StyleSheet.create({
   popupSectionLabel: {
     fontSize: 12,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#000000",
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -2197,7 +2197,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     color: "#4A90D9",
-    fontWeight: "600",
+    fontWeight: "500",
   },
   popupHint: {
     fontSize: 12,
@@ -2286,7 +2286,7 @@ const styles = StyleSheet.create({
   editNutrientUnitText: {
     fontSize: 16,
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     letterSpacing: 0.3,
   },
   editNutrientActions: {
@@ -2308,7 +2308,7 @@ const styles = StyleSheet.create({
   editNutrientRevertText: {
     fontSize: 16,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#666",
   },
   editNutrientRevertTextDisabled: {
@@ -2324,7 +2324,7 @@ const styles = StyleSheet.create({
   editNutrientSaveText: {
     fontSize: 16,
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#ffffff",
   },
   // Revert All styles
@@ -2343,7 +2343,7 @@ const styles = StyleSheet.create({
   revertAllText: {
     fontSize: 13,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#8B5CF6",
   },
   // Something Off Button styles
@@ -2427,7 +2427,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 17,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#1a1a1a",
     lineHeight: 22,
   },
@@ -2470,7 +2470,7 @@ const styles = StyleSheet.create({
   somethingOffCancelText: {
     fontSize: 16,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#666",
   },
   somethingOffSubmitButton: {
@@ -2487,7 +2487,7 @@ const styles = StyleSheet.create({
   somethingOffSubmitText: {
     fontSize: 16,
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#ffffff",
   },
   // Edit Quantity Popup styles
@@ -2569,7 +2569,7 @@ const styles = StyleSheet.create({
   editQuantitySaveText: {
     fontSize: 16,
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#ffffff",
   },
 });

@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 32,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#1a1a1a",
     letterSpacing: -1,
     marginBottom: 4,
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   tagline: {
     fontSize: 15,
     color: "#666",
-    fontWeight: "500",
+    fontWeight: "400",
   },
   welcomeContainer: {
     alignItems: "center",
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   },
   welcomeTitle: {
     fontSize: 24,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#1a1a1a",
     marginBottom: 8,
     letterSpacing: -0.5,
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
   },
   authButtonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#1a1a1a",
   },
   appleButton: {
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
   },
   termsLink: {
     color: "#666",
-    fontWeight: "600",
+    fontWeight: "500",
   },
   skipButton: {
     alignItems: "center",
@@ -483,6 +483,6 @@ const styles = StyleSheet.create({
   skipButtonText: {
     fontSize: 14,
     color: "#666",
-    fontWeight: "500",
+    fontWeight: "400",
   },
 });

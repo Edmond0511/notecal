@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#999",
     textTransform: "uppercase",
     letterSpacing: 0.5,

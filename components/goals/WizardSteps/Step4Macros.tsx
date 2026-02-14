@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#333",
     marginBottom: 8,
   },
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#333",
   },
   optionsRow: {
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   },
   optionLabel: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#666",
   },
   optionLabelSelected: {

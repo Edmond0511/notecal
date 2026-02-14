@@ -885,7 +885,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#999",
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -901,7 +901,7 @@ const styles = StyleSheet.create({
   },
   resetButtonText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#1A6872",
     letterSpacing: 0.2,
   },
@@ -1037,7 +1037,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#fff",
   },
   waterTip: {
@@ -1051,13 +1051,13 @@ const styles = StyleSheet.create({
   },
   waterTipTitle: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#5A9AC7",
     marginBottom: 6,
   },
   waterTipText: {
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "400",
     color: "#6B7280",
     marginBottom: 8,
     lineHeight: 18,
@@ -1068,7 +1068,7 @@ const styles = StyleSheet.create({
   },
   waterTipExample: {
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "400",
     color: "#6B7280",
     fontStyle: "italic",
   },
@@ -1087,7 +1087,7 @@ const styles = StyleSheet.create({
   },
   waterTipUnitText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#5A9AC7",
   },
 });

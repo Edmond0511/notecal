@@ -213,7 +213,7 @@ export function BarcodeScannerModal({
               <Text style={styles.permissionTitle}>Rebuild Required</Text>
               <Text style={styles.permissionDescription}>
                 The camera module requires a native rebuild. Run{"\n"}
-                <Text style={{ fontWeight: "700" }}>npx expo run:ios</Text>
+                <Text style={{ fontWeight: "600" }}>npx expo run:ios</Text>
                 {"\n"}then reopen the app.
               </Text>
               <TouchableOpacity
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
   permissionTitle: {
     fontSize: 22,
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#1a1a1a",
     marginBottom: 12,
     letterSpacing: -0.3,
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
   permissionButtonText: {
     fontSize: 17,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#fff",
   },
   permissionCancelButton: {
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
   permissionCancelText: {
     fontSize: 16,
     fontFamily: "System",
-    fontWeight: "500",
+    fontWeight: "400",
     color: "#666",
   },
   // Overlay
@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
   hintText: {
     fontSize: 16,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#fff",
     backgroundColor: "rgba(0,0,0,0.5)",
     paddingVertical: 8,
@@ -687,7 +687,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     fontFamily: "System",
-    fontWeight: "500",
+    fontWeight: "400",
     color: "#666",
   },
   // Found state
@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 19,
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#1a1a1a",
     lineHeight: 24,
     letterSpacing: -0.3,
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
   productBrand: {
     fontSize: 14,
     fontFamily: "System",
-    fontWeight: "500",
+    fontWeight: "400",
     color: "#888",
     marginTop: 2,
   },
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
   servingLabel: {
     fontSize: 15,
     fontFamily: "System",
-    fontWeight: "500",
+    fontWeight: "400",
     color: "#666",
   },
   servingInputWrapper: {
@@ -746,7 +746,7 @@ const styles = StyleSheet.create({
   servingUnit: {
     fontSize: 15,
     fontFamily: "System",
-    fontWeight: "500",
+    fontWeight: "400",
     color: "#888",
     marginLeft: 4,
   },
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
   scanAgainText: {
     fontSize: 15,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#666",
   },
   addButton: {
@@ -809,7 +809,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 17,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#fff",
   },
   // Not found state
@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
   notFoundTitle: {
     fontSize: 18,
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#1a1a1a",
     letterSpacing: -0.2,
   },

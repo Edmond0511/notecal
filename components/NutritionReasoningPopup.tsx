@@ -1320,76 +1320,76 @@ export function NutritionReasoningPopup({
                         {item.label}
                       </Text>
                       <View style={styles.headerBadges}>
-                      {/* Quantity Badge */}
-                      <TouchableOpacity
-                        style={styles.quantityBadge}
-                        onPress={() =>
-                          handleQuantityPress(item.id, item.servings ?? 1)
-                        }
-                        activeOpacity={0.6}
-                      >
-                        <Text style={styles.quantityText}>
-                          ×
-                          {Number.isInteger(item.servings ?? 1)
-                            ? item.servings ?? 1
-                            : (item.servings ?? 1).toFixed(1)}
-                        </Text>
-                        <Ionicons
-                          name="pencil"
-                          size={10}
-                          color="#6B7280"
-                          style={{ marginLeft: 3 }}
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => {
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light,
-                          );
-                          const itemKey = item.id || String(index);
-                          if (activeConfidencePopup === itemKey) {
-                            setActiveConfidencePopup(null);
-                            setActivePopupData(null);
-                          } else {
-                            setActiveConfidencePopup(itemKey);
-                            setActivePopupData({
-                              confidence: item.confidence,
-                              reasoning: item.reasoning,
-                            });
+                        {/* Quantity Badge */}
+                        <TouchableOpacity
+                          style={styles.quantityBadge}
+                          onPress={() =>
+                            handleQuantityPress(item.id, item.servings ?? 1)
                           }
-                        }}
-                        style={[
-                          styles.confidenceBadge,
-                          {
-                            backgroundColor: getConfidenceColors(
-                              item.confidence,
-                            ).background,
-                            borderColor: getConfidenceColors(item.confidence)
-                              .border,
-                          },
-                        ]}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.confidenceBadgeContent}>
-                          <Text
-                            style={[
-                              styles.confidenceText,
-                              {
-                                color: getConfidenceColors(item.confidence)
-                                  .text,
-                              },
-                            ]}
-                          >
-                            {Math.round(item.confidence * 100)}%
+                          activeOpacity={0.6}
+                        >
+                          <Text style={styles.quantityText}>
+                            ×
+                            {Number.isInteger(item.servings ?? 1)
+                              ? (item.servings ?? 1)
+                              : (item.servings ?? 1).toFixed(1)}
                           </Text>
                           <Ionicons
-                            name="information-circle-outline"
-                            size={14}
-                            color={getConfidenceColors(item.confidence).text}
-                            style={{ opacity: 0.6 }}
+                            name="pencil"
+                            size={10}
+                            color="#6B7280"
+                            style={{ marginLeft: 3 }}
                           />
-                        </View>
-                      </TouchableOpacity>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => {
+                            Haptics.impactAsync(
+                              Haptics.ImpactFeedbackStyle.Light,
+                            );
+                            const itemKey = item.id || String(index);
+                            if (activeConfidencePopup === itemKey) {
+                              setActiveConfidencePopup(null);
+                              setActivePopupData(null);
+                            } else {
+                              setActiveConfidencePopup(itemKey);
+                              setActivePopupData({
+                                confidence: item.confidence,
+                                reasoning: item.reasoning,
+                              });
+                            }
+                          }}
+                          style={[
+                            styles.confidenceBadge,
+                            {
+                              backgroundColor: getConfidenceColors(
+                                item.confidence,
+                              ).background,
+                              borderColor: getConfidenceColors(item.confidence)
+                                .border,
+                            },
+                          ]}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.confidenceBadgeContent}>
+                            <Text
+                              style={[
+                                styles.confidenceText,
+                                {
+                                  color: getConfidenceColors(item.confidence)
+                                    .text,
+                                },
+                              ]}
+                            >
+                              {Math.round(item.confidence * 100)}%
+                            </Text>
+                            <Ionicons
+                              name="information-circle-outline"
+                              size={14}
+                              color={getConfidenceColors(item.confidence).text}
+                              style={{ opacity: 0.6 }}
+                            />
+                          </View>
+                        </TouchableOpacity>
                       </View>
                     </View>
                   </View>
@@ -1642,6 +1642,20 @@ export function NutritionReasoningPopup({
                         </View>
                       )}
 
+                      {/* Confidence Explanation */}
+                      {item.reasoning.confidenceExplanation && (
+                        <View style={styles.reasoningRow}>
+                          <Ionicons
+                            name="checkmark-circle-outline"
+                            size={16}
+                            color="#666"
+                          />
+                          <Text style={styles.reasoningText}>
+                            {item.reasoning.confidenceExplanation}
+                          </Text>
+                        </View>
+                      )}
+
                       {/* Data Source */}
                       {item.reasoning.dataSource && (
                         <View style={styles.reasoningRow}>
@@ -1654,20 +1668,6 @@ export function NutritionReasoningPopup({
                             text={item.reasoning.dataSource}
                             style={styles.sourceText}
                           />
-                        </View>
-                      )}
-
-                      {/* Confidence Explanation */}
-                      {item.reasoning.confidenceExplanation && (
-                        <View style={styles.reasoningRow}>
-                          <Ionicons
-                            name="checkmark-circle-outline"
-                            size={16}
-                            color="#666"
-                          />
-                          <Text style={styles.reasoningText}>
-                            {item.reasoning.confidenceExplanation}
-                          </Text>
                         </View>
                       )}
                     </View>

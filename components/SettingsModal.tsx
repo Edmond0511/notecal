@@ -315,13 +315,12 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         setShowNutritionGoals(true);
                       }}
                     >
-                      <View style={styles.menuIconContainer}>
-                        <Ionicons
-                          name="nutrition-outline"
-                          size={20}
-                          color="#666"
-                        />
-                      </View>
+                      <Ionicons
+                        name="nutrition-outline"
+                        size={18}
+                        color="#333"
+                        style={{ marginRight: 12 }}
+                      />
                       <Text style={styles.menuItemText}>Nutrition Targets</Text>
                       <Ionicons name="chevron-forward" size={18} color="#ccc" />
                     </TouchableOpacity>
@@ -336,13 +335,12 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         setShowGoalsWizard(true);
                       }}
                     >
-                      <View style={styles.menuIconContainer}>
-                        <Ionicons
-                          name="flag-outline"
-                          size={20}
-                          color="#666"
-                        />
-                      </View>
+                      <Ionicons
+                        name="flag-outline"
+                        size={18}
+                        color="#333"
+                        style={{ marginRight: 12 }}
+                      />
                       <Text style={styles.menuItemText}>Goals Setup</Text>
                       <Ionicons name="chevron-forward" size={18} color="#ccc" />
                     </TouchableOpacity>
@@ -357,13 +355,12 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         setShowWeightTracking(true);
                       }}
                     >
-                      <View style={styles.menuIconContainer}>
-                        <Ionicons
-                          name="scale-outline"
-                          size={20}
-                          color="#666"
-                        />
-                      </View>
+                      <Ionicons
+                        name="scale-outline"
+                        size={18}
+                        color="#333"
+                        style={{ marginRight: 12 }}
+                      />
                       <Text style={styles.menuItemText}>Weight Tracking</Text>
                       <Ionicons name="chevron-forward" size={18} color="#ccc" />
                     </TouchableOpacity>
@@ -378,13 +375,12 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         setShowCalendarLegend(true);
                       }}
                     >
-                      <View style={styles.menuIconContainer}>
-                        <Ionicons
-                          name="calendar-outline"
-                          size={20}
-                          color="#666"
-                        />
-                      </View>
+                      <Ionicons
+                        name="calendar-outline"
+                        size={18}
+                        color="#333"
+                        style={{ marginRight: 12 }}
+                      />
                       <Text style={styles.menuItemText}>Calendar Legend</Text>
                       <Ionicons name="chevron-forward" size={18} color="#ccc" />
                     </TouchableOpacity>
@@ -400,13 +396,12 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
                   <View style={styles.menuCard}>
                     <View style={styles.menuItem}>
-                      <View style={styles.menuIconContainer}>
-                        <Ionicons
-                          name="information-circle-outline"
-                          size={20}
-                          color="#666"
-                        />
-                      </View>
+                      <Ionicons
+                        name="information-circle-outline"
+                        size={18}
+                        color="#333"
+                        style={{ marginRight: 12 }}
+                      />
                       <Text style={styles.menuItemText}>Version</Text>
                       <Text style={styles.menuItemValue}>1.0.0</Text>
                     </View>
@@ -539,9 +534,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#999",
-    textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 8,
     marginLeft: 4,
@@ -583,7 +577,7 @@ const styles = StyleSheet.create({
   },
   accountEmail: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#1a1a1a",
     marginBottom: 2,
   },
@@ -599,7 +593,7 @@ const styles = StyleSheet.create({
   },
   signOutText: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#DC2626",
   },
   signInCard: {
@@ -628,7 +622,7 @@ const styles = StyleSheet.create({
   },
   signInTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#1a1a1a",
     marginBottom: 2,
   },
@@ -651,30 +645,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
   },
-  menuIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "#f5f5f5",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
   menuItemText: {
     flex: 1,
     fontSize: 16,
     color: "#1a1a1a",
-    fontWeight: "500",
+    fontWeight: "400",
   },
   menuItemValue: {
     fontSize: 15,
     color: "#999",
-    fontWeight: "500",
+    fontWeight: "400",
   },
   menuDivider: {
     height: 1,
     backgroundColor: "#f0f0f0",
-    marginLeft: 60,
+    marginLeft: 20,
+    marginRight: 20
   },
   syncStatus: {
     flexDirection: "row",

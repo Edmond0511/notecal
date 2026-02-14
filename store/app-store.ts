@@ -4,6 +4,7 @@ import { mmkvStateStorage } from '@/lib/mmkv';
 import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets, SavedEntry, Macros, WeightEntry } from '@/types';
 import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
 import { nutritionQueue } from '@/services/nutritionQueue';
+import { photoSyncService } from '@/services/photoSyncService';
 import { supabase } from '@/lib/supabase';
 import NetInfo from '@react-native-community/netinfo';
 
@@ -768,17 +769,63 @@ export const useAppStore = create<AppState>()(
     set((state) => ({
       weightEntries: [...state.weightEntries, newEntry],
     }));
+
+    // Queue photo uploads for any local URIs
+    const photos = newEntry.photoUris ?? (newEntry.photoUri ? [newEntry.photoUri] : []);
+    photos.forEach((uri, index) => {
+      if (photoSyncService.isLocalUri(uri)) {
+        photoSyncService.queueUpload(uri, newEntry.id, index);
+      }
+    });
+    if (photos.some(uri => photoSyncService.isLocalUri(uri))) {
+      photoSyncService.flushUploadQueue();
+    }
   },
 
   updateWeightEntry: (id: string, updates: Partial<Pick<WeightEntry, 'date' | 'weightKg' | 'note' | 'photoUri' | 'photoUris'>>) => {
+    // Capture old photos before updating (for deletion of removed storage paths)
+    const oldEntry = get().weightEntries.find(e => e.id === id);
+    const oldPhotos = oldEntry
+      ? (oldEntry.photoUris ?? (oldEntry.photoUri ? [oldEntry.photoUri] : []))
+      : [];
+
     set((state) => ({
       weightEntries: state.weightEntries.map((e) =>
         e.id === id ? { ...e, ...updates } : e
       ),
     }));
+
+    // Queue uploads for new local URIs
+    const newPhotos = updates.photoUris ?? (updates.photoUri ? [updates.photoUri] : []);
+    newPhotos.forEach((uri, index) => {
+      if (photoSyncService.isLocalUri(uri) && !oldPhotos.includes(uri)) {
+        photoSyncService.queueUpload(uri, id, index);
+      }
+    });
+    if (newPhotos.some(uri => photoSyncService.isLocalUri(uri) && !oldPhotos.includes(uri))) {
+      photoSyncService.flushUploadQueue();
+    }
+
+    // Delete removed storage-path photos
+    const removedPaths = oldPhotos.filter(
+      p => photoSyncService.isStoragePath(p) && !newPhotos.includes(p)
+    );
+    if (removedPaths.length > 0) {
+      photoSyncService.deletePhotos(removedPaths);
+    }
   },
 
   deleteWeightEntry: (id: string) => {
+    // Clean up storage photos before removing entry
+    const entry = get().weightEntries.find(e => e.id === id);
+    if (entry) {
+      const photos = entry.photoUris ?? (entry.photoUri ? [entry.photoUri] : []);
+      const storagePaths = photos.filter(p => photoSyncService.isStoragePath(p));
+      if (storagePaths.length > 0) {
+        photoSyncService.deletePhotos(storagePaths);
+      }
+    }
+
     set((state) => ({
       weightEntries: state.weightEntries.filter((e) => e.id !== id),
     }));

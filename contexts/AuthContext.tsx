@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { mmkv, saveUserSnapshot, restoreUserSnapshot } from "@/lib/mmkv";
 import { syncService } from "@/services/syncService";
+import { photoSyncService } from "@/services/photoSyncService";
 import { nutritionQueue } from "@/services/nutritionQueue";
 import { useAppStore } from "@/store/app-store";
 import { Session, User } from "@supabase/supabase-js";
@@ -32,6 +33,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+
+      // Set sync user for cold start (onAuthStateChange SIGNED_IN doesn't fire for persisted sessions)
+      if (session?.user) {
+        syncService.setUser(session.user.id);
+        photoSyncService.setUser(session.user.id);
+      }
+
       setIsLoading(false);
     });
 
@@ -60,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         mmkv.set(LAST_USER_KEY, session.user.id);
         syncService.setUser(session.user.id);
+        photoSyncService.setUser(session.user.id);
         syncService.fullSync();
       } else if (event === "SIGNED_OUT") {
         nutritionQueue.clearAll();
@@ -69,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           saveUserSnapshot(outgoingUserId);
         }
         syncService.setUser(null);
+        photoSyncService.setUser(null);
         useAppStore.getState().clearUserData();
         mmkv.remove(LAST_USER_KEY);
       }

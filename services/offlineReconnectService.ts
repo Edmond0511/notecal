@@ -2,6 +2,7 @@ import NetInfo, { NetInfoSubscription } from '@react-native-community/netinfo';
 import { AppState, NativeEventSubscription } from 'react-native';
 import { useAppStore } from '@/store/app-store';
 import { syncService } from '@/services/syncService';
+import { photoSyncService } from '@/services/photoSyncService';
 
 const DEBOUNCE_MS = 2000;
 
@@ -27,11 +28,12 @@ class OfflineReconnectService {
   }
 
   private init() {
-    // Drain pending entries on startup if online
+    // Drain pending entries and flush photo uploads on startup if online
     NetInfo.fetch().then((state) => {
       if (state.isConnected) {
         console.log('[reconnect] Online at startup — draining pending entries');
         useAppStore.getState().enqueuePendingEntries();
+        photoSyncService.flushUploadQueue();
       }
     });
 
@@ -53,6 +55,7 @@ class OfflineReconnectService {
           if (state.isConnected) {
             console.log('[reconnect] App foregrounded while online — draining pending entries');
             useAppStore.getState().enqueuePendingEntries();
+            photoSyncService.flushUploadQueue();
           }
         });
       }
@@ -64,6 +67,7 @@ class OfflineReconnectService {
     this.debounceTimer = setTimeout(() => {
       console.log('[reconnect] Connectivity detected — draining pending entries');
       useAppStore.getState().enqueuePendingEntries();
+      photoSyncService.flushUploadQueue();
       syncService.fullSync();
     }, DEBOUNCE_MS);
   }

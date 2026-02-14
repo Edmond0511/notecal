@@ -7,7 +7,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Alert,
   Dimensions,
-  Image,
   Modal,
   StatusBar,
   StyleSheet,
@@ -16,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SyncedImage } from "./SyncedImage";
 import {
   Gesture,
   GestureDetector,
@@ -395,7 +395,7 @@ export function WeightTrackingModal({ visible, onClose, openToLog }: WeightTrack
             activeOpacity={0.8}
             onPress={() => setPreviewImageUri(uri)}
           >
-            <Image source={{ uri }} style={styles.photoThumb} />
+            <SyncedImage uri={uri} style={styles.photoThumb} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.photoThumbRemove}
@@ -555,8 +555,8 @@ export function WeightTrackingModal({ visible, onClose, openToLog }: WeightTrack
                                   setPreviewImageUri(photos[0]);
                                 }}
                               >
-                                <Image
-                                  source={{ uri: photos[0] }}
+                                <SyncedImage
+                                  uri={photos[0]}
                                   style={styles.historyThumbnail}
                                 />
                                 {photoCount > 1 && (
@@ -827,8 +827,8 @@ export function WeightTrackingModal({ visible, onClose, openToLog }: WeightTrack
               <View style={styles.previewCloseButton}>
                 <Ionicons name="close" size={22} color="#fff" />
               </View>
-              <Image
-                source={{ uri: previewImageUri }}
+              <SyncedImage
+                uri={previewImageUri}
                 style={styles.previewImage}
                 resizeMode="contain"
               />

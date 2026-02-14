@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { mmkv } from '@/lib/mmkv';
 import { useAppStore } from '@/store/app-store';
+import { photoSyncService } from '@/services/photoSyncService';
 import { Entry, FoodItem, SavedEntry, WeightEntry, Document, UserGoals, UnitSystem, ManualTargets } from '@/types';
 
 // ============================================================
@@ -594,6 +595,16 @@ class SyncService {
 
     if (changed) {
       useAppStore.setState({ weightEntries: localWeight });
+
+      // Pre-cache any storage-path photos from pulled entries (fire-and-forget)
+      const allPhotos: string[] = [];
+      for (const we of localWeight) {
+        const photos = we.photoUris ?? (we.photoUri ? [we.photoUri] : []);
+        allPhotos.push(...photos);
+      }
+      photoSyncService.ensureCached(allPhotos).catch(err =>
+        console.warn('[sync] Photo pre-cache failed:', err.message)
+      );
     }
   }
 

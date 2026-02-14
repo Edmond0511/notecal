@@ -1,4 +1,4 @@
-import { File, Directory, Paths } from 'expo-file-system';
+import FileSystem, { File, Directory, Paths } from 'expo-file-system';
 import { supabase } from '@/lib/supabase';
 import { mmkv } from '@/lib/mmkv';
 import { useAppStore } from '@/store/app-store';
@@ -24,6 +24,7 @@ const CACHE_MAP_KEY = 'photo-cache-map';
 const BUCKET = 'weight-photos';
 const CACHE_SUBDIR = 'weight-photos';
 const MAX_RETRIES = 3;
+let persistCounter = 0;
 
 // ============================================================
 // Helpers
@@ -61,6 +62,27 @@ function getCacheDir(): Directory {
 class PhotoSyncService {
   private userId: string | null = null;
   private flushing = false;
+
+  /**
+   * Copy a temporary photo (e.g. from expo-image-picker) to the persistent
+   * cache directory so it survives temp-dir cleanup. Returns the new URI.
+   */
+  persistLocalPhoto(tempUri: string): string {
+    try {
+      const cacheDir = getCacheDir();
+      if (!cacheDir.exists) cacheDir.create();
+
+      const ext = tempUri.includes('.') ? tempUri.substring(tempUri.lastIndexOf('.')) : '.jpg';
+      const fileName = `local_${Date.now()}_${persistCounter++}${ext}`;
+      const source = new File(tempUri);
+      const dest = new File(cacheDir, fileName);
+      source.copy(dest);
+      return dest.uri;
+    } catch (err: any) {
+      console.warn('[photoSync] Failed to persist photo, using original URI:', err.message);
+      return tempUri;
+    }
+  }
 
   isLocalUri(uri: string): boolean {
     return uri.startsWith('file://') || uri.startsWith('ph://') || uri.startsWith('/');
@@ -152,6 +174,12 @@ class PhotoSyncService {
           // Upload to Supabase Storage
           const storagePath = await this.uploadFile(item.localUri, item.entryId);
 
+          // Seed cache map so getLocalUri() returns the local file immediately
+          // (avoids re-downloading an image we already have on disk)
+          const cacheMap = loadCacheMap();
+          cacheMap[storagePath] = item.localUri;
+          saveCacheMap(cacheMap);
+
           // Replace localUri with storagePath in the store (match by URI, not index)
           this.replaceUriInEntry(item.entryId, item.localUri, storagePath);
 
@@ -220,23 +248,29 @@ class PhotoSyncService {
       cacheDir.create();
     }
 
-    // Download from Supabase Storage
-    const { data, error } = await supabase.storage
+    // Get a signed URL then download natively via FileSystem.downloadAsync.
+    // We avoid supabase.storage.download() and fetch().arrayBuffer() because
+    // JS-level binary handling (Blob/ArrayBuffer) is unreliable in React Native
+    // and often produces 0-byte or corrupted files.
+    const { data: urlData, error: urlError } = await supabase.storage
       .from(BUCKET)
-      .download(storagePath);
+      .createSignedUrl(storagePath, 300);
 
-    if (error || !data) {
-      throw new Error(`Failed to download photo: ${error?.message ?? 'no data'}`);
+    if (urlError || !urlData?.signedUrl) {
+      throw new Error(`Failed to get signed URL: ${urlError?.message ?? 'no URL'}`);
     }
 
-    // Write blob to cache directory
     const fileName = storagePath.replace(/\//g, '_');
     const destFile = new File(cacheDir, fileName);
 
-    // Convert blob to ArrayBuffer and write via File API
-    const arrayBuffer = await data.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    destFile.write(bytes);
+    const { status } = await FileSystem.downloadAsync(
+      urlData.signedUrl,
+      destFile.uri,
+    );
+
+    if (status !== 200) {
+      throw new Error(`Failed to download photo: HTTP ${status}`);
+    }
 
     const localPath = destFile.uri;
 

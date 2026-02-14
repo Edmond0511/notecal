@@ -38,6 +38,16 @@ export interface FoodItem {
     url: string;
   }[];
   reasoning?: NutritionReasoning;
+  barcode?: string;
+}
+
+export interface BarcodeProduct {
+  barcode: string;
+  name: string;
+  brand?: string;
+  servingSizeG?: number;
+  imageUrl?: string;
+  nutrimentsPer100g: Macros;
 }
 
 export interface Entry {
@@ -191,6 +201,7 @@ export interface AppState {
   saveEntry: (entry: Entry) => void;
   deleteSavedEntry: (id: string) => void;
   useSavedEntry: (savedEntry: SavedEntry) => Entry;
+  addBarcodeEntry: (product: BarcodeProduct, servingGrams: number) => Entry;
   createSavedEntry: (rawText: string) => Promise<{ success: boolean; error?: string }>;
   // Item editing actions
   updateEntryItemMacro: (entryId: string, itemId: string, macroKey: keyof Macros, value: number) => void;

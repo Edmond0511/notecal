@@ -1,4 +1,5 @@
 import { AddActionMenu } from "@/components/AddActionMenu";
+import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { Calendar } from "@/components/Calendar";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
 import { GoalsPopup } from "@/components/GoalsPopup";
@@ -10,7 +11,7 @@ import { WeightTrackingModal } from "@/components/WeightTrackingModal";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { useSwipeDateNavigation } from "@/hooks/useSwipeDateNavigation";
 import { useAppStore } from "@/store/app-store";
-import { SavedEntry } from "@/types";
+import { BarcodeProduct, SavedEntry } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -56,6 +57,7 @@ export default function HomeScreen() {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showSavedEntriesPopup, setShowSavedEntriesPopup] = useState(false);
   const [showWeightModal, setShowWeightModal] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [currentDocumentText, setCurrentDocumentText] = useState("");
 
   // Load document text for current date
@@ -174,6 +176,45 @@ export default function HomeScreen() {
     setShowAddMenu(false);
     setShowWeightModal(true);
   }, []);
+
+  const handleMenuScanBarcode = useCallback(() => {
+    setShowAddMenu(false);
+    setShowBarcodeScanner(true);
+  }, []);
+
+  const handleBarcodeProductAdd = useCallback(
+    (product: BarcodeProduct, servingGrams: number) => {
+      const storeAddBarcodeEntry = useAppStore.getState().addBarcodeEntry;
+      const newEntry = storeAddBarcodeEntry(product, servingGrams);
+
+      // Update document text
+      const newLine = newEntry.rawText;
+      const updatedText = currentDocumentText
+        ? `${currentDocumentText}\n${newLine}`
+        : newLine;
+      setCurrentDocumentText(updatedText);
+      saveDocument(currentDate, updatedText);
+
+      setShowBarcodeScanner(false);
+    },
+    [currentDocumentText, currentDate, saveDocument],
+  );
+
+  const handleBarcodeManualEntry = useCallback(
+    (text: string) => {
+      const rawText = `- ${text}`;
+      addEntry(rawText);
+
+      const updatedText = currentDocumentText
+        ? `${currentDocumentText}\n${rawText}`
+        : rawText;
+      setCurrentDocumentText(updatedText);
+      saveDocument(currentDate, updatedText);
+
+      setShowBarcodeScanner(false);
+    },
+    [currentDocumentText, currentDate, addEntry, saveDocument],
+  );
 
   // Track keyboard open/close for dual-rendering the totals bar.
   // Debounce the "show" transition to filter out brief keyboardWillShow
@@ -405,6 +446,7 @@ export default function HomeScreen() {
         visible={showAddMenu}
         onClose={() => setShowAddMenu(false)}
         onSavedEntriesPress={handleMenuSavedEntries}
+        onScanBarcodePress={handleMenuScanBarcode}
         onLogWeightPress={handleMenuLogWeight}
       />
 
@@ -413,6 +455,14 @@ export default function HomeScreen() {
         visible={showSavedEntriesPopup}
         onClose={() => setShowSavedEntriesPopup(false)}
         onSelectEntry={handleSelectSavedEntry}
+      />
+
+      {/* Barcode Scanner Modal */}
+      <BarcodeScannerModal
+        visible={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+        onAddProduct={handleBarcodeProductAdd}
+        onAddManualEntry={handleBarcodeManualEntry}
       />
 
       {/* Weight Tracking Modal */}

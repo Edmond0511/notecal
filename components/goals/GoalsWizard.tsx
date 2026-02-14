@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
 import {
+  Dimensions,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -24,10 +25,18 @@ import {
   View,
 } from 'react-native';
 import {
+  Gesture,
+  GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
 import Animated, {
+  Extrapolation,
   FadeInDown,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Step1Metrics } from './WizardSteps/Step1Metrics';
@@ -36,6 +45,9 @@ import { Step3Goal } from './WizardSteps/Step3Goal';
 import { Step4Macros } from './WizardSteps/Step4Macros';
 import { StepWeightTarget } from './WizardSteps/StepWeightTarget';
 import { Step5Review } from './WizardSteps/Step5Review';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const DISMISS_THRESHOLD = 150;
 
 interface GoalsWizardProps {
   visible: boolean;
@@ -85,6 +97,8 @@ const initialFormData: WizardFormData = {
 
 export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProps) {
   const insets = useSafeAreaInsets();
+  const translateY = useSharedValue(0);
+  const isScrolledToTop = useSharedValue(true);
   const setGoals = useAppStore((state) => state.setGoals);
   const preferredUnits = useAppStore((state) => state.preferredUnits);
   const setPreferredUnits = useAppStore((state) => state.setPreferredUnits);
@@ -95,6 +109,8 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
   // Initialize form with existing goals or defaults
   useEffect(() => {
     if (visible) {
+      translateY.value = 0;
+      isScrolledToTop.value = true;
       if (existingGoals) {
         const isImperial = preferredUnits === 'imperial';
         // Backward compatibility: map removed goal types
@@ -293,6 +309,48 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
     return calculateGoals(input);
   };
 
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      if (isScrolledToTop.value && event.translationY > 0) {
+        translateY.value = event.translationY;
+      }
+    })
+    .onEnd((event) => {
+      if (event.translationY > DISMISS_THRESHOLD) {
+        translateY.value = withSpring(SCREEN_HEIGHT, {
+          damping: 20,
+          stiffness: 200,
+        });
+        runOnJS(handleClose)();
+      } else {
+        translateY.value = withSpring(0, {
+          damping: 20,
+          stiffness: 400,
+        });
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateY.value,
+      [0, SCREEN_HEIGHT * 0.5],
+      [1, 0],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
+  const handleScrollBeginDrag = (event: any) => {
+    isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
+  };
+
+  const handleScroll = (event: any) => {
+    isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
+  };
+
   const renderStep = () => {
     const content = getStepContent(currentStep);
     switch (content) {
@@ -355,26 +413,28 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
     >
       <GestureHandlerRootView style={styles.gestureRoot}>
         <StatusBar barStyle="dark-content" />
+        <Animated.View style={[styles.backdrop, backdropStyle]}>
+          <TouchableOpacity
+            style={styles.backdropPressable}
+            onPress={handleClose}
+            activeOpacity={1}
+          />
+        </Animated.View>
 
-        {/* Modal Content */}
-        <View
-          style={[
-            styles.modalContainer,
-            { paddingBottom: insets.bottom + 16 },
-          ]}
-        >
-          {/* Safe area spacer */}
-          <View style={{ height: insets.top, backgroundColor: '#f8f8f8' }} />
+        <GestureDetector gesture={panGesture}>
+          <Animated.View
+            style={[
+              styles.modalContainer,
+              { marginTop: insets.top },
+              animatedStyle,
+            ]}
+          >
+            <View style={styles.dragIndicatorContainer}>
+              <View style={styles.dragIndicator} />
+            </View>
 
-          {/* Header */}
+            {/* Header */}
             <View style={styles.header}>
-              <TouchableOpacity
-                style={styles.headerBackButton}
-                onPress={handleClose}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="chevron-back" size={20} color="#666" />
-              </TouchableOpacity>
               <View style={styles.headerContent}>
                 <Text style={styles.headerTitle}>
                   {existingGoals ? 'Edit Goals' : 'Set Up Goals'}
@@ -383,7 +443,6 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
                   Step {currentStep} of {totalSteps}
                 </Text>
               </View>
-              <View style={styles.headerRightSpacer} />
             </View>
 
             {/* Progress indicator */}
@@ -412,6 +471,9 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="interactive"
                 bounces={true}
+                onScrollBeginDrag={handleScrollBeginDrag}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
               >
                 <Animated.View entering={FadeInDown.delay(100).duration(400)}>
                   {renderStep()}
@@ -420,7 +482,12 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
             </KeyboardAvoidingView>
 
             {/* Navigation buttons */}
-            <View style={styles.navigationContainer}>
+            <View
+              style={[
+                styles.navigationContainer,
+                { paddingBottom: insets.bottom + 16 },
+              ]}
+            >
               {currentStep > 1 ? (
                 <TouchableOpacity
                   style={styles.backButton}
@@ -465,7 +532,8 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
                 </TouchableOpacity>
               )}
             </View>
-        </View>
+          </Animated.View>
+        </GestureDetector>
       </GestureHandlerRootView>
     </Modal>
   );
@@ -474,36 +542,46 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
 const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  backdropPressable: {
+    flex: 1,
   },
   modalContainer: {
     flex: 1,
     backgroundColor: '#f8f8f8',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  dragIndicatorContainer: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 8,
+    backgroundColor: '#f8f8f8',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  dragIndicator: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#ddd',
   },
   header: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
     backgroundColor: '#f8f8f8',
-  },
-  headerBackButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#EBEBEB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerRightSpacer: {
-    width: 36,
   },
   headerContent: {
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 17,
-    fontFamily: 'System',
+    fontSize: 18,
     fontWeight: '600',
     color: '#1a1a1a',
     textAlign: 'center',
@@ -548,6 +626,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 16,
+    backgroundColor: '#f8f8f8',
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },

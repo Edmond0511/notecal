@@ -13,6 +13,7 @@ interface AddActionMenuProps {
   visible: boolean;
   onClose: () => void;
   onSavedEntriesPress: () => void;
+  onScanBarcodePress: () => void;
   onLogWeightPress: () => void;
 }
 
@@ -20,6 +21,7 @@ export function AddActionMenu({
   visible,
   onClose,
   onSavedEntriesPress,
+  onScanBarcodePress,
   onLogWeightPress,
 }: AddActionMenuProps) {
   return (
@@ -44,35 +46,51 @@ export function AddActionMenu({
           <Animated.View
             entering={FadeInDown.duration(200)}
             exiting={FadeOutDown.duration(150)}
-            style={styles.menuContainer}
+            style={styles.menuWrapper}
           >
-            <TouchableOpacity
-              style={styles.menuItem}
-              activeOpacity={0.7}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onSavedEntriesPress();
-              }}
-            >
-              <View style={styles.iconCircle}>
-                <Ionicons name="bookmark-outline" size={20} color="#1A6872" />
-              </View>
-              <Text style={styles.menuLabel}>Saved Entries</Text>
-            </TouchableOpacity>
+            <View style={styles.menuRow}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.7}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onScanBarcodePress();
+                }}
+              >
+                <View style={styles.iconCircle}>
+                  <Ionicons name="barcode-outline" size={20} color="#1A6872" />
+                </View>
+                <Text style={styles.menuLabel}>Scan Barcode</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.menuItem}
-              activeOpacity={0.7}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onLogWeightPress();
-              }}
-            >
-              <View style={styles.iconCircle}>
-                <Ionicons name="scale-outline" size={20} color="#1A6872" />
-              </View>
-              <Text style={styles.menuLabel}>Log Weight</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.7}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onSavedEntriesPress();
+                }}
+              >
+                <View style={styles.iconCircle}>
+                  <Ionicons name="bookmark-outline" size={20} color="#1A6872" />
+                </View>
+                <Text style={styles.menuLabel}>Saved Entries</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.7}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onLogWeightPress();
+                }}
+              >
+                <View style={styles.iconCircle}>
+                  <Ionicons name="scale-outline" size={20} color="#1A6872" />
+                </View>
+                <Text style={styles.menuLabel}>Log Weight</Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         </>
       )}
@@ -96,10 +114,13 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
-  menuContainer: {
-    flexDirection: "row",
+  menuWrapper: {
     marginBottom: 110,
     marginHorizontal: 20,
+    alignSelf: "stretch",
+  },
+  menuRow: {
+    flexDirection: "row",
     gap: 12,
   },
   menuItem: {

@@ -6,11 +6,8 @@ import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, {
   Circle,
-  Defs,
   Line,
-  LinearGradient,
   Path,
-  Stop,
   Text as SvgText,
 } from "react-native-svg";
 import Animated, {
@@ -137,12 +134,6 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
       ? `M${points[0].x},${points[0].y}L${points[0].x},${points[0].y}`
       : catmullRomToBezier(points, 0.3);
 
-  // Build gradient fill path (area under the curve)
-  const areaPath =
-    linePath +
-    `L${points[points.length - 1].x},${PADDING_TOP + chartHeight}` +
-    `L${points[0].x},${PADDING_TOP + chartHeight}Z`;
-
   // Target weight line
   const targetY = targetDisplay
     ? PADDING_TOP +
@@ -180,14 +171,6 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
     <Animated.View entering={FadeIn.duration(400)}>
       {/* Chart */}
       <Svg width={width} height={CHART_HEIGHT}>
-        <Defs>
-          <LinearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#1A6872" stopOpacity="0.25" />
-            <Stop offset="50%" stopColor="#1A6872" stopOpacity="0.08" />
-            <Stop offset="100%" stopColor="#1A6872" stopOpacity="0.01" />
-          </LinearGradient>
-        </Defs>
-
         {/* Y-axis grid lines */}
         {yTicks.map((tick, i) => {
           const y =
@@ -241,9 +224,6 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
             </SvgText>
           </>
         )}
-
-        {/* Area fill */}
-        <Path d={areaPath} fill="url(#weightGradient)" />
 
         {/* Weight line */}
         <Path

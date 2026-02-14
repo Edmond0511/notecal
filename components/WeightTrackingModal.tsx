@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { photoSyncService } from "@/services/photoSyncService";
 import { SyncedImage } from "./SyncedImage";
 import {
   Gesture,
@@ -253,7 +254,8 @@ export function WeightTrackingModal({ visible, onClose, openToLog }: WeightTrack
       quality: 0.7,
     });
     if (!result.canceled && result.assets[0]) {
-      onPick(result.assets[0].uri);
+      const persisted = photoSyncService.persistLocalPhoto(result.assets[0].uri);
+      onPick(persisted);
     }
   }, []);
 
@@ -270,7 +272,8 @@ export function WeightTrackingModal({ visible, onClose, openToLog }: WeightTrack
       quality: 0.7,
     });
     if (!result.canceled && result.assets[0]) {
-      onPick(result.assets[0].uri);
+      const persisted = photoSyncService.persistLocalPhoto(result.assets[0].uri);
+      onPick(persisted);
     }
   }, []);
 

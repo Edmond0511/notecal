@@ -31,6 +31,7 @@ import {
 import {
   Gesture,
   GestureDetector,
+  GestureHandlerRootView,
   TouchableOpacity as GHTouchableOpacity,
 } from "react-native-gesture-handler";
 import Animated, {
@@ -1206,7 +1207,7 @@ export function NutritionReasoningPopup({
       transparent
       onRequestClose={onClose}
     >
-      <View style={styles.gestureRoot}>
+      <GestureHandlerRootView style={styles.gestureRoot}>
         <StatusBar barStyle="dark-content" />
         {/* Backdrop */}
         <Animated.View style={[styles.backdrop, backdropStyle]}>
@@ -1739,7 +1740,7 @@ export function NutritionReasoningPopup({
             onClose={() => setEditQuantityPopup(null)}
           />
         )}
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }

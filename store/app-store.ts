@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStateStorage } from '@/lib/mmkv';
-import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets, SavedEntry, Macros, WeightEntry } from '@/types';
+import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct } from '@/types';
 import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
+import { barcodeProductToFoodItem } from '@/services/barcodeService';
 import { nutritionQueue } from '@/services/nutritionQueue';
 import { photoSyncService } from '@/services/photoSyncService';
 import { supabase } from '@/lib/supabase';
@@ -506,6 +507,34 @@ export const useAppStore = create<AppState>()(
             }
           : se
       ),
+    }));
+
+    return newEntry;
+  },
+
+  addBarcodeEntry: (product: BarcodeProduct, servingGrams: number): Entry => {
+    const entryId = Date.now().toString();
+    const currentDate = get().currentDate;
+
+    const item = barcodeProductToFoodItem(product, entryId, servingGrams);
+    const label = product.brand
+      ? `${product.name} (${product.brand})`
+      : product.name;
+    const rawText = `- ${label}, ${servingGrams}g`;
+
+    const newEntry: Entry = {
+      id: entryId,
+      date: currentDate,
+      rawText,
+      inlineKcal: item.macros.kcal,
+      status: 'ok',
+      items: [item],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    set((state) => ({
+      entries: [...state.entries, newEntry],
     }));
 
     return newEntry;

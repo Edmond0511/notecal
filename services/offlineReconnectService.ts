@@ -1,7 +1,6 @@
 import NetInfo, { NetInfoSubscription } from '@react-native-community/netinfo';
 import { AppState, NativeEventSubscription } from 'react-native';
 import { useAppStore } from '@/store/app-store';
-import { syncService } from '@/services/syncService';
 import { photoSyncService } from '@/services/photoSyncService';
 
 const DEBOUNCE_MS = 2000;
@@ -68,7 +67,6 @@ class OfflineReconnectService {
       console.log('[reconnect] Connectivity detected — draining pending entries');
       useAppStore.getState().enqueuePendingEntries();
       photoSyncService.flushUploadQueue();
-      syncService.fullSync();
     }, DEBOUNCE_MS);
   }
 

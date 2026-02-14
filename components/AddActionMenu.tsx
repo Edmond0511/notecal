@@ -26,90 +26,77 @@ export function AddActionMenu({
   onLogWeightPress,
   onSnapFoodPress,
 }: AddActionMenuProps) {
+  if (!visible) return null;
+
   return (
-    <View
-      style={styles.overlay}
-      pointerEvents={visible ? "auto" : "none"}
-    >
-      {visible && (
-        <>
-          <Animated.View
-            entering={FadeIn.duration(200)}
-            exiting={FadeOut.duration(200)}
-            style={styles.backdrop}
+    <View style={styles.overlay}>
+      <Animated.View
+        entering={FadeIn.duration(200)}
+        exiting={FadeOut.duration(200)}
+        style={styles.backdrop}
+      >
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+      </Animated.View>
+
+      <Animated.View
+        entering={FadeInDown.duration(200)}
+        exiting={FadeOutDown.duration(150)}
+        style={styles.menuWrapper}
+      >
+        <View style={styles.menuRow}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onScanBarcodePress();
+            }}
           >
-            <TouchableOpacity
-              style={StyleSheet.absoluteFill}
-              activeOpacity={1}
-              onPress={onClose}
-            />
-          </Animated.View>
+            <Ionicons name="barcode-outline" size={26} color="#222" />
+            <Text style={styles.menuLabel}>Scan Barcode</Text>
+          </TouchableOpacity>
 
-          <Animated.View
-            entering={FadeInDown.duration(200)}
-            exiting={FadeOutDown.duration(150)}
-            style={styles.menuWrapper}
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onSavedEntriesPress();
+            }}
           >
-            <View style={styles.menuRow}>
-              <TouchableOpacity
-                style={styles.menuItem}
-                activeOpacity={0.7}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  onScanBarcodePress();
-                }}
-              >
-                <View style={styles.iconCircle}>
-                  <Ionicons name="barcode-outline" size={20} color="#1A6872" />
-                </View>
-                <Text style={styles.menuLabel}>Scan Barcode</Text>
-              </TouchableOpacity>
+            <Ionicons name="bookmark-outline" size={26} color="#222" />
+            <Text style={styles.menuLabel}>Saved Entries</Text>
+          </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.menuItem}
-                activeOpacity={0.7}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  onSavedEntriesPress();
-                }}
-              >
-                <View style={styles.iconCircle}>
-                  <Ionicons name="bookmark-outline" size={20} color="#1A6872" />
-                </View>
-                <Text style={styles.menuLabel}>Saved Entries</Text>
-              </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onLogWeightPress();
+            }}
+          >
+            <Ionicons name="scale-outline" size={26} color="#222" />
+            <Text style={styles.menuLabel}>Log Weight</Text>
+          </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.menuItem}
-                activeOpacity={0.7}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  onLogWeightPress();
-                }}
-              >
-                <View style={styles.iconCircle}>
-                  <Ionicons name="scale-outline" size={20} color="#1A6872" />
-                </View>
-                <Text style={styles.menuLabel}>Log Weight</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.menuItem}
-                activeOpacity={0.7}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  onSnapFoodPress();
-                }}
-              >
-                <View style={styles.iconCircle}>
-                  <Ionicons name="camera-outline" size={20} color="#1A6872" />
-                </View>
-                <Text style={styles.menuLabel}>Snap Food</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </>
-      )}
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onSnapFoodPress();
+            }}
+          >
+            <Ionicons name="camera-outline" size={26} color="#222" />
+            <Text style={styles.menuLabel}>Snap Food</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
     </View>
   );
 }
@@ -137,12 +124,15 @@ const styles = StyleSheet.create({
   },
   menuRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   menuItem: {
-    flex: 1,
+    width: "47%",
+    flexGrow: 1,
     alignItems: "center",
-    paddingVertical: 14,
+    gap: 6,
+    paddingVertical: 25,
     paddingHorizontal: 8,
     borderRadius: 16,
     backgroundColor: "#fff",
@@ -151,15 +141,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
     shadowRadius: 4,
     elevation: 1,
-  },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#E0F2F1",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
   },
   menuLabel: {
     fontSize: 13,

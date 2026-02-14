@@ -250,7 +250,9 @@ export default function HomeScreen() {
   useEffect(() => {
     let showTimer: ReturnType<typeof setTimeout> | null = null;
     const willShowSub = Keyboard.addListener("keyboardWillShow", () => {
+      if (showTimer) clearTimeout(showTimer);
       showTimer = setTimeout(() => {
+        showTimer = null;
         showAccessoryBarRef.current = true;
         setShowAccessoryBar(true);
       }, 80);
@@ -263,9 +265,22 @@ export default function HomeScreen() {
       showAccessoryBarRef.current = false;
       setShowAccessoryBar(false);
     });
+    // Safety net: keyboardDidHide fires after keyboard is fully gone.
+    // Catches cases where keyboardWillHide is missed (e.g. Modal transitions).
+    const didHideSub = Keyboard.addListener("keyboardDidHide", () => {
+      if (showTimer) {
+        clearTimeout(showTimer);
+        showTimer = null;
+      }
+      if (showAccessoryBarRef.current) {
+        showAccessoryBarRef.current = false;
+        setShowAccessoryBar(false);
+      }
+    });
     return () => {
       willShowSub.remove();
       willHideSub.remove();
+      didHideSub.remove();
       if (showTimer) clearTimeout(showTimer);
     };
   }, []);
@@ -571,6 +586,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingBottom: 50,
     backgroundColor: "transparent",
+    zIndex: 10,
   },
   inputAccessoryWrapper: {
     paddingTop: 0,

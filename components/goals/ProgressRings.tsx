@@ -502,6 +502,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2},
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 1,
   },
   calorieIconContainer: {
     position: "absolute",
@@ -586,6 +591,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2},
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 1,
   },
   macroIconContainer: {
     position: "absolute",

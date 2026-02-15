@@ -12,8 +12,6 @@ import {
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
-  FadeIn,
-  FadeInDown,
   interpolate,
   runOnJS,
   useAnimatedStyle,
@@ -255,7 +253,6 @@ export function Calendar({
         {/* Calendar Sheet */}
         <GestureDetector gesture={panGesture}>
         <Animated.View
-          entering={FadeIn.duration(200)}
           style={[styles.sheet, { paddingBottom: insets.bottom + 16 }, sheetAnimatedStyle]}
         >
           {/* Minimal handle line */}
@@ -264,10 +261,7 @@ export function Calendar({
           </View>
 
           {/* Header - Month Year with text-based navigation */}
-          <Animated.View
-            entering={FadeInDown.delay(50).duration(400)}
-            style={styles.header}
-          >
+          <View style={styles.header}>
             <TouchableOpacity
               onPress={() => navigateMonth("prev")}
               style={styles.navButton}
@@ -289,25 +283,19 @@ export function Calendar({
             >
               <Text style={styles.navText}>→</Text>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
 
           {/* Weekday Headers - ultra light */}
-          <Animated.View
-            entering={FadeInDown.delay(100).duration(400)}
-            style={styles.weekdayRow}
-          >
+          <View style={styles.weekdayRow}>
             {WEEKDAYS.map((day, index) => (
               <View key={index} style={styles.weekdayCell}>
                 <Text style={styles.weekdayText}>{day}</Text>
               </View>
             ))}
-          </Animated.View>
+          </View>
 
           {/* Calendar Grid */}
-          <Animated.View
-            entering={FadeInDown.delay(150).duration(400)}
-            style={styles.calendarGrid}
-          >
+          <View style={styles.calendarGrid}>
             {calendarDays.map((item, index) => {
               const dateStr = formatDate(item.date);
               const isSelected = isSameDay(dateStr, selectedDate);
@@ -354,7 +342,7 @@ export function Calendar({
                 </TouchableOpacity>
               );
             })}
-          </Animated.View>
+          </View>
 
         </Animated.View>
         </GestureDetector>

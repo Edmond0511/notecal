@@ -53,29 +53,29 @@ const COLORS = {
   },
   // Other nutrients
   fiber: {
-    primary: "#8B6914",
-    secondary: "#FDF6E3",
-    track: "#F0E4C8",
+    primary: "#C4B097",
+    secondary: "#F8F4EF",
+    track: "#EDE6DC",
   },
   sugar: {
-    primary: "#C45BAA",
-    secondary: "#FCE4F6",
-    track: "#F5C4E8",
+    primary: "#D4899E",
+    secondary: "#FDF0F4",
+    track: "#F8DDE5",
   },
   sodium: {
-    primary: "#5B8CC4",
-    secondary: "#E8F1FA",
-    track: "#C8DCF0",
+    primary: "#8BACC8",
+    secondary: "#F0F5FA",
+    track: "#DCE8F2",
   },
   potassium: {
-    primary: "#6B8E5B",
-    secondary: "#EDF5EB",
-    track: "#D4E6CF",
+    primary: "#9BB893",
+    secondary: "#F2F7F0",
+    track: "#DEE9DB",
   },
   water: {
-    primary: "#7EB3E0",
-    secondary: "#EAF3FB",
-    track: "#C8E0F5",
+    primary: "#A3CCE8",
+    secondary: "#F0F7FC",
+    track: "#D8EAF5",
   },
 };
 
@@ -356,9 +356,9 @@ const NutrientBar = React.memo(function NutrientBar({ label, current, target, co
       <View style={styles.nutrientBarHeader}>
         <Text style={styles.nutrientBarLabel}>{label}</Text>
         <Text style={[styles.nutrientBarValue, isOver && styles.nutrientBarValueOver]}>
-          {truncateNumber(current, 5)}<Text style={styles.nutrientBarUnit}>{unit}</Text>
+          <Text style={styles.nutrientBarConsumed}>{truncateNumber(current, 5)}<Text style={styles.nutrientBarUnit}>{unit}</Text></Text>
           <Text style={styles.nutrientBarDivider}> / </Text>
-          {truncateNumber(target, 5)}<Text style={styles.nutrientBarUnit}>{unit}</Text>
+          <Text style={styles.nutrientBarTotal}>{truncateNumber(target, 5)}<Text style={styles.nutrientBarUnit}>{unit}</Text></Text>
         </Text>
       </View>
       <View style={styles.nutrientBarTrack}>
@@ -535,9 +535,10 @@ const styles = StyleSheet.create({
   },
   calorieUnit: {
     fontSize: 12,
-    color: "#999",
+    color: COLORS.calories.primary,
     fontWeight: "500",
     marginTop: -2,
+    opacity: 0.7,
   },
   calorieInfo: {
     flex: 1,
@@ -675,13 +676,20 @@ const styles = StyleSheet.create({
   nutrientBarValueOver: {
     color: "#EF5350",
   },
-  nutrientBarUnit: {
-    fontSize: 11,
+  nutrientBarConsumed: {
+    fontWeight: "500",
+    color: "#333",
+  },
+  nutrientBarTotal: {
     fontWeight: "500",
     color: "#888",
   },
+  nutrientBarUnit: {
+    fontSize: 11,
+    fontWeight: "500",
+  },
   nutrientBarDivider: {
-    color: "#ccc",
+    color: "#aaa",
   },
   nutrientBarTrack: {
     height: 6,

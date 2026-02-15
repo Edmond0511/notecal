@@ -68,24 +68,24 @@ const MACRO_COLORS = {
 
 const MICRO_COLORS = {
   fiber: {
-    primary: "#8B6914",
-    secondary: "#FDF6E3",
+    primary: "#C4B097",
+    secondary: "#F8F4EF",
   },
   sugar: {
-    primary: "#C45BAA",
-    secondary: "#FCE4F6",
+    primary: "#D4899E",
+    secondary: "#FDF0F4",
   },
   sodium: {
-    primary: "#5B8CC4",
-    secondary: "#E8F1FA",
+    primary: "#8BACC8",
+    secondary: "#F0F5FA",
   },
   potassium: {
-    primary: "#6B8E5B",
-    secondary: "#EDF5EB",
+    primary: "#9BB893",
+    secondary: "#F2F7F0",
   },
   water: {
-    primary: "#7EB3E0",
-    secondary: "#EAF3FB",
+    primary: "#A3CCE8",
+    secondary: "#F0F7FC",
   },
 };
 

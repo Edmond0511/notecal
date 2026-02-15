@@ -1,3 +1,4 @@
+import { AnimatedDigits } from "@/components/AnimatedDigits";
 import {
   BarcodeLookupError,
   BarcodeNotFoundError,
@@ -20,6 +21,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Keyboard,
+  LayoutAnimation,
   Modal,
   StatusBar,
   StyleSheet,
@@ -46,7 +48,10 @@ try {
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const VIEWFINDER_SIZE = SCREEN_WIDTH * 0.7;
+const VIEWFINDER_WIDTH = SCREEN_WIDTH * 0.78;
+const VIEWFINDER_HEIGHT = SCREEN_WIDTH * 0.44;
+
+const TEAL = "#1A6872";
 
 const MACRO_COLORS = {
   calories: { primary: "#FF6B35" },
@@ -106,12 +111,20 @@ export function BarcodeScannerModal({
     }
   }, [visible]);
 
-  // Track keyboard height for not_found state
+  // Track keyboard height for bottom card positioning
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardWillShow", (e) => {
+      LayoutAnimation.configureNext({
+        duration: e.duration,
+        update: { type: LayoutAnimation.Types.keyboard },
+      });
       setKeyboardHeight(e.endCoordinates.height);
     });
-    const hideSub = Keyboard.addListener("keyboardWillHide", () => {
+    const hideSub = Keyboard.addListener("keyboardWillHide", (e) => {
+      LayoutAnimation.configureNext({
+        duration: e.duration,
+        update: { type: LayoutAnimation.Types.keyboard },
+      });
       setKeyboardHeight(0);
     });
     return () => {
@@ -177,12 +190,22 @@ export function BarcodeScannerModal({
     onClose();
   }, [onClose]);
 
+  const handleServingStep = useCallback(
+    (delta: number) => {
+      const current = parseFloat(servingGrams) || 100;
+      const next = Math.max(1, current + delta);
+      setServingGrams(next.toString());
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    },
+    [servingGrams]
+  );
+
   // Compute scaled macros for preview
   const previewMacros: Macros | null =
     state.type === "found"
       ? scaleMacrosToServing(
           state.product.nutrimentsPer100g,
-          parseFloat(servingGrams) || 100,
+          parseFloat(servingGrams) || 100
         )
       : null;
 
@@ -208,7 +231,7 @@ export function BarcodeScannerModal({
           >
             <View style={styles.permissionContent}>
               <View style={styles.permissionIconCircle}>
-                <Ionicons name="build-outline" size={48} color="#1A6872" />
+                <Ionicons name="build-outline" size={48} color={TEAL} />
               </View>
               <Text style={styles.permissionTitle}>Rebuild Required</Text>
               <Text style={styles.permissionDescription}>
@@ -232,7 +255,7 @@ export function BarcodeScannerModal({
           >
             <View style={styles.permissionContent}>
               <View style={styles.permissionIconCircle}>
-                <Ionicons name="camera-outline" size={48} color="#1A6872" />
+                <Ionicons name="camera-outline" size={48} color={TEAL} />
               </View>
               <Text style={styles.permissionTitle}>Camera Access</Text>
               <Text style={styles.permissionDescription}>
@@ -291,7 +314,7 @@ export function BarcodeScannerModal({
               onPress={handleClose}
               activeOpacity={0.7}
             >
-              <Ionicons name="close" size={24} color="#fff" />
+              <Ionicons name="chevron-down" size={26} color="#fff" />
             </TouchableOpacity>
 
             {/* Scanning hint */}
@@ -300,7 +323,16 @@ export function BarcodeScannerModal({
                 entering={FadeIn.duration(300)}
                 style={styles.hintContainer}
               >
-                <Text style={styles.hintText}>Point camera at a barcode</Text>
+                <View style={styles.hintPill}>
+                  <Ionicons
+                    name="barcode-outline"
+                    size={18}
+                    color="rgba(255,255,255,0.8)"
+                  />
+                  <Text style={styles.hintText}>
+                    Point camera at a barcode
+                  </Text>
+                </View>
               </Animated.View>
             )}
 
@@ -311,7 +343,7 @@ export function BarcodeScannerModal({
                 style={styles.bottomCard}
               >
                 <View style={styles.loadingContent}>
-                  <ActivityIndicator size="small" color="#1A6872" />
+                  <ActivityIndicator size="small" color={TEAL} />
                   <Text style={styles.loadingText}>Looking up product...</Text>
                 </View>
               </Animated.View>
@@ -323,85 +355,116 @@ export function BarcodeScannerModal({
                 entering={FadeInDown.duration(300)}
                 style={[
                   styles.bottomCard,
-                  { paddingBottom: insets.bottom + 16 },
+                  { paddingBottom: keyboardHeight || insets.bottom + 16 },
                 ]}
               >
                 {/* Product info */}
                 <View style={styles.productHeader}>
-                  <View style={styles.productInfo}>
-                    <Text style={styles.productName} numberOfLines={2}>
-                      {state.product.name}
+                  {state.product.brand && (
+                    <Text style={styles.productBrand}>
+                      {state.product.brand}
                     </Text>
-                    {state.product.brand && (
-                      <Text style={styles.productBrand}>
-                        {state.product.brand}
-                      </Text>
-                    )}
+                  )}
+                  <Text style={styles.productName} numberOfLines={2}>
+                    {state.product.name}
+                  </Text>
+                </View>
+
+                {/* Serving stepper */}
+                <View style={styles.servingCard}>
+                  <Text style={styles.servingLabel}>Serving</Text>
+                  <View style={styles.stepperContainer}>
+                    <TouchableOpacity
+                      style={styles.stepperButton}
+                      onPress={() => handleServingStep(-10)}
+                      activeOpacity={0.6}
+                    >
+                      <Ionicons name="remove" size={18} color="#666" />
+                    </TouchableOpacity>
+                    <View style={styles.servingInputWrapper}>
+                      <TextInput
+                        style={styles.servingInput}
+                        value={servingGrams}
+                        onChangeText={setServingGrams}
+                        keyboardType="numeric"
+                        selectTextOnFocus
+                        returnKeyType="done"
+                      />
+                      <Text style={styles.servingUnit}>g</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.stepperButton}
+                      onPress={() => handleServingStep(10)}
+                      activeOpacity={0.6}
+                    >
+                      <Ionicons name="add" size={18} color="#666" />
+                    </TouchableOpacity>
                   </View>
                 </View>
 
-                {/* Serving size input */}
-                <View style={styles.servingRow}>
-                  <Text style={styles.servingLabel}>Serving size</Text>
-                  <View style={styles.servingInputWrapper}>
-                    <TextInput
-                      style={styles.servingInput}
-                      value={servingGrams}
-                      onChangeText={setServingGrams}
-                      keyboardType="numeric"
-                      selectTextOnFocus
-                      returnKeyType="done"
-                    />
-                    <Text style={styles.servingUnit}>g</Text>
-                  </View>
-                </View>
-
-                {/* Macros preview */}
+                {/* Macro pills */}
                 <View style={styles.macrosPreview}>
-                  <View style={styles.macroPreviewItem}>
-                    <FontAwesomeIcon
-                      icon={MACRO_ICONS.calories}
-                      size={12}
-                      color={MACRO_COLORS.calories.primary}
-                    />
-                    <Text style={styles.macroPreviewValue}>
-                      {Math.round(previewMacros.kcal)}
-                    </Text>
-                    <Text style={styles.macroPreviewLabel}>kcal</Text>
-                  </View>
-                  <View style={styles.macroPreviewItem}>
-                    <FontAwesomeIcon
-                      icon={MACRO_ICONS.protein}
-                      size={12}
-                      color={MACRO_COLORS.protein.primary}
-                    />
-                    <Text style={styles.macroPreviewValue}>
-                      {Math.round(previewMacros.protein)}g
-                    </Text>
-                    <Text style={styles.macroPreviewLabel}>protein</Text>
-                  </View>
-                  <View style={styles.macroPreviewItem}>
-                    <FontAwesomeIcon
-                      icon={MACRO_ICONS.fat}
-                      size={12}
-                      color={MACRO_COLORS.fat.primary}
-                    />
-                    <Text style={styles.macroPreviewValue}>
-                      {Math.round(previewMacros.fat)}g
-                    </Text>
-                    <Text style={styles.macroPreviewLabel}>fat</Text>
-                  </View>
-                  <View style={styles.macroPreviewItem}>
-                    <FontAwesomeIcon
-                      icon={MACRO_ICONS.carbs}
-                      size={12}
-                      color={MACRO_COLORS.carbs.primary}
-                    />
-                    <Text style={styles.macroPreviewValue}>
-                      {Math.round(previewMacros.carbs)}g
-                    </Text>
-                    <Text style={styles.macroPreviewLabel}>carbs</Text>
-                  </View>
+                  {(
+                    [
+                      {
+                        key: "calories" as const,
+                        value: previewMacros.kcal,
+                        suffix: undefined as string | undefined,
+                        label: "KCAL",
+                      },
+                      {
+                        key: "protein" as const,
+                        value: previewMacros.protein,
+                        suffix: "g" as string | undefined,
+                        label: "PROTEIN",
+                      },
+                      {
+                        key: "fat" as const,
+                        value: previewMacros.fat,
+                        suffix: "g" as string | undefined,
+                        label: "FAT",
+                      },
+                      {
+                        key: "carbs" as const,
+                        value: previewMacros.carbs,
+                        suffix: "g" as string | undefined,
+                        label: "CARBS",
+                      },
+                    ]
+                  ).map((macro, i) => (
+                    <Animated.View
+                      key={macro.key}
+                      entering={FadeInDown.delay(i * 80).duration(300)}
+                      style={[
+                        styles.macroPill,
+                        {
+                          backgroundColor: `${MACRO_COLORS[macro.key].primary}18`,
+                        },
+                      ]}
+                    >
+                      <FontAwesomeIcon
+                        icon={MACRO_ICONS[macro.key]}
+                        size={11}
+                        color={MACRO_COLORS[macro.key].primary}
+                      />
+                      <View style={styles.macroPillValueRow}>
+                        <AnimatedDigits
+                          value={macro.value}
+                          style={{
+                            fontSize: 17,
+                            fontWeight: "700",
+                            color: "#333",
+                          }}
+                        />
+                        {macro.suffix && (
+                          <Text style={styles.macroPillSuffix}>
+                            {macro.suffix}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={styles.macroPillLabel}>{macro.label}</Text>
+                    </Animated.View>
+                  ))}
                 </View>
 
                 {/* Action buttons */}
@@ -432,7 +495,7 @@ export function BarcodeScannerModal({
                 entering={FadeInDown.duration(300)}
                 style={[
                   styles.bottomCard,
-                  { paddingBottom: keyboardHeight + insets.bottom + 16 },
+                  { paddingBottom: keyboardHeight || insets.bottom + 16 },
                 ]}
               >
                 <View style={styles.notFoundHeader}>
@@ -558,7 +621,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   permissionButton: {
-    backgroundColor: "#1A6872",
+    backgroundColor: TEAL,
     paddingVertical: 14,
     paddingHorizontal: 36,
     borderRadius: 14,
@@ -582,20 +645,20 @@ const styles = StyleSheet.create({
   },
   // Overlay
   overlayTop: {
-    flex: 1,
+    flex: 0.3,
     backgroundColor: "rgba(0,0,0,0.55)",
   },
   overlayMiddleRow: {
     flexDirection: "row",
-    height: VIEWFINDER_SIZE,
+    height: VIEWFINDER_HEIGHT,
   },
   overlaySide: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",
   },
   viewfinder: {
-    width: VIEWFINDER_SIZE,
-    height: VIEWFINDER_SIZE,
+    width: VIEWFINDER_WIDTH,
+    height: VIEWFINDER_HEIGHT,
   },
   overlayBottom: {
     flex: 1,
@@ -603,75 +666,79 @@ const styles = StyleSheet.create({
   },
   corner: {
     position: "absolute",
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
     borderColor: "#fff",
   },
   cornerTL: {
     top: 0,
     left: 0,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-    borderTopLeftRadius: 8,
+    borderTopWidth: 3.5,
+    borderLeftWidth: 3.5,
+    borderTopLeftRadius: 10,
   },
   cornerTR: {
     top: 0,
     right: 0,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-    borderTopRightRadius: 8,
+    borderTopWidth: 3.5,
+    borderRightWidth: 3.5,
+    borderTopRightRadius: 10,
   },
   cornerBL: {
     bottom: 0,
     left: 0,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-    borderBottomLeftRadius: 8,
+    borderBottomWidth: 3.5,
+    borderLeftWidth: 3.5,
+    borderBottomLeftRadius: 10,
   },
   cornerBR: {
     bottom: 0,
     right: 0,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-    borderBottomRightRadius: 8,
+    borderBottomWidth: 3.5,
+    borderRightWidth: 3.5,
+    borderBottomRightRadius: 10,
   },
   // Close button
   closeButton: {
     position: "absolute",
     left: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
-  // Hint
+  // Hint pill
   hintContainer: {
     position: "absolute",
-    bottom: 140,
+    bottom: 300,
     left: 0,
     right: 0,
     alignItems: "center",
   },
+  hintPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 24,
+  },
   hintText: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: "System",
     fontWeight: "500",
     color: "#fff",
-    backgroundColor: "rgba(0,0,0,0.5)",
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    overflow: "hidden",
   },
-  // Bottom card (shared)
+  // Bottom card
   bottomCard: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#fff",
+    backgroundColor: "#f8f8f8",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
@@ -692,12 +759,15 @@ const styles = StyleSheet.create({
   },
   // Found state
   productHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 16,
-  },
-  productInfo: {
-    flex: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   productName: {
     fontSize: 19,
@@ -708,73 +778,98 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   productBrand: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "System",
-    fontWeight: "400",
-    color: "#888",
-    marginTop: 2,
+    fontWeight: "500",
+    color: "#999",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
-  servingRow: {
+  servingCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 14,
     marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   servingLabel: {
     fontSize: 15,
     fontFamily: "System",
-    fontWeight: "400",
+    fontWeight: "500",
     color: "#666",
   },
-  servingInputWrapper: {
+  stepperContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#f4f4f4",
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    overflow: "hidden",
+  },
+  stepperButton: {
+    width: 36,
+    height: 36,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  servingInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 4,
   },
   servingInput: {
     fontSize: 17,
     fontFamily: "System",
     fontWeight: "600",
-    color: "#1a1a1a",
-    minWidth: 50,
+    color: "#333",
+    minWidth: 44,
     textAlign: "right",
     padding: 0,
   },
   servingUnit: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "System",
     fontWeight: "400",
     color: "#888",
-    marginLeft: 4,
+    marginLeft: 3,
   },
   macrosPreview: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "#f9f9f9",
-    borderRadius: 14,
-    padding: 14,
+    gap: 8,
     marginBottom: 16,
   },
-  macroPreviewItem: {
+  macroPill: {
+    flex: 1,
     alignItems: "center",
-    gap: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderRadius: 14,
+    gap: 5,
   },
-  macroPreviewValue: {
-    fontSize: 16,
-    fontFamily: "System",
-    fontWeight: "700",
-    color: "#1a1a1a",
+  macroPillValueRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
   },
-  macroPreviewLabel: {
-    fontSize: 11,
+  macroPillSuffix: {
+    fontSize: 12,
     fontFamily: "System",
     fontWeight: "500",
-    color: "#999",
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
+    color: "#888",
+    marginLeft: 1,
+  },
+  macroPillLabel: {
+    fontSize: 9,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#888",
+    letterSpacing: 0.5,
   },
   actionRow: {
     flexDirection: "row",
@@ -788,7 +883,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#e5e5e5",
   },
   scanAgainText: {
     fontSize: 15,
@@ -804,20 +899,20 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: "#1A6872",
+    backgroundColor: TEAL,
   },
   addButtonText: {
     fontSize: 17,
     fontFamily: "System",
-    fontWeight: "400",
+    fontWeight: "600",
     color: "#fff",
   },
-  // Not found state
+  // Not found / error states
   notFoundHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   notFoundTitle: {
     fontSize: 18,
@@ -830,8 +925,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "System",
     fontWeight: "400",
-    color: "#888",
-    lineHeight: 20,
+    color: "#666",
+    lineHeight: 22,
     marginBottom: 16,
   },
   manualInputRow: {
@@ -845,8 +940,10 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     fontWeight: "400",
     color: "#1a1a1a",
-    backgroundColor: "#f4f4f4",
-    borderRadius: 12,
+    backgroundColor: "#ffffff",
+    borderWidth: 1.5,
+    borderColor: "#e5e5e5",
+    borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
@@ -854,12 +951,12 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: "#1A6872",
+    backgroundColor: TEAL,
     justifyContent: "center",
     alignItems: "center",
   },
   manualSubmitDisabled: {
-    backgroundColor: "#e8e8e8",
+    backgroundColor: "#9CA3AF",
   },
   scanAgainButtonAlt: {
     flexDirection: "row",

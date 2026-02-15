@@ -1,5 +1,6 @@
-import { supabase } from "@/lib/supabase";
 import { mmkv } from "@/lib/mmkv";
+import { supabase } from "@/lib/supabase";
+import { useAppStore } from "@/store/app-store";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
@@ -28,11 +29,10 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAppStore } from "@/store/app-store";
 import { AuthModal } from "./AuthModal";
+import { CalendarLegendModal } from "./CalendarLegendModal";
 import { GoalsWizard } from "./goals/GoalsWizard";
 import { NutritionGoalsModal } from "./NutritionGoalsModal";
-import { CalendarLegendModal } from "./CalendarLegendModal";
 import { WeightTrackingModal } from "./WeightTrackingModal";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -42,12 +42,16 @@ function formatSyncTime(isoString: string): string {
   const date = new Date(isoString);
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
-  const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const time = date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
   if (isToday) return time;
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
-  if (date.toDateString() === yesterday.toDateString()) return `yesterday at ${time}`;
-  return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${time}`;
+  if (date.toDateString() === yesterday.toDateString())
+    return `yesterday at ${time}`;
+  return `${date.toLocaleDateString([], { month: "short", day: "numeric" })} at ${time}`;
 }
 
 interface SettingsModalProps {
@@ -245,31 +249,35 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                   ) : user ? (
                     /* Signed In State */
                     <>
-                    <View style={styles.accountCard}>
-                      <View style={styles.accountInfo}>
-                        <View style={styles.avatarContainer}>
-                          <Text style={styles.avatarText}>
-                            {user.email.charAt(0).toUpperCase()}
-                          </Text>
-                        </View>
-                        <View style={styles.accountDetails}>
-                          <Text style={styles.accountEmail} numberOfLines={1}>
-                            {user.email}
-                          </Text>
-                          <Text style={styles.accountProvider}>
-                            Signed in with {user.provider}
-                          </Text>
+                      <View style={styles.accountCard}>
+                        <View style={styles.accountInfo}>
+                          <View style={styles.avatarContainer}>
+                            <Text style={styles.avatarText}>
+                              {user.email.charAt(0).toUpperCase()}
+                            </Text>
+                          </View>
+                          <View style={styles.accountDetails}>
+                            <Text style={styles.accountEmail} numberOfLines={1}>
+                              {user.email}
+                            </Text>
+                            <Text style={styles.accountProvider}>
+                              Signed in with {user.provider}
+                            </Text>
+                          </View>
                         </View>
                       </View>
-                    </View>
-                    {lastSynced && (
-                      <View style={styles.syncStatus}>
-                        <Ionicons name="cloud-done-outline" size={14} color="#999" />
-                        <Text style={styles.syncStatusText}>
-                          Last synced {formatSyncTime(lastSynced)}
-                        </Text>
-                      </View>
-                    )}
+                      {lastSynced && (
+                        <View style={styles.syncStatus}>
+                          <Ionicons
+                            name="cloud-done-outline"
+                            size={14}
+                            color="#999"
+                          />
+                          <Text style={styles.syncStatusText}>
+                            Last synced {formatSyncTime(lastSynced)}
+                          </Text>
+                        </View>
+                      )}
                     </>
                   ) : (
                     /* Signed Out State */
@@ -317,12 +325,12 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                     >
                       <Ionicons
                         name="nutrition-outline"
-                        size={18}
+                        size={20}
                         color="#333"
                         style={{ marginRight: 12 }}
                       />
                       <Text style={styles.menuItemText}>Nutrition Targets</Text>
-                      <Ionicons name="chevron-forward" size={18} color="#ccc" />
+                      <Ionicons name="chevron-forward" size={20} color="#ccc" />
                     </TouchableOpacity>
 
                     <View style={styles.menuDivider} />
@@ -337,12 +345,12 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                     >
                       <Ionicons
                         name="flag-outline"
-                        size={18}
+                        size={20}
                         color="#333"
                         style={{ marginRight: 12 }}
                       />
                       <Text style={styles.menuItemText}>Goals Setup</Text>
-                      <Ionicons name="chevron-forward" size={18} color="#ccc" />
+                      <Ionicons name="chevron-forward" size={20} color="#ccc" />
                     </TouchableOpacity>
 
                     <View style={styles.menuDivider} />
@@ -357,12 +365,12 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                     >
                       <Ionicons
                         name="scale-outline"
-                        size={18}
+                        size={20}
                         color="#333"
                         style={{ marginRight: 12 }}
                       />
                       <Text style={styles.menuItemText}>Weight Tracking</Text>
-                      <Ionicons name="chevron-forward" size={18} color="#ccc" />
+                      <Ionicons name="chevron-forward" size={20} color="#ccc" />
                     </TouchableOpacity>
 
                     <View style={styles.menuDivider} />
@@ -377,12 +385,12 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                     >
                       <Ionicons
                         name="calendar-outline"
-                        size={18}
+                        size={20}
                         color="#333"
                         style={{ marginRight: 12 }}
                       />
                       <Text style={styles.menuItemText}>Calendar Legend</Text>
-                      <Ionicons name="chevron-forward" size={18} color="#ccc" />
+                      <Ionicons name="chevron-forward" size={20} color="#ccc" />
                     </TouchableOpacity>
                   </View>
                 </Animated.View>
@@ -398,12 +406,12 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                     <View style={styles.menuItem}>
                       <Ionicons
                         name="information-circle-outline"
-                        size={18}
+                        size={20}
                         color="#333"
                         style={{ marginRight: 12 }}
                       />
                       <Text style={styles.menuItemText}>Version</Text>
-                      <Text style={styles.menuItemValue}>1.0.0</Text>
+                      <Text style={styles.menuItemValue}>2.0.0</Text>
                     </View>
                   </View>
                 </Animated.View>
@@ -536,6 +544,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
     color: "#999",
+    textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 8,
     marginLeft: 4,
@@ -660,7 +669,7 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#f0f0f0",
     marginLeft: 20,
-    marginRight: 20
+    marginRight: 20,
   },
   syncStatus: {
     flexDirection: "row",

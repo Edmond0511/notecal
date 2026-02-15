@@ -350,7 +350,7 @@ export function Calendar({
                       {item.date.getDate()}
                     </Text>
                   </View>
-                  {dotColor && <View style={[dotStyles.dot, { backgroundColor: DOT_COLORS[dotColor] }]} />}
+                  <View style={[dotStyles.dot, dotColor ? { backgroundColor: DOT_COLORS[dotColor] } : { backgroundColor: 'transparent' }]} />
                 </TouchableOpacity>
               );
             })}

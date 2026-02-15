@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { Dimensions, StyleSheet, Text, View } from "react-native";
 import { truncateNumber } from "@/utils/formatNumber";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
@@ -14,13 +14,14 @@ import Animated, {
   FadeIn,
   interpolate,
   Layout,
-  runOnJS,
+  useAnimatedProps,
   useAnimatedStyle,
-  useDerivedValue,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
 import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -96,7 +97,7 @@ interface CircularProgressProps {
   animationDelay?: number;
 }
 
-function CircularProgress({
+const CircularProgress = React.memo(function CircularProgress({
   current,
   target,
   size,
@@ -107,11 +108,9 @@ function CircularProgress({
   animationDelay = 0,
 }: CircularProgressProps) {
   const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-  const [animatedPercentage, setAnimatedPercentage] = useState(0);
 
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference * (1 - animatedPercentage / 100);
 
   const progress = useSharedValue(0);
 
@@ -122,9 +121,9 @@ function CircularProgress({
     });
   }, [percentage]);
 
-  useDerivedValue(() => {
-    runOnJS(setAnimatedPercentage)(progress.value);
-  });
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: circumference * (1 - progress.value / 100),
+  }));
 
   return (
     <Svg
@@ -148,7 +147,7 @@ function CircularProgress({
         fill="transparent"
       />
       {/* Progress circle */}
-      <Circle
+      <AnimatedCircle
         cx={size / 2}
         cy={size / 2}
         r={radius}
@@ -156,19 +155,19 @@ function CircularProgress({
         strokeWidth={strokeWidth}
         fill="transparent"
         strokeDasharray={`${circumference} ${circumference}`}
-        strokeDashoffset={strokeDashoffset}
         strokeLinecap="round"
+        animatedProps={animatedProps}
       />
     </Svg>
   );
-}
+});
 
 interface CalorieRingProps {
   current: number;
   target: number;
 }
 
-function CalorieRing({ current, target }: CalorieRingProps) {
+const CalorieRing = React.memo(function CalorieRing({ current, target }: CalorieRingProps) {
   const remaining = Math.max(target - current, 0);
   const isOver = current > target;
 
@@ -229,7 +228,7 @@ function CalorieRing({ current, target }: CalorieRingProps) {
       </View>
     </Animated.View>
   );
-}
+});
 
 interface MacroCardProps {
   label: string;
@@ -241,7 +240,7 @@ interface MacroCardProps {
   icon: IconProp;
 }
 
-function MacroCard({ label, current, target, color, delay, unit = "g", icon }: MacroCardProps) {
+const MacroCard = React.memo(function MacroCard({ label, current, target, color, delay, unit = "g", icon }: MacroCardProps) {
   const isOver = current > target;
 
   const fadeIn = useSharedValue(0);
@@ -303,7 +302,7 @@ function MacroCard({ label, current, target, color, delay, unit = "g", icon }: M
       </View>
     </Animated.View>
   );
-}
+});
 
 // Compact nutrient bar for other nutrients
 interface NutrientBarProps {
@@ -315,21 +314,32 @@ interface NutrientBarProps {
   delay: number;
 }
 
-function NutrientBar({ label, current, target, color, unit, delay }: NutrientBarProps) {
+const NutrientBar = React.memo(function NutrientBar({ label, current, target, color, unit, delay }: NutrientBarProps) {
   const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0;
   const isOver = current > target;
 
   const fadeIn = useSharedValue(0);
   const barWidth = useSharedValue(0);
+  const hasAnimated = useRef(false);
 
   useEffect(() => {
-    setTimeout(() => {
-      fadeIn.value = withTiming(1, { duration: 400 });
+    if (!hasAnimated.current) {
+      // First mount: use delay for staggered entrance
+      hasAnimated.current = true;
+      setTimeout(() => {
+        fadeIn.value = withTiming(1, { duration: 400 });
+        barWidth.value = withTiming(percentage, {
+          duration: 800,
+          easing: Easing.out(Easing.cubic),
+        });
+      }, delay);
+    } else {
+      // Subsequent updates: animate immediately without delay
       barWidth.value = withTiming(percentage, {
         duration: 800,
         easing: Easing.out(Easing.cubic),
       });
-    }, delay);
+    }
   }, [percentage]);
 
   const containerStyle = useAnimatedStyle(() => ({
@@ -362,7 +372,7 @@ function NutrientBar({ label, current, target, color, unit, delay }: NutrientBar
       </View>
     </Animated.View>
   );
-}
+});
 
 interface OtherNutrients {
   fiber?: number;
@@ -397,7 +407,7 @@ interface ProgressRingsProps {
   };
 }
 
-export function ProgressRings({ consumed, targets }: ProgressRingsProps) {
+export const ProgressRings = React.memo(function ProgressRings({ consumed, targets }: ProgressRingsProps) {
   // Determine which other nutrients are enabled (have targets)
   const otherNutrients: Array<{
     key: keyof OtherNutrients;
@@ -479,7 +489,7 @@ export function ProgressRings({ consumed, targets }: ProgressRingsProps) {
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

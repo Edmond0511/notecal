@@ -32,6 +32,7 @@ import {
 } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Defs, Mask, Rect } from "react-native-svg";
 
 // Lazy-load expo-camera to avoid crashing before native rebuild
 let CameraView: any = null;
@@ -47,9 +48,11 @@ try {
   cameraAvailable = false;
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } =
+  Dimensions.get("window");
 const VIEWFINDER_WIDTH = SCREEN_WIDTH * 0.78;
 const VIEWFINDER_HEIGHT = SCREEN_WIDTH * 0.44;
+const VIEWFINDER_RADIUS = 20;
 
 const TEAL = "#1A6872";
 
@@ -291,21 +294,46 @@ export function BarcodeScannerModal({
               }
             />
 
-            {/* Dark overlay with viewfinder cutout */}
+            {/* Dark overlay with rounded viewfinder cutout */}
             <View style={StyleSheet.absoluteFill} pointerEvents="none">
-              <View style={styles.overlayTop} />
-              <View style={styles.overlayMiddleRow}>
-                <View style={styles.overlaySide} />
-                <View style={styles.viewfinder}>
-                  {/* Corner decorations */}
-                  <View style={[styles.corner, styles.cornerTL]} />
-                  <View style={[styles.corner, styles.cornerTR]} />
-                  <View style={[styles.corner, styles.cornerBL]} />
-                  <View style={[styles.corner, styles.cornerBR]} />
-                </View>
-                <View style={styles.overlaySide} />
+              <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT}>
+                <Defs>
+                  <Mask id="hole">
+                    <Rect
+                      width={SCREEN_WIDTH}
+                      height={SCREEN_HEIGHT}
+                      fill="white"
+                    />
+                    <Rect
+                      x={(SCREEN_WIDTH - VIEWFINDER_WIDTH) / 2}
+                      y={SCREEN_HEIGHT * 0.23}
+                      width={VIEWFINDER_WIDTH}
+                      height={VIEWFINDER_HEIGHT}
+                      rx={VIEWFINDER_RADIUS}
+                      ry={VIEWFINDER_RADIUS}
+                      fill="black"
+                    />
+                  </Mask>
+                </Defs>
+                <Rect
+                  width={SCREEN_WIDTH}
+                  height={SCREEN_HEIGHT}
+                  fill="rgba(0,0,0,0.55)"
+                  mask="url(#hole)"
+                />
+              </Svg>
+              {/* Corner decorations */}
+              <View
+                style={[
+                  styles.viewfinderFrame,
+                  { top: SCREEN_HEIGHT * 0.23 },
+                ]}
+              >
+                <View style={[styles.corner, styles.cornerTL]} />
+                <View style={[styles.corner, styles.cornerTR]} />
+                <View style={[styles.corner, styles.cornerBL]} />
+                <View style={[styles.corner, styles.cornerBR]} />
               </View>
-              <View style={styles.overlayBottom} />
             </View>
 
             {/* Close button */}
@@ -643,26 +671,12 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: "#666",
   },
-  // Overlay
-  overlayTop: {
-    flex: 0.3,
-    backgroundColor: "rgba(0,0,0,0.55)",
-  },
-  overlayMiddleRow: {
-    flexDirection: "row",
-    height: VIEWFINDER_HEIGHT,
-  },
-  overlaySide: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
-  },
-  viewfinder: {
+  // Viewfinder frame (positioned over the SVG cutout)
+  viewfinderFrame: {
+    position: "absolute",
+    left: (SCREEN_WIDTH - VIEWFINDER_WIDTH) / 2,
     width: VIEWFINDER_WIDTH,
     height: VIEWFINDER_HEIGHT,
-  },
-  overlayBottom: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
   },
   corner: {
     position: "absolute",
@@ -675,28 +689,28 @@ const styles = StyleSheet.create({
     left: 0,
     borderTopWidth: 3.5,
     borderLeftWidth: 3.5,
-    borderTopLeftRadius: 10,
+    borderTopLeftRadius: VIEWFINDER_RADIUS,
   },
   cornerTR: {
     top: 0,
     right: 0,
     borderTopWidth: 3.5,
     borderRightWidth: 3.5,
-    borderTopRightRadius: 10,
+    borderTopRightRadius: VIEWFINDER_RADIUS,
   },
   cornerBL: {
     bottom: 0,
     left: 0,
     borderBottomWidth: 3.5,
     borderLeftWidth: 3.5,
-    borderBottomLeftRadius: 10,
+    borderBottomLeftRadius: VIEWFINDER_RADIUS,
   },
   cornerBR: {
     bottom: 0,
     right: 0,
     borderBottomWidth: 3.5,
     borderRightWidth: 3.5,
-    borderBottomRightRadius: 10,
+    borderBottomRightRadius: VIEWFINDER_RADIUS,
   },
   // Close button
   closeButton: {

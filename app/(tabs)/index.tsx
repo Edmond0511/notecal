@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   },
   inputAccessoryWrapper: {
     paddingTop: 0,
-    paddingBottom: 12,
+    paddingBottom: 16,
     backgroundColor: "transparent",
   },
 });

@@ -281,7 +281,7 @@ function ConfidencePopup({
     getDefaultExplanation();
 
   return (
-    <View style={styles.confidencePopupOverlay}>
+    <Animated.View entering={FadeIn.duration(200)} style={styles.confidencePopupOverlay}>
       <TouchableOpacity
         style={styles.confidencePopupBackdrop}
         activeOpacity={1}
@@ -317,7 +317,7 @@ function ConfidencePopup({
         {/* Explanation Paragraph */}
         <ParsedText text={displayText} style={styles.popupExplanation} />
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -1260,7 +1260,7 @@ export function NutritionReasoningPopup({
                 <View style={styles.metadataRow}>
                   {displayEntry.createdAt && (
                     <View style={styles.entryTimeBadge}>
-                      <Ionicons name="time-outline" size={13} color="#8B7355" />
+                      <Ionicons name="time-outline" size={13} color="#777" />
                       <Text style={styles.entryTimeText}>
                         {new Date(displayEntry.createdAt).toLocaleTimeString(
                           "en-US",
@@ -1336,8 +1336,8 @@ export function NutritionReasoningPopup({
                           </Text>
                           <Ionicons
                             name="pencil"
-                            size={10}
-                            color="#6B7280"
+                            size={12}
+                            color="#999"
                             style={{ marginLeft: 3 }}
                           />
                         </TouchableOpacity>
@@ -1570,29 +1570,6 @@ export function NutritionReasoningPopup({
                     </TouchableOpacity>
                   )}
 
-                  {/* Something Off Button */}
-                  <TouchableOpacity
-                    style={styles.somethingOffButton}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setSomethingOffItem({
-                        id: item.id,
-                        label: item.label,
-                        macros: item.macros,
-                      });
-                    }}
-                    activeOpacity={0.6}
-                  >
-                    <Ionicons
-                      name="alert-circle-outline"
-                      size={14}
-                      color="#888"
-                    />
-                    <Text style={styles.somethingOffButtonText}>
-                      Something Off?
-                    </Text>
-                  </TouchableOpacity>
-
                   {/* Reasoning Section */}
                   {item.reasoning && (
                     <View style={styles.reasoningSection}>
@@ -1672,6 +1649,29 @@ export function NutritionReasoningPopup({
                       )}
                     </View>
                   )}
+
+                  {/* Something Off Button - at the bottom of card */}
+                  <TouchableOpacity
+                    style={styles.somethingOffButton}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setSomethingOffItem({
+                        id: item.id,
+                        label: item.label,
+                        macros: item.macros,
+                      });
+                    }}
+                    activeOpacity={0.6}
+                  >
+                    <Ionicons
+                      name="alert-circle-outline"
+                      size={14}
+                      color="#888"
+                    />
+                    <Text style={styles.somethingOffButtonText}>
+                      Something Off?
+                    </Text>
+                  </TouchableOpacity>
                 </Animated.View>
               ))}
 
@@ -1771,10 +1771,12 @@ function MacroItem({
         <View style={styles.macroIconContainer}>
           <FontAwesomeIcon icon={icon} size={12} color={colors.primary} />
         </View>
-        <Text style={styles.macroValue}>
-          {Math.round(value)}
-          {unit}
-        </Text>
+        <View style={styles.macroValueEditable}>
+          <Text style={styles.macroValue}>
+            {Math.round(value)}
+            {unit}
+          </Text>
+        </View>
         <Text style={styles.macroLabel}>{label}</Text>
       </GHTouchableOpacity>
     </View>
@@ -1811,10 +1813,12 @@ function MicroItem({
         <View style={styles.macroIconContainer}>
           <FontAwesomeIcon icon={icon} size={12} color={colors.primary} />
         </View>
-        <Text style={styles.macroValue}>
-          {displayValue}
-          {unit}
-        </Text>
+        <View style={styles.macroValueEditable}>
+          <Text style={styles.macroValue}>
+            {displayValue}
+            {unit}
+          </Text>
+        </View>
         <Text style={styles.macroLabel}>{label}</Text>
       </GHTouchableOpacity>
     </View>
@@ -1890,7 +1894,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#F5F0EB",
+    backgroundColor: "#F0F0F0",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 14,
@@ -1899,7 +1903,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "System",
     fontWeight: "500",
-    color: "#8B7355",
+    color: "#777",
   },
   saveButton: {
     flexDirection: "row",
@@ -1944,7 +1948,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 1,
   },
@@ -2033,6 +2037,11 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     fontWeight: "700",
     color: "#333",
+  },
+  macroValueEditable: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+    borderStyle: "dashed",
     marginBottom: 2,
   },
   macroLabel: {
@@ -2099,7 +2108,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 1,
   },
@@ -2353,7 +2362,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 10,
-    marginBottom: 8,
+    marginTop: 4,
   },
   somethingOffButtonText: {
     fontSize: 13,

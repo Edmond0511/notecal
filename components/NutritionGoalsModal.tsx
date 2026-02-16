@@ -187,7 +187,6 @@ export function NutritionGoalsModal({
 
   const scrollViewRef = React.useRef<any>(null);
   const scrollY = React.useRef(0);
-  const waterTipHeight = React.useRef(154); // fallback estimate; refined by onLayout
 
   // Refs for each input field
   const kcalInputRef = React.useRef<TextInput>(null);
@@ -439,7 +438,6 @@ export function NutritionGoalsModal({
     nutrient: "fiber" | "sugar" | "sodium" | "potassium" | "water",
   ) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const currentlyEnabled = isNutrientEnabled(nutrient);
     switch (nutrient) {
       case "fiber":
         setFiberEnabled(!fiberEnabled);
@@ -456,19 +454,6 @@ export function NutritionGoalsModal({
       case "water":
         setWaterEnabled(!waterEnabled);
         break;
-    }
-    // When enabling, compensate scroll offset for content added above the toggles
-    if (!currentlyEnabled) {
-      // 52px for the new target row; water also adds a tooltip above the toggles
-      const offset = nutrient === 'water'
-        ? 52 + waterTipHeight.current + 12  // +12 for tooltip marginBottom
-        : 52;
-      requestAnimationFrame(() => {
-        scrollViewRef.current?.scrollTo({
-          y: scrollY.current + offset,
-          animated: false,
-        });
-      });
     }
   };
 
@@ -628,7 +613,7 @@ export function NutritionGoalsModal({
             </View>
 
             <View style={styles.header}>
-              <Text style={styles.title}>Nutrition Goals</Text>
+              <Text style={styles.title}>Nutrition Targets</Text>
             </View>
 
             <KeyboardAvoidingView
@@ -649,79 +634,45 @@ export function NutritionGoalsModal({
                 bounces={true}
                 keyboardShouldPersistTaps="handled"
               >
-                {/* Daily Targets Section */}
+                {/* Other Nutrients Section */}
                 <Animated.View
                   entering={FadeInDown.delay(100).duration(400)}
                   layout={Layout.springify()}
                   style={styles.section}
                 >
                   <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Daily Targets</Text>
-
-                    {/* Reset to calculated values - inline with section title */}
-                    {goals && hasAnyModifications() && (
-                      <Animated.View
-                        entering={FadeIn.duration(200)}
-                        exiting={FadeOut.duration(150)}
-                      >
-                        <TouchableOpacity
-                          style={styles.resetButton}
-                          onPress={resetAllToCalculated}
-                          activeOpacity={0.7}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                          <Ionicons name="refresh" size={13} color="#1A6872" />
-                          <Text style={styles.resetButtonText}>Reset</Text>
-                        </TouchableOpacity>
-                      </Animated.View>
-                    )}
+                    <Text style={styles.sectionTitle}>Other Nutrients</Text>
                   </View>
 
-                  <Animated.View
-                    style={styles.goalsCard}
-                    layout={Layout.springify()}
-                  >
-                    {renderTargetRow("kcal", "Calories", "kcal", false, MACRO_CONFIG.kcal.icon, MACRO_CONFIG.kcal.color)}
-                    {renderTargetRow("protein", "Protein", "g", false, MACRO_CONFIG.protein.icon, MACRO_CONFIG.protein.color)}
-                    {renderTargetRow("fat", "Fat", "g", false, MACRO_CONFIG.fat.icon, MACRO_CONFIG.fat.color)}
-                    {renderTargetRow(
-                      "carbs",
-                      "Carbs",
-                      "g",
-                      enabledOtherNutrients.length === 0,
-                      MACRO_CONFIG.carbs.icon,
-                      MACRO_CONFIG.carbs.color,
-                    )}
+                  <View style={styles.toggleCardShadow}>
+                    <View style={styles.toggleCard}>
+                      {OTHER_NUTRIENTS.map((nutrient, index) => {
+                        const enabled = isNutrientEnabled(nutrient.key);
+                        return (
+                          <View
+                            key={nutrient.key}
+                            style={[
+                              styles.toggleRow,
+                              index === OTHER_NUTRIENTS.length - 1 &&
+                                styles.toggleRowLast,
+                            ]}
+                          >
+                            <View style={styles.toggleLabelContainer}>
 
-                    {/* Enabled other nutrients appear here */}
-                    {enabledOtherNutrients.map((nutrient, index) => (
-                      <Animated.View
-                        key={nutrient.key}
-                        entering={FadeIn.duration(200)}
-                        exiting={FadeOut.duration(150)}
-                        layout={Layout.springify()}
-                      >
-                        {renderTargetRow(
-                          nutrient.key,
-                          nutrient.label,
-                          nutrient.unit,
-                          index === enabledOtherNutrients.length - 1,
-                          nutrient.icon,
-                          nutrient.color,
-                        )}
-                      </Animated.View>
-                    ))}
-                  </Animated.View>
-                </Animated.View>
+                              <Text style={styles.toggleLabel}>
+                                {nutrient.label}
+                              </Text>
 
-                {/* Other Nutrients Section */}
-                <Animated.View
-                  entering={FadeInDown.delay(200).duration(400)}
-                  layout={Layout.springify()}
-                  style={styles.section}
-                >
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Other Nutrients</Text>
+                            </View>
+                            <Switch
+                              value={enabled}
+                              onValueChange={() => toggleNutrient(nutrient.key)}
+                              trackColor={{ true: "#007AFF" }}
+                            />
+                          </View>
+                        );
+                      })}
+                    </View>
                   </View>
 
                   {/* Water tracking tooltip */}
@@ -730,9 +681,6 @@ export function NutritionGoalsModal({
                       entering={FadeIn.duration(200)}
                       exiting={FadeOut.duration(200)}
                       style={styles.waterTip}
-                      onLayout={(e) => {
-                        waterTipHeight.current = e.nativeEvent.layout.height;
-                      }}
                     >
                       <Text style={styles.waterTipTitle}>Track Water Intake</Text>
                       <Text style={styles.waterTipText}>
@@ -765,35 +713,73 @@ export function NutritionGoalsModal({
                       </View>
                     </Animated.View>
                   )}
+                </Animated.View>
 
-                  <View style={styles.toggleCard}>
-                    {OTHER_NUTRIENTS.map((nutrient, index) => {
-                      const enabled = isNutrientEnabled(nutrient.key);
-                      return (
-                        <View
-                          key={nutrient.key}
-                          style={[
-                            styles.toggleRow,
-                            index === OTHER_NUTRIENTS.length - 1 &&
-                              styles.toggleRowLast,
-                          ]}
+                {/* Daily Targets Section */}
+                <Animated.View
+                  entering={FadeInDown.delay(200).duration(400)}
+                  layout={Layout.springify()}
+                  style={styles.section}
+                >
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Daily Targets</Text>
+
+                    {/* Reset to calculated values - inline with section title */}
+                    {goals && hasAnyModifications() && (
+                      <Animated.View
+                        entering={FadeIn.duration(200)}
+                        exiting={FadeOut.duration(150)}
+                      >
+                        <TouchableOpacity
+                          style={styles.resetButton}
+                          onPress={resetAllToCalculated}
+                          activeOpacity={0.7}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <View style={styles.toggleLabelContainer}>
-                    
-                            <Text style={styles.toggleLabel}>
-                              {nutrient.label}
-                            </Text>
-                  
-                          </View>
-                          <Switch
-                            value={enabled}
-                            onValueChange={() => toggleNutrient(nutrient.key)}
-                            trackColor={{ true: "#007AFF" }}
-                          />
-                        </View>
-                      );
-                    })}
+                          <Ionicons name="refresh" size={13} color="#1A6872" />
+                          <Text style={styles.resetButtonText}>Reset</Text>
+                        </TouchableOpacity>
+                      </Animated.View>
+                    )}
                   </View>
+
+                  <Animated.View
+                    style={styles.goalsCardShadow}
+                    layout={Layout.springify()}
+                  >
+                    <View style={styles.goalsCard}>
+                      {renderTargetRow("kcal", "Calories", "kcal", false, MACRO_CONFIG.kcal.icon, MACRO_CONFIG.kcal.color)}
+                      {renderTargetRow("protein", "Protein", "g", false, MACRO_CONFIG.protein.icon, MACRO_CONFIG.protein.color)}
+                      {renderTargetRow("fat", "Fat", "g", false, MACRO_CONFIG.fat.icon, MACRO_CONFIG.fat.color)}
+                      {renderTargetRow(
+                        "carbs",
+                        "Carbs",
+                        "g",
+                        enabledOtherNutrients.length === 0,
+                        MACRO_CONFIG.carbs.icon,
+                        MACRO_CONFIG.carbs.color,
+                      )}
+
+                      {/* Enabled other nutrients appear here */}
+                      {enabledOtherNutrients.map((nutrient, index) => (
+                        <Animated.View
+                          key={nutrient.key}
+                          entering={FadeIn.duration(200)}
+                          exiting={FadeOut.duration(150)}
+                          layout={Layout.springify()}
+                        >
+                          {renderTargetRow(
+                            nutrient.key,
+                            nutrient.label,
+                            nutrient.unit,
+                            index === enabledOtherNutrients.length - 1,
+                            nutrient.icon,
+                            nutrient.color,
+                          )}
+                        </Animated.View>
+                      ))}
+                    </View>
+                  </Animated.View>
                 </Animated.View>
               </Animated.ScrollView>
             </KeyboardAvoidingView>
@@ -911,16 +897,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginLeft: 4,
   },
+  goalsCardShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
   goalsCard: {
     backgroundColor: "#ffffff",
     borderRadius: 16,
     paddingVertical: 4,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
   },
   targetRow: {
     flexDirection: "row",
@@ -987,6 +975,13 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#333",
   },
+  toggleCardShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
   toggleCard: {
     backgroundColor: "#ffffff",
     borderRadius: 16,
@@ -1045,7 +1040,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 12,
-    marginBottom: 12,
+    marginTop: 12,
     borderWidth: 1,
     borderColor: "rgba(126, 179, 224, 0.2)",
   },

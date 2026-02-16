@@ -314,84 +314,86 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                 >
                   <Text style={styles.sectionTitle}>App</Text>
 
-                  <View style={styles.menuCard}>
-                    <TouchableOpacity
-                      style={styles.menuItem}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setShowNutritionGoals(true);
-                      }}
-                    >
-                      <Ionicons
-                        name="nutrition-outline"
-                        size={20}
-                        color="#333"
-                        style={{ marginRight: 12 }}
-                      />
-                      <Text style={styles.menuItemText}>Nutrition Targets</Text>
-                      <Ionicons name="chevron-forward" size={20} color="#ccc" />
-                    </TouchableOpacity>
+                  <View style={styles.menuCardShadow}>
+                    <View style={styles.menuCard}>
+                      <TouchableOpacity
+                        style={styles.menuItem}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setShowNutritionGoals(true);
+                        }}
+                      >
+                        <Ionicons
+                          name="nutrition-outline"
+                          size={20}
+                          color="#333"
+                          style={{ marginRight: 12 }}
+                        />
+                        <Text style={styles.menuItemText}>Nutrition Targets</Text>
+                        <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                      </TouchableOpacity>
 
-                    <View style={styles.menuDivider} />
+                      <View style={styles.menuDivider} />
 
-                    <TouchableOpacity
-                      style={styles.menuItem}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setShowGoalsWizard(true);
-                      }}
-                    >
-                      <Ionicons
-                        name="flag-outline"
-                        size={20}
-                        color="#333"
-                        style={{ marginRight: 12 }}
-                      />
-                      <Text style={styles.menuItemText}>Goals Setup</Text>
-                      <Ionicons name="chevron-forward" size={20} color="#ccc" />
-                    </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.menuItem}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setShowGoalsWizard(true);
+                        }}
+                      >
+                        <Ionicons
+                          name="flag-outline"
+                          size={20}
+                          color="#333"
+                          style={{ marginRight: 12 }}
+                        />
+                        <Text style={styles.menuItemText}>Goals Setup</Text>
+                        <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                      </TouchableOpacity>
 
-                    <View style={styles.menuDivider} />
+                      <View style={styles.menuDivider} />
 
-                    <TouchableOpacity
-                      style={styles.menuItem}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setShowWeightTracking(true);
-                      }}
-                    >
-                      <Ionicons
-                        name="scale-outline"
-                        size={20}
-                        color="#333"
-                        style={{ marginRight: 12 }}
-                      />
-                      <Text style={styles.menuItemText}>Weight Tracking</Text>
-                      <Ionicons name="chevron-forward" size={20} color="#ccc" />
-                    </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.menuItem}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setShowWeightTracking(true);
+                        }}
+                      >
+                        <Ionicons
+                          name="scale-outline"
+                          size={20}
+                          color="#333"
+                          style={{ marginRight: 12 }}
+                        />
+                        <Text style={styles.menuItemText}>Weight Tracking</Text>
+                        <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                      </TouchableOpacity>
 
-                    <View style={styles.menuDivider} />
+                      <View style={styles.menuDivider} />
 
-                    <TouchableOpacity
-                      style={styles.menuItem}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setShowCalendarLegend(true);
-                      }}
-                    >
-                      <Ionicons
-                        name="calendar-outline"
-                        size={20}
-                        color="#333"
-                        style={{ marginRight: 12 }}
-                      />
-                      <Text style={styles.menuItemText}>Calendar Legend</Text>
-                      <Ionicons name="chevron-forward" size={20} color="#ccc" />
-                    </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.menuItem}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setShowCalendarLegend(true);
+                        }}
+                      >
+                        <Ionicons
+                          name="calendar-outline"
+                          size={20}
+                          color="#333"
+                          style={{ marginRight: 12 }}
+                        />
+                        <Text style={styles.menuItemText}>Calendar Legend</Text>
+                        <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </Animated.View>
 
@@ -402,16 +404,18 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                 >
                   <Text style={styles.sectionTitle}>About</Text>
 
-                  <View style={styles.menuCard}>
-                    <View style={styles.menuItem}>
-                      <Ionicons
-                        name="information-circle-outline"
-                        size={20}
-                        color="#333"
-                        style={{ marginRight: 12 }}
-                      />
-                      <Text style={styles.menuItemText}>Version</Text>
-                      <Text style={styles.menuItemValue}>2.0.0</Text>
+                  <View style={styles.menuCardShadow}>
+                    <View style={styles.menuCard}>
+                      <View style={styles.menuItem}>
+                        <Ionicons
+                          name="information-circle-outline"
+                          size={20}
+                          color="#333"
+                          style={{ marginRight: 12 }}
+                        />
+                        <Text style={styles.menuItemText}>Version</Text>
+                        <Text style={styles.menuItemValue}>2.0.0</Text>
+                      </View>
                     </View>
                   </View>
                 </Animated.View>
@@ -558,8 +562,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 1,
   },
@@ -599,6 +603,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     backgroundColor: "#ffffff",
     borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
   },
   signOutText: {
     fontSize: 15,
@@ -612,8 +621,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 1,
   },
@@ -639,15 +648,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#666",
   },
+  menuCardShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
   menuCard: {
     backgroundColor: "#ffffff",
     borderRadius: 16,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
   },
   menuItem: {
     flexDirection: "row",

@@ -500,7 +500,6 @@ export function WeightTrackingModal({
               keyboardType="decimal-pad"
               placeholder="0.0"
               placeholderTextColor="#ccc"
-              autoFocus
               textAlign="center"
             />
             <Text style={styles.heroUnitLabel}>{unitLabel}</Text>

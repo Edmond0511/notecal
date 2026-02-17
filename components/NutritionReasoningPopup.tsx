@@ -281,43 +281,47 @@ function ConfidencePopup({
     getDefaultExplanation();
 
   return (
-    <Animated.View entering={FadeIn.duration(200)} style={styles.confidencePopupOverlay}>
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity
         style={styles.confidencePopupBackdrop}
         activeOpacity={1}
         onPress={onClose}
-      />
-      <Animated.View
-        entering={FadeInDown.duration(200)}
-        style={styles.confidencePopup}
       >
-        {/* Header */}
-        <View style={styles.popupHeader}>
-          <View
-            style={[
-              styles.popupConfidenceIndicator,
-              {
-                backgroundColor: colors.background,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <Text style={[styles.popupConfidenceValue, { color: colors.text }]}>
-              {confidencePercent}%
+        <View style={styles.confidencePopup} onStartShouldSetResponder={() => true}>
+          {/* Header */}
+          <View style={styles.popupHeader}>
+            <View
+              style={[
+                styles.popupConfidenceIndicator,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.popupConfidenceValue, { color: colors.text }]}>
+                {confidencePercent}%
+              </Text>
+            </View>
+            <Text style={styles.popupTitle}>
+              {getConfidenceLevel()} Confidence
             </Text>
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close" size={22} color="#999" />
+            </TouchableOpacity>
           </View>
-          <Text style={styles.popupTitle}>
-            {getConfidenceLevel()} Confidence
-          </Text>
+
+          {/* AI Explanation Label */}
+          <Text style={styles.popupSectionLabel}>AI Explanation</Text>
+
+          {/* Explanation Paragraph */}
+          <ParsedText text={displayText} style={styles.popupExplanation} />
         </View>
-
-        {/* AI Explanation Label */}
-        <Text style={styles.popupSectionLabel}>AI Explanation</Text>
-
-        {/* Explanation Paragraph */}
-        <ParsedText text={displayText} style={styles.popupExplanation} />
-      </Animated.View>
-    </Animated.View>
+      </TouchableOpacity>
+    </Modal>
   );
 }
 
@@ -2129,33 +2133,24 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   // Confidence popup styles
-  confidencePopupOverlay: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    left: 0,
-    bottom: 0,
-    zIndex: 9999,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    elevation: 20,
-  },
   confidencePopupBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 32,
   },
   confidencePopup: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 20,
-    minWidth: 320,
-    maxWidth: 400,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 24,
+    width: "100%",
+    maxWidth: 340,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
   },
   popupHeader: {
     flexDirection: "row",

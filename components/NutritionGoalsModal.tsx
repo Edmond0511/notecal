@@ -116,7 +116,7 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
     label: "Fiber",
     unit: "g",
     placeholder: "25",
-    color: "#C4B097",
+    color: "#B08C5A",
     icon: icons.seedling,
   },
   {
@@ -124,7 +124,7 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
     label: "Sugar",
     unit: "g",
     placeholder: "50",
-    color: "#D4899E",
+    color: "#D4687E",
     icon: icons.cube,
   },
   {
@@ -132,7 +132,7 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
     label: "Sodium",
     unit: "mg",
     placeholder: "2300",
-    color: "#8BACC8",
+    color: "#6898BE",
     icon: icons.cubesStacked,
   },
   {
@@ -140,7 +140,7 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
     label: "Potassium",
     unit: "mg",
     placeholder: "3500",
-    color: "#9BB893",
+    color: "#72A868",
     icon: icons.bolt,
   },
   {
@@ -148,7 +148,7 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
     label: "Water",
     unit: "L",
     placeholder: "3.7",
-    color: "#A3CCE8",
+    color: "#5AADE0",
     icon: icons.glassWater,
   },
 ];

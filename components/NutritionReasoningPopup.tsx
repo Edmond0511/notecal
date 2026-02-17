@@ -68,23 +68,23 @@ const MACRO_COLORS = {
 
 const MICRO_COLORS = {
   fiber: {
-    primary: "#C4B097",
+    primary: "#B08C5A",
     secondary: "#F8F4EF",
   },
   sugar: {
-    primary: "#D4899E",
+    primary: "#D4687E",
     secondary: "#FDF0F4",
   },
   sodium: {
-    primary: "#8BACC8",
+    primary: "#6898BE",
     secondary: "#F0F5FA",
   },
   potassium: {
-    primary: "#9BB893",
+    primary: "#72A868",
     secondary: "#F2F7F0",
   },
   water: {
-    primary: "#A3CCE8",
+    primary: "#5AADE0",
     secondary: "#F0F7FC",
   },
 };
@@ -2039,9 +2039,6 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   macroValueEditable: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
-    borderStyle: "dashed",
     marginBottom: 2,
   },
   macroLabel: {

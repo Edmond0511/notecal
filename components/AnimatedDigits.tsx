@@ -12,6 +12,8 @@ import Animated, {
 interface AnimatedDigitsProps {
   value: number;
   maxDigits?: number;
+  maxWidth?: number;
+  minimumFontScale?: number;
   style?: TextStyle;
 }
 
@@ -107,15 +109,28 @@ const FadeSlideChar = memo(function FadeSlideChar({
 export const AnimatedDigits = memo(function AnimatedDigits({
   value,
   maxDigits = 5,
+  maxWidth,
+  minimumFontScale = 0.6,
   style,
 }: AnimatedDigitsProps) {
   const displayStr = truncateNumber(Math.round(value), maxDigits);
   const chars = displayStr.split("");
 
-  const fontSize = (style?.fontSize as number) || 16;
+  const baseFontSize = (style?.fontSize as number) || 16;
   const fontWeight =
     (style?.fontWeight as TextStyle["fontWeight"]) || "600";
   const color = (style?.color as string) || "#222";
+
+  // Scale font down if total width exceeds maxWidth
+  let fontSize = baseFontSize;
+  if (maxWidth) {
+    const totalWidth = chars.length * Math.ceil(baseFontSize * 0.62);
+    if (totalWidth > maxWidth) {
+      const scale = Math.max(maxWidth / totalWidth, minimumFontScale);
+      fontSize = Math.floor(baseFontSize * scale);
+    }
+  }
+
   const digitHeight = Math.ceil(fontSize * 1.3);
   const charWidth = Math.ceil(fontSize * 0.62);
 
@@ -125,6 +140,7 @@ export const AnimatedDigits = memo(function AnimatedDigits({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
+        ...(maxWidth ? { maxWidth, overflow: "hidden" as const } : {}),
       }}
     >
       {chars.map((char, i) => (

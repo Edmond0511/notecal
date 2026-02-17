@@ -33,6 +33,7 @@ import { AuthModal } from "./AuthModal";
 import { CalendarLegendModal } from "./CalendarLegendModal";
 import { GoalsWizard } from "./goals/GoalsWizard";
 import { NutritionGoalsModal } from "./NutritionGoalsModal";
+import { PersonalInfoModal } from "./PersonalInfoModal";
 import { WeightTrackingModal } from "./WeightTrackingModal";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -73,6 +74,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [showGoalsWizard, setShowGoalsWizard] = useState(false);
   const [showWeightTracking, setShowWeightTracking] = useState(false);
   const [showCalendarLegend, setShowCalendarLegend] = useState(false);
+  const [showPersonalInfo, setShowPersonalInfo] = useState(false);
   const goals = useAppStore((s) => s.goals);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -323,6 +325,36 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           Haptics.impactAsync(
                             Haptics.ImpactFeedbackStyle.Light,
                           );
+                          if (goals) {
+                            setShowPersonalInfo(true);
+                          } else {
+                            setShowGoalsWizard(true);
+                          }
+                        }}
+                      >
+                        <Ionicons
+                          name="person-outline"
+                          size={20}
+                          color="#333"
+                          style={{ marginRight: 12 }}
+                        />
+                        <Text style={styles.menuItemText}>Personal Info</Text>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color="#ccc"
+                        />
+                      </TouchableOpacity>
+
+                      <View style={styles.menuDivider} />
+
+                      <TouchableOpacity
+                        style={styles.menuItem}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
                           setShowNutritionGoals(true);
                         }}
                       >
@@ -496,6 +528,11 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
         <CalendarLegendModal
           visible={showCalendarLegend}
           onClose={() => setShowCalendarLegend(false)}
+        />
+
+        <PersonalInfoModal
+          visible={showPersonalInfo}
+          onClose={() => setShowPersonalInfo(false)}
         />
       </Modal>
     </>

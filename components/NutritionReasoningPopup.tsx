@@ -1260,7 +1260,7 @@ export function NutritionReasoningPopup({
                 <View style={styles.metadataRow}>
                   {displayEntry.createdAt && (
                     <View style={styles.entryTimeBadge}>
-                      <Ionicons name="time-outline" size={13} color="#777" />
+                      <Ionicons name="time-outline" size={13} color="#8B6914" />
                       <Text style={styles.entryTimeText}>
                         {new Date(displayEntry.createdAt).toLocaleTimeString(
                           "en-US",
@@ -1894,7 +1894,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: "#F5F0EB",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 14,
@@ -1903,7 +1903,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "System",
     fontWeight: "500",
-    color: "#777",
+    color: "#8B6914",
   },
   saveButton: {
     flexDirection: "row",

@@ -73,8 +73,8 @@ export const TotalsBar = React.memo(function TotalsBar({
             <AnimatedDigits
               value={dailyTotals.kcal}
               maxDigits={5}
+              maxWidth={56}
               style={styles.totalValue}
-
             />
             <FontAwesomeIcon
               icon={icons.fire}
@@ -88,8 +88,8 @@ export const TotalsBar = React.memo(function TotalsBar({
             <AnimatedDigits
               value={dailyTotals.protein}
               maxDigits={4}
+              maxWidth={56}
               style={styles.totalValue}
-
             />
             <FontAwesomeIcon
               icon={icons.protein}
@@ -103,8 +103,8 @@ export const TotalsBar = React.memo(function TotalsBar({
             <AnimatedDigits
               value={dailyTotals.fat}
               maxDigits={4}
+              maxWidth={56}
               style={styles.totalValue}
-
             />
             <FontAwesomeIcon
               icon={icons.fat}
@@ -118,8 +118,8 @@ export const TotalsBar = React.memo(function TotalsBar({
             <AnimatedDigits
               value={dailyTotals.carbs}
               maxDigits={4}
+              maxWidth={56}
               style={styles.totalValue}
-
             />
             <FontAwesomeIcon
               icon={icons.carbs}

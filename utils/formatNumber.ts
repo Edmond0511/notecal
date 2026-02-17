@@ -6,18 +6,29 @@
  * @returns Formatted string like "1234", "12.3k", "1.2M"
  */
 export function truncateNumber(value: number, maxDigits: number = 5): string {
+  if (!Number.isFinite(value)) return "0";
   const rounded = Math.round(value);
+  const abs = Math.abs(rounded);
   const str = rounded.toString();
   if (str.length <= maxDigits) {
     return str;
   }
-  if (rounded >= 1_000_000) {
-    const m = rounded / 1_000_000;
-    return m >= 100 ? `${Math.round(m)}M` : `${parseFloat(m.toFixed(1))}M`;
+  const sign = rounded < 0 ? "-" : "";
+  if (abs >= 1_000_000_000_000) {
+    const t = abs / 1_000_000_000_000;
+    return sign + (t >= 100 ? `${Math.round(t)}T` : `${parseFloat(t.toFixed(1))}T`);
   }
-  if (rounded >= 1_000) {
-    const k = rounded / 1_000;
-    return k >= 100 ? `${Math.round(k)}k` : `${parseFloat(k.toFixed(1))}k`;
+  if (abs >= 1_000_000_000) {
+    const b = abs / 1_000_000_000;
+    return sign + (b >= 100 ? `${Math.round(b)}B` : `${parseFloat(b.toFixed(1))}B`);
+  }
+  if (abs >= 1_000_000) {
+    const m = abs / 1_000_000;
+    return sign + (m >= 100 ? `${Math.round(m)}M` : `${parseFloat(m.toFixed(1))}M`);
+  }
+  if (abs >= 1_000) {
+    const k = abs / 1_000;
+    return sign + (k >= 100 ? `${Math.round(k)}k` : `${parseFloat(k.toFixed(1))}k`);
   }
   return str.slice(0, maxDigits);
 }

@@ -316,3 +316,21 @@ export function getGoalTypeDescription(goal: GoalType): {
   };
   return descriptions[goal];
 }
+
+/**
+ * Calculate BMI from weight (kg) and height (cm)
+ */
+export function calculateBMI(weightKg: number, heightCm: number): number {
+  const heightM = heightCm / 100;
+  return Math.round((weightKg / (heightM * heightM)) * 10) / 10;
+}
+
+/**
+ * Get BMI category label and color
+ */
+export function getBMICategory(bmi: number): { label: string; color: string } {
+  if (bmi < 18.5) return { label: 'Underweight', color: '#3B82F6' };
+  if (bmi < 25) return { label: 'Normal', color: '#22C55E' };
+  if (bmi < 30) return { label: 'Overweight', color: '#F97316' };
+  return { label: 'Obese', color: '#EF4444' };
+}

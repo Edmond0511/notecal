@@ -251,10 +251,7 @@ export function PersonalInfoModal({
   ) => (
     <View style={styles.unitToggleRow}>
       <TouchableOpacity
-        style={[
-          styles.unitPill,
-          current === "metric" && styles.unitPillActive,
-        ]}
+        style={[styles.unitPill, current === "metric" && styles.unitPillActive]}
         onPress={current === "metric" ? undefined : onToggle}
         activeOpacity={current === "metric" ? 1 : 0.6}
       >
@@ -299,25 +296,43 @@ export function PersonalInfoModal({
     return (
       <View key={field}>
         <TouchableOpacity
-          style={[styles.metricRow, isLast && !isEditing && styles.metricRowLast]}
+          style={[
+            styles.metricRow,
+            isLast && !isEditing && styles.metricRowLast,
+          ]}
           onPress={() => handleTapField(field)}
           activeOpacity={0.6}
         >
           <Text style={styles.metricLabel}>{label}</Text>
           <View style={styles.metricValueContainer}>
             {field === "age" && (
-              <Text style={[styles.metricValue, isEditing && styles.metricValueEditing]}>
+              <Text
+                style={[
+                  styles.metricValue,
+                  isEditing && styles.metricValueEditing,
+                ]}
+              >
                 {editAge || goals.age}
               </Text>
             )}
             {field === "sex" && (
-              <Text style={[styles.metricValue, isEditing && styles.metricValueEditing]}>
+              <Text
+                style={[
+                  styles.metricValue,
+                  isEditing && styles.metricValueEditing,
+                ]}
+              >
                 {editSex === "male" ? "Male" : "Female"}
               </Text>
             )}
             {field === "height" && (
               <>
-                <Text style={[styles.metricValue, isEditing && styles.metricValueEditing]}>
+                <Text
+                  style={[
+                    styles.metricValue,
+                    isEditing && styles.metricValueEditing,
+                  ]}
+                >
                   {displayHeightUnit === "imperial"
                     ? `${editHeightFeet || 0}'${editHeightInches || 0}"`
                     : editHeightCm || goals.heightCm}
@@ -329,7 +344,12 @@ export function PersonalInfoModal({
             )}
             {field === "weight" && (
               <>
-                <Text style={[styles.metricValue, isEditing && styles.metricValueEditing]}>
+                <Text
+                  style={[
+                    styles.metricValue,
+                    isEditing && styles.metricValueEditing,
+                  ]}
+                >
                   {displayWeightUnit === "imperial"
                     ? editWeightLbs || kgToLbs(goals.weightKg)
                     : editWeightKg || goals.weightKg}
@@ -683,8 +703,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 1,
   },

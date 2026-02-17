@@ -247,7 +247,7 @@ export function cmToFeetInches(cm: number): { feet: number; inches: number } {
  * Convert weight from pounds to kilograms
  */
 export function lbsToKg(lbs: number): number {
-  return Math.round(lbs * 0.453592 * 10) / 10;
+  return Math.round(lbs * 0.453592 * 1000) / 1000;
 }
 
 /**

@@ -272,20 +272,14 @@ export default function HomeScreen() {
         clearTimeout(showTimer);
         showTimer = null;
       }
-      showAccessoryBarRef.current = false;
-      setShowAccessoryBar(false);
     });
-    // Safety net: keyboardDidHide fires after keyboard is fully gone.
-    // Catches cases where keyboardWillHide is missed (e.g. Modal transitions).
     const didHideSub = Keyboard.addListener("keyboardDidHide", () => {
       if (showTimer) {
         clearTimeout(showTimer);
         showTimer = null;
       }
-      if (showAccessoryBarRef.current) {
-        showAccessoryBarRef.current = false;
-        setShowAccessoryBar(false);
-      }
+      showAccessoryBarRef.current = false;
+      setShowAccessoryBar(false);
     });
     return () => {
       willShowSub.remove();

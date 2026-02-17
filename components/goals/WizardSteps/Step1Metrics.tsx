@@ -151,6 +151,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
                 toggleHeightUnits(event.nativeEvent.selectedSegmentIndex === 1);
               }}
               style={styles.segmentedControl}
+              appearance="light"
             />
           </View>
           {formData.heightUseImperial ? (
@@ -209,6 +210,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
                 toggleWeightUnits(event.nativeEvent.selectedSegmentIndex === 1);
               }}
               style={styles.segmentedControl}
+              appearance="light"
             />
           </View>
           {formData.weightUseImperial ? (

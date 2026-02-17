@@ -289,7 +289,6 @@ export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps
 
       {/* Macro targets */}
       <View style={styles.macrosCard}>
-        <Text style={styles.cardTitle}>Daily Macros</Text>
         <View style={styles.macrosGrid}>
           <View style={[styles.macroItem, { backgroundColor: "#E3F2FD" }]}>
             <FontAwesomeIcon
@@ -513,9 +512,6 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   macrosCard: {
-    backgroundColor: "#f8f8f8",
-    borderRadius: 16,
-    padding: 16,
     marginBottom: 16,
   },
   cardTitle: {

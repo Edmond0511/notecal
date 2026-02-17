@@ -1,4 +1,4 @@
-import FileSystem, { File, Directory, Paths } from 'expo-file-system';
+import { File, Directory, Paths } from 'expo-file-system';
 import { supabase } from '@/lib/supabase';
 import { mmkv } from '@/lib/mmkv';
 import { useAppStore } from '@/store/app-store';
@@ -263,14 +263,11 @@ class PhotoSyncService {
     const fileName = storagePath.replace(/\//g, '_');
     const destFile = new File(cacheDir, fileName);
 
-    const { status } = await FileSystem.downloadAsync(
+    await File.downloadFileAsync(
       urlData.signedUrl,
-      destFile.uri,
+      destFile,
+      { idempotent: true },
     );
-
-    if (status !== 200) {
-      throw new Error(`Failed to download photo: HTTP ${status}`);
-    }
 
     const localPath = destFile.uri;
 

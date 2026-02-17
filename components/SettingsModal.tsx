@@ -320,7 +320,9 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         style={styles.menuItem}
                         activeOpacity={0.7}
                         onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
                           setShowNutritionGoals(true);
                         }}
                       >
@@ -330,8 +332,14 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           color="#333"
                           style={{ marginRight: 12 }}
                         />
-                        <Text style={styles.menuItemText}>Nutrition Targets</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                        <Text style={styles.menuItemText}>
+                          Nutrition Targets
+                        </Text>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color="#ccc"
+                        />
                       </TouchableOpacity>
 
                       <View style={styles.menuDivider} />
@@ -340,7 +348,9 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         style={styles.menuItem}
                         activeOpacity={0.7}
                         onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
                           setShowGoalsWizard(true);
                         }}
                       >
@@ -351,7 +361,11 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           style={{ marginRight: 12 }}
                         />
                         <Text style={styles.menuItemText}>Goals Setup</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color="#ccc"
+                        />
                       </TouchableOpacity>
 
                       <View style={styles.menuDivider} />
@@ -360,7 +374,9 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         style={styles.menuItem}
                         activeOpacity={0.7}
                         onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
                           setShowWeightTracking(true);
                         }}
                       >
@@ -371,7 +387,11 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           style={{ marginRight: 12 }}
                         />
                         <Text style={styles.menuItemText}>Weight Tracking</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color="#ccc"
+                        />
                       </TouchableOpacity>
 
                       <View style={styles.menuDivider} />
@@ -380,7 +400,9 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         style={styles.menuItem}
                         activeOpacity={0.7}
                         onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
                           setShowCalendarLegend(true);
                         }}
                       >
@@ -391,7 +413,11 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           style={{ marginRight: 12 }}
                         />
                         <Text style={styles.menuItemText}>Calendar Legend</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color="#ccc"
+                        />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -620,10 +646,6 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
     elevation: 1,
   },
   signInIconContainer: {

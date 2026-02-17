@@ -201,8 +201,9 @@ class PhotoSyncService {
   }
 
   /**
-   * Upload a local file to Supabase Storage using fetch+blob approach.
-   * Returns the storage path (not a full URL).
+   * Upload a local file to Supabase Storage using expo-file-system's native
+   * File.bytes(). We avoid fetch().blob() because it's unreliable in React
+   * Native and often produces 0-byte or corrupted files.
    */
   private async uploadFile(localUri: string, entryId: string): Promise<string> {
     const userId = this.userId!;
@@ -210,13 +211,13 @@ class PhotoSyncService {
     const random = Math.random().toString(36).substring(2, 8);
     const storagePath = `${userId}/${entryId}/${timestamp}-${random}.jpg`;
 
-    // Read the file as blob via fetch (avoids base64 memory overhead)
-    const response = await fetch(localUri);
-    const blob = await response.blob();
+    // Read the file as raw bytes via expo-file-system (native, reliable)
+    const sourceFile = new File(localUri);
+    const bytes = await sourceFile.bytes();
 
     const { error } = await supabase.storage
       .from(BUCKET)
-      .upload(storagePath, blob, {
+      .upload(storagePath, bytes, {
         contentType: 'image/jpeg',
         upsert: false,
       });

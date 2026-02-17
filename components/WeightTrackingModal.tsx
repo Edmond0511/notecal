@@ -219,7 +219,7 @@ export function WeightTrackingModal({ visible, onClose, openToLog }: WeightTrack
 
   // Sort entries by date descending for history
   const sortedEntries = useMemo(
-    () => [...weightEntries].sort((a, b) => b.date.localeCompare(a.date)),
+    () => [...weightEntries].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)),
     [weightEntries]
   );
 

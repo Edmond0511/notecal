@@ -5,14 +5,23 @@ import { FoodPhotoModal } from "@/components/FoodPhotoModal";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
 import { GoalsPopup } from "@/components/GoalsPopup";
 import { NotesEditor } from "@/components/NotesEditor";
+import {
+  PhotoProcessingToast,
+  type PhotoToastState,
+} from "@/components/PhotoProcessingToast";
 import { SavedEntriesPopup } from "@/components/SavedEntriesPopup";
 import { SettingsModal } from "@/components/SettingsModal";
 import { TotalsBar } from "@/components/TotalsBar";
 import { WeightTrackingModal } from "@/components/WeightTrackingModal";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { useSwipeDateNavigation } from "@/hooks/useSwipeDateNavigation";
+import { supabase } from "@/lib/supabase";
+import {
+  resolveNutritionFromPhoto,
+  NutritionNotFoodError,
+} from "@/services/nutritionApi";
 import { useAppStore } from "@/store/app-store";
-import { BarcodeProduct, FoodItem, Macros, SavedEntry } from "@/types";
+import { BarcodeProduct, SavedEntry } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -60,6 +69,9 @@ export default function HomeScreen() {
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [showFoodPhoto, setShowFoodPhoto] = useState(false);
+  const [photoToastState, setPhotoToastState] = useState<PhotoToastState>({
+    type: "idle",
+  });
   const [currentDocumentText, setCurrentDocumentText] = useState("");
 
   // Load document text for current date
@@ -199,22 +211,70 @@ export default function HomeScreen() {
     setShowFoodPhoto(true);
   }, []);
 
-  const handlePhotoEntryAdd = useCallback(
-    (items: FoodItem[], totals: Macros) => {
-      const storeAddPhotoEntry = useAppStore.getState().addPhotoEntry;
-      const newEntry = storeAddPhotoEntry(items, totals);
+  const handlePhotoCaptured = useCallback(
+    async (base64: string, mimeType: string) => {
+      setPhotoToastState({ type: "analyzing" });
 
-      const newLine = newEntry.rawText;
-      const updatedText = currentDocumentText
-        ? `${currentDocumentText}\n${newLine}`
-        : newLine;
-      setCurrentDocumentText(updatedText);
-      saveDocument(currentDate, updatedText);
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        const response = await resolveNutritionFromPhoto(base64, mimeType, {
+          userId: user?.id,
+        });
 
-      setShowFoodPhoto(false);
+        if (response.resolved && response.resolved.length > 0) {
+          // Read latest state to avoid stale closure
+          const state = useAppStore.getState();
+          const latestDoc = state.getDocument(state.currentDate);
+          const currentText = latestDoc?.content ?? "";
+
+          const newEntry = state.addPhotoEntry(
+            response.resolved,
+            response.totals,
+          );
+
+          const updatedText = currentText
+            ? `${currentText}\n${newEntry.rawText}`
+            : newEntry.rawText;
+          setCurrentDocumentText(updatedText);
+          state.saveDocument(state.currentDate, updatedText);
+
+          setPhotoToastState({
+            type: "success",
+            itemCount: response.resolved.length,
+          });
+        } else {
+          setPhotoToastState({
+            type: "error",
+            message: "No food items identified",
+          });
+        }
+      } catch (error) {
+        if (error instanceof NutritionNotFoodError) {
+          setPhotoToastState({
+            type: "error",
+            message: "No food items identified",
+          });
+        } else {
+          console.error("[HomeScreen] Photo processing error:", error);
+          setPhotoToastState({
+            type: "error",
+            message: "Failed to analyze photo",
+          });
+        }
+      }
     },
-    [currentDocumentText, currentDate, saveDocument],
+    [],
   );
+
+  const handlePhotoToastDismiss = useCallback(() => {
+    setPhotoToastState({ type: "idle" });
+  }, []);
+
+  const handlePhotoToastAutoHide = useCallback(() => {
+    setPhotoToastState({ type: "idle" });
+  }, []);
 
   const handleBarcodeProductAdd = useCallback(
     (product: BarcodeProduct, servingGrams: number) => {
@@ -453,6 +513,13 @@ export default function HomeScreen() {
         />
       </View>
 
+      {/* Photo processing toast */}
+      <PhotoProcessingToast
+        state={photoToastState}
+        onDismiss={handlePhotoToastDismiss}
+        onAutoHide={handlePhotoToastAutoHide}
+      />
+
       {/* Custom Calendar */}
       <Calendar
         visible={showCalendar}
@@ -513,7 +580,7 @@ export default function HomeScreen() {
       <FoodPhotoModal
         visible={showFoodPhoto}
         onClose={() => setShowFoodPhoto(false)}
-        onAddEntry={handlePhotoEntryAdd}
+        onPhotoCaptured={handlePhotoCaptured}
       />
 
       {/* Weight Tracking Modal */}

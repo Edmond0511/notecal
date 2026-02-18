@@ -1,7 +1,7 @@
 import { BarcodeProduct, FoodItem, Macros } from '@/types';
 
 const OFF_API_BASE = 'https://world.openfoodfacts.org/api/v2/product';
-const OFF_FIELDS = 'product_name,brands,serving_size,serving_quantity,nutriments,image_front_small_url';
+const OFF_FIELDS = 'product_name,brands,serving_size,serving_quantity,nutriments,image_front_small_url,categories_tags';
 
 interface OFFNutriments {
   'energy-kcal_100g'?: number;
@@ -21,6 +21,7 @@ interface OFFProduct {
   serving_quantity?: number;
   nutriments?: OFFNutriments;
   image_front_small_url?: string;
+  categories_tags?: string[];
 }
 
 interface OFFResponse {
@@ -40,6 +41,37 @@ export class BarcodeLookupError extends Error {
     super(message);
     this.name = 'BarcodeLookupError';
   }
+}
+
+export class BarcodeNonFoodError extends Error {
+  constructor(barcode: string) {
+    super(`Non-food product: ${barcode}`);
+    this.name = 'BarcodeNonFoodError';
+  }
+}
+
+const NON_FOOD_CATEGORY_PREFIXES = [
+  // Pet food
+  'en:pet-food', 'en:dog-food', 'en:cat-food', 'en:dog-treats', 'en:cat-treats',
+  'en:pet-treats', 'en:bird-food', 'en:fish-food', 'en:animal-feed',
+  // Cosmetics / beauty
+  'en:cosmetics', 'en:beauty', 'en:skin-care', 'en:hair-care', 'en:body-care',
+  'en:makeup', 'en:perfumes', 'en:deodorants', 'en:shaving', 'en:sun-care',
+  // Cleaning / household
+  'en:cleaning-products', 'en:household-products', 'en:laundry-detergents', 'en:dishwashing',
+  // Tobacco
+  'en:tobacco', 'en:cigarettes', 'en:e-cigarettes', 'en:e-liquids',
+  // Baby non-food
+  'en:baby-diapers', 'en:baby-wipes', 'en:baby-care',
+  // Medical / dental
+  'en:medicines', 'en:medical-devices', 'en:dental-care', 'en:toothpastes', 'en:mouthwashes',
+];
+
+function isNonFoodProduct(categoriesTags?: string[]): boolean {
+  if (!categoriesTags?.length) return false;
+  return categoriesTags.some(tag =>
+    NON_FOOD_CATEGORY_PREFIXES.some(prefix => tag.startsWith(prefix))
+  );
 }
 
 /**
@@ -137,7 +169,7 @@ export async function lookupBarcode(barcode: string): Promise<BarcodeProduct> {
   }
 
   if (!response.ok) {
-    throw new BarcodeLookupError(`API error (${response.status})`);
+    throw new BarcodeNotFoundError(barcode);
   }
 
   const data: OFFResponse = await response.json();
@@ -150,6 +182,10 @@ export async function lookupBarcode(barcode: string): Promise<BarcodeProduct> {
 
   if (!product.nutriments || !product.product_name) {
     throw new BarcodeNotFoundError(barcode);
+  }
+
+  if (isNonFoodProduct(product.categories_tags)) {
+    throw new BarcodeNonFoodError(barcode);
   }
 
   const macrosPer100g = offNutrimentsToMacros(product.nutriments);

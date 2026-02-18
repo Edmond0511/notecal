@@ -1,6 +1,7 @@
 import { AnimatedDigits } from "@/components/AnimatedDigits";
 import {
   BarcodeLookupError,
+  BarcodeNonFoodError,
   BarcodeNotFoundError,
   lookupBarcode,
   scaleMacrosToServing,
@@ -30,7 +31,21 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
+import Animated, {
+  Extrapolation,
+  FadeIn,
+  FadeInDown,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, Mask, Rect } from "react-native-svg";
 
@@ -54,6 +69,7 @@ const VIEWFINDER_WIDTH = SCREEN_WIDTH * 0.78;
 const VIEWFINDER_HEIGHT = SCREEN_WIDTH * 0.44;
 const VIEWFINDER_RADIUS = 20;
 
+const DISMISS_THRESHOLD = 150;
 const TEAL = "#1A6872";
 
 const MACRO_COLORS = {
@@ -75,6 +91,7 @@ type ScannerState =
   | { type: "loading"; barcode: string }
   | { type: "found"; product: BarcodeProduct }
   | { type: "not_found"; barcode: string }
+  | { type: "non_food" }
   | { type: "error"; message: string };
 
 interface BarcodeScannerModalProps {
@@ -103,6 +120,7 @@ export function BarcodeScannerModal({
   const [manualText, setManualText] = useState("");
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scanLockRef = useRef(false);
+  const translateY = useSharedValue(0);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -111,6 +129,7 @@ export function BarcodeScannerModal({
       setServingGrams("");
       setManualText("");
       scanLockRef.current = false;
+      translateY.value = 0;
     }
   }, [visible]);
 
@@ -158,6 +177,8 @@ export function BarcodeScannerModal({
     } catch (err) {
       if (err instanceof BarcodeNotFoundError) {
         setState({ type: "not_found", barcode });
+      } else if (err instanceof BarcodeNonFoodError) {
+        setState({ type: "non_food" });
       } else if (err instanceof BarcodeLookupError) {
         setState({ type: "error", message: err.message });
       } else {
@@ -193,6 +214,38 @@ export function BarcodeScannerModal({
     onClose();
   }, [onClose]);
 
+  const panGesture = Gesture.Pan()
+    .activeOffsetY(10)
+    .onUpdate((event) => {
+      if (event.translationY > 0) {
+        translateY.value = event.translationY;
+      }
+    })
+    .onEnd((event) => {
+      if (event.translationY > DISMISS_THRESHOLD) {
+        translateY.value = withSpring(SCREEN_HEIGHT, {
+          damping: 20,
+          stiffness: 200,
+        });
+        runOnJS(handleClose)();
+      } else {
+        translateY.value = withSpring(0, { damping: 20, stiffness: 400 });
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateY.value,
+      [0, SCREEN_HEIGHT * 0.5],
+      [1, 0],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
   const handleServingStep = useCallback(
     (delta: number) => {
       const current = parseFloat(servingGrams) || 100;
@@ -220,18 +273,25 @@ export function BarcodeScannerModal({
   return (
     <Modal
       visible={visible}
-      animationType="slide"
-      presentationStyle="fullScreen"
+      animationType="fade"
+      transparent
       onRequestClose={onClose}
     >
-      <View style={styles.root}>
+      <GestureHandlerRootView style={styles.gestureRoot}>
         <StatusBar barStyle="light-content" />
+        <Animated.View style={[styles.backdrop, backdropStyle]}>
+          <TouchableOpacity
+            style={styles.backdropPressable}
+            onPress={handleClose}
+            activeOpacity={1}
+          />
+        </Animated.View>
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[styles.container, { marginTop: insets.top }, animatedStyle]}>
 
         {!cameraAvailable ? (
           // Native module not built yet
-          <View
-            style={[styles.permissionContainer, { paddingTop: insets.top }]}
-          >
+          <View style={styles.permissionContainer}>
             <View style={styles.permissionContent}>
               <View style={styles.permissionIconCircle}>
                 <Ionicons name="build-outline" size={48} color={TEAL} />
@@ -253,9 +313,7 @@ export function BarcodeScannerModal({
           </View>
         ) : !permission.granted ? (
           // Permission denied / not yet granted
-          <View
-            style={[styles.permissionContainer, { paddingTop: insets.top }]}
-          >
+          <View style={styles.permissionContainer}>
             <View style={styles.permissionContent}>
               <View style={styles.permissionIconCircle}>
                 <Ionicons name="camera-outline" size={48} color={TEAL} />
@@ -338,12 +396,17 @@ export function BarcodeScannerModal({
 
             {/* Close button */}
             <TouchableOpacity
-              style={[styles.closeButton, { top: insets.top + 12 }]}
+              style={[styles.closeButton, { top: 12 }]}
               onPress={handleClose}
               activeOpacity={0.7}
             >
               <Ionicons name="chevron-down" size={26} color="#fff" />
             </TouchableOpacity>
+
+            {/* Drag indicator */}
+            <View style={styles.dragIndicatorContainer} pointerEvents="none">
+              <View style={styles.dragIndicator} />
+            </View>
 
             {/* Scanning hint */}
             {state.type === "scanning" && (
@@ -438,7 +501,7 @@ export function BarcodeScannerModal({
                         key: "calories" as const,
                         value: previewMacros.kcal,
                         suffix: undefined as string | undefined,
-                        label: "KCAL",
+                        label: "CAL",
                       },
                       {
                         key: "protein" as const,
@@ -576,6 +639,34 @@ export function BarcodeScannerModal({
               </Animated.View>
             )}
 
+            {/* Non-food state */}
+            {state.type === "non_food" && (
+              <Animated.View
+                entering={FadeInDown.duration(300)}
+                style={[
+                  styles.bottomCard,
+                  { paddingBottom: insets.bottom + 16 },
+                ]}
+              >
+                <View style={styles.notFoundHeader}>
+                  <Ionicons name="ban-outline" size={24} color="#F87171" />
+                  <Text style={styles.notFoundTitle}>Not a food item</Text>
+                </View>
+                <Text style={styles.notFoundDescription}>
+                  This product doesn't appear to be a food or drink. Only food
+                  items can be tracked.
+                </Text>
+                <TouchableOpacity
+                  style={styles.scanAgainButtonAlt}
+                  onPress={handleScanAgain}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="scan-outline" size={16} color="#666" />
+                  <Text style={styles.scanAgainText}>Scan Again</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+
             {/* Error state */}
             {state.type === "error" && (
               <Animated.View
@@ -601,15 +692,45 @@ export function BarcodeScannerModal({
             )}
           </>
         )}
-      </View>
+          </Animated.View>
+        </GestureDetector>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  gestureRoot: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+  backdropPressable: {
+    flex: 1,
+  },
+  container: {
     flex: 1,
     backgroundColor: "#000",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: "hidden",
+  },
+  dragIndicatorContainer: {
+    position: "absolute",
+    top: 8,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 10,
+  },
+  dragIndicator: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.4)",
   },
   // Permission screen
   permissionContainer: {
@@ -726,7 +847,7 @@ const styles = StyleSheet.create({
   // Hint pill
   hintContainer: {
     position: "absolute",
-    bottom: 300,
+    top: SCREEN_HEIGHT * 0.23 - 52,
     left: 0,
     right: 0,
     alignItems: "center",

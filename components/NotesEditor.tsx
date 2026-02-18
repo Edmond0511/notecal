@@ -712,27 +712,39 @@ export function NotesEditor({
   }, [initialDocumentText]);
 
   // Reset layout measurements and scroll to top on date change.
-  // Blur first so RN's native scroll-to-cursor doesn't fire when the
-  // TextInput value changes. Release selection control immediately —
-  // blur alone is sufficient to suppress scroll-to-cursor, and keeping
-  // selection pinned to {start:0,end:0} causes iOS to fight user
-  // scrolling by repeatedly scrolling the parent ScrollView to show
-  // position 0 on every re-render.
+  // Pin selection to {0,0} so native scroll-to-cursor targets the top (not
+  // the end of the new text). Reset both isTouchActiveRef and isScrollingRef
+  // — during a swipe both can be true, which would cause
+  // handleContentSizeChange's guard to skip the forced scroll-to-top.
+  // After 50ms (~3 frames) release the selection pin so the user can tap
+  // freely. The 300ms focus cooldown ensures no scroll-to-cursor fires
+  // during that window.
   useEffect(() => {
-    setSelection(undefined);
+    setSelection({ start: 0, end: 0 });
     selectionPinnedRef.current = false;
+    isTouchActiveRef.current = false;
+    isScrollingRef.current = false;
 
     textInputRef.current?.blur();
     scrollToTopOnContentRef.current = true;
     setEntryYMap(new Map());
     setLayoutStale(true);
     scrollTo(scrollRef, 0, 0, false);
-    // Block focus for a short window so native scroll-to-cursor can't fire
     dateChangeCooldownRef.current = true;
     const cooldownTimer = setTimeout(() => {
       dateChangeCooldownRef.current = false;
     }, 300);
-    return () => clearTimeout(cooldownTimer);
+    // Release selection pin after layout settles. 50ms is enough for
+    // handleContentSizeChange's rAF to scroll to top, short enough that
+    // the user can't interact (finger just lifted from swipe, plus the
+    // 300ms cooldown blocks focus).
+    const selectionTimer = setTimeout(() => {
+      setSelection(undefined);
+    }, 50);
+    return () => {
+      clearTimeout(cooldownTimer);
+      clearTimeout(selectionTimer);
+    };
   }, [currentDate]);
 
   // Cleanup timeouts on unmount

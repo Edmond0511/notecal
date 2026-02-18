@@ -1,7 +1,6 @@
 import { useAppStore } from "@/store/app-store";
 import {
   calculateBMI,
-  calculateGoals,
   cmToFeetInches,
   feetInchesToCm,
   kgToLbs,
@@ -177,24 +176,12 @@ export function PersonalInfoModal({
     if (currentHeightCm < 100 || currentHeightCm > 275) return;
     if (currentWeightKg < 30 || currentWeightKg > 300) return;
 
-    const input = {
+    setGoals({
+      ...goals,
       sex: editSex,
       age: currentAge,
       heightCm: Math.round(currentHeightCm * 10) / 10,
       weightKg: Math.round(currentWeightKg * 10) / 10,
-      activityLevel: goals.activityLevel,
-      goalType: goals.goalType,
-      proteinPreference: goals.proteinPreference,
-      carbPreference: goals.carbPreference,
-      targetWeightKg: goals.targetWeightKg,
-      timelineWeeks: goals.timelineWeeks,
-    };
-
-    const calculated = calculateGoals(input);
-    setGoals({
-      ...calculated,
-      manualTargets: goals.manualTargets,
-      createdAt: goals.createdAt,
     });
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -623,7 +610,7 @@ export function PersonalInfoModal({
                   activeOpacity={0.8}
                 >
                   <Text style={styles.saveButtonText}>
-                    Save & Recalculate Goals
+                    Save
                   </Text>
                 </TouchableOpacity>
               </View>

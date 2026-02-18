@@ -1,522 +1,547 @@
-import {
-  resolveNutritionFromPhoto,
-  NutritionNotFoodError,
-  NutritionApiError,
-} from "@/services/nutritionApi";
-import { Entry, FoodItem, Macros } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
-import {
-  faDroplet,
-  faDrumstickBite,
-  faFireFlameCurved,
-  faWheatAwn,
-} from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
+  Dimensions,
   Modal,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
+import Animated, {
+  Extrapolation,
+  FadeIn,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { supabase } from "@/lib/supabase";
 
-type ModalState = "idle" | "camera" | "analyzing" | "result" | "not_food" | "error";
+// Lazy-load expo-camera to avoid crashing before native rebuild
+let CameraView: any = null;
+let useCameraPermissions: any = null;
+let cameraAvailable = false;
+
+try {
+  const mod = require("expo-camera");
+  CameraView = mod.CameraView;
+  useCameraPermissions = mod.useCameraPermissions;
+  cameraAvailable = true;
+} catch {
+  cameraAvailable = false;
+}
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const DISMISS_THRESHOLD = 150;
+const TEAL = "#1A6872";
 
 interface FoodPhotoModalProps {
   visible: boolean;
   onClose: () => void;
-  onAddEntry: (items: FoodItem[], totals: Macros) => void;
+  onPhotoCaptured: (base64: string, mimeType: string) => void;
+}
+
+// Stub hook when expo-camera is not available
+function useStubPermissions(): [{ granted: false } | null, () => void] {
+  return [null, () => {}];
 }
 
 export function FoodPhotoModal({
   visible,
   onClose,
-  onAddEntry,
+  onPhotoCaptured,
 }: FoodPhotoModalProps) {
   const insets = useSafeAreaInsets();
-  const [state, setState] = useState<ModalState>("idle");
-  const [items, setItems] = useState<FoodItem[]>([]);
-  const [totals, setTotals] = useState<Macros | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
-  const hasLaunchedRef = useRef(false);
+  const usePerms = cameraAvailable ? useCameraPermissions : useStubPermissions;
+  const [permission, requestPermission] = usePerms();
+  const [flashMode, setFlashMode] = useState<"off" | "on" | "auto">("off");
+  const [zoom, setZoom] = useState(0);
+  const cameraRef = useRef<any>(null);
+  const captureLockRef = useRef(false);
+  const translateY = useSharedValue(0);
 
-  const reset = useCallback(() => {
-    setState("idle");
-    setItems([]);
-    setTotals(null);
-    setErrorMessage("");
-    hasLaunchedRef.current = false;
-  }, []);
+  // Reset state when modal opens
+  useEffect(() => {
+    if (visible) {
+      setFlashMode("off");
+      setZoom(0);
+      translateY.value = 0;
+      captureLockRef.current = false;
+    }
+  }, [visible]);
 
-  const launchCamera = useCallback(async () => {
-    setState("camera");
+  const handleCapture = useCallback(async () => {
+    if (!cameraRef.current || captureLockRef.current) return;
+    captureLockRef.current = true;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      const ImagePicker = await import("expo-image-picker");
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission needed",
-          "Camera access is required to snap food photos.",
-        );
-        reset();
-        onClose();
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
+      const photo = await cameraRef.current.takePictureAsync({
         quality: 0.5,
         base64: true,
-        allowsEditing: false,
       });
-
-      if (result.canceled || !result.assets?.[0]?.base64) {
-        reset();
-        onClose();
-        return;
+      if (photo?.base64) {
+        onPhotoCaptured(photo.base64, "image/jpeg");
       }
-
-      const asset = result.assets[0];
-      const base64 = asset.base64!;
-      const mimeType = asset.mimeType || "image/jpeg";
-
-      setState("analyzing");
-
-      const { data: { user } } = await supabase.auth.getUser();
-      const response = await resolveNutritionFromPhoto(base64, mimeType, {
-        userId: user?.id,
-      });
-
-      if (response.resolved && response.resolved.length > 0) {
-        setItems(response.resolved);
-        setTotals(response.totals);
-        setState("result");
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else {
-        setState("not_food");
-      }
-    } catch (error) {
-      if (error instanceof NutritionNotFoodError) {
-        setState("not_food");
-      } else {
-        console.error("[FoodPhotoModal] Error:", error);
-        setErrorMessage(
-          error instanceof NutritionApiError
-            ? error.message
-            : "Something went wrong. Please try again.",
-        );
-        setState("error");
-      }
+    } catch (e) {
+      console.error("[FoodPhotoModal] Capture error:", e);
     }
-  }, [onClose, reset]);
-
-  // Launch camera when modal becomes visible
-  useEffect(() => {
-    if (visible && !hasLaunchedRef.current) {
-      hasLaunchedRef.current = true;
-      launchCamera();
-    }
-    if (!visible) {
-      reset();
-    }
-  }, [visible, launchCamera, reset]);
-
-  const handleRetake = useCallback(() => {
-    hasLaunchedRef.current = false;
-    reset();
-    // Small delay to let state settle before relaunching
-    setTimeout(() => {
-      hasLaunchedRef.current = true;
-      launchCamera();
-    }, 100);
-  }, [launchCamera, reset]);
-
-  const handleAdd = useCallback(() => {
-    if (items.length > 0 && totals) {
-      onAddEntry(items, totals);
-      reset();
-      onClose();
-    }
-  }, [items, totals, onAddEntry, onClose, reset]);
+    onClose();
+  }, [onPhotoCaptured, onClose]);
 
   const handleClose = useCallback(() => {
-    reset();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
-  }, [reset, onClose]);
+  }, [onClose]);
 
-  if (!visible) return null;
+  const toggleFlash = useCallback(() => {
+    setFlashMode((prev) => {
+      if (prev === "off") return "on";
+      if (prev === "on") return "auto";
+      return "off";
+    });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  const handleZoomToggle = useCallback((level: number) => {
+    setZoom(level);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  const flashIconName =
+    flashMode === "off"
+      ? "flash-off"
+      : flashMode === "on"
+        ? "flash"
+        : "flash-outline";
+
+  const panGesture = Gesture.Pan()
+    .activeOffsetY(10)
+    .onUpdate((event) => {
+      if (event.translationY > 0) {
+        translateY.value = event.translationY;
+      }
+    })
+    .onEnd((event) => {
+      if (event.translationY > DISMISS_THRESHOLD) {
+        translateY.value = withSpring(SCREEN_HEIGHT, {
+          damping: 20,
+          stiffness: 200,
+        });
+        runOnJS(handleClose)();
+      } else {
+        translateY.value = withSpring(0, { damping: 20, stiffness: 400 });
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateY.value,
+      [0, SCREEN_HEIGHT * 0.5],
+      [1, 0],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
+  if (!permission) return null;
 
   return (
     <Modal
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
+      animationType="fade"
+      transparent
+      onRequestClose={onClose}
     >
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <StatusBar barStyle="dark-content" />
-
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} hitSlop={12}>
-            <Ionicons name="close" size={24} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Snap Food</Text>
-          <View style={{ width: 24 }} />
-        </View>
-
-        {/* Content */}
-        {(state === "camera" || state === "analyzing") && (
+      <GestureHandlerRootView style={styles.gestureRoot}>
+        <StatusBar barStyle="light-content" />
+        <Animated.View style={[styles.backdrop, backdropStyle]}>
+          <TouchableOpacity
+            style={styles.backdropPressable}
+            onPress={handleClose}
+            activeOpacity={1}
+          />
+        </Animated.View>
+        <GestureDetector gesture={panGesture}>
           <Animated.View
-            entering={FadeIn.duration(200)}
-            style={styles.centerContent}
+            style={[
+              styles.container,
+              { marginTop: insets.top },
+              animatedStyle,
+            ]}
           >
-            <ActivityIndicator size="large" color="#1A6872" />
-            <Text style={styles.statusText}>
-              {state === "camera" ? "Opening camera…" : "Analyzing food…"}
-            </Text>
-            {state === "analyzing" && (
-              <Text style={styles.statusSubtext}>
-                Identifying items and calculating nutrition
-              </Text>
+            {!cameraAvailable ? (
+              <View style={styles.permissionContainer}>
+                <View style={styles.permissionContent}>
+                  <View style={styles.permissionIconCircle}>
+                    <Ionicons name="build-outline" size={48} color={TEAL} />
+                  </View>
+                  <Text style={styles.permissionTitle}>Rebuild Required</Text>
+                  <Text style={styles.permissionDescription}>
+                    The camera module requires a native rebuild. Run{"\n"}
+                    <Text style={{ fontWeight: "600" }}>
+                      npx expo run:ios
+                    </Text>
+                    {"\n"}then reopen the app.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.permissionCancelButton}
+                    onPress={handleClose}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.permissionCancelText}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : !permission.granted ? (
+              <View style={styles.permissionContainer}>
+                <View style={styles.permissionContent}>
+                  <View style={styles.permissionIconCircle}>
+                    <Ionicons name="camera-outline" size={48} color={TEAL} />
+                  </View>
+                  <Text style={styles.permissionTitle}>Camera Access</Text>
+                  <Text style={styles.permissionDescription}>
+                    NoteCal needs camera access to photograph food and calculate
+                    nutrition
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.permissionButton}
+                    onPress={requestPermission}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.permissionButtonText}>
+                      Allow Camera
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.permissionCancelButton}
+                    onPress={handleClose}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.permissionCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <>
+                <CameraView
+                  ref={cameraRef}
+                  style={StyleSheet.absoluteFill}
+                  facing="back"
+                  flash={flashMode}
+                  zoom={zoom}
+                />
+
+                {/* Drag indicator */}
+                <View
+                  style={styles.dragIndicatorContainer}
+                  pointerEvents="none"
+                >
+                  <View style={styles.dragIndicator} />
+                </View>
+
+                {/* Close button */}
+                <TouchableOpacity
+                  style={[styles.closeButton, { top: 12 }]}
+                  onPress={handleClose}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="chevron-down" size={26} color="#fff" />
+                </TouchableOpacity>
+
+                {/* Flash toggle */}
+                <TouchableOpacity
+                  style={[styles.flashButton, { top: 12 }]}
+                  onPress={toggleFlash}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={flashIconName as any}
+                    size={22}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+
+                {/* Hint pill */}
+                <Animated.View
+                  entering={FadeIn.duration(300)}
+                  style={styles.hintContainer}
+                >
+                  <View style={styles.hintPill}>
+                    <Ionicons
+                      name="camera-outline"
+                      size={18}
+                      color="rgba(255,255,255,0.8)"
+                    />
+                    <Text style={styles.hintText}>
+                      Take a photo of your food
+                    </Text>
+                  </View>
+                </Animated.View>
+
+                {/* Zoom + capture button */}
+                <View
+                  style={[
+                    styles.captureContainer,
+                    { paddingBottom: insets.bottom + 20 },
+                  ]}
+                >
+                  <View style={styles.zoomContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.zoomButton,
+                        zoom === 0 && styles.zoomButtonActive,
+                      ]}
+                      onPress={() => handleZoomToggle(0)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.zoomLabel,
+                          zoom === 0 && styles.zoomLabelActive,
+                        ]}
+                      >
+                        0.5x
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.zoomButton,
+                        zoom !== 0 && styles.zoomButtonActive,
+                      ]}
+                      onPress={() => handleZoomToggle(0.05)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.zoomLabel,
+                          zoom !== 0 && styles.zoomLabelActive,
+                        ]}
+                      >
+                        1x
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.captureButtonOuter}
+                    onPress={handleCapture}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.captureButtonInner} />
+                  </TouchableOpacity>
+                </View>
+              </>
             )}
           </Animated.View>
-        )}
-
-        {state === "result" && (
-          <Animated.View
-            entering={FadeInDown.duration(300)}
-            style={styles.resultContainer}
-          >
-            <ScrollView
-              style={styles.resultScroll}
-              contentContainerStyle={styles.resultScrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <Text style={styles.resultTitle}>
-                Found {items.length} item{items.length !== 1 ? "s" : ""}
-              </Text>
-
-              {/* Totals summary */}
-              {totals && (
-                <View style={styles.totalsRow}>
-                  <MacroPill
-                    icon={faFireFlameCurved as IconProp}
-                    value={Math.round(totals.kcal)}
-                    unit="kcal"
-                    color="#E8590C"
-                  />
-                  <MacroPill
-                    icon={faDrumstickBite as IconProp}
-                    value={Math.round(totals.protein)}
-                    unit="g"
-                    color="#2B8A3E"
-                  />
-                  <MacroPill
-                    icon={faDroplet as IconProp}
-                    value={Math.round(totals.fat)}
-                    unit="g"
-                    color="#E67700"
-                  />
-                  <MacroPill
-                    icon={faWheatAwn as IconProp}
-                    value={Math.round(totals.carbs)}
-                    unit="g"
-                    color="#5C7CFA"
-                  />
-                </View>
-              )}
-
-              {/* Item list */}
-              {items.map((item, index) => (
-                <View key={index} style={styles.itemCard}>
-                  <View style={styles.itemHeader}>
-                    <Text style={styles.itemLabel} numberOfLines={2}>
-                      {item.label}
-                    </Text>
-                    <Text style={styles.itemKcal}>
-                      {Math.round(item.macros.kcal)} kcal
-                    </Text>
-                  </View>
-                  <View style={styles.itemMacros}>
-                    <Text style={styles.itemMacroText}>
-                      {item.qty}{item.unit}
-                    </Text>
-                    <Text style={styles.itemMacroText}>
-                      P: {Math.round(item.macros.protein)}g
-                    </Text>
-                    <Text style={styles.itemMacroText}>
-                      F: {Math.round(item.macros.fat)}g
-                    </Text>
-                    <Text style={styles.itemMacroText}>
-                      C: {Math.round(item.macros.carbs)}g
-                    </Text>
-                  </View>
-                  {item.confidence < 0.8 && (
-                    <Text style={styles.lowConfidence}>
-                      ~ estimated (confidence: {Math.round(item.confidence * 100)}%)
-                    </Text>
-                  )}
-                </View>
-              ))}
-            </ScrollView>
-
-            {/* Action buttons */}
-            <View style={[styles.actionBar, { paddingBottom: insets.bottom + 16 }]}>
-              <TouchableOpacity
-                style={styles.retakeButton}
-                onPress={handleRetake}
-              >
-                <Ionicons name="camera-outline" size={18} color="#1A6872" />
-                <Text style={styles.retakeButtonText}>Retake</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={handleAdd}
-              >
-                <Text style={styles.addButtonText}>Add to Log</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        )}
-
-        {state === "not_food" && (
-          <Animated.View
-            entering={FadeIn.duration(200)}
-            style={styles.centerContent}
-          >
-            <Ionicons name="alert-circle-outline" size={48} color="#999" />
-            <Text style={styles.errorTitle}>No food items identified</Text>
-            <Text style={styles.errorSubtext}>
-              Try taking a clearer photo of your food
-            </Text>
-            <TouchableOpacity
-              style={styles.retakeButtonLarge}
-              onPress={handleRetake}
-            >
-              <Ionicons name="camera-outline" size={18} color="#1A6872" />
-              <Text style={styles.retakeButtonText}>Retake Photo</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        {state === "error" && (
-          <Animated.View
-            entering={FadeIn.duration(200)}
-            style={styles.centerContent}
-          >
-            <Ionicons name="warning-outline" size={48} color="#E8590C" />
-            <Text style={styles.errorTitle}>Analysis failed</Text>
-            <Text style={styles.errorSubtext}>{errorMessage}</Text>
-            <TouchableOpacity
-              style={styles.retakeButtonLarge}
-              onPress={handleRetake}
-            >
-              <Ionicons name="camera-outline" size={18} color="#1A6872" />
-              <Text style={styles.retakeButtonText}>Try Again</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-      </View>
+        </GestureDetector>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
 
-function MacroPill({
-  icon,
-  value,
-  unit,
-  color,
-}: {
-  icon: IconProp;
-  value: number;
-  unit: string;
-  color: string;
-}) {
-  return (
-    <View style={[styles.macroPill, { backgroundColor: `${color}12` }]}>
-      <FontAwesomeIcon icon={icon} size={12} color={color} />
-      <Text style={[styles.macroPillText, { color }]}>
-        {value}
-        {unit}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
+  gestureRoot: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+  backdropPressable: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#000",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: "hidden",
   },
-  header: {
-    flexDirection: "row",
+  dragIndicatorContainer: {
+    position: "absolute",
+    top: 8,
+    left: 0,
+    right: 0,
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#eee",
+    zIndex: 10,
   },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#333",
+  dragIndicator: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.4)",
   },
-  centerContent: {
+  // Permission screens
+  permissionContainer: {
     flex: 1,
-    alignItems: "center",
+    backgroundColor: "#f8f8f8",
     justifyContent: "center",
-    paddingHorizontal: 32,
-    gap: 12,
+    alignItems: "center",
   },
-  statusText: {
-    fontSize: 17,
-    fontWeight: "500",
-    color: "#333",
-    marginTop: 16,
+  permissionContent: {
+    alignItems: "center",
+    paddingHorizontal: 40,
   },
-  statusSubtext: {
-    fontSize: 14,
-    color: "#888",
-    textAlign: "center",
+  permissionIconCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#E0F2F1",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
   },
-  resultContainer: {
-    flex: 1,
-  },
-  resultScroll: {
-    flex: 1,
-  },
-  resultScrollContent: {
-    padding: 16,
-    paddingBottom: 24,
-  },
-  resultTitle: {
-    fontSize: 18,
+  permissionTitle: {
+    fontSize: 22,
+    fontFamily: "System",
     fontWeight: "600",
-    color: "#333",
+    color: "#1a1a1a",
+    marginBottom: 12,
+    letterSpacing: -0.3,
+  },
+  permissionDescription: {
+    fontSize: 16,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  permissionButton: {
+    backgroundColor: TEAL,
+    paddingVertical: 14,
+    paddingHorizontal: 36,
+    borderRadius: 14,
     marginBottom: 12,
   },
-  totalsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 16,
-  },
-  macroPill: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  macroPillText: {
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  itemCard: {
-    backgroundColor: "#f9f9f8",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
-  },
-  itemHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 6,
-  },
-  itemLabel: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#333",
-    flex: 1,
-    marginRight: 12,
-  },
-  itemKcal: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#E8590C",
-  },
-  itemMacros: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  itemMacroText: {
-    fontSize: 13,
-    color: "#666",
-  },
-  lowConfidence: {
-    fontSize: 12,
-    color: "#999",
-    fontStyle: "italic",
-    marginTop: 4,
-  },
-  actionBar: {
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#eee",
-    backgroundColor: "#fff",
-  },
-  retakeButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: "#E0F2F1",
-  },
-  retakeButtonText: {
-    fontSize: 15,
-    fontWeight: "400",
-    color: "#1A6872",
-  },
-  addButton: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: "#1A6872",
-  },
-  addButtonText: {
-    fontSize: 15,
+  permissionButtonText: {
+    fontSize: 17,
+    fontFamily: "System",
     fontWeight: "400",
     color: "#fff",
   },
-  errorTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#333",
+  permissionCancelButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
   },
-  errorSubtext: {
-    fontSize: 14,
-    color: "#888",
-    textAlign: "center",
+  permissionCancelText: {
+    fontSize: 16,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: "#666",
   },
-  retakeButtonLarge: {
+  // Close button
+  closeButton: {
+    position: "absolute",
+    left: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  // Flash button
+  flashButton: {
+    position: "absolute",
+    right: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  // Zoom controls
+  zoomContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    backgroundColor: "#E0F2F1",
-    marginTop: 8,
+    gap: 4,
+    marginBottom: 18,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderRadius: 20,
+    padding: 3,
+  },
+  zoomButton: {
+    width: 40,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  zoomButtonActive: {
+    backgroundColor: "rgba(255,255,255,0.25)",
+  },
+  zoomLabel: {
+    fontSize: 13,
+    fontFamily: "System",
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.5)",
+  },
+  zoomLabelActive: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  // Hint pill
+  hintContainer: {
+    position: "absolute",
+    bottom: 200,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  hintPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 24,
+  },
+  hintText: {
+    fontSize: 15,
+    fontFamily: "System",
+    fontWeight: "500",
+    color: "#fff",
+  },
+  // Capture button
+  captureContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    paddingTop: 16,
+  },
+  captureButtonOuter: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 3,
+    borderColor: "#fff",
+  },
+  captureButtonInner: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#fff",
   },
 });

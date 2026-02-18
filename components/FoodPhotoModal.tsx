@@ -17,12 +17,14 @@ import {
 } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
-  FadeIn,
   interpolate,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
+  withSequence,
   withSpring,
+  withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -68,6 +70,7 @@ export function FoodPhotoModal({
   const cameraRef = useRef<any>(null);
   const captureLockRef = useRef(false);
   const translateY = useSharedValue(0);
+  const hintOpacity = useSharedValue(0);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -76,6 +79,11 @@ export function FoodPhotoModal({
       setZoom(0);
       translateY.value = 0;
       captureLockRef.current = false;
+      // Fade in hint, then auto-fade out after 2s
+      hintOpacity.value = withSequence(
+        withTiming(1, { duration: 400 }),
+        withDelay(2000, withTiming(0, { duration: 600 })),
+      );
     }
   }, [visible]);
 
@@ -153,6 +161,10 @@ export function FoodPhotoModal({
       [1, 0],
       Extrapolation.CLAMP,
     ),
+  }));
+
+  const hintStyle = useAnimatedStyle(() => ({
+    opacity: hintOpacity.value,
   }));
 
   if (!permission) return null;
@@ -275,8 +287,8 @@ export function FoodPhotoModal({
 
                 {/* Hint pill */}
                 <Animated.View
-                  entering={FadeIn.duration(300)}
-                  style={styles.hintContainer}
+                  style={[styles.hintContainer, hintStyle]}
+                  pointerEvents="none"
                 >
                   <View style={styles.hintPill}>
                     <Ionicons

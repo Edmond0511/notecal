@@ -303,10 +303,13 @@ export function Calendar({
 
               let dotColor: keyof typeof DOT_COLORS | null = null;
               if (dateCalorieMap && item.isCurrentMonth) {
-                const isFuture = dateStr > todayStr;
-                if (!isFuture) {
-                  const consumed = dateCalorieMap[dateStr];
-                  if (consumed && consumed > 0) {
+                const consumed = dateCalorieMap[dateStr];
+                if (consumed && consumed > 0) {
+                  const isFuture = dateStr > todayStr;
+                  if (isFuture) {
+                    // Future dates with entries get a neutral green dot
+                    dotColor = 'green';
+                  } else {
                     const target = goals!.manualTargets?.kcal ?? goals!.targetKcal;
                     dotColor = getDotColor(consumed, target);
                   }

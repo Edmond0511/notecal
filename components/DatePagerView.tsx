@@ -62,23 +62,38 @@ export function DatePagerView({
   const internalDateRef = useRef(currentDate);
   // Guard to ignore onPageSelected events caused by programmatic setPage
   const isResettingRef = useRef(false);
+  // Skip recentering on initial mount
+  const isMountedRef = useRef(false);
 
   const dates = useMemo(
     () => [shiftDate(currentDate, -1), currentDate, shiftDate(currentDate, 1)],
     [currentDate],
   );
 
-  // When currentDate changes externally (arrows, calendar), jump to center without animation
+  // Unified recentering: handles both swipe-triggered and external date changes
   useEffect(() => {
-    if (internalDateRef.current !== currentDate) {
-      internalDateRef.current = currentDate;
-      isResettingRef.current = true;
-      pagerRef.current?.setPageWithoutAnimation(1);
-      // Release guard after a frame
-      requestAnimationFrame(() => {
-        isResettingRef.current = false;
-      });
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      return;
     }
+
+    internalDateRef.current = currentDate;
+    isResettingRef.current = true;
+
+    // setTimeout(0) runs after React commits new children to the native pager
+    const recenterId = setTimeout(() => {
+      pagerRef.current?.setPageWithoutAnimation(1);
+    }, 0);
+
+    // Guaranteed guard release — no reliance on native onPageSelected events
+    const guardId = setTimeout(() => {
+      isResettingRef.current = false;
+    }, 150);
+
+    return () => {
+      clearTimeout(recenterId);
+      clearTimeout(guardId);
+    };
   }, [currentDate]);
 
   const handlePageSelected = useCallback(
@@ -98,13 +113,7 @@ export function DatePagerView({
       internalDateRef.current = newDate;
       onDateChange(newDate);
 
-      // Silently recenter after React re-renders with new dates
-      requestAnimationFrame(() => {
-        pagerRef.current?.setPageWithoutAnimation(1);
-        requestAnimationFrame(() => {
-          isResettingRef.current = false;
-        });
-      });
+      // Recentering is handled by the useEffect on currentDate
     },
     [dates, onDateChange],
   );

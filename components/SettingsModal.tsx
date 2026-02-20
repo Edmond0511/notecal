@@ -503,37 +503,49 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
         </GestureHandlerRootView>
 
         {/* Nested inside Settings Modal — presents on top on iOS */}
-        <AuthModal
-          visible={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          onAuthSuccess={handleAuthSuccess}
-        />
+        {showAuthModal && (
+          <AuthModal
+            visible={showAuthModal}
+            onClose={() => setShowAuthModal(false)}
+            onAuthSuccess={handleAuthSuccess}
+          />
+        )}
 
-        <NutritionGoalsModal
-          visible={showNutritionGoals}
-          onClose={() => setShowNutritionGoals(false)}
-        />
+        {showNutritionGoals && (
+          <NutritionGoalsModal
+            visible={showNutritionGoals}
+            onClose={() => setShowNutritionGoals(false)}
+          />
+        )}
 
-        <GoalsWizard
-          visible={showGoalsWizard}
-          onClose={() => setShowGoalsWizard(false)}
-          existingGoals={goals}
-        />
+        {showGoalsWizard && (
+          <GoalsWizard
+            visible={showGoalsWizard}
+            onClose={() => setShowGoalsWizard(false)}
+            existingGoals={goals}
+          />
+        )}
 
-        <WeightTrackingModal
-          visible={showWeightTracking}
-          onClose={() => setShowWeightTracking(false)}
-        />
+        {showWeightTracking && (
+          <WeightTrackingModal
+            visible={showWeightTracking}
+            onClose={() => setShowWeightTracking(false)}
+          />
+        )}
 
-        <CalendarLegendModal
-          visible={showCalendarLegend}
-          onClose={() => setShowCalendarLegend(false)}
-        />
+        {showCalendarLegend && (
+          <CalendarLegendModal
+            visible={showCalendarLegend}
+            onClose={() => setShowCalendarLegend(false)}
+          />
+        )}
 
-        <PersonalInfoModal
-          visible={showPersonalInfo}
-          onClose={() => setShowPersonalInfo(false)}
-        />
+        {showPersonalInfo && (
+          <PersonalInfoModal
+            visible={showPersonalInfo}
+            onClose={() => setShowPersonalInfo(false)}
+          />
+        )}
       </Modal>
     </>
   );

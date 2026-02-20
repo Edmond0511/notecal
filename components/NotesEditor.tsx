@@ -598,6 +598,7 @@ interface NotesEditorProps {
   isOnline?: boolean;
   waterTrackingEnabled?: boolean;
   inputAccessoryViewID?: string;
+  isActive?: boolean;
 }
 
 export function NotesEditor({
@@ -611,6 +612,7 @@ export function NotesEditor({
   isOnline = true,
   waterTrackingEnabled = false,
   inputAccessoryViewID,
+  isActive = true,
 }: NotesEditorProps) {
   const [documentText, setDocumentText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
@@ -711,41 +713,22 @@ export function NotesEditor({
     previousTextRef.current = initialDocumentText;
   }, [initialDocumentText]);
 
-  // Reset layout measurements and scroll to top on date change.
-  // Pin selection to {0,0} so native scroll-to-cursor targets the top (not
-  // the end of the new text). Reset both isTouchActiveRef and isScrollingRef
-  // — during a swipe both can be true, which would cause
-  // handleContentSizeChange's guard to skip the forced scroll-to-top.
-  // After 50ms (~3 frames) release the selection pin so the user can tap
-  // freely. The 300ms focus cooldown ensures no scroll-to-cursor fires
-  // during that window.
+  // When page becomes inactive: blur input, clear debounce timers.
+  // When page becomes active: reset scroll and layout state.
   useEffect(() => {
-    setSelection({ start: 0, end: 0 });
-    selectionPinnedRef.current = false;
-    isTouchActiveRef.current = false;
-    isScrollingRef.current = false;
-
-    textInputRef.current?.blur();
-    scrollToTopOnContentRef.current = true;
-    setEntryYMap(new Map());
-    setLayoutStale(true);
-    scrollTo(scrollRef, 0, 0, false);
-    dateChangeCooldownRef.current = true;
-    const cooldownTimer = setTimeout(() => {
-      dateChangeCooldownRef.current = false;
-    }, 300);
-    // Release selection pin after layout settles. 50ms is enough for
-    // handleContentSizeChange's rAF to scroll to top, short enough that
-    // the user can't interact (finger just lifted from swipe, plus the
-    // 300ms cooldown blocks focus).
-    const selectionTimer = setTimeout(() => {
-      setSelection(undefined);
-    }, 50);
-    return () => {
-      clearTimeout(cooldownTimer);
-      clearTimeout(selectionTimer);
-    };
-  }, [currentDate]);
+    if (!isActive) {
+      textInputRef.current?.blur();
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+        debounceTimeoutRef.current = null;
+      }
+    } else {
+      // Reset layout state when becoming active
+      setEntryYMap(new Map());
+      setLayoutStale(true);
+      scrollTo(scrollRef, 0, 0, false);
+    }
+  }, [isActive, scrollRef]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -984,6 +967,8 @@ export function NotesEditor({
   // Handle text changes with debouncing and Apple Notes-style list transforms
   const handleTextChange = useCallback(
     (newText: string) => {
+      // Prevent editing on inactive pages
+      if (!isActive) return;
       // Prevent recursive handling during programmatic text changes
       if (isTransformingRef.current) return;
 
@@ -1070,6 +1055,7 @@ export function NotesEditor({
       }, delay);
     },
     [
+      isActive,
       processDocumentChanges,
       onDocumentTextChange,
       scrollToKeepCaretVisible,
@@ -1188,7 +1174,8 @@ export function NotesEditor({
           placeholderTextColor="#ccc"
           multiline
           scrollEnabled={false}
-          autoFocus
+          autoFocus={isActive}
+          editable={isActive}
           textAlignVertical="top"
           autoCorrect={false}
           autoCapitalize="sentences"
@@ -1198,7 +1185,7 @@ export function NotesEditor({
           contextMenuHidden={false}
           selectTextOnFocus={false}
           clearTextOnFocus={false}
-          inputAccessoryViewID={inputAccessoryViewID}
+          inputAccessoryViewID={isActive ? inputAccessoryViewID : undefined}
         />
       </Animated.ScrollView>
 

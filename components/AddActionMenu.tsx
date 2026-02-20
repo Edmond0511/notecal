@@ -47,54 +47,56 @@ export function AddActionMenu({
         exiting={FadeOutDown.duration(150)}
         style={styles.menuWrapper}
       >
-        <View style={styles.menuRow}>
-          <TouchableOpacity
-            style={styles.menuItem}
-            activeOpacity={0.7}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onScanBarcodePress();
-            }}
-          >
-            <Ionicons name="barcode-outline" size={26} color="#222" />
-            <Text style={styles.menuLabel}>Scan Barcode</Text>
-          </TouchableOpacity>
+        <View style={styles.menuContainer}>
+          <View style={styles.menuRow}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onScanBarcodePress();
+              }}
+            >
+              <Ionicons name="barcode-outline" size={28} color="#222" />
+              <Text style={styles.menuLabel}>Scan Barcode</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            activeOpacity={0.7}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onSavedEntriesPress();
-            }}
-          >
-            <Ionicons name="bookmark-outline" size={26} color="#222" />
-            <Text style={styles.menuLabel}>Saved Entries</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onSavedEntriesPress();
+              }}
+            >
+              <Ionicons name="bookmark-outline" size={28} color="#222" />
+              <Text style={styles.menuLabel}>Saved Entries</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            activeOpacity={0.7}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onLogWeightPress();
-            }}
-          >
-            <Ionicons name="scale-outline" size={26} color="#222" />
-            <Text style={styles.menuLabel}>Log Weight</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onLogWeightPress();
+              }}
+            >
+              <Ionicons name="scale-outline" size={28} color="#222" />
+              <Text style={styles.menuLabel}>Log Weight</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            activeOpacity={0.7}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onSnapFoodPress();
-            }}
-          >
-            <Ionicons name="camera-outline" size={26} color="#222" />
-            <Text style={styles.menuLabel}>Snap Food</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onSnapFoodPress();
+              }}
+            >
+              <Ionicons name="camera-outline" size={28} color="#222" />
+              <Text style={styles.menuLabel}>Snap Food</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Animated.View>
     </View>
@@ -118,9 +120,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
   menuWrapper: {
-    marginBottom: 110,
+    marginBottom: 140,
     marginHorizontal: 20,
     alignSelf: "stretch",
+  },
+  menuContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 6,
   },
   menuRow: {
     flexDirection: "row",
@@ -132,15 +144,15 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: "center",
     gap: 6,
-    paddingVertical: 25,
+    paddingVertical: 20,
     paddingHorizontal: 8,
     borderRadius: 16,
     backgroundColor: "#fff",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   menuLabel: {
     fontSize: 13,

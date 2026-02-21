@@ -691,7 +691,7 @@ export function NutritionGoalsModal({
                           - water, 500ml
                         </Text>
                         <Text style={styles.waterTipExample}>
-                          - 2 glasses water
+                          - 1.5l water
                         </Text>
                       </View>
                       <View style={styles.waterTipUnitsRow}>
@@ -703,12 +703,6 @@ export function NutritionGoalsModal({
                         </View>
                         <View style={styles.waterTipUnit}>
                           <Text style={styles.waterTipUnitText}>oz</Text>
-                        </View>
-                        <View style={styles.waterTipUnit}>
-                          <Text style={styles.waterTipUnitText}>cups</Text>
-                        </View>
-                        <View style={styles.waterTipUnit}>
-                          <Text style={styles.waterTipUnitText}>glasses</Text>
                         </View>
                       </View>
                     </Animated.View>

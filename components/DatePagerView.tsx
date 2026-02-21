@@ -54,6 +54,7 @@ interface DatePagerContextValue {
   onAddEntry: (text: string) => void;
   onUpdateEntry?: (id: string, text: string) => Promise<void>;
   onDeleteEntry: (id: string) => void;
+  onDeleteEntries: (ids: string[]) => void;
   isOnline: boolean;
   waterTrackingEnabled: boolean;
 }
@@ -84,6 +85,7 @@ function DatePage({ index, isActive }: InfinitePagerPageProps) {
         onAddEntry={ctx.onAddEntry}
         onUpdateEntry={ctx.onUpdateEntry}
         onDeleteEntry={ctx.onDeleteEntry}
+        onDeleteEntries={ctx.onDeleteEntries}
         currentDate={date}
         isOnline={ctx.isOnline}
         waterTrackingEnabled={ctx.waterTrackingEnabled}
@@ -107,6 +109,7 @@ interface DatePagerViewProps {
   onAddEntry: (text: string) => void;
   onUpdateEntry?: (id: string, text: string) => Promise<void>;
   onDeleteEntry: (id: string) => void;
+  onDeleteEntries: (ids: string[]) => void;
   isOnline: boolean;
   waterTrackingEnabled: boolean;
 }
@@ -120,18 +123,26 @@ export function DatePagerView({
   onAddEntry,
   onUpdateEntry,
   onDeleteEntry,
+  onDeleteEntries,
   isOnline,
   waterTrackingEnabled,
 }: DatePagerViewProps) {
   const pagerRef = useRef<InfinitePagerImperativeApi>(null);
   const baseDateRef = useRef(currentDate); // Fixed at mount
   const isInternalChangeRef = useRef(false);
+  const isExternalNavRef = useRef(false);
   const currentIndexRef = useRef(0);
 
-  // Swipe handler
+  // Fires for both swipes and programmatic setPage (via useAnimatedReaction → runOnJS)
   const handlePageChange = useCallback(
     (pageIndex: number) => {
       currentIndexRef.current = pageIndex;
+      // setPage from external nav (arrows/calendar) triggers onPageChange too;
+      // ignore it so we don't poison isInternalChangeRef for the next chevron click.
+      if (isExternalNavRef.current) {
+        isExternalNavRef.current = false;
+        return;
+      }
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       const date = indexToDate(baseDateRef.current, pageIndex);
       isInternalChangeRef.current = true;
@@ -147,6 +158,8 @@ export function DatePagerView({
       return;
     }
     const targetIndex = dateToIndex(baseDateRef.current, currentDate);
+    if (currentIndexRef.current === targetIndex) return;
+    isExternalNavRef.current = true;
     pagerRef.current?.setPage(targetIndex, { animated: false });
     currentIndexRef.current = targetIndex;
   }, [currentDate]);
@@ -167,6 +180,7 @@ export function DatePagerView({
       onAddEntry,
       onUpdateEntry,
       onDeleteEntry,
+      onDeleteEntries,
       isOnline,
       waterTrackingEnabled,
     }),
@@ -177,6 +191,7 @@ export function DatePagerView({
       onAddEntry,
       onUpdateEntry,
       onDeleteEntry,
+      onDeleteEntries,
       isOnline,
       waterTrackingEnabled,
     ],
@@ -186,8 +201,8 @@ export function DatePagerView({
     <DatePagerContext.Provider value={contextValue}>
       <InfinitePager
         ref={pagerRef}
-        style={{ flex: 1 }}
-        pageWrapperStyle={{ flex: 1 }}
+        style={pagerStyle}
+        pageWrapperStyle={pagerStyle}
         PageComponent={DatePage}
         onPageChange={handlePageChange}
         pageBuffer={1}
@@ -197,3 +212,5 @@ export function DatePagerView({
     </DatePagerContext.Provider>
   );
 }
+
+const pagerStyle = { flex: 1 } as const;

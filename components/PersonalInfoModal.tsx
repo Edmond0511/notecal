@@ -823,7 +823,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     backgroundColor: "#0a7ea4",
-    borderRadius: 14,
+    borderRadius: 999,
     paddingVertical: 16,
     alignItems: "center",
   },

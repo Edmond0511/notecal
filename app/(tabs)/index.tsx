@@ -45,6 +45,7 @@ export default function HomeScreen() {
   const addEntry = useAppStore((state) => state.addEntry);
   const updateEntry = useAppStore((state) => state.updateEntry);
   const deleteEntry = useAppStore((state) => state.deleteEntry);
+  const deleteEntries = useAppStore((state) => state.deleteEntries);
   const setCurrentDate = useAppStore((state) => state.setCurrentDate);
   const saveDocument = useAppStore((state) => state.saveDocument);
   const getDocument = useAppStore((state) => state.getDocument);
@@ -492,6 +493,7 @@ export default function HomeScreen() {
         onAddEntry={addEntry}
         onUpdateEntry={updateEntry}
         onDeleteEntry={deleteEntry}
+        onDeleteEntries={deleteEntries}
         isOnline={isOnline}
         waterTrackingEnabled={goals?.manualTargets?.water !== undefined}
       />
@@ -499,16 +501,14 @@ export default function HomeScreen() {
       {/* iOS: Totals bar as native keyboard accessory */}
       {Platform.OS === "ios" && (
         <InputAccessoryView nativeID={INPUT_ACCESSORY_VIEW_ID}>
-          {showAccessoryBar && showAccessoryBarRef.current && (
-            <View style={styles.inputAccessoryWrapper}>
-              <TotalsBar
-                dailyTotals={dailyTotals}
-                isOnline={isOnline}
-                onAddSavedPress={handleAddSavedPress}
-                onTotalsPress={handleTotalsPress}
-              />
-            </View>
-          )}
+          <View style={styles.inputAccessoryWrapper}>
+            <TotalsBar
+              dailyTotals={dailyTotals}
+              isOnline={isOnline}
+              onAddSavedPress={handleAddSavedPress}
+              onTotalsPress={handleTotalsPress}
+            />
+          </View>
         </InputAccessoryView>
       )}
 

@@ -615,6 +615,7 @@ interface NotesEditorProps {
   onAddEntry: (text: string) => void;
   onUpdateEntry?: (id: string, text: string) => Promise<void>;
   onDeleteEntry: (id: string) => void;
+  onDeleteEntries?: (ids: string[]) => void;
   currentDate?: string;
   isOnline?: boolean;
   waterTrackingEnabled?: boolean;
@@ -629,6 +630,7 @@ export function NotesEditor({
   onAddEntry,
   onUpdateEntry,
   onDeleteEntry,
+  onDeleteEntries,
   currentDate,
   isOnline = true,
   waterTrackingEnabled = false,
@@ -639,6 +641,8 @@ export function NotesEditor({
   const isFreeform = entryMode === "freeform";
 
   const [documentText, setDocumentText] = useState(initialDocumentText);
+  const documentTextRef = useRef(initialDocumentText);
+  documentTextRef.current = documentText;
   const [prevInitialText, setPrevInitialText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
@@ -654,13 +658,19 @@ export function NotesEditor({
   // Track previous text for detecting user actions via text diffing
   const previousTextRef = useRef<string>(initialDocumentText);
 
-  // Sync prop to state during render (eliminates 1-frame flash on date change)
+  // Sync prop to state during render (eliminates 1-frame flash on date change).
+  // Only reset layout when the incoming text differs from what we already have
+  // (genuine external change like date navigation). Skip reset when the parent
+  // is just echoing back text we already set via handleTextChange — otherwise
+  // layoutStale briefly hides indicators on every keystroke.
   if (initialDocumentText !== prevInitialText) {
     setPrevInitialText(initialDocumentText);
-    setDocumentText(initialDocumentText);
-    previousTextRef.current = initialDocumentText;
-    setLayoutStale(true);
-    setEntryYMap(new Map());
+    if (initialDocumentText !== documentText) {
+      setDocumentText(initialDocumentText);
+      previousTextRef.current = initialDocumentText;
+      setLayoutStale(true);
+      setEntryYMap(new Map());
+    }
   }
 
   // Controlled selection for cursor positioning after transforms
@@ -677,19 +687,37 @@ export function NotesEditor({
   const isKeyboardVisibleRef = useRef(false);
   const isFocusPendingRef = useRef(false);
   const isScrollingRef = useRef(false);
+  // Flag: the next onFocus was triggered programmatically (rAF focus()),
+  // so handleFocus should accept it unconditionally without guard checks.
+  const isProgrammaticFocusRef = useRef(false);
   const [showSoftInput, setShowSoftInput] = useState(true);
+  const pendingFocusRef = useRef(false);
+  const showSoftInputRef = useRef(true);
   // Touch movement tracking for reliable tap-vs-scroll detection.
   // onScrollBeginDrag can fire late for slow scrolls, so we also track
   // raw touch movement to cancel pending keyboard open immediately.
   const touchStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const hasTouchMovedRef = useRef(false);
   const isTouchActiveRef = useRef(false);
+  // Scroll position saved on touch start, used to undo native scrollRangeToVisible
+  // that fires when UITextView becomes first responder before our JS blur() can prevent it.
+  const scrollBeforeTouchRef = useRef(0);
   // Flag: scroll to top after next content sync (set on date change)
   const scrollToTopOnContentRef = useRef(false);
-  // Cooldown: block focus briefly after date change to prevent native scroll-to-cursor
-  const dateChangeCooldownRef = useRef(false);
-  // Pin selection to position 0 after date change to prevent native scroll-to-cursor
-  const selectionPinnedRef = useRef(false);
+  // Focus with keyboard: fast-path when showSoftInput is already true,
+  // otherwise defer focus to useEffect after React commits the prop change.
+  const requestFocusWithKeyboard = useCallback(() => {
+    if (showSoftInputRef.current) {
+      // Prop already true on native side — focus immediately
+      isProgrammaticFocusRef.current = true;
+      textInputRef.current?.focus();
+    } else {
+      // Need state transition — defer focus to useEffect after commit
+      pendingFocusRef.current = true;
+      setShowSoftInput(true);
+    }
+  }, []);
+
   // Reanimated scroll handler - runs on UI thread, no JS re-renders
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -755,9 +783,6 @@ export function NotesEditor({
         debounceTimeoutRef.current = null;
       }
     } else {
-      // Reset layout state when becoming active
-      setEntryYMap(new Map());
-      setLayoutStale(true);
       scrollTo(scrollRef, 0, 0, false);
     }
   }, [isActive, scrollRef]);
@@ -782,6 +807,7 @@ export function NotesEditor({
     });
     const hideSub = Keyboard.addListener("keyboardDidHide", () => {
       isKeyboardVisibleRef.current = false;
+      pendingFocusRef.current = false;
       setShowSoftInput(false);
       textInputRef.current?.blur();
     });
@@ -791,13 +817,34 @@ export function NotesEditor({
     };
   }, []);
 
+  // Keep ref in sync with state so requestFocusWithKeyboard can read it synchronously.
+  showSoftInputRef.current = showSoftInput;
+
+  // After React commits showSoftInput=true, fire deferred focus if pending.
+  useEffect(() => {
+    if (showSoftInput && pendingFocusRef.current) {
+      pendingFocusRef.current = false;
+      // Guard: abort if scrolling started between request and commit
+      if (isScrollingRef.current || hasTouchMovedRef.current) {
+        setShowSoftInput(false);
+        textInputRef.current?.blur();
+        return;
+      }
+      isProgrammaticFocusRef.current = true;
+      textInputRef.current?.focus();
+    }
+  }, [showSoftInput]);
+
   // Track touch start position; clear movement flag.
+  // Save scroll position BEFORE native UITextView.becomeFirstResponder can
+  // call scrollRangeToVisible and snap the scroll to the cursor.
   const handleTouchStart = useCallback((e: any) => {
     const touch = e.nativeEvent;
     touchStartRef.current = { x: touch.pageX, y: touch.pageY };
     hasTouchMovedRef.current = false;
     isTouchActiveRef.current = true;
-  }, []);
+    scrollBeforeTouchRef.current = scrollOffset.value;
+  }, [scrollOffset]);
 
   // Detect finger movement (>3px) and cancel pending keyboard open immediately.
   // This fires much earlier than onScrollBeginDrag for slow scrolls.
@@ -808,45 +855,52 @@ export function NotesEditor({
     const dy = Math.abs(touch.pageY - touchStartRef.current.y);
     if (dx > 3 || dy > 3) {
       hasTouchMovedRef.current = true;
+      pendingFocusRef.current = false;
       // Cancel pending focus immediately
       if (isFocusPendingRef.current) {
         isFocusPendingRef.current = false;
         textInputRef.current?.blur();
+        // Undo native scrollRangeToVisible that fired on becomeFirstResponder
+        scrollTo(scrollRef, 0, scrollBeforeTouchRef.current, false);
       }
     }
-  }, []);
+  }, [scrollRef]);
 
   // On focus while keyboard is hidden: either defer to handleTouchEnd or resolve immediately.
   // If touch is still active, defer (focus fired mid-touch). If touch already ended
   // (focus fired after touchEnd due to ScrollView gesture recognition), resolve immediately.
+  //
+  // IMPORTANT: Native UITextView.becomeFirstResponder() calls scrollRangeToVisible()
+  // which snaps the parent scroll to the cursor BEFORE this JS callback fires.
+  // We undo this by restoring the scroll position saved in handleTouchStart.
   const handleFocus = useCallback(() => {
-    // After date change, block focus to prevent native scroll-to-cursor
-    if (dateChangeCooldownRef.current) {
-      textInputRef.current?.blur();
+    // Programmatic focus (from rAF in handleTouchEnd) — accept unconditionally.
+    // Guards below are designed for native focus events; the rAF delay can allow
+    // concurrent events (scroll, new touch, gesture) to flip refs and wrongly reject.
+    if (isProgrammaticFocusRef.current) {
+      isProgrammaticFocusRef.current = false;
       return;
     }
     if (isKeyboardVisibleRef.current) return; // already editing, no guard
-    // If a scroll is already active or touch has moved, blur immediately.
+    // If a scroll is already active or touch has moved, blur immediately
+    // and undo the native scrollRangeToVisible snap.
     if (isScrollingRef.current || hasTouchMovedRef.current) {
       textInputRef.current?.blur();
+      scrollTo(scrollRef, 0, scrollBeforeTouchRef.current, false);
       return;
     }
     if (isTouchActiveRef.current) {
       // Touch is still in progress — blur immediately to prevent native
-      // scroll-to-cursor, then re-focus in handleTouchEnd if it was a tap
+      // scroll-to-cursor, then re-focus in handleTouchEnd if it was a tap.
+      // Restore scroll position to undo scrollRangeToVisible snap.
       isFocusPendingRef.current = true;
       textInputRef.current?.blur();
+      scrollTo(scrollRef, 0, scrollBeforeTouchRef.current, false);
     } else {
-      // Touch already ended (focus fired after touchEnd) — resolve immediately
-      if (selectionPinnedRef.current) {
-        selectionPinnedRef.current = false;
-        requestAnimationFrame(() =>
-          setTimeout(() => setSelection(undefined), 50),
-        );
-      }
-      setShowSoftInput(true);
+      // Touch already ended (focus fired after touchEnd) — re-focus with keyboard
+      requestFocusWithKeyboard();
     }
-  }, []);
+  }, [scrollRef, requestFocusWithKeyboard]);
 
   // When touch ends (finger lifts), resolve pending focus.
   // If the touch didn't move and no scroll started, it was a tap → open keyboard.
@@ -859,23 +913,23 @@ export function NotesEditor({
       return;
     }
     // Tap confirmed — re-focus (was blurred in handleFocus to block
-    // native scroll-to-cursor) and open keyboard
-    setShowSoftInput(true);
-    textInputRef.current?.focus();
-    // Clear pinned selection after focus establishes
-    if (selectionPinnedRef.current) {
-      selectionPinnedRef.current = false;
-      requestAnimationFrame(() =>
-        setTimeout(() => setSelection(undefined), 50),
-      );
-    }
-  }, []);
+    // native scroll-to-cursor) and open keyboard.
+    requestFocusWithKeyboard();
+  }, [requestFocusWithKeyboard]);
 
   // Handle system touch cancellation (incoming call, gesture override).
   const handleTouchCancel = useCallback(() => {
     isTouchActiveRef.current = false;
-    if (isFocusPendingRef.current) {
-      isFocusPendingRef.current = false;
+    if (!isFocusPendingRef.current) return;
+    isFocusPendingRef.current = false;
+    // No movement detected — gesture system cancelled a tap, re-focus
+    if (!hasTouchMovedRef.current && !isScrollingRef.current) {
+      setShowSoftInput(true);
+      requestAnimationFrame(() => {
+        isProgrammaticFocusRef.current = true;
+        textInputRef.current?.focus();
+      });
+    } else {
       textInputRef.current?.blur();
     }
   }, []);
@@ -886,9 +940,12 @@ export function NotesEditor({
     isScrollingRef.current = true;
     if (isFocusPendingRef.current) {
       isFocusPendingRef.current = false;
+      pendingFocusRef.current = false;
       textInputRef.current?.blur();
+      // Undo native scrollRangeToVisible snap
+      scrollTo(scrollRef, 0, scrollBeforeTouchRef.current, false);
     }
-  }, []);
+  }, [scrollRef]);
 
   const handleScrollEnd = useCallback(() => {
     isScrollingRef.current = false;
@@ -995,8 +1052,14 @@ export function NotesEditor({
       }
 
       // Delete removed entries
-      for (const entryId of entriesToRemove) {
-        onDeleteEntry(entryId);
+      if (entriesToRemove.length > 0) {
+        if (onDeleteEntries) {
+          onDeleteEntries(entriesToRemove);
+        } else {
+          for (const entryId of entriesToRemove) {
+            onDeleteEntry(entryId);
+          }
+        }
       }
 
       // Add new entries
@@ -1004,7 +1067,7 @@ export function NotesEditor({
         onAddEntry(line);
       }
     },
-    [entries, parseDocumentForFoodEntries, onAddEntry, onDeleteEntry],
+    [entries, parseDocumentForFoodEntries, onAddEntry, onDeleteEntry, onDeleteEntries],
   );
 
   // Handle text changes with debouncing and Apple Notes-style list transforms
@@ -1142,8 +1205,11 @@ export function NotesEditor({
   const hasFreshMeasurements = !layoutStale;
 
   // Compute indicator data only when dependencies change
+  // Use ref for documentText so indicators only recompute when layout
+  // measurements (entryYMap) are fresh — avoids 1-frame position flicker
+  // caused by recomputing with stale y-positions on every keystroke.
   const indicatorData = useMemo(() => {
-    const lines = documentText.split("\n");
+    const lines = documentTextRef.current.split("\n");
     const usedEntryIds = new Set<string>();
     const positionCounts = new Map<string, number>();
 
@@ -1192,7 +1258,7 @@ export function NotesEditor({
     });
 
     return indicators;
-  }, [documentText, entries, entryYMap, isFreeform]);
+  }, [entries, entryYMap, isFreeform]);
 
   return (
     <View style={styles.container}>

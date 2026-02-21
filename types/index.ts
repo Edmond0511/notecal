@@ -185,6 +185,7 @@ export interface AppState {
   addEntry: (rawText: string) => void;
   updateEntry: (id: string, rawText: string) => Promise<void>;
   deleteEntry: (id: string) => void;
+  deleteEntries: (ids: string[]) => void;
   setCurrentDate: (date: string) => void;
   getEntriesForDate: (date: string) => Entry[];
   getDailyTotals: (date: string) => DailyTotals;

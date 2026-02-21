@@ -297,6 +297,14 @@ export const useAppStore = create<AppState>()(
     }));
   },
 
+  deleteEntries: (ids: string[]) => {
+    for (const id of ids) { nutritionQueue.cancel(id); }
+    const idSet = new Set(ids);
+    set((state) => ({
+      entries: state.entries.filter(e => !idSet.has(e.id)),
+    }));
+  },
+
   setCurrentDate: (date: string) => {
     set({ currentDate: date });
   },

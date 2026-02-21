@@ -73,7 +73,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
               <FontAwesomeIcon
                 icon={icons.mars}
                 size={20}
-                color={formData.sex === "male" ? "#fff" : "#1A6872"}
+                color={formData.sex === "male" ? "#fff" : "#0a7ea4"}
               />
             </View>
             <Text
@@ -102,7 +102,7 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
               <FontAwesomeIcon
                 icon={icons.venus}
                 size={20}
-                color={formData.sex === "female" ? "#fff" : "#1A6872"}
+                color={formData.sex === "female" ? "#fff" : "#0a7ea4"}
               />
             </View>
             <Text
@@ -313,8 +313,8 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   sexOptionActive: {
-    backgroundColor: "#E0F2F1",
-    borderColor: "#1A6872",
+    backgroundColor: "#E0F2F7",
+    borderColor: "#0a7ea4",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -325,13 +325,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#E0F2F7",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
   sexIconContainerActive: {
-    backgroundColor: "#1A6872",
+    backgroundColor: "#0a7ea4",
   },
   sexOptionText: {
     flex: 1,
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   sexOptionTextActive: {
-    color: "#1A6872",
+    color: "#0a7ea4",
   },
   inputRow: {
     flexDirection: "row",

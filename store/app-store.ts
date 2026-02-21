@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStateStorage } from '@/lib/mmkv';
-import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct } from '@/types';
+import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, EntryMode, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct } from '@/types';
 import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
 import { barcodeProductToFoodItem } from '@/services/barcodeService';
 import { nutritionQueue } from '@/services/nutritionQueue';
@@ -66,19 +66,27 @@ export const useAppStore = create<AppState>()(
       isLoading: false,
       goals: null,
       preferredUnits: 'metric' as UnitSystem,
+      entryMode: 'dash' as EntryMode,
       savedEntries: [],
       weightEntries: [],
 
   addEntry: (rawText: string) => {
-    // Only process lines that start with "- " or "— " (em-dash)
     const trimmed = rawText.trim();
-    if (!trimmed.startsWith('-') && !trimmed.startsWith(EM_DASH)) {
-      return;
+    const isFreeform = get().entryMode === 'freeform';
+
+    let textLine: string;
+    if (isFreeform) {
+      // In freeform mode, every non-empty line is a food entry
+      textLine = trimmed;
+    } else {
+      // In dash mode, only process lines that start with "- " or "— " (em-dash)
+      if (!trimmed.startsWith('-') && !trimmed.startsWith(EM_DASH)) {
+        return;
+      }
+      textLine = trimmed.substring(1).trim(); // Remove "-" or "—" prefix
     }
 
-    const textLine = trimmed.substring(1).trim(); // Remove "-" or "—" prefix
-
-    // Don't create an entry if there's no food text after the dash
+    // Don't create an entry if there's no food text
     if (!textLine) {
       return;
     }
@@ -202,11 +210,16 @@ export const useAppStore = create<AppState>()(
     // Cancel any existing queued item for this entry
     nutritionQueue.cancel(id);
 
-    // Only process if line starts with "- " or "— " and has food text after the marker
     const trimmed = rawText.trim();
-    const textLine = (trimmed.startsWith('-') || trimmed.startsWith(EM_DASH))
-      ? trimmed.substring(1).trim()
-      : '';
+    const isFreeform = get().entryMode === 'freeform';
+    let textLine: string;
+    if (isFreeform) {
+      textLine = trimmed;
+    } else {
+      textLine = (trimmed.startsWith('-') || trimmed.startsWith(EM_DASH))
+        ? trimmed.substring(1).trim()
+        : '';
+    }
 
     if (!textLine) {
       // No food text — mark as error
@@ -394,6 +407,10 @@ export const useAppStore = create<AppState>()(
     set({ preferredUnits: units });
   },
 
+  setEntryMode: (mode: EntryMode) => {
+    set({ entryMode: mode });
+  },
+
   setManualTargets: (targets: ManualTargets | null) => {
     const currentGoals = get().goals;
     if (currentGoals) {
@@ -478,12 +495,18 @@ export const useAppStore = create<AppState>()(
   useSavedEntry: (savedEntry: SavedEntry): Entry => {
     const entryId = Date.now().toString();
     const currentDate = get().currentDate;
+    const isFreeform = get().entryMode === 'freeform';
+
+    // In freeform mode, strip dash prefix from saved entry rawText
+    const rawText = isFreeform
+      ? savedEntry.rawText.replace(/^[-—]\s*/, '')
+      : savedEntry.rawText;
 
     // Create new entry with pre-populated nutrition data
     const newEntry: Entry = {
       id: entryId,
       date: currentDate,
-      rawText: savedEntry.rawText,
+      rawText,
       inlineKcal: savedEntry.totalKcal,
       status: 'ok',
       items: savedEntry.items.map((item) => ({
@@ -515,12 +538,15 @@ export const useAppStore = create<AppState>()(
   addBarcodeEntry: (product: BarcodeProduct, servingGrams: number): Entry => {
     const entryId = Date.now().toString();
     const currentDate = get().currentDate;
+    const isFreeform = get().entryMode === 'freeform';
 
     const item = barcodeProductToFoodItem(product, entryId, servingGrams);
     const label = product.brand
       ? `${product.name} (${product.brand})`
       : product.name;
-    const rawText = `— ${label}, ${servingGrams}g`;
+    const rawText = isFreeform
+      ? `${label}, ${servingGrams}g`
+      : `— ${label}, ${servingGrams}g`;
 
     const newEntry: Entry = {
       id: entryId,
@@ -543,8 +569,10 @@ export const useAppStore = create<AppState>()(
   addPhotoEntry: (items: import('@/types').FoodItem[], totals: import('@/types').Macros): Entry => {
     const entryId = Date.now().toString();
     const currentDate = get().currentDate;
+    const isFreeform = get().entryMode === 'freeform';
 
-    const rawText = `— ${items.map((i) => i.label).join(', ')}`;
+    const labelText = items.map((i) => i.label).join(', ');
+    const rawText = isFreeform ? labelText : `— ${labelText}`;
     const entryItems = items.map((item, index) => ({
       ...item,
       id: `${entryId}-photo-${index}`,
@@ -582,10 +610,13 @@ export const useAppStore = create<AppState>()(
       return { success: false, error: 'Empty input' };
     }
 
-    // Check for duplicates (normalize to "- foodText" format for comparison)
-    const normalizedText = `- ${foodText}`.toLowerCase().trim();
+    const isFreeform = get().entryMode === 'freeform';
+
+    // Check for duplicates - normalize for comparison
+    const normalizedForStorage = isFreeform ? foodText : `- ${foodText}`;
+    const normalizedCheck = normalizedForStorage.toLowerCase().trim();
     const existing = get().savedEntries.find(
-      (se) => se.rawText.toLowerCase().trim() === normalizedText
+      (se) => se.rawText.replace(/^[-—]\s*/, '').trim().toLowerCase() === foodText.toLowerCase()
     );
     if (existing) {
       return { success: false, error: 'Already saved' };
@@ -608,7 +639,7 @@ export const useAppStore = create<AppState>()(
       const savedEntryId = Date.now().toString();
       const newSavedEntry: SavedEntry = {
         id: savedEntryId,
-        rawText: `- ${foodText}`,
+        rawText: isFreeform ? foodText : `- ${foodText}`,
         items: response.resolved.map((item, index) => ({
           ...item,
           id: item.id || `saved-${savedEntryId}-item-${index}`,
@@ -918,9 +949,15 @@ export const useAppStore = create<AppState>()(
           if (!current) continue;
 
           const trimmed = current.rawText.trim();
-          const textLine = (trimmed.startsWith('-') || trimmed.startsWith(EM_DASH))
-            ? trimmed.substring(1).trim()
-            : '';
+          const isFreeform = get().entryMode === 'freeform';
+          let textLine: string;
+          if (isFreeform) {
+            textLine = trimmed;
+          } else {
+            textLine = (trimmed.startsWith('-') || trimmed.startsWith(EM_DASH))
+              ? trimmed.substring(1).trim()
+              : '';
+          }
           if (!textLine) continue;
 
           console.log(`[enqueuePendingEntries] Enqueuing: "${textLine}" (id=${entry.id})`);
@@ -1038,11 +1075,12 @@ export const useAppStore = create<AppState>()(
         documents: state.documents,
         goals: state.goals,
         preferredUnits: state.preferredUnits,
+        entryMode: state.entryMode,
         savedEntries: state.savedEntries,
         weightEntries: state.weightEntries,
       }),
       // Handle version migrations
-      version: 3,
+      version: 4,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           persistedState = {
@@ -1054,6 +1092,12 @@ export const useAppStore = create<AppState>()(
           persistedState = {
             ...persistedState,
             weightEntries: persistedState.weightEntries || [],
+          };
+        }
+        if (version < 4) {
+          persistedState = {
+            ...persistedState,
+            entryMode: persistedState.entryMode || 'dash',
           };
         }
         return persistedState;

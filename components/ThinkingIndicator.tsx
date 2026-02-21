@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   container: {
     position: "relative",
     overflow: "hidden",
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#E0F2F7",
     borderRadius: 12,
     alignSelf: "flex-start",
     paddingHorizontal: 6,
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     fontWeight: "500",
     letterSpacing: 0.3,
-    color: "#1A6872",
+    color: "#0a7ea4",
     includeFontPadding: false,
   },
   shimmerOverlay: {

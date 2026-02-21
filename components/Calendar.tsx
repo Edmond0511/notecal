@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   },
   navText: {
     fontSize: 20,
-    color: "#1A6872",
+    color: "#0a7ea4",
     fontWeight: "300",
   },
   monthYearContainer: {
@@ -450,11 +450,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(26, 104, 114, 0.12)",
   },
   todayDayText: {
-    color: "#1A6872",
+    color: "#0a7ea4",
     fontWeight: "500",
   },
   selectedDay: {
-    backgroundColor: "#1A6872",
+    backgroundColor: "#0a7ea4",
   },
   selectedDayText: {
     color: "#fff",

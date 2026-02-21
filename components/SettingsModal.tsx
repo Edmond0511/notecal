@@ -76,6 +76,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [showCalendarLegend, setShowCalendarLegend] = useState(false);
   const [showPersonalInfo, setShowPersonalInfo] = useState(false);
   const goals = useAppStore((s) => s.goals);
+  const entryMode = useAppStore((s) => s.entryMode ?? 'dash');
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -450,6 +451,31 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           size={20}
                           color="#ccc"
                         />
+                      </TouchableOpacity>
+
+                      <View style={styles.menuDivider} />
+
+                      <TouchableOpacity
+                        style={styles.menuItem}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
+                          const next = entryMode === 'dash' ? 'freeform' : 'dash';
+                          useAppStore.getState().setEntryMode(next);
+                        }}
+                      >
+                        <Ionicons
+                          name="list-outline"
+                          size={20}
+                          color="#333"
+                          style={{ marginRight: 12 }}
+                        />
+                        <Text style={styles.menuItemText}>Entry Mode</Text>
+                        <Text style={styles.menuItemValue}>
+                          {entryMode === 'freeform' ? 'Freeform' : 'Dash'}
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   </View>

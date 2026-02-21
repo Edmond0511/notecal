@@ -207,8 +207,8 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   optionButtonSelected: {
-    backgroundColor: "#E0F2F1",
-    borderColor: "#1A6872",
+    backgroundColor: "#E0F2F7",
+    borderColor: "#0a7ea4",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   optionLabelSelected: {
-    color: "#1A6872",
+    color: "#0a7ea4",
   },
   optionDescription: {
     fontSize: 13,
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   infoBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#E0F2F7",
     padding: 14,
     borderRadius: 16,
     gap: 10,
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 13,
-    color: "#1A6872",
+    color: "#0a7ea4",
     lineHeight: 18,
   },
 });

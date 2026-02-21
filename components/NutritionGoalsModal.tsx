@@ -736,7 +736,7 @@ export function NutritionGoalsModal({
                           activeOpacity={0.7}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <Ionicons name="refresh" size={13} color="#1A6872" />
+                          <Ionicons name="refresh" size={13} color="#0a7ea4" />
                           <Text style={styles.resetButtonText}>Reset</Text>
                         </TouchableOpacity>
                       </Animated.View>
@@ -888,7 +888,7 @@ const styles = StyleSheet.create({
   resetButtonText: {
     fontSize: 12,
     fontWeight: "500",
-    color: "#1A6872",
+    color: "#0a7ea4",
     letterSpacing: 0.2,
   },
   sectionSubtitle: {
@@ -1028,7 +1028,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 25,
-    backgroundColor: "#1A6872",
+    backgroundColor: "#0a7ea4",
   },
   saveButtonText: {
     fontSize: 15,

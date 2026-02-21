@@ -1,8 +1,13 @@
 import { Entry } from "@/types";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { Keyboard, Platform, View } from "react-native";
-import PagerView from "react-native-pager-view";
+import { Gesture } from "react-native-gesture-handler";
+import InfinitePager, {
+  type InfinitePagerImperativeApi,
+  type InfinitePagerPageProps,
+} from "react-native-infinite-pager";
+import { runOnJS } from "react-native-reanimated";
 import { NotesEditor } from "./NotesEditor";
 
 const INPUT_ACCESSORY_VIEW_ID = "totals-bar-accessory";
@@ -16,7 +21,7 @@ function parseDate(s: string): Date {
   );
 }
 
-/** Date → YYYYMMDD */
+/** Date -> YYYYMMDD */
 function formatDate(d: Date): string {
   return (
     d.getFullYear().toString() +
@@ -25,11 +30,72 @@ function formatDate(d: Date): string {
   );
 }
 
-/** Shift a YYYYMMDD string by +/- days */
-function shiftDate(dateStr: string, days: number): string {
-  const d = parseDate(dateStr);
-  d.setDate(d.getDate() + days);
+/** Convert a page index to a YYYYMMDD string relative to baseDate */
+function indexToDate(baseDate: string, index: number): string {
+  const d = parseDate(baseDate);
+  d.setDate(d.getDate() + index);
   return formatDate(d);
+}
+
+/** Convert a YYYYMMDD string to a page index relative to baseDate */
+function dateToIndex(baseDate: string, dateStr: string): number {
+  const base = parseDate(baseDate);
+  const target = parseDate(dateStr);
+  const diffMs = target.getTime() - base.getTime();
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+}
+
+// Context for passing shared props to DatePage
+interface DatePagerContextValue {
+  baseDate: string;
+  allEntries: Entry[];
+  getDocumentText: (date: string) => string;
+  onDocumentTextChange: (date: string, text: string) => void;
+  onAddEntry: (text: string) => void;
+  onUpdateEntry?: (id: string, text: string) => Promise<void>;
+  onDeleteEntry: (id: string) => void;
+  isOnline: boolean;
+  waterTrackingEnabled: boolean;
+}
+
+const DatePagerContext = React.createContext<DatePagerContextValue>(null!);
+
+// Module-level page component (stable reference - never remounts)
+function DatePage({ index, isActive }: InfinitePagerPageProps) {
+  const ctx = useContext(DatePagerContext);
+  const date = indexToDate(ctx.baseDate, index);
+
+  const entries = useMemo(
+    () => ctx.allEntries.filter((e) => e.date === date),
+    [ctx.allEntries, date],
+  );
+
+  const handleTextChange = useCallback(
+    (text: string) => ctx.onDocumentTextChange(date, text),
+    [ctx.onDocumentTextChange, date],
+  );
+
+  return (
+    <View style={{ flex: 1, paddingBottom: 88 }}>
+      <NotesEditor
+        entries={entries}
+        initialDocumentText={ctx.getDocumentText(date)}
+        onDocumentTextChange={handleTextChange}
+        onAddEntry={ctx.onAddEntry}
+        onUpdateEntry={ctx.onUpdateEntry}
+        onDeleteEntry={ctx.onDeleteEntry}
+        currentDate={date}
+        isOnline={ctx.isOnline}
+        waterTrackingEnabled={ctx.waterTrackingEnabled}
+        isActive={isActive}
+        inputAccessoryViewID={
+          isActive && Platform.OS === "ios"
+            ? INPUT_ACCESSORY_VIEW_ID
+            : undefined
+        }
+      />
+    </View>
+  );
 }
 
 interface DatePagerViewProps {
@@ -57,123 +123,77 @@ export function DatePagerView({
   isOnline,
   waterTrackingEnabled,
 }: DatePagerViewProps) {
-  const pagerRef = useRef<PagerView>(null);
-  // Track which date the pager is centered on (may lag behind currentDate during recentering)
-  const internalDateRef = useRef(currentDate);
-  // Guard to ignore onPageSelected events caused by programmatic setPage
-  const isResettingRef = useRef(false);
-  // Skip recentering on initial mount
-  const isMountedRef = useRef(false);
+  const pagerRef = useRef<InfinitePagerImperativeApi>(null);
+  const baseDateRef = useRef(currentDate); // Fixed at mount
+  const isInternalChangeRef = useRef(false);
+  const currentIndexRef = useRef(0);
 
-  const dates = useMemo(
-    () => [shiftDate(currentDate, -1), currentDate, shiftDate(currentDate, 1)],
-    [currentDate],
+  // Swipe handler
+  const handlePageChange = useCallback(
+    (pageIndex: number) => {
+      currentIndexRef.current = pageIndex;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const date = indexToDate(baseDateRef.current, pageIndex);
+      isInternalChangeRef.current = true;
+      onDateChange(date);
+    },
+    [onDateChange],
   );
 
-  // Unified recentering: handles both swipe-triggered and external date changes
+  // External navigation (arrows, calendar)
   useEffect(() => {
-    if (!isMountedRef.current) {
-      isMountedRef.current = true;
+    if (isInternalChangeRef.current) {
+      isInternalChangeRef.current = false;
       return;
     }
-
-    internalDateRef.current = currentDate;
-    isResettingRef.current = true;
-
-    // setTimeout(0) runs after React commits new children to the native pager
-    const recenterId = setTimeout(() => {
-      pagerRef.current?.setPageWithoutAnimation(1);
-    }, 0);
-
-    // Guaranteed guard release — no reliance on native onPageSelected events
-    const guardId = setTimeout(() => {
-      isResettingRef.current = false;
-    }, 150);
-
-    return () => {
-      clearTimeout(recenterId);
-      clearTimeout(guardId);
-    };
+    const targetIndex = dateToIndex(baseDateRef.current, currentDate);
+    pagerRef.current?.setPage(targetIndex, { animated: false });
+    currentIndexRef.current = targetIndex;
   }, [currentDate]);
 
-  const handlePageSelected = useCallback(
-    (e: { nativeEvent: { position: number } }) => {
-      if (isResettingRef.current) return;
-
-      const page = e.nativeEvent.position;
-      if (page === 1) return; // still on center
-
-      const newDate = page === 0 ? dates[0] : dates[2];
-
-      // Set guard IMMEDIATELY to block re-entrant onPageSelected events
-      // that fire when React re-renders PagerView with new children/keys
-      isResettingRef.current = true;
-
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      internalDateRef.current = newDate;
-      onDateChange(newDate);
-
-      // Recentering is handled by the useEffect on currentDate
-    },
-    [dates, onDateChange],
-  );
-
-  const handlePageScrollStateChanged = useCallback(
-    (e: { nativeEvent: { pageScrollState: string } }) => {
-      if (e.nativeEvent.pageScrollState === "dragging") {
-        Keyboard.dismiss();
-      }
-    },
+  // Dismiss keyboard on drag start
+  const dismissKeyboardGesture = useMemo(
+    () => Gesture.Pan().onStart(() => runOnJS(Keyboard.dismiss)()),
     [],
   );
 
-  // Memoized entries per date
-  const entriesByDate = useMemo(() => {
-    const map: Record<string, Entry[]> = {};
-    for (const date of dates) {
-      map[date] = allEntries.filter((entry) => entry.date === date);
-    }
-    return map;
-  }, [dates, allEntries]);
-
-  // Per-date document text change handlers
-  const makeTextChangeHandler = useCallback(
-    (date: string) => (text: string) => {
-      onDocumentTextChange(date, text);
-    },
-    [onDocumentTextChange],
+  // Context value
+  const contextValue = useMemo<DatePagerContextValue>(
+    () => ({
+      baseDate: baseDateRef.current,
+      allEntries,
+      getDocumentText,
+      onDocumentTextChange,
+      onAddEntry,
+      onUpdateEntry,
+      onDeleteEntry,
+      isOnline,
+      waterTrackingEnabled,
+    }),
+    [
+      allEntries,
+      getDocumentText,
+      onDocumentTextChange,
+      onAddEntry,
+      onUpdateEntry,
+      onDeleteEntry,
+      isOnline,
+      waterTrackingEnabled,
+    ],
   );
 
   return (
-    <PagerView
-      ref={pagerRef}
-      style={{ flex: 1 }}
-      initialPage={1}
-      offscreenPageLimit={1}
-      onPageSelected={handlePageSelected}
-      onPageScrollStateChanged={handlePageScrollStateChanged}
-    >
-      {dates.map((date, index) => (
-        <View key={date} style={{ flex: 1, paddingBottom: 88 }}>
-          <NotesEditor
-            entries={entriesByDate[date] ?? []}
-            initialDocumentText={getDocumentText(date)}
-            onDocumentTextChange={makeTextChangeHandler(date)}
-            onAddEntry={onAddEntry}
-            onUpdateEntry={onUpdateEntry}
-            onDeleteEntry={onDeleteEntry}
-            currentDate={date}
-            isOnline={isOnline}
-            waterTrackingEnabled={waterTrackingEnabled}
-            isActive={index === 1}
-            inputAccessoryViewID={
-              index === 1 && Platform.OS === "ios"
-                ? INPUT_ACCESSORY_VIEW_ID
-                : undefined
-            }
-          />
-        </View>
-      ))}
-    </PagerView>
+    <DatePagerContext.Provider value={contextValue}>
+      <InfinitePager
+        ref={pagerRef}
+        style={{ flex: 1 }}
+        pageWrapperStyle={{ flex: 1 }}
+        PageComponent={DatePage}
+        onPageChange={handlePageChange}
+        pageBuffer={1}
+        initialIndex={0}
+        simultaneousGestures={[dismissKeyboardGesture]}
+      />
+    </DatePagerContext.Provider>
   );
 }

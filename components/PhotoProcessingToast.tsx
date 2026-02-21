@@ -64,7 +64,7 @@ export function PhotoProcessingToast({
 
     // Show toast
     isVisible.current = true;
-    translateY.value = withSpring(0, { damping: 18, stiffness: 200 });
+    translateY.value = withTiming(0, { duration: 250 });
 
     if (state.type === "success") {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -120,7 +120,7 @@ export function PhotoProcessingToast({
         <View style={styles.pill}>
           {state.type === "analyzing" && (
             <>
-              <ActivityIndicator size="small" color="#1A6872" />
+              <ActivityIndicator size="small" color="#0a7ea4" />
               <Text style={styles.text}>Analyzing photo...</Text>
               <TouchableOpacity
                 style={styles.closeButton}
@@ -156,7 +156,7 @@ export function PhotoProcessingToast({
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: 120,
+    bottom: 130,
     left: 16,
     right: 16,
     zIndex: 20,

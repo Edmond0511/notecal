@@ -60,7 +60,7 @@ export const TotalsBar = React.memo(function TotalsBar({
           onPress={onAddSavedPress}
           activeOpacity={0.8}
         >
-          <Ionicons name="add" size={24} color="#1A6872" />
+          <Ionicons name="add" size={24} color="#0a7ea4" />
         </TouchableOpacity>
 
         {/* Daily Totals Bar - Tap to open goals popup */}
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#E0F2F7",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -175,10 +175,10 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 9,
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
     elevation: 6,
   },
   totalItem: {

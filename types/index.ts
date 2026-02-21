@@ -109,6 +109,7 @@ export type GoalType = 'lose' | 'maintain' | 'gain';
 export type ProteinPreference = 'low' | 'standard' | 'high';
 export type CarbPreference = 'low' | 'standard' | 'high';
 export type UnitSystem = 'metric' | 'imperial';
+export type EntryMode = 'dash' | 'freeform';
 
 export interface UserGoalsInput {
   sex: Sex;
@@ -175,6 +176,7 @@ export interface AppState {
   // Goals state
   goals: UserGoals | null;
   preferredUnits: UnitSystem;
+  entryMode: EntryMode;
   // Saved entries state
   savedEntries: SavedEntry[];
   // Weight tracking state
@@ -196,6 +198,7 @@ export interface AppState {
   clearGoals: () => void;
   clearUserData: () => void;
   setPreferredUnits: (units: UnitSystem) => void;
+  setEntryMode: (mode: EntryMode) => void;
   setManualTargets: (targets: ManualTargets | null) => void;
   // Saved entries actions
   saveEntry: (entry: Entry) => void;

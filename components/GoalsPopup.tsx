@@ -183,7 +183,7 @@ export function GoalsPopup({
                 style={styles.setupContent}
               >
                 <View style={styles.setupIconContainer}>
-                  <Ionicons name="nutrition-outline" size={32} color="#1A6872" />
+                  <Ionicons name="nutrition-outline" size={32} color="#0a7ea4" />
                 </View>
                 <Text style={styles.setupTitle}>Set your nutrition goals</Text>
                 <Text style={styles.setupDescription}>
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#E0F2F1',
+    backgroundColor: '#E0F2F7',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   setupButton: {
-    backgroundColor: '#1A6872',
+    backgroundColor: '#0a7ea4',
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 25,

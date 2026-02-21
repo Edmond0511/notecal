@@ -1294,7 +1294,7 @@ export function NutritionReasoningPopup({
                               : "bookmark-outline"
                           }
                           size={14}
-                          color={isSaved || isEntrySaved ? "#fff" : "#1A6872"}
+                          color={isSaved || isEntrySaved ? "#fff" : "#0a7ea4"}
                         />
                         <Text
                           style={[
@@ -1913,19 +1913,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#E0F2F7",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 14,
   },
   saveButtonSaved: {
-    backgroundColor: "#1A6872",
+    backgroundColor: "#0a7ea4",
   },
   saveButtonText: {
     fontSize: 12,
     fontFamily: "System",
     fontWeight: "500",
-    color: "#1A6872",
+    color: "#0a7ea4",
   },
   saveButtonTextSaved: {
     color: "#fff",
@@ -2480,7 +2480,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1A6872",
+    backgroundColor: "#0a7ea4",
   },
   somethingOffSubmitButtonDisabled: {
     backgroundColor: "#9CA3AF",
@@ -2565,7 +2565,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1A6872",
+    backgroundColor: "#0a7ea4",
   },
   editQuantitySaveText: {
     fontSize: 16,

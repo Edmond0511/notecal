@@ -386,7 +386,7 @@ export function SavedEntriesPopup({
                 style={styles.emptyContent}
               >
                 <View style={styles.emptyIconContainer}>
-                  <Ionicons name="bookmark-outline" size={32} color="#1A6872" />
+                  <Ionicons name="bookmark-outline" size={32} color="#0a7ea4" />
                 </View>
                 <Text style={styles.emptyTitle}>No saved foods yet</Text>
                 <Text style={styles.emptyDescription}>
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   },
   countBadge: {
     marginLeft: 8,
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#E0F2F7",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "System",
     fontWeight: "700",
-    color: "#1A6872",
+    color: "#0a7ea4",
   },
   searchContainer: {
     paddingHorizontal: 16,
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#E0F2F7",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,

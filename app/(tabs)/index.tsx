@@ -171,10 +171,14 @@ export default function HomeScreen() {
   // Handle date change from pager swipe
   const handleDateChange = useCallback(
     (newDate: string) => {
-      saveDocument(currentDate, currentDocumentText.trim());
+      const state = useAppStore.getState();
+      const currentDoc = state.getDocument(state.currentDate);
+      if (currentDoc) {
+        state.saveDocument(state.currentDate, currentDoc.content.trim());
+      }
       setCurrentDate(newDate);
     },
-    [currentDate, currentDocumentText, saveDocument, setCurrentDate],
+    [setCurrentDate],
   );
 
   // Handle saved entry selection
@@ -183,10 +187,10 @@ export default function HomeScreen() {
       // Create entry with pre-loaded nutrition data (no API call)
       // useSavedEntry is a store function, not a hook - call it directly
       const storeUseSavedEntry = useAppStore.getState().useSavedEntry;
-      storeUseSavedEntry(savedEntry);
+      const newEntry = storeUseSavedEntry(savedEntry);
 
-      // Update document text
-      const newLine = savedEntry.rawText;
+      // Use the returned entry's rawText (mode-aware from useSavedEntry)
+      const newLine = newEntry.rawText;
       const updatedText = currentDocumentText
         ? `${currentDocumentText}\n${newLine}`
         : newLine;
@@ -318,7 +322,8 @@ export default function HomeScreen() {
 
   const handleBarcodeManualEntry = useCallback(
     (text: string) => {
-      const rawText = `— ${text}`;
+      const isFreeform = useAppStore.getState().entryMode === 'freeform';
+      const rawText = isFreeform ? text : `— ${text}`;
       addEntry(rawText);
 
       const updatedText = currentDocumentText

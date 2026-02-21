@@ -1,3 +1,4 @@
+import { useAppStore } from "@/store/app-store";
 import { Entry } from "@/types";
 import { truncateNumber } from "@/utils/formatNumber";
 import * as Haptics from "expo-haptics";
@@ -9,9 +10,9 @@ import React, {
   useState,
 } from "react";
 import {
-  Animated as RNAnimated,
   Dimensions,
   Keyboard,
+  Animated as RNAnimated,
   StyleSheet,
   Text,
   TextInput,
@@ -101,7 +102,7 @@ function computeTextDiff(oldText: string, newText: string): TextDiff {
   return { type: "replace", position: prefixEnd, deletedText, insertedText };
 }
 
-function getLineAtPosition(text: string, position: number) {
+function getLineAtPosition(text: string, position: number, freeform = false) {
   const lines = text.split("\n");
   let charCount = 0;
   for (let i = 0; i < lines.length; i++) {
@@ -110,6 +111,20 @@ function getLineAtPosition(text: string, position: number) {
     if (position >= lineStart && position <= lineEnd) {
       const lineText = lines[i];
       const trimmed = lineText.trim();
+
+      if (freeform) {
+        const hasContent = trimmed.length > 0;
+        return {
+          lineIndex: i,
+          lineStart,
+          lineEnd,
+          lineText,
+          isEntryLine: hasContent,
+          markerType: null as string | null,
+          textAfterMarker: trimmed,
+        };
+      }
+
       const isEmDash = trimmed.startsWith(`${EM_DASH} `);
       const isDash = trimmed.startsWith("- ");
       return {
@@ -189,9 +204,15 @@ function assessEntryCompleteness(entryText: string): number {
 function findMostRecentEntryLine(
   text: string,
   cursorPosition?: number,
+  freeform = false,
 ): string | null {
   const lines = text.split("\n");
   let charCount = 0;
+
+  const isEntryLine = (trimmed: string) =>
+    freeform
+      ? trimmed.length > 0
+      : trimmed.startsWith("-") || trimmed.startsWith(EM_DASH);
 
   // If we have cursor position, find the line at that position
   if (cursorPosition !== undefined) {
@@ -199,7 +220,7 @@ function findMostRecentEntryLine(
       const lineEnd = charCount + line.length;
       if (cursorPosition >= charCount && cursorPosition <= lineEnd) {
         const trimmed = line.trim();
-        if (trimmed.startsWith("-") || trimmed.startsWith(EM_DASH)) {
+        if (isEntryLine(trimmed)) {
           return trimmed;
         }
         break;
@@ -211,7 +232,7 @@ function findMostRecentEntryLine(
   // Fallback: return the last entry line
   for (let i = lines.length - 1; i >= 0; i--) {
     const trimmed = lines[i].trim();
-    if (trimmed.startsWith("-") || trimmed.startsWith(EM_DASH)) {
+    if (isEntryLine(trimmed)) {
       return trimmed;
     }
   }
@@ -375,7 +396,7 @@ const styles = StyleSheet.create({
   inlineCalories: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#E0F2F7",
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 12,
@@ -383,7 +404,7 @@ const styles = StyleSheet.create({
   caloriesText: {
     fontSize: 12,
     lineHeight: 16,
-    color: "#1A6872",
+    color: "#0a7ea4",
     fontFamily: "System",
     fontWeight: "500",
     includeFontPadding: false,
@@ -391,7 +412,7 @@ const styles = StyleSheet.create({
   inlineWater: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#E0F2F7",
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 12,
@@ -401,7 +422,7 @@ const styles = StyleSheet.create({
   waterText: {
     fontSize: 12,
     lineHeight: 16,
-    color: "#1A6872",
+    color: "#0a7ea4",
     fontFamily: "System",
     fontWeight: "500",
     includeFontPadding: false,
@@ -614,7 +635,11 @@ export function NotesEditor({
   inputAccessoryViewID,
   isActive = true,
 }: NotesEditorProps) {
+  const entryMode = useAppStore((s) => s.entryMode);
+  const isFreeform = entryMode === "freeform";
+
   const [documentText, setDocumentText] = useState(initialDocumentText);
+  const [prevInitialText, setPrevInitialText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -628,6 +653,16 @@ export function NotesEditor({
   const [layoutStale, setLayoutStale] = useState(true);
   // Track previous text for detecting user actions via text diffing
   const previousTextRef = useRef<string>(initialDocumentText);
+
+  // Sync prop to state during render (eliminates 1-frame flash on date change)
+  if (initialDocumentText !== prevInitialText) {
+    setPrevInitialText(initialDocumentText);
+    setDocumentText(initialDocumentText);
+    previousTextRef.current = initialDocumentText;
+    setLayoutStale(true);
+    setEntryYMap(new Map());
+  }
+
   // Controlled selection for cursor positioning after transforms
   const [selection, setSelection] = useState<
     { start: number; end: number } | undefined
@@ -694,7 +729,10 @@ export function NotesEditor({
       const yMap = new Map<string, number[]>();
       for (const line of lines) {
         const text = (line.text || "").trim();
-        if (text.startsWith("-") || text.startsWith(EM_DASH)) {
+        const isEntry = isFreeform
+          ? text.length > 0
+          : text.startsWith("-") || text.startsWith(EM_DASH);
+        if (isEntry) {
           const prefix = text.substring(0, 20);
           const positions = yMap.get(prefix) || [];
           positions.push(line.y ?? 0);
@@ -704,14 +742,8 @@ export function NotesEditor({
       setEntryYMap(yMap);
       setLayoutStale(false);
     },
-    [],
+    [isFreeform],
   );
-
-  // Sync document text from parent (typing reflection + date navigation)
-  useEffect(() => {
-    setDocumentText(initialDocumentText);
-    previousTextRef.current = initialDocumentText;
-  }, [initialDocumentText]);
 
   // When page becomes inactive: blur input, clear debounce timers.
   // When page becomes active: reset scroll and layout state.
@@ -808,7 +840,9 @@ export function NotesEditor({
       // Touch already ended (focus fired after touchEnd) — resolve immediately
       if (selectionPinnedRef.current) {
         selectionPinnedRef.current = false;
-        requestAnimationFrame(() => setTimeout(() => setSelection(undefined), 50));
+        requestAnimationFrame(() =>
+          setTimeout(() => setSelection(undefined), 50),
+        );
       }
       setShowSoftInput(true);
     }
@@ -831,7 +865,9 @@ export function NotesEditor({
     // Clear pinned selection after focus establishes
     if (selectionPinnedRef.current) {
       selectionPinnedRef.current = false;
-      requestAnimationFrame(() => setTimeout(() => setSelection(undefined), 50));
+      requestAnimationFrame(() =>
+        setTimeout(() => setSelection(undefined), 50),
+      );
     }
   }, []);
 
@@ -899,13 +935,20 @@ export function NotesEditor({
     [getCursorLineY, scrollRef, keyboard],
   );
 
-  // Parse document text to find lines that start with "-" or "—"
-  const parseDocumentForFoodEntries = useCallback((text: string): string[] => {
-    return text
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.startsWith("-") || line.startsWith(EM_DASH));
-  }, []);
+  // Parse document text to find food entry lines
+  const parseDocumentForFoodEntries = useCallback(
+    (text: string): string[] => {
+      return text
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) =>
+          isFreeform
+            ? line.length > 0
+            : line.startsWith("-") || line.startsWith(EM_DASH),
+        );
+    },
+    [isFreeform],
+  );
 
   // Process document changes and update nutrition data
   const processDocumentChanges = useCallback(
@@ -975,11 +1018,14 @@ export function NotesEditor({
       const oldText = previousTextRef.current;
       const diff = computeTextDiff(oldText, newText);
 
-      // Try transforms in priority order
-      let result = checkDashSpaceTransform(oldText, newText, diff);
-      if (!result) result = checkDoubleEnterExit(oldText, newText, diff);
-      if (!result) result = checkEnterAutoInsert(oldText, newText, diff);
-      if (!result) result = checkRevertEmDash(oldText, newText, diff);
+      // Dash-specific transforms (disabled in freeform mode)
+      let result: { transformedText: string; newCursor: number } | null = null;
+      if (!isFreeform) {
+        result = checkDashSpaceTransform(oldText, newText, diff);
+        if (!result) result = checkDoubleEnterExit(oldText, newText, diff);
+        if (!result) result = checkEnterAutoInsert(oldText, newText, diff);
+        if (!result) result = checkRevertEmDash(oldText, newText, diff);
+      }
 
       if (result) {
         isTransformingRef.current = true;
@@ -1026,7 +1072,11 @@ export function NotesEditor({
       // Check for Enter-key instant trigger:
       // If user pressed Enter after an entry line with content, process immediately
       if (diff.type === "insert" && diff.insertedText.includes("\n")) {
-        const lineBeforeEnter = getLineAtPosition(oldText, diff.position);
+        const lineBeforeEnter = getLineAtPosition(
+          oldText,
+          diff.position,
+          isFreeform,
+        );
         if (
           lineBeforeEnter?.isEntryLine &&
           lineBeforeEnter.textAfterMarker.trim()
@@ -1045,7 +1095,11 @@ export function NotesEditor({
       }
 
       // Adaptive debounce based on entry completeness
-      const mostRecentEntry = findMostRecentEntryLine(finalText);
+      const mostRecentEntry = findMostRecentEntryLine(
+        finalText,
+        undefined,
+        isFreeform,
+      );
       const delay = mostRecentEntry
         ? assessEntryCompleteness(mostRecentEntry)
         : DELAY_COMPLETE_ENTRY;
@@ -1056,6 +1110,7 @@ export function NotesEditor({
     },
     [
       isActive,
+      isFreeform,
       processDocumentChanges,
       onDocumentTextChange,
       scrollToKeepCaretVisible,
@@ -1065,15 +1120,18 @@ export function NotesEditor({
   );
 
   // Handle indicator tap - retry on error, show reasoning on ok
-  const handleIndicatorTap = useCallback((entry: Entry) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (entry.status === "error" && onUpdateEntry) {
-      onUpdateEntry(entry.id, entry.rawText);
-      return;
-    }
-    setSelectedEntry(entry);
-    setShowReasoningPopup(true);
-  }, [onUpdateEntry]);
+  const handleIndicatorTap = useCallback(
+    (entry: Entry) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (entry.status === "error" && onUpdateEntry) {
+        onUpdateEntry(entry.id, entry.rawText);
+        return;
+      }
+      setSelectedEntry(entry);
+      setShowReasoningPopup(true);
+    },
+    [onUpdateEntry],
+  );
 
   const handleClosePopup = useCallback(() => {
     setShowReasoningPopup(false);
@@ -1097,8 +1155,10 @@ export function NotesEditor({
 
     lines.forEach((line, index) => {
       const trimmedLine = line.trim();
-      if (!trimmedLine.startsWith("-") && !trimmedLine.startsWith(EM_DASH))
-        return;
+      const isEntry = isFreeform
+        ? trimmedLine.length > 0
+        : trimmedLine.startsWith("-") || trimmedLine.startsWith(EM_DASH);
+      if (!isEntry) return;
 
       const matchedEntry = entries.find(
         (e) => e.rawText === trimmedLine && !usedEntryIds.has(e.id),
@@ -1132,7 +1192,7 @@ export function NotesEditor({
     });
 
     return indicators;
-  }, [documentText, entries, entryYMap]);
+  }, [documentText, entries, entryYMap, isFreeform]);
 
   return (
     <View style={styles.container}>
@@ -1170,11 +1230,15 @@ export function NotesEditor({
           onFocus={handleFocus}
           showSoftInputOnFocus={showSoftInput}
           selection={selection}
-          placeholder="Start logging food items starting with '-'"
+          placeholder={
+            isFreeform
+              ? "Start logging food items..."
+              : "Start logging food items starting with '-'"
+          }
           placeholderTextColor="#ccc"
           multiline
           scrollEnabled={false}
-          autoFocus={isActive}
+          autoFocus={false}
           editable={isActive}
           textAlignVertical="top"
           autoCorrect={false}

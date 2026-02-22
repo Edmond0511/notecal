@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStateStorage } from '@/lib/mmkv';
-import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, EntryMode, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct } from '@/types';
+import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, EntryMode, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct, DatabaseSearchResult } from '@/types';
 import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
-import { barcodeProductToFoodItem } from '@/services/barcodeService';
+import { barcodeProductToFoodItem, scaleMacrosToServing } from '@/services/barcodeService';
 import { nutritionQueue } from '@/services/nutritionQueue';
 import { photoSyncService } from '@/services/photoSyncService';
 import { supabase } from '@/lib/supabase';
@@ -574,6 +574,68 @@ export const useAppStore = create<AppState>()(
     return newEntry;
   },
 
+  addDatabaseSearchEntry: (result: DatabaseSearchResult, servingGrams: number): Entry => {
+    const entryId = Date.now().toString();
+    const currentDate = get().currentDate;
+    const isFreeform = get().entryMode === 'freeform';
+
+    const macros = scaleMacrosToServing(result.macrosPer100g, servingGrams);
+    const label = result.brand
+      ? `${result.name} (${result.brand})`
+      : result.name;
+    const rawText = isFreeform
+      ? `${label}, ${servingGrams}g`
+      : `— ${label}, ${servingGrams}g`;
+
+    const sourceId = result.source === 'FDC'
+      ? String(result.fdcId ?? '')
+      : result.offId ?? '';
+
+    const citations = result.source === 'FDC'
+      ? [{ provider: 'USDA FoodData Central', url: `https://fdc.nal.usda.gov/fdc-app.html#/food-details/${result.fdcId}/nutrients` }]
+      : [{ provider: 'Open Food Facts', url: `https://world.openfoodfacts.org/product/${result.offId}` }];
+
+    const item: import('@/types').FoodItem = {
+      id: `${entryId}-dbsearch-0`,
+      entryId,
+      label: result.name,
+      brand: result.brand,
+      qty: servingGrams,
+      unit: 'g',
+      source: result.source,
+      sourceId,
+      macros,
+      confidence: 0.95,
+      citations,
+      reasoning: {
+        interpretation: `Database search: ${label}`,
+        assumptions: [
+          `Nutrition data from ${result.source === 'FDC' ? 'USDA FoodData Central' : 'Open Food Facts'} database`,
+          `Serving size: ${servingGrams}g`,
+          `Values scaled from per-100g data`,
+        ],
+        dataSource: result.source === 'FDC' ? 'USDA FoodData Central (FDC)' : 'Open Food Facts (OFF)',
+      },
+    };
+
+    const newEntry: Entry = {
+      id: entryId,
+      date: currentDate,
+      rawText,
+      inlineKcal: macros.kcal,
+      status: 'ok',
+      items: [item],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    set((state) => ({
+      entries: [...state.entries, newEntry],
+    }));
+
+    return newEntry;
+  },
+
   addPhotoEntry: (items: import('@/types').FoodItem[], totals: import('@/types').Macros): Entry => {
     const entryId = Date.now().toString();
     const currentDate = get().currentDate;
@@ -793,7 +855,7 @@ export const useAppStore = create<AppState>()(
     }));
   },
 
-  updateEntryItemQuantity: (entryId: string, itemId: string, newServings: number) => {
+  updateEntryItemQuantity: (entryId: string, itemId: string, newServings: number, newQty?: number, newUnit?: string) => {
     set((state) => ({
       entries: state.entries.map((entry) => {
         if (entry.id !== entryId) return entry;
@@ -840,6 +902,8 @@ export const useAppStore = create<AppState>()(
             macros: scaledMacros,
             // Clear originalMacros since quantity change is a deliberate recalculation
             originalMacros: undefined,
+            ...(newQty !== undefined && { qty: newQty }),
+            ...(newUnit !== undefined && { unit: newUnit }),
           };
         });
 

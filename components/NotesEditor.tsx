@@ -783,6 +783,11 @@ export function NotesEditor({
         debounceTimeoutRef.current = null;
       }
     } else {
+      // Reset scroll/focus guard refs so stale state from the previous
+      // page interaction doesn't block the next tap from opening the keyboard.
+      isScrollingRef.current = false;
+      isFocusPendingRef.current = false;
+      pendingFocusRef.current = false;
       scrollTo(scrollRef, 0, 0, false);
     }
   }, [isActive, scrollRef]);
@@ -924,24 +929,23 @@ export function NotesEditor({
     isFocusPendingRef.current = false;
     // No movement detected — gesture system cancelled a tap, re-focus
     if (!hasTouchMovedRef.current && !isScrollingRef.current) {
-      setShowSoftInput(true);
-      requestAnimationFrame(() => {
-        isProgrammaticFocusRef.current = true;
-        textInputRef.current?.focus();
-      });
+      requestFocusWithKeyboard();
     } else {
       textInputRef.current?.blur();
     }
-  }, []);
+  }, [requestFocusWithKeyboard]);
 
   // If a scroll begins while focus is pending, cancel — it was a scroll.
   // Also sets isScrollingRef so that any later-arriving onFocus is rejected.
   const handleScrollBeginDrag = useCallback(() => {
     isScrollingRef.current = true;
+    // Always blur when scroll drag starts to prevent native scrollRangeToVisible
+    // from fighting the user's scroll gesture during keyboard dismiss animation
+    // and layout inset changes. User must re-tap to resume editing after scroll.
+    textInputRef.current?.blur();
     if (isFocusPendingRef.current) {
       isFocusPendingRef.current = false;
       pendingFocusRef.current = false;
-      textInputRef.current?.blur();
       // Undo native scrollRangeToVisible snap
       scrollTo(scrollRef, 0, scrollBeforeTouchRef.current, false);
     }

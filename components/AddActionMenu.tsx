@@ -16,6 +16,7 @@ interface AddActionMenuProps {
   onScanBarcodePress: () => void;
   onLogWeightPress: () => void;
   onSnapFoodPress: () => void;
+  onSearchDatabasePress: () => void;
 }
 
 export function AddActionMenu({
@@ -25,6 +26,7 @@ export function AddActionMenu({
   onScanBarcodePress,
   onLogWeightPress,
   onSnapFoodPress,
+  onSearchDatabasePress,
 }: AddActionMenuProps) {
   if (!visible) return null;
 
@@ -57,7 +59,7 @@ export function AddActionMenu({
                 onScanBarcodePress();
               }}
             >
-              <Ionicons name="barcode-outline" size={28} color="#222" />
+              <Ionicons name="barcode-outline" size={28} color="#1a1a1a" />
               <Text style={styles.menuLabel}>Scan Barcode</Text>
             </TouchableOpacity>
 
@@ -69,7 +71,7 @@ export function AddActionMenu({
                 onSavedEntriesPress();
               }}
             >
-              <Ionicons name="bookmark-outline" size={28} color="#222" />
+              <Ionicons name="bookmark-outline" size={28} color="#1a1a1a" />
               <Text style={styles.menuLabel}>Saved Entries</Text>
             </TouchableOpacity>
 
@@ -81,7 +83,7 @@ export function AddActionMenu({
                 onLogWeightPress();
               }}
             >
-              <Ionicons name="scale-outline" size={28} color="#222" />
+              <Ionicons name="scale-outline" size={28} color="#1a1a1a" />
               <Text style={styles.menuLabel}>Log Weight</Text>
             </TouchableOpacity>
 
@@ -93,8 +95,20 @@ export function AddActionMenu({
                 onSnapFoodPress();
               }}
             >
-              <Ionicons name="camera-outline" size={28} color="#222" />
+              <Ionicons name="camera-outline" size={28} color="#1a1a1a" />
               <Text style={styles.menuLabel}>Snap Food</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onSearchDatabasePress();
+              }}
+            >
+              <Ionicons name="search-outline" size={28} color="#1a1a1a" />
+              <Text style={styles.menuLabel}>Search Foods</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -126,7 +140,7 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     backgroundColor: "#fff",
-    borderRadius: 22,
+    borderRadius: 24,
     padding: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
@@ -150,8 +164,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
     elevation: 2,
   },
   menuLabel: {

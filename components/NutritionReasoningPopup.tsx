@@ -774,38 +774,140 @@ function EditNutrientPopup({
   );
 }
 
+// Unit conversion constants
+type QuantityUnit = 'servings' | 'g' | 'oz' | 'lbs';
+
+const WEIGHT_UNITS: QuantityUnit[] = ['servings', 'g', 'oz', 'lbs'];
+
+const GRAMS_PER: Record<string, number> = {
+  g: 1,
+  oz: 28.3495,
+  lbs: 453.592,
+};
+
+function normalizeUnit(unit: string): QuantityUnit | null {
+  const lower = unit.toLowerCase().trim();
+  if (lower === 'g' || lower === 'gram' || lower === 'grams') return 'g';
+  if (lower === 'oz' || lower === 'ounce' || lower === 'ounces') return 'oz';
+  if (lower === 'lb' || lower === 'lbs' || lower === 'pound' || lower === 'pounds') return 'lbs';
+  return null;
+}
+
+function toGrams(value: number, unit: QuantityUnit): number | null {
+  if (unit === 'servings') return null;
+  return value * (GRAMS_PER[unit] ?? 1);
+}
+
+function fromGrams(grams: number, unit: QuantityUnit): number | null {
+  if (unit === 'servings') return null;
+  return grams / (GRAMS_PER[unit] ?? 1);
+}
+
+function formatQtyValue(val: number): string {
+  if (Number.isInteger(val)) return val.toString();
+  if (val >= 100) return val.toFixed(0);
+  if (val >= 10) return val.toFixed(1);
+  return val.toFixed(2);
+}
+
 // Edit Quantity Popup component
 function EditQuantityPopup({
   currentServings,
+  itemQty,
+  itemUnit,
+  itemKcal,
   onSave,
   onClose,
 }: {
   currentServings: number;
-  onSave: (servings: number) => void;
+  itemQty: number;
+  itemUnit: string;
+  itemKcal: number;
+  onSave: (servings: number, qty?: number, unit?: string) => void;
   onClose: () => void;
 }) {
   const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
 
-  const formatServings = (val: number) =>
-    Number.isInteger(val) ? val.toString() : val.toFixed(1);
+  const normalizedUnit = normalizeUnit(itemUnit);
+  const initialUnit: QuantityUnit = normalizedUnit ?? 'servings';
+  const originalGrams = normalizedUnit
+    ? toGrams(itemQty, normalizedUnit)
+    : null;
 
-  const [inputValue, setInputValue] = useState(formatServings(currentServings));
+  const [selectedUnit, setSelectedUnit] = useState<QuantityUnit>(initialUnit);
+  const [inputValue, setInputValue] = useState(
+    initialUnit === 'servings'
+      ? formatQtyValue(currentServings)
+      : formatQtyValue(itemQty),
+  );
 
   const handleSave = () => {
     const numValue = parseFloat(inputValue);
-    if (!isNaN(numValue) && numValue > 0) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (isNaN(numValue) || numValue <= 0) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (selectedUnit === 'servings') {
       onSave(numValue);
-      onClose();
+    } else {
+      const newGrams = toGrams(numValue, selectedUnit);
+      if (newGrams == null || originalGrams == null || originalGrams <= 0) {
+        onSave(numValue);
+      } else {
+        const scaleFactor = newGrams / originalGrams;
+        onSave(scaleFactor, numValue, selectedUnit);
+      }
     }
+    onClose();
   };
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Keyboard.dismiss();
     onClose();
+  };
+
+  const handleUnitSwitch = (newUnit: QuantityUnit) => {
+    if (newUnit === selectedUnit) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const currentNum = parseFloat(inputValue);
+    if (isNaN(currentNum) || currentNum <= 0) {
+      setSelectedUnit(newUnit);
+      return;
+    }
+
+    let convertedValue: number;
+
+    if (selectedUnit === 'servings' && newUnit !== 'servings') {
+      if (originalGrams != null) {
+        const currentGrams = currentNum * originalGrams;
+        convertedValue = fromGrams(currentGrams, newUnit)!;
+      } else {
+        setSelectedUnit(newUnit);
+        return;
+      }
+    } else if (selectedUnit !== 'servings' && newUnit === 'servings') {
+      const currentGrams = toGrams(currentNum, selectedUnit);
+      if (currentGrams != null && originalGrams != null && originalGrams > 0) {
+        convertedValue = currentGrams / originalGrams;
+      } else {
+        convertedValue = 1;
+      }
+    } else {
+      const currentGrams = toGrams(currentNum, selectedUnit);
+      if (currentGrams != null) {
+        convertedValue = fromGrams(currentGrams, newUnit)!;
+      } else {
+        setSelectedUnit(newUnit);
+        return;
+      }
+    }
+
+    setSelectedUnit(newUnit);
+    setInputValue(formatQtyValue(convertedValue));
   };
 
   const panGesture = Gesture.Pan()
@@ -880,6 +982,7 @@ function EditQuantityPopup({
           </View>
 
           <View style={styles.editQuantityContent}>
+            {/* Quantity Input */}
             <View style={styles.editQuantityInputContainer}>
               <TextInput
                 ref={inputRef}
@@ -892,10 +995,38 @@ function EditQuantityPopup({
               />
             </View>
 
+            {/* Unit Pill Selector */}
+            <View style={styles.unitPillRow}>
+              {WEIGHT_UNITS.map((unit) => (
+                <TouchableOpacity
+                  key={unit}
+                  style={[
+                    styles.unitPill,
+                    selectedUnit === unit && styles.unitPillSelected,
+                  ]}
+                  onPress={() => handleUnitSwitch(unit)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.unitPillText,
+                      selectedUnit === unit && styles.unitPillTextSelected,
+                    ]}
+                  >
+                    {unit}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Hint */}
             <Text style={styles.editQuantityHint}>
-              Nutrients will scale proportionally
+              {selectedUnit === 'servings'
+                ? 'Nutrients will scale proportionally'
+                : `Based on ${formatQtyValue(itemQty)}${itemUnit} = ${Math.round(itemKcal)} kcal`}
             </Text>
 
+            {/* Save Button */}
             <TouchableOpacity
               style={styles.editQuantitySaveButton}
               onPress={handleSave}
@@ -948,6 +1079,9 @@ export function NutritionReasoningPopup({
   const [editQuantityPopup, setEditQuantityPopup] = useState<{
     itemId: string;
     currentServings: number;
+    itemQty: number;
+    itemUnit: string;
+    itemKcal: number;
   } | null>(null);
 
   // Get goals to check which micronutrients are enabled
@@ -1182,21 +1316,23 @@ export function NutritionReasoningPopup({
 
   // Handler for when quantity badge is pressed
   const handleQuantityPress = useCallback(
-    (itemId: string, currentServings: number) => {
+    (itemId: string, currentServings: number, qty: number, unit: string, kcal: number) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setEditQuantityPopup({ itemId, currentServings });
+      setEditQuantityPopup({ itemId, currentServings, itemQty: qty, itemUnit: unit, itemKcal: kcal });
     },
     [],
   );
 
   // Handler for saving edited quantity value
   const handleSaveQuantity = useCallback(
-    (newServings: number) => {
+    (newServings: number, newQty?: number, newUnit?: string) => {
       if (!displayEntry || !editQuantityPopup) return;
       updateEntryItemQuantity(
         displayEntry.id,
         editQuantityPopup.itemId,
         newServings,
+        newQty,
+        newUnit,
       );
     },
     [displayEntry, editQuantityPopup, updateEntryItemQuantity],
@@ -1328,15 +1464,22 @@ export function NutritionReasoningPopup({
                         <TouchableOpacity
                           style={styles.quantityBadge}
                           onPress={() =>
-                            handleQuantityPress(item.id, item.servings ?? 1)
+                            handleQuantityPress(
+                              item.id,
+                              item.servings ?? 1,
+                              item.qty,
+                              item.unit,
+                              item.macros.kcal,
+                            )
                           }
                           activeOpacity={0.6}
                         >
                           <Text style={styles.quantityText}>
-                            ×
-                            {Number.isInteger(item.servings ?? 1)
-                              ? (item.servings ?? 1)
-                              : (item.servings ?? 1).toFixed(1)}
+                            {normalizeUnit(item.unit)
+                              ? `${formatQtyValue(item.qty)}${item.unit}`
+                              : `×${Number.isInteger(item.servings ?? 1)
+                                  ? (item.servings ?? 1)
+                                  : (item.servings ?? 1).toFixed(1)}`}
                           </Text>
                           <Ionicons
                             name="pencil"
@@ -1740,6 +1883,9 @@ export function NutritionReasoningPopup({
         {editQuantityPopup && (
           <EditQuantityPopup
             currentServings={editQuantityPopup.currentServings}
+            itemQty={editQuantityPopup.itemQty}
+            itemUnit={editQuantityPopup.itemUnit}
+            itemKcal={editQuantityPopup.itemKcal}
             onSave={handleSaveQuantity}
             onClose={() => setEditQuantityPopup(null)}
           />
@@ -2521,7 +2667,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   editQuantityTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: "System",
     fontWeight: "600",
     color: "#1a1a1a",
@@ -2530,6 +2676,31 @@ const styles = StyleSheet.create({
   },
   editQuantityContent: {
     paddingHorizontal: 20,
+  },
+  unitPillRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  unitPill: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#EBEBEB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unitPillSelected: {
+    backgroundColor: '#0a7ea4',
+  },
+  unitPillText: {
+    fontSize: 14,
+    fontFamily: 'System',
+    fontWeight: '600',
+    color: '#666',
+  },
+  unitPillTextSelected: {
+    color: '#ffffff',
   },
   editQuantityInputContainer: {
     flexDirection: "row",
@@ -2540,22 +2711,22 @@ const styles = StyleSheet.create({
   editQuantityInput: {
     flex: 1,
     height: 56,
-    borderWidth: 2,
-    borderColor: "#6B7280",
-    borderRadius: 14,
-    paddingHorizontal: 18,
+    borderWidth: 1.5,
+    borderColor: "#e5e5e5",
+    borderRadius: 12,
+    paddingHorizontal: 16,
     fontSize: 24,
     fontFamily: "System",
     fontWeight: "600",
     color: "#1a1a1a",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
     letterSpacing: -0.5,
   },
   editQuantityHint: {
     fontSize: 13,
     fontFamily: "System",
     fontWeight: "400",
-    color: "#888",
+    color: "#999",
     marginBottom: 24,
     lineHeight: 18,
     paddingHorizontal: 4,

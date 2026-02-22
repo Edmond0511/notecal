@@ -50,6 +50,19 @@ export interface BarcodeProduct {
   nutrimentsPer100g: Macros;
 }
 
+export interface DatabaseSearchResult {
+  fdcId?: number;
+  offId?: string;
+  source: 'FDC' | 'OFF';
+  name: string;
+  brand?: string;
+  category?: string;
+  dataType?: string; // FDC: 'Foundation' | 'SR Legacy' | 'Branded'
+  macrosPer100g: Macros;
+  defaultServingG?: number;
+  defaultServingLabel?: string;
+}
+
 export interface Entry {
   id: string;
   date: string; // YYYYMMDD format
@@ -206,14 +219,21 @@ export interface AppState {
   deleteSavedEntry: (id: string) => void;
   useSavedEntry: (savedEntry: SavedEntry) => Entry;
   addBarcodeEntry: (product: BarcodeProduct, servingGrams: number) => Entry;
+  addDatabaseSearchEntry: (result: DatabaseSearchResult, servingGrams: number) => Entry;
   addPhotoEntry: (items: FoodItem[], totals: Macros) => Entry;
   createSavedEntry: (rawText: string) => Promise<{ success: boolean; error?: string }>;
   // Item editing actions
   updateEntryItemMacro: (entryId: string, itemId: string, macroKey: keyof Macros, value: number) => void;
   revertEntryItemSingleMacro: (entryId: string, itemId: string, macroKey: keyof Macros) => void;
   revertEntryItemMacros: (entryId: string, itemId: string) => void;
-  // Quantity editing action (servings multiplier)
-  updateEntryItemQuantity: (entryId: string, itemId: string, newServings: number) => void;
+  // Quantity editing action (unit-aware)
+  updateEntryItemQuantity: (
+    entryId: string,
+    itemId: string,
+    newServings: number,
+    newQty?: number,
+    newUnit?: string,
+  ) => void;
   // Correction action
   correctEntryItem: (entryId: string, itemId: string, feedback: string) => Promise<void>;
   // Weight tracking actions

@@ -1,5 +1,6 @@
 import { AddActionMenu } from "@/components/AddActionMenu";
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
+import { DatabaseSearchModal } from "@/components/DatabaseSearchModal";
 import { Calendar } from "@/components/Calendar";
 import { DatePagerView } from "@/components/DatePagerView";
 import { FoodPhotoModal } from "@/components/FoodPhotoModal";
@@ -21,7 +22,7 @@ import {
   NutritionNotFoodError,
 } from "@/services/nutritionApi";
 import { useAppStore } from "@/store/app-store";
-import { BarcodeProduct, SavedEntry } from "@/types";
+import { BarcodeProduct, DatabaseSearchResult, SavedEntry } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -69,6 +70,7 @@ export default function HomeScreen() {
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [showFoodPhoto, setShowFoodPhoto] = useState(false);
+  const [showDatabaseSearch, setShowDatabaseSearch] = useState(false);
   const [photoToastState, setPhotoToastState] = useState<PhotoToastState>({
     type: "idle",
   });
@@ -237,6 +239,29 @@ export default function HomeScreen() {
     setShowAddMenu(false);
     setShowFoodPhoto(true);
   }, []);
+
+  const handleMenuSearchDatabase = useCallback(() => {
+    setShowAddMenu(false);
+    setShowDatabaseSearch(true);
+  }, []);
+
+  const handleDatabaseSearchAdd = useCallback(
+    (result: DatabaseSearchResult, servingGrams: number) => {
+      const storeAddDatabaseSearchEntry = useAppStore.getState().addDatabaseSearchEntry;
+      const newEntry = storeAddDatabaseSearchEntry(result, servingGrams);
+
+      // Update document text
+      const newLine = newEntry.rawText;
+      const updatedText = currentDocumentText
+        ? `${currentDocumentText}\n${newLine}`
+        : newLine;
+      setCurrentDocumentText(updatedText);
+      saveDocument(currentDate, updatedText);
+
+      setShowDatabaseSearch(false);
+    },
+    [currentDocumentText, currentDate, saveDocument],
+  );
 
   const handlePhotoCaptured = useCallback(
     async (base64: string, mimeType: string) => {
@@ -579,6 +604,7 @@ export default function HomeScreen() {
         onScanBarcodePress={handleMenuScanBarcode}
         onLogWeightPress={handleMenuLogWeight}
         onSnapFoodPress={handleMenuSnapFood}
+        onSearchDatabasePress={handleMenuSearchDatabase}
       />
 
       {/* Saved Entries Popup */}
@@ -594,6 +620,13 @@ export default function HomeScreen() {
         onClose={() => setShowBarcodeScanner(false)}
         onAddProduct={handleBarcodeProductAdd}
         onAddManualEntry={handleBarcodeManualEntry}
+      />
+
+      {/* Database Search Modal */}
+      <DatabaseSearchModal
+        visible={showDatabaseSearch}
+        onClose={() => setShowDatabaseSearch(false)}
+        onAddEntry={handleDatabaseSearchAdd}
       />
 
       {/* Food Photo Modal */}

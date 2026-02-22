@@ -616,6 +616,7 @@ export const useAppStore = create<AppState>()(
         ],
         dataSource: result.source === 'FDC' ? 'USDA FoodData Central (FDC)' : 'Open Food Facts (OFF)',
       },
+      ...(result.portions?.length ? { commonPortions: result.portions } : {}),
     };
 
     const newEntry: Entry = {

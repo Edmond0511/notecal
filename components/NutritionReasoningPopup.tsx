@@ -1,5 +1,5 @@
 import { useAppStore } from "@/store/app-store";
-import { Entry, Macros } from "@/types";
+import { CommonPortion, Entry, Macros } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -21,6 +21,7 @@ import {
   Keyboard,
   Linking,
   Modal,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -775,7 +776,7 @@ function EditNutrientPopup({
 }
 
 // Unit conversion constants
-type QuantityUnit = 'servings' | 'g' | 'oz' | 'lbs';
+type QuantityUnit = 'servings' | 'g' | 'oz' | 'lbs' | 'portion';
 
 const WEIGHT_UNITS: QuantityUnit[] = ['servings', 'g', 'oz', 'lbs'];
 
@@ -816,6 +817,7 @@ function EditQuantityPopup({
   itemQty,
   itemUnit,
   itemKcal,
+  commonPortions,
   onSave,
   onClose,
 }: {
@@ -823,6 +825,7 @@ function EditQuantityPopup({
   itemQty: number;
   itemUnit: string;
   itemKcal: number;
+  commonPortions?: CommonPortion[];
   onSave: (servings: number, qty?: number, unit?: string) => void;
   onClose: () => void;
 }) {
@@ -837,11 +840,23 @@ function EditQuantityPopup({
     : null;
 
   const [selectedUnit, setSelectedUnit] = useState<QuantityUnit>(initialUnit);
+  const [selectedPortion, setSelectedPortion] = useState<CommonPortion | null>(null);
   const [inputValue, setInputValue] = useState(
     initialUnit === 'servings'
       ? formatQtyValue(currentServings)
       : formatQtyValue(itemQty),
   );
+
+  // Convert current value to grams based on selected unit
+  const getCurrentGrams = (num: number): number | null => {
+    if (selectedUnit === 'portion' && selectedPortion) {
+      return num * selectedPortion.grams;
+    }
+    if (selectedUnit === 'servings') {
+      return originalGrams != null ? num * originalGrams : null;
+    }
+    return toGrams(num, selectedUnit);
+  };
 
   const handleSave = () => {
     const numValue = parseFloat(inputValue);
@@ -851,6 +866,14 @@ function EditQuantityPopup({
 
     if (selectedUnit === 'servings') {
       onSave(numValue);
+    } else if (selectedUnit === 'portion' && selectedPortion) {
+      const newGrams = numValue * selectedPortion.grams;
+      if (originalGrams != null && originalGrams > 0) {
+        const scaleFactor = newGrams / originalGrams;
+        onSave(scaleFactor, newGrams, 'g');
+      } else {
+        onSave(numValue);
+      }
     } else {
       const newGrams = toGrams(numValue, selectedUnit);
       if (newGrams == null || originalGrams == null || originalGrams <= 0) {
@@ -869,44 +892,66 @@ function EditQuantityPopup({
     onClose();
   };
 
+  const handlePortionSelect = (portion: CommonPortion) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const currentNum = parseFloat(inputValue);
+    // Convert current value to grams, then to this portion's units
+    const curGrams = (!isNaN(currentNum) && currentNum > 0)
+      ? getCurrentGrams(currentNum)
+      : null;
+
+    setSelectedUnit('portion');
+    setSelectedPortion(portion);
+
+    if (curGrams != null && portion.grams > 0) {
+      setInputValue(formatQtyValue(curGrams / portion.grams));
+    } else {
+      setInputValue('1');
+    }
+  };
+
   const handleUnitSwitch = (newUnit: QuantityUnit) => {
-    if (newUnit === selectedUnit) return;
+    if (newUnit === selectedUnit && newUnit !== 'portion') return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const currentNum = parseFloat(inputValue);
     if (isNaN(currentNum) || currentNum <= 0) {
       setSelectedUnit(newUnit);
+      if (newUnit !== 'portion') setSelectedPortion(null);
       return;
     }
 
     let convertedValue: number;
 
-    if (selectedUnit === 'servings' && newUnit !== 'servings') {
-      if (originalGrams != null) {
-        const currentGrams = currentNum * originalGrams;
-        convertedValue = fromGrams(currentGrams, newUnit)!;
-      } else {
-        setSelectedUnit(newUnit);
-        return;
-      }
-    } else if (selectedUnit !== 'servings' && newUnit === 'servings') {
-      const currentGrams = toGrams(currentNum, selectedUnit);
-      if (currentGrams != null && originalGrams != null && originalGrams > 0) {
-        convertedValue = currentGrams / originalGrams;
+    // Get current value in grams
+    const curGrams = getCurrentGrams(currentNum);
+
+    if (newUnit === 'servings') {
+      if (curGrams != null && originalGrams != null && originalGrams > 0) {
+        convertedValue = curGrams / originalGrams;
       } else {
         convertedValue = 1;
       }
+    } else if (newUnit === 'portion') {
+      // Handled by handlePortionSelect
+      return;
     } else {
-      const currentGrams = toGrams(currentNum, selectedUnit);
-      if (currentGrams != null) {
-        convertedValue = fromGrams(currentGrams, newUnit)!;
+      // Switching to g/oz/lbs
+      if (curGrams != null) {
+        convertedValue = fromGrams(curGrams, newUnit)!;
+      } else if (selectedUnit === 'servings' && originalGrams != null) {
+        const gramsVal = currentNum * originalGrams;
+        convertedValue = fromGrams(gramsVal, newUnit)!;
       } else {
         setSelectedUnit(newUnit);
+        setSelectedPortion(null);
         return;
       }
     }
 
     setSelectedUnit(newUnit);
+    setSelectedPortion(null);
     setInputValue(formatQtyValue(convertedValue));
   };
 
@@ -995,7 +1040,50 @@ function EditQuantityPopup({
               />
             </View>
 
-            {/* Unit Pill Selector */}
+            {/* Food-specific portion pills (Row 1) */}
+            {commonPortions && commonPortions.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.portionPillScrollRow}
+                contentContainerStyle={styles.portionPillScrollContent}
+              >
+                {commonPortions.map((portion, i) => {
+                  const isActive = selectedUnit === 'portion' && selectedPortion?.label === portion.label;
+                  return (
+                    <TouchableOpacity
+                      key={`${portion.label}-${i}`}
+                      style={[
+                        styles.portionPillItem,
+                        isActive && styles.portionPillItemSelected,
+                      ]}
+                      onPress={() => handlePortionSelect(portion)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.portionPillItemLabel,
+                          isActive && styles.portionPillItemLabelSelected,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {portion.label}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.portionPillItemGrams,
+                          isActive && styles.portionPillItemGramsSelected,
+                        ]}
+                      >
+                        {portion.grams}g
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            {/* Universal Unit Pill Selector (Row 2) */}
             <View style={styles.unitPillRow}>
               {WEIGHT_UNITS.map((unit) => (
                 <TouchableOpacity
@@ -1023,7 +1111,9 @@ function EditQuantityPopup({
             <Text style={styles.editQuantityHint}>
               {selectedUnit === 'servings'
                 ? 'Nutrients will scale proportionally'
-                : `Based on ${formatQtyValue(itemQty)}${itemUnit} = ${Math.round(itemKcal)} kcal`}
+                : selectedUnit === 'portion' && selectedPortion
+                  ? `1 ${selectedPortion.label} = ${selectedPortion.grams}g`
+                  : `Based on ${formatQtyValue(itemQty)}${itemUnit} = ${Math.round(itemKcal)} kcal`}
             </Text>
 
             {/* Save Button */}
@@ -1082,6 +1172,7 @@ export function NutritionReasoningPopup({
     itemQty: number;
     itemUnit: string;
     itemKcal: number;
+    commonPortions?: CommonPortion[];
   } | null>(null);
 
   // Get goals to check which micronutrients are enabled
@@ -1316,9 +1407,9 @@ export function NutritionReasoningPopup({
 
   // Handler for when quantity badge is pressed
   const handleQuantityPress = useCallback(
-    (itemId: string, currentServings: number, qty: number, unit: string, kcal: number) => {
+    (itemId: string, currentServings: number, qty: number, unit: string, kcal: number, itemCommonPortions?: CommonPortion[]) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setEditQuantityPopup({ itemId, currentServings, itemQty: qty, itemUnit: unit, itemKcal: kcal });
+      setEditQuantityPopup({ itemId, currentServings, itemQty: qty, itemUnit: unit, itemKcal: kcal, commonPortions: itemCommonPortions });
     },
     [],
   );
@@ -1470,6 +1561,7 @@ export function NutritionReasoningPopup({
                               item.qty,
                               item.unit,
                               item.macros.kcal,
+                              item.commonPortions,
                             )
                           }
                           activeOpacity={0.6}
@@ -1886,6 +1978,7 @@ export function NutritionReasoningPopup({
             itemQty={editQuantityPopup.itemQty}
             itemUnit={editQuantityPopup.itemUnit}
             itemKcal={editQuantityPopup.itemKcal}
+            commonPortions={editQuantityPopup.commonPortions}
             onSave={handleSaveQuantity}
             onClose={() => setEditQuantityPopup(null)}
           />
@@ -2676,6 +2769,42 @@ const styles = StyleSheet.create({
   },
   editQuantityContent: {
     paddingHorizontal: 20,
+  },
+  portionPillScrollRow: {
+    marginBottom: 10,
+    maxHeight: 52,
+  },
+  portionPillScrollContent: {
+    gap: 8,
+    paddingHorizontal: 2,
+  },
+  portionPillItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: '#EBEBEB',
+    alignItems: 'center',
+    minWidth: 64,
+  },
+  portionPillItemSelected: {
+    backgroundColor: '#0a7ea4',
+  },
+  portionPillItemLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#444',
+  },
+  portionPillItemLabelSelected: {
+    color: '#ffffff',
+  },
+  portionPillItemGrams: {
+    fontSize: 10,
+    fontWeight: '400',
+    color: '#999',
+    marginTop: 1,
+  },
+  portionPillItemGramsSelected: {
+    color: 'rgba(255,255,255,0.7)',
   },
   unitPillRow: {
     flexDirection: 'row',

@@ -19,6 +19,11 @@ export interface Macros {
   water?: number;
 }
 
+export interface CommonPortion {
+  label: string; // e.g. "1 cup", "1 medium", "1 tbsp"
+  grams: number; // gram equivalent
+}
+
 export interface FoodItem {
   id: string;
   entryId: string;
@@ -39,6 +44,7 @@ export interface FoodItem {
   }[];
   reasoning?: NutritionReasoning;
   barcode?: string;
+  commonPortions?: CommonPortion[];
 }
 
 export interface BarcodeProduct {
@@ -61,6 +67,7 @@ export interface DatabaseSearchResult {
   macrosPer100g: Macros;
   defaultServingG?: number;
   defaultServingLabel?: string;
+  portions?: CommonPortion[];
 }
 
 export interface Entry {

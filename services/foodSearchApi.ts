@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { DatabaseSearchResult } from '@/types';
+import { CommonPortion, DatabaseSearchResult } from '@/types';
 
 export interface FoodSearchResponse {
   results: DatabaseSearchResult[];
@@ -96,5 +96,24 @@ export async function searchFoodDatabase(
       undefined,
       error as Error
     );
+  }
+}
+
+export async function fetchFoodPortions(fdcId: number): Promise<CommonPortion[]> {
+  try {
+    const { data, error } = await supabase.functions.invoke<{ portions: CommonPortion[] }>('food-search', {
+      body: { mode: 'detail', fdcId },
+    });
+
+    if (error || !data?.portions) {
+      if (__DEV__) {
+        console.log('[foodSearchApi] Portions fetch failed:', error?.message ?? 'no data');
+      }
+      return [];
+    }
+
+    return data.portions;
+  } catch {
+    return [];
   }
 }

@@ -1,0 +1,1271 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+interface NutritionRequest {
+  textLine?: string;
+  foodText?: string; // Keep for backward compatibility
+  locale?: "en-CA" | "en-US";
+  userId?: string;
+  // Correction mode fields
+  correctionMode?: boolean;
+  currentMacros?: Macros;
+  qty?: number;
+  unit?: string;
+  userFeedback?: string;
+  // Photo mode fields
+  photoMode?: boolean;
+  base64Image?: string;
+  mimeType?: string;
+}
+
+interface NutritionReasoning {
+  interpretation: string;
+  assumptions: string[];
+  portionNotes?: string;
+  dataSource?: string;
+  confidenceExplanation?: string;
+  confidenceAnalysis?: string;
+}
+
+interface Macros {
+  kcal: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number;
+  potassium?: number;
+  water?: number;
+}
+
+interface CommonPortion {
+  label: string;
+  grams: number;
+}
+
+interface FoodItem {
+  label: string;
+  qty: number;
+  unit: string;
+  confidence: number;
+  macros: Macros;
+  reasoning?: NutritionReasoning;
+  commonPortions?: CommonPortion[];
+}
+
+interface NutritionData {
+  items: FoodItem[];
+  totals: Macros;
+  tokens?: number;
+}
+
+interface ApiResponse {
+  resolved?: FoodItem[];
+  totals?: Macros;
+  error?: string;
+}
+
+interface CorrectionResponse {
+  correctedMacros: Macros;
+  correctedLabel?: string;
+  explanation: string;
+  confidence?: number;
+  reasoning?: NutritionReasoning;
+}
+
+function normalizeCacheKey(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/^[-•*]\s*/, "") // strip leading bullets
+    .replace(/\s+/g, " ") // collapse whitespace
+    .replace(/\s*,\s*/g, ", ") // normalize comma spacing
+    .replace(/[.!?]+$/, ""); // strip trailing punctuation
+}
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const {
+      textLine,
+      foodText: foodTextFromRequest,
+      locale = "en-US",
+      userId,
+      correctionMode,
+      currentMacros,
+      qty,
+      unit,
+      userFeedback,
+      photoMode,
+      base64Image,
+      mimeType,
+    }: NutritionRequest = await req.json();
+
+    // Handle correction mode
+    if (correctionMode) {
+      return await handleCorrectionRequest(
+        foodTextFromRequest || "",
+        currentMacros,
+        userFeedback || "",
+        userId,
+        supabase,
+        qty,
+        unit,
+      );
+    }
+
+    // Handle photo mode
+    if (photoMode && base64Image) {
+      return await handlePhotoRequest(
+        base64Image,
+        mimeType || "image/jpeg",
+        userId,
+        supabase,
+      );
+    }
+
+    // Support both textLine and foodText for backward compatibility
+    const foodText = (textLine || foodTextFromRequest || "").trim();
+
+    if (!foodText || foodText.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Food text is required" } as ApiResponse),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const startTime = Date.now();
+    let tokensUsed = 0;
+    let costCents = 0;
+    let nutritionData: NutritionData;
+
+    // 1. Check cache first
+    const cacheKey = normalizeCacheKey(foodText);
+    console.log(`[Cache] Looking up: "${cacheKey}"`);
+
+    const { data: cachedData, error: cacheError } = await supabase
+      .from("nutrition_cache")
+      .select("*")
+      .eq("food_query", cacheKey)
+      .gte("expires_at", new Date().toISOString())
+      .single();
+
+    if (cacheError) {
+      console.log(`[Cache] Miss - ${cacheError.code}: ${cacheError.message}`);
+    }
+
+    if (!cacheError && cachedData) {
+      console.log(`[Cache] Hit! hit_count: ${cachedData.hit_count}`);
+      // Cache hit - update hit count and extend TTL (fire-and-forget)
+      const newExpiry = new Date();
+      newExpiry.setDate(newExpiry.getDate() + 7);
+
+      supabase
+        .from("nutrition_cache")
+        .update({
+          hit_count: cachedData.hit_count + 1,
+          expires_at: newExpiry.toISOString(),
+        })
+        .eq("id", cachedData.id)
+        .then(({ error }: any) => {
+          if (error)
+            console.error("[Cache] Hit count update error:", error.message);
+        });
+
+      nutritionData = cachedData.nutrition_data as NutritionData;
+
+      // Log cache hit usage (fire-and-forget)
+      if (userId) {
+        logApiUsage(supabase, userId, 0, 0, "cache_hit", startTime);
+      }
+
+      return new Response(
+        JSON.stringify({
+          resolved: nutritionData.items,
+          totals: nutritionData.totals,
+        } as ApiResponse),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // 2. Cache miss - call AI service
+    try {
+      const aiResult = await callAIService(foodText);
+      nutritionData = aiResult.data;
+      tokensUsed = aiResult.tokens || 0;
+      costCents = calculateCost(tokensUsed);
+
+      // 3. Cache the result (fire-and-forget — don't block the response)
+      // Only cache results with sufficient confidence (>= 0.6)
+      const avgConfidence = calculateConfidenceScore(nutritionData);
+      if (avgConfidence >= 0.6) {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+
+        supabase
+          .from("nutrition_cache")
+          .upsert(
+            {
+              food_query: cacheKey,
+              normalized_query: cacheKey,
+              nutrition_data: nutritionData,
+              confidence_score: avgConfidence,
+              hit_count: 1,
+              expires_at: expiresAt.toISOString(),
+            },
+            {
+              onConflict: "food_query",
+            },
+          )
+          .then(({ error }: any) => {
+            if (error) console.error("[Cache] Write error:", error.message);
+          });
+      } else {
+        console.log(
+          `[Cache] Skipping cache write — low confidence: ${avgConfidence}`,
+        );
+      }
+
+      // 4. Log API usage (fire-and-forget)
+      if (userId) {
+        logApiUsage(
+          supabase,
+          userId,
+          tokensUsed,
+          costCents,
+          "success",
+          startTime,
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          resolved: nutritionData.items,
+          totals: nutritionData.totals,
+        } as ApiResponse),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    } catch (aiError) {
+      let errorMessage = "AI service unavailable, showing estimated values";
+      let errorDetails = "Unknown error";
+
+      // Check if it's a missing API key error
+      if (aiError instanceof Error) {
+        errorDetails = aiError.message;
+        if (aiError.message === "GEMINI_API_KEY_NOT_CONFIGURED") {
+          errorMessage = "AI service not configured, showing estimated values";
+        }
+      }
+
+      console.error(`[AI Error] Food: "${foodText}" | Error: ${errorDetails}`);
+
+      // Log error usage (fire-and-forget)
+      if (userId) {
+        logApiUsage(
+          supabase,
+          userId,
+          0,
+          0,
+          "ai_error",
+          startTime,
+          errorDetails,
+        );
+      }
+
+      // Return fallback response
+      const fallbackData = generateFallbackResponse(foodText);
+      console.log(
+        `[Fallback] Returning estimated data: ${fallbackData.totals.kcal} kcal`,
+      );
+
+      return new Response(
+        JSON.stringify({
+          resolved: fallbackData.items,
+          totals: fallbackData.totals,
+          error: errorMessage,
+        } as ApiResponse),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+  } catch (error) {
+    console.error("Function error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Internal server error";
+
+    return new Response(
+      JSON.stringify({
+        error: errorMessage,
+      } as ApiResponse),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+});
+
+async function callAIService(
+  foodText: string,
+): Promise<{ data: NutritionData; tokens?: number }> {
+  // Use Gemini as the single AI provider
+  return await callGemini(foodText);
+}
+
+// Models in order of preference
+const GEMINI_MODELS = {
+  primary: "gemini-2.5-flash",
+  fallback: "gemini-2.5-flash-lite",
+  correction: "gemini-2.5-flash-lite",
+};
+
+// Track rate limit state (resets on function cold start)
+let rateLimitedUntil: number | null = null;
+
+function isRateLimited(): boolean {
+  if (!rateLimitedUntil) return false;
+  if (Date.now() > rateLimitedUntil) {
+    rateLimitedUntil = null;
+    return false;
+  }
+  return true;
+}
+
+function setRateLimited(retryAfterSeconds?: number) {
+  // Default to 60 seconds if no retry-after header
+  const waitTime = (retryAfterSeconds || 60) * 1000;
+  rateLimitedUntil = Date.now() + waitTime;
+  console.log(
+    `[Gemini] Rate limited, will use fallback for ${retryAfterSeconds || 60}s`,
+  );
+}
+
+async function callGemini(
+  foodText: string,
+): Promise<{ data: NutritionData; tokens?: number }> {
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  if (!apiKey) {
+    console.error("[Gemini] API key not configured");
+    throw new Error("GEMINI_API_KEY_NOT_CONFIGURED");
+  }
+
+  // Use fallback model if primary is rate limited
+  const model = isRateLimited()
+    ? GEMINI_MODELS.fallback
+    : GEMINI_MODELS.primary;
+  console.log(`[Gemini] Processing with ${model}: "${foodText}"`);
+
+  const prompt = `You are an expert Certified Nutritionist and Data Analyst. Your task is to extract food items from text and return precise macronutrient data.
+
+DATA HIERARCHY & ACCURACY RULES:
+1. Exact Matches: For branded items or restaurant chains, you MUST use official nutritional data from the manufacturer or restaurant rather than generic equivalents.
+2. Niche Items: For less common foods, prioritize finding the most specific entry available in nutritional databases (USDA, NCCDB).
+3. Ranges: If a food item implies a caloric range (e.g., a medium apple is 80-100kcal), you MUST calculate and return the MEDIAN value (90kcal). Do not return ranges.
+4. Validation: Cross-reference caloric estimates against standard nutritional density to ensure physical realism (e.g., pure fat cannot exceed 9kcal/g).
+
+UNRESOLVABLE INPUT RULES:
+- If the input is clearly NOT a food item (e.g., a bare number like "3", a random word like "hello", gibberish, a sentence/question, or anything that cannot reasonably be interpreted as food), return a single item with all macros set to 0 and confidence 0. Use the reasoning fields to explain why this could not be resolved.
+- Do NOT guess or stretch interpretations. "3" is NOT "3 eggs". "hello" is NOT a food. A bare number with no food context is unresolvable.
+- Only attempt resolution if a food item is explicitly named or clearly implied (e.g., "3 eggs" is valid, "3" alone is not).
+- For unresolvable items, set the label to the original input text, qty to 0, and include a clear interpretation and confidenceExplanation explaining why the input could not be identified as food.
+
+FORMATTING RULES:
+- Convert all quantities to grams (g) for consistency.
+- Use standard portion sizes if no quantity is specified.
+- Return ONLY valid JSON. No markdown formatting, no explanations.
+- Set confidence:
+   - 0.95-1.0: Exact brand match or precise weight given.
+   - 0.8-0.9: Standard USDA generic match.
+   - 0.6-0.7: AI estimate/Complex preparation without recipe.
+
+OUTPUT FORMAT:
+{
+  "items": [
+    {
+      "label": "McDonald's Big Mac",
+      "qty": 215,
+      "unit": "g",
+      "confidence": 0.99,
+      "macros": {"kcal": 590, "protein": 25, "fat": 34, "carbs": 46, "fiber": 3, "sugar": 9, "sodium": 1010, "potassium": 420},
+      "commonPortions": [{"label": "1 sandwich", "grams": 215}, {"label": "½ sandwich", "grams": 108}, {"label": "100g", "grams": 100}],
+      "reasoning": {
+        "interpretation": "Identified as McDonald's Big Mac sandwich",
+        "assumptions": ["Standard menu item", "No modifications assumed"],
+        "portionNotes": "Official serving weight: 215g",
+        "dataSource": "[McDonald's USA Nutrition Guide 2024](https://www.mcdonalds.com/nutrition)",
+        "confidenceExplanation": "High confidence, exact branded product with officially published nutrition data",
+        "confidenceAnalysis": "This item was identified as a McDonald's Big Mac using data from [McDonald's USA Nutrition Guide](https://www.mcdonalds.com/nutrition). McDonald's publishes exact per-item nutrition facts (590 kcal, 215g serving), so no estimation was needed. The only minor uncertainty is potential regional variation in ingredients."
+      }
+    }
+  ],
+  "totals": {"kcal": 590, "protein": 25, "fat": 34, "carbs": 46, "fiber": 3, "sugar": 9, "sodium": 1010, "potassium": 420}
+}
+
+ADDITIONAL NUTRIENTS:
+- fiber: Dietary fiber in grams (g)
+- sugar: Total sugars in grams (g)
+- sodium: Sodium in milligrams (mg)
+- potassium: Potassium in milligrams (mg)
+- water: Water/liquid amount in milliliters (ml). If the entry includes plain water, sparkling water, mineral water, or soda water, return the amount in ml. These have 0 calories. For food items without explicit water mention, omit this field.
+Always include fiber, sugar, sodium, potassium in the macros object. Use 0 if data is unavailable. Only include water when explicitly mentioned.
+
+REASONING GUIDELINES:
+- interpretation: How you identified/interpreted this food item
+- assumptions: List any assumptions made (e.g., "raw weight", "boneless", "standard portion")
+- portionNotes: How you handled the quantity (e.g., "specified 150g", "assumed medium size")
+- dataSource: Which database or source you used. ONLY use links from official TRUSTED food data sources (restaurants, USDA, NCCDB, etc). ALWAYS format as markdown link [Display Name](URL) when a URL is available (e.g., "[USDA FDC #123456](https://fdc.nal.usda.gov/fdc-app.html#/food-details/123456)"). If no URL exists, return "No source available".
+- confidenceExplanation: One-line summary using "High/Medium/Low confidence" (never the numeric %) followed by a short reason (e.g., "High confidence, USDA generic match with specified weight" or "Medium confidence, portion assumed and preparation method unknown")
+- confidenceAnalysis: A detailed 2-4 sentence paragraph explaining how the confidence score was determined. Write in a neutral tone without referring to "the user" or "you". When referencing a data source, make the source name itself the clickable link (e.g., "sourced from [USDA FoodData Central](https://fdc.nal.usda.gov/fdc-app.html#/food-details/175168)" NOT "sourced from USDA FoodData Central (FDC ID: 175168)"). Cover: (1) how the food was identified and what data source was used (as a clickable link), (2) whether the portion was specified or assumed and how that affects accuracy, (3) specific uncertainties or factors that raised or lowered confidence (e.g., preparation method unknown, brand vs generic, weight estimated from "1 medium").
+
+COMMON PORTIONS:
+For each food item, include a "commonPortions" array with 3-5 context-appropriate portion options. Each entry has a "label" (human-readable) and "grams" (gram equivalent). Choose portions that make sense for the specific food:
+- Liquids/drinks: cups (240ml≈240g), fl oz (≈30g), ml, L
+- Fruits/vegetables: "1 medium", "1 cup chopped", "1 large"
+- Meats: "1 breast" (~170g), "1 thigh" (~115g), "1 palm-size" (~85g)
+- Spreads/sauces: "1 tbsp" (~15g), "1 tsp" (~5g)
+- Bread/baked goods: "1 slice", "1 roll"
+- Eggs: "1 large" (~50g), "1 medium" (~44g)
+- Grains/pasta: "1 cup cooked" (~200g), "½ cup dry"
+- Dairy: "1 cup" (~240g), "1 slice" (~28g), "1 oz" (~28g)
+Always include a gram-based option. Example:
+"commonPortions": [{"label": "1 cup (240ml)", "grams": 240}, {"label": "1 fl oz", "grams": 30}, {"label": "100g", "grams": 100}]
+
+Food text: "${foodText}"
+
+JSON:`;
+
+  const geminiStart = Date.now();
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+        },
+      }),
+    },
+  );
+  console.log(`[Gemini] API call took ${Date.now() - geminiStart}ms`);
+
+  // Handle rate limiting or overloaded model - fall back to secondary model
+  if (response.status === 429 || response.status === 503) {
+    const retryAfter = response.headers.get("retry-after");
+    const retrySeconds = retryAfter ? parseInt(retryAfter, 10) : 60;
+
+    // If we're already using fallback and still failing, throw error
+    if (model === GEMINI_MODELS.fallback) {
+      console.error(
+        `[Gemini] Fallback model also unavailable (${response.status})`,
+      );
+      throw new Error("All Gemini models unavailable");
+    }
+
+    // Set rate limit and retry with fallback model
+    setRateLimited(retrySeconds);
+    console.log(
+      `[Gemini] ${response.status} on ${model}, retrying with fallback: ${GEMINI_MODELS.fallback}`,
+    );
+    return callGemini(foodText); // Recursive call will use fallback
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[Gemini] API error ${response.status}: ${errorText}`);
+    throw new Error(
+      `Gemini API error: ${response.status} ${response.statusText} - ${errorText.substring(0, 200)}`,
+    );
+  }
+
+  const data = await response.json();
+
+  // Check for blocked or empty responses
+  if (!data.candidates || data.candidates.length === 0) {
+    console.error("[Gemini] No candidates in response:", JSON.stringify(data));
+    throw new Error(
+      `Gemini returned no candidates: ${data.promptFeedback?.blockReason || "unknown reason"}`,
+    );
+  }
+
+  const candidate = data.candidates[0];
+
+  // Check finish reason
+  if (candidate.finishReason && candidate.finishReason !== "STOP") {
+    console.error(
+      `[Gemini] Unexpected finish reason: ${candidate.finishReason}`,
+    );
+  }
+
+  if (!candidate.content?.parts?.[0]?.text) {
+    console.error("[Gemini] No text in response:", JSON.stringify(candidate));
+    throw new Error("Gemini response missing text content");
+  }
+
+  const content = candidate.content.parts[0].text;
+  console.log(`[Gemini] Raw response length: ${content.length} chars`);
+
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    console.error(
+      "[Gemini] No JSON found in response:",
+      content.substring(0, 500),
+    );
+    throw new Error("No JSON found in Gemini response");
+  }
+
+  try {
+    const rawData = JSON.parse(jsonMatch[0]);
+
+    // Normalize: Gemini may return items under different keys
+    const items: FoodItem[] =
+      rawData.items ||
+      rawData.resolved ||
+      rawData.foods ||
+      rawData.food_items ||
+      [];
+
+    // Sanitize commonPortions on each item
+    for (const item of items) {
+      if (Array.isArray(item.commonPortions)) {
+        item.commonPortions = item.commonPortions
+          .filter(
+            (p: any) =>
+              typeof p?.label === "string" &&
+              p.label.trim().length > 0 &&
+              typeof p?.grams === "number" &&
+              p.grams > 0,
+          )
+          .slice(0, 8);
+      } else {
+        delete item.commonPortions;
+      }
+    }
+
+    const nutritionData: NutritionData = {
+      items,
+      totals: rawData.totals || {
+        kcal: 0,
+        protein: 0,
+        fat: 0,
+        carbs: 0,
+        fiber: 0,
+        sugar: 0,
+        sodium: 0,
+        potassium: 0,
+      },
+    };
+
+    console.log(
+      `[Gemini] Success (${model}): ${nutritionData.items.length} items, ${nutritionData.totals.kcal} kcal`,
+    );
+    return { data: nutritionData };
+  } catch (parseError) {
+    console.error(
+      "[Gemini] Parse error:",
+      parseError,
+      "Content:",
+      content.substring(0, 500),
+    );
+    throw new Error(`Failed to parse Gemini response: ${parseError}`);
+  }
+}
+
+function calculateCost(tokens: number): number {
+  const costPerMillion = 0.25; // $0.25 per 1M tokens for Gemini
+  return Math.ceil((tokens / 1000000) * costPerMillion * 100); // convert to cents
+}
+
+function calculateConfidenceScore(data: NutritionData): number {
+  if (!data.items || data.items.length === 0) return 0;
+
+  const avgConfidence =
+    data.items.reduce((sum, item) => sum + item.confidence, 0) /
+    data.items.length;
+
+  // Apply quality factors
+  let qualityMultiplier = 1.0;
+
+  // Penalize very high calorie estimates (likely errors)
+  const totalCalories = data.totals.kcal;
+  if (totalCalories > 2000) {
+    qualityMultiplier *= 0.8;
+  }
+
+  // Boost confidence for balanced macros
+  const hasProtein = data.totals.protein > 0;
+  const hasFat = data.totals.fat > 0;
+  const hasCarbs = data.totals.carbs > 0;
+  if (hasProtein && hasFat && hasCarbs) {
+    qualityMultiplier *= 1.1;
+  }
+
+  // Penalize if all items have the same confidence (suggests generic estimation)
+  const confidences = data.items.map((item) => item.confidence);
+  const hasVaryingConfidence = new Set(confidences).size > 1;
+  if (!hasVaryingConfidence && avgConfidence === 0.8) {
+    qualityMultiplier *= 0.9;
+  }
+
+  return Math.min(
+    1.0,
+    Math.round(avgConfidence * qualityMultiplier * 100) / 100,
+  );
+}
+
+function generateFallbackResponse(foodText: string): NutritionData {
+  // Return zeros when AI service is unavailable
+  const lines = foodText.split("\n").filter((line) => line.trim().length > 0);
+
+  const items: FoodItem[] = lines.map((line) => {
+    return {
+      label: line.trim(),
+      qty: 0,
+      unit: "g",
+      confidence: 0,
+      macros: {
+        kcal: 0,
+        protein: 0,
+        fat: 0,
+        carbs: 0,
+        fiber: 0,
+        sugar: 0,
+        sodium: 0,
+        potassium: 0,
+      },
+    };
+  });
+
+  return {
+    items,
+    totals: {
+      kcal: 0,
+      protein: 0,
+      fat: 0,
+      carbs: 0,
+      fiber: 0,
+      sugar: 0,
+      sodium: 0,
+      potassium: 0,
+    },
+  };
+}
+
+async function logApiUsage(
+  supabase: any,
+  userId: string,
+  tokens: number,
+  costCents: number,
+  status: string,
+  startTime: number,
+  errorMessage?: string,
+) {
+  const responseTime = Date.now() - startTime;
+
+  await supabase.from("api_usage").insert({
+    user_id: userId,
+    tokens_used: tokens,
+    cost_cents: costCents,
+    request_type: "nutrition",
+    status,
+    error_message: errorMessage,
+    response_time_ms: responseTime,
+  });
+}
+
+async function handlePhotoRequest(
+  base64Image: string,
+  mimeType: string,
+  userId: string | undefined,
+  supabase: any,
+): Promise<Response> {
+  const startTime = Date.now();
+
+  try {
+    const result = await callGeminiWithPhoto(base64Image, mimeType);
+
+    // Check for not_food response — return 200 so Supabase client
+    // delivers the body via `data` instead of swallowing it in `error`.
+    if (result.data.notFood) {
+      return new Response(
+        JSON.stringify({ error: "not_food", resolved: [], totals: null }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // Log usage (fire-and-forget)
+    if (userId) {
+      logApiUsage(
+        supabase,
+        userId,
+        result.tokens || 0,
+        calculateCost(result.tokens || 0),
+        "photo_success",
+        startTime,
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        resolved: result.data.items,
+        totals: result.data.totals,
+      } as ApiResponse),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  } catch (error) {
+    console.error("[Photo] Error:", error);
+
+    if (userId) {
+      logApiUsage(
+        supabase,
+        userId,
+        0,
+        0,
+        "photo_error",
+        startTime,
+        error instanceof Error ? error.message : "Unknown error",
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ error: "Failed to analyze photo" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+}
+
+async function callGeminiWithPhoto(
+  base64Image: string,
+  mimeType: string,
+): Promise<{ data: NutritionData & { notFood?: boolean }; tokens?: number }> {
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  if (!apiKey) {
+    console.error("[Gemini Photo] API key not configured");
+    throw new Error("GEMINI_API_KEY_NOT_CONFIGURED");
+  }
+
+  const model = isRateLimited()
+    ? GEMINI_MODELS.fallback
+    : GEMINI_MODELS.primary;
+  console.log(`[Gemini Photo] Processing with ${model}`);
+
+  const prompt = `You are an expert Certified Nutritionist analyzing a photo of food. Your task is to identify ALL food items visible in the image and return precise macronutrient data.
+
+IMPORTANT: If the image does NOT contain any identifiable food items (e.g., it shows a person, object, scenery, text, or anything non-food), you MUST return: {"not_food": true}
+
+VISUAL ESTIMATION RULES:
+1. Identify every distinct food item visible in the photo
+2. Estimate portion sizes using visual cues: plate size (standard dinner plate ~26cm), utensils, hands, common container sizes
+3. Convert all estimated quantities to grams (g)
+4. Use USDA FoodData Central nutrition data for calculations
+5. For ambiguous items, use the most common interpretation
+6. Set confidence between 0.5-0.8 for photo-based estimates (lower than text due to visual estimation uncertainty)
+
+DATA ACCURACY:
+- Cross-reference caloric estimates against standard nutritional density
+- Pure fat cannot exceed 9kcal/g
+- Ensure calories ≈ (protein × 4) + (carbs × 4) + (fat × 9)
+
+OUTPUT FORMAT (JSON only, no markdown):
+{
+  "items": [
+    {
+      "label": "Grilled chicken breast",
+      "qty": 150,
+      "unit": "g",
+      "confidence": 0.65,
+      "macros": {"kcal": 248, "protein": 46, "fat": 5, "carbs": 0, "fiber": 0, "sugar": 0, "sodium": 350, "potassium": 420},
+      "commonPortions": [{"label": "1 breast", "grams": 170}, {"label": "1 palm-size", "grams": 85}, {"label": "100g", "grams": 100}],
+      "reasoning": {
+        "interpretation": "Identified grilled chicken breast from visual appearance — pale, lean meat with grill marks",
+        "assumptions": ["Boneless skinless breast", "No added oil or sauce visible", "Grilled preparation based on char marks"],
+        "portionNotes": "Estimated ~150g based on size relative to dinner plate",
+        "dataSource": "[USDA FDC #171077](https://fdc.nal.usda.gov/fdc-app.html#/food-details/171077)",
+        "confidenceExplanation": "Medium confidence, visual identification with estimated portion size",
+        "confidenceAnalysis": "This item was identified as grilled chicken breast based on visual characteristics. The portion was estimated at 150g using plate-size reference. Exact weight and preparation method introduce uncertainty."
+      }
+    }
+  ],
+  "totals": {"kcal": 248, "protein": 46, "fat": 5, "carbs": 0, "fiber": 0, "sugar": 0, "sodium": 350, "potassium": 420}
+}
+
+Always include fiber, sugar, sodium, potassium in the macros object. Use 0 if data is unavailable.
+For each item, include a "commonPortions" array with 3-5 context-appropriate portion options. Each has "label" (human-readable) and "grams" (gram equivalent).
+
+Analyze the food in this photo:`;
+
+  const geminiStart = Date.now();
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              { inlineData: { mimeType, data: base64Image } },
+            ],
+          },
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+        },
+      }),
+    },
+  );
+  console.log(`[Gemini Photo] API call took ${Date.now() - geminiStart}ms`);
+
+  // Handle rate limiting — fall back to secondary model
+  if (response.status === 429 || response.status === 503) {
+    const retryAfter = response.headers.get("retry-after");
+    const retrySeconds = retryAfter ? parseInt(retryAfter, 10) : 60;
+
+    if (model === GEMINI_MODELS.fallback) {
+      console.error(
+        `[Gemini Photo] Fallback model also unavailable (${response.status})`,
+      );
+      throw new Error("All Gemini models unavailable");
+    }
+
+    setRateLimited(retrySeconds);
+    console.log(
+      `[Gemini Photo] ${response.status} on ${model}, retrying with fallback`,
+    );
+    return callGeminiWithPhoto(base64Image, mimeType);
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[Gemini Photo] API error ${response.status}: ${errorText}`);
+    throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+
+  if (!data.candidates || data.candidates.length === 0) {
+    console.error("[Gemini Photo] No candidates:", JSON.stringify(data));
+    throw new Error(
+      `Gemini returned no candidates: ${data.promptFeedback?.blockReason || "unknown"}`,
+    );
+  }
+
+  const candidate = data.candidates[0];
+  if (!candidate.content?.parts?.[0]?.text) {
+    console.error("[Gemini Photo] No text in response:", JSON.stringify(candidate));
+    throw new Error("Gemini response missing text content");
+  }
+
+  const content = candidate.content.parts[0].text;
+  console.log(`[Gemini Photo] Raw response length: ${content.length} chars`);
+
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    console.error("[Gemini Photo] No JSON found:", content.substring(0, 500));
+    throw new Error("No JSON found in Gemini response");
+  }
+
+  try {
+    const rawData = JSON.parse(jsonMatch[0]);
+
+    // Check for not_food response
+    if (rawData.not_food === true) {
+      return { data: { items: [], totals: { kcal: 0, protein: 0, fat: 0, carbs: 0 }, notFood: true } };
+    }
+
+    const items: FoodItem[] =
+      rawData.items || rawData.resolved || rawData.foods || [];
+
+    // Sanitize commonPortions on each item
+    for (const item of items) {
+      if (Array.isArray(item.commonPortions)) {
+        item.commonPortions = item.commonPortions
+          .filter(
+            (p: any) =>
+              typeof p?.label === "string" &&
+              p.label.trim().length > 0 &&
+              typeof p?.grams === "number" &&
+              p.grams > 0,
+          )
+          .slice(0, 8);
+      } else {
+        delete item.commonPortions;
+      }
+    }
+
+    const nutritionData: NutritionData & { notFood?: boolean } = {
+      items,
+      totals: rawData.totals || {
+        kcal: 0, protein: 0, fat: 0, carbs: 0,
+        fiber: 0, sugar: 0, sodium: 0, potassium: 0,
+      },
+    };
+
+    console.log(
+      `[Gemini Photo] Success (${model}): ${nutritionData.items.length} items, ${nutritionData.totals.kcal} kcal`,
+    );
+    return { data: nutritionData };
+  } catch (parseError) {
+    console.error("[Gemini Photo] Parse error:", parseError, content.substring(0, 500));
+    throw new Error(`Failed to parse Gemini response: ${parseError}`);
+  }
+}
+
+async function handleCorrectionRequest(
+  foodText: string,
+  currentMacros: Macros | undefined,
+  userFeedback: string,
+  userId: string | undefined,
+  supabase: any,
+  qty?: number,
+  unit?: string,
+): Promise<Response> {
+  const startTime = Date.now();
+
+  // Validate inputs
+  if (!foodText || !currentMacros || !userFeedback) {
+    return new Response(
+      JSON.stringify({ error: "Missing required fields for correction" }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  try {
+    const correctionResult = await callCorrectionAI(
+      foodText,
+      currentMacros,
+      userFeedback,
+      qty,
+      unit,
+    );
+
+    // Log usage (fire-and-forget)
+    if (userId) {
+      logApiUsage(
+        supabase,
+        userId,
+        correctionResult.tokens || 0,
+        calculateCost(correctionResult.tokens || 0),
+        "correction_success",
+        startTime,
+      );
+    }
+
+    return new Response(
+      JSON.stringify(correctionResult.data as CorrectionResponse),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  } catch (error) {
+    console.error("[Correction] Error:", error);
+
+    // Log error (fire-and-forget)
+    if (userId) {
+      logApiUsage(
+        supabase,
+        userId,
+        0,
+        0,
+        "correction_error",
+        startTime,
+        error instanceof Error ? error.message : "Unknown error",
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ error: "Failed to process correction" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+}
+
+async function callCorrectionAI(
+  foodText: string,
+  currentMacros: Macros,
+  userFeedback: string,
+  qty?: number,
+  unit?: string,
+): Promise<{ data: CorrectionResponse; tokens?: number }> {
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  if (!apiKey) {
+    console.error("[Gemini Correction] API key not configured");
+    throw new Error("GEMINI_API_KEY_NOT_CONFIGURED");
+  }
+
+  // Always use the correction model for corrections
+  const model = GEMINI_MODELS.correction;
+  console.log(
+    `[Gemini Correction] Processing with ${model}: "${foodText}" (${qty}${unit}) | Feedback: "${userFeedback}"`,
+  );
+
+  // Build portion context string
+  const portionInfo =
+    qty && unit
+      ? `\n  - Portion size: ${qty}${unit} (the current macros are calculated for this specific portion)`
+      : "";
+
+  const prompt = `You are an expert Certified Nutritionist reviewing feedback on food nutrition data.
+
+  CURRENT DATA:
+  - Food item: "${foodText}"${portionInfo}
+  - Current nutrition values:
+  ${JSON.stringify(currentMacros)}
+
+  FEEDBACK:
+  "${userFeedback}"
+
+  TASK:
+  Analyze the feedback and determine what corrections should be made to this entry.
+
+  CORRECTION RULES:
+  1. Only correct values that the feedback explicitly or implicitly suggests are wrong
+  2. If feedback mentions a different preparation method (e.g., "fried" vs "grilled"), recalculate all affected macros
+  3. If feedback says values are "too high" or "too low" without specifics, adjust by 15-25% in the indicated direction
+  4. If feedback specifies a brand or variant, use that product's official nutrition data
+  5. If feedback is about quantity mismatch (e.g., "that's per 100g"), scale all values proportionally
+  6. CRITICAL: If a portion size is provided above, ALL corrected macros MUST be calculated for that exact portion size. Do NOT default to per-100g or a "standard serving" — use the specified quantity. For example, if the portion is 240g, return macros for 240g of the food.
+
+  HANDLING DESCRIPTIVE CLARIFICATIONS:
+  - If feedback provides a descriptive clarification (e.g., "this is grilled salmon", "it's a large apple", "actually brown rice") without explicitly mentioning inaccuracy, treat this as a request to RE-IDENTIFY the entry
+  - Re-identification means: look up nutrition data for the clarified food description and recalculate all values accordingly
+  - Update correctedLabel to reflect the clarified description
+  - These clarifications indicate the original identification may have been incorrect or too generic
+
+  CONSISTENCY REQUIREMENTS:
+  - Calories must approximately equal: (protein * 4) + (carbs * 4) + (fat * 9) + (fiber * 2 if counted)
+  - If any macro is adjusted, recalculate calories to match (unless calories were specifically corrected)
+  - If calories are adjusted, consider whether macros need proportional adjustment
+  - No negative values allowed
+  - Protein, fat, carbs cannot exceed total weight of food
+
+  HANDLING RECALCULATION REQUESTS:
+  - If feedback is "recalculate", "recalc", "redo", "recompute", "try again", or similar, this is a VALID request to recompute the nutrition values from scratch
+  - For recalculations, use USDA FoodData Central or manufacturer data and set confidence based on data quality (0.8-0.9 for USDA match, 0.95+ for exact brand match)
+
+  HANDLING AMBIGUOUS FEEDBACK:
+  - If feedback is vague (e.g., "seems wrong", "doesn't look right") without specifics, make best educated guess based on typical values for similar foods
+  - If feedback contradicts nutritional science (e.g., "100g chicken has 500g protein"), keep original values and explain why                                 
+                                                         
+  OUTPUT FORMAT (JSON only, no markdown):
+  {
+    "correctedMacros": {
+      "kcal": <number>,
+      "protein": <number>,
+      "fat": <number>,
+      "carbs": <number>,
+      "fiber": <number>,
+      "sugar": <number>,
+      "sodium": <number>,
+      "potassium": <number>
+    },
+    "correctedLabel": "<updated label if food description needs clarification, otherwise same as original>",
+    "confidence": <number between 0 and 1>,
+    "explanation": "<2-3 sentences explaining what was changed and why>",
+    "reasoning": {
+      "interpretation": "<how the feedback was interpreted - e.g., 'This entry was re-identified as grilled salmon based on the clarification provided'>",
+      "assumptions": ["<list of assumptions made>"],
+      "portionNotes": "<any notes about portion/quantity adjustments>",
+      "dataSource": "Which database or source was used. ALWAYS format as markdown link [Display Name](URL) when URL is available (e.g., '[USDA FDC #123456](https://fdc.nal.usda.gov/fdc-app.html#/food-details/123456)'). If no URL exists, provide plain text name.",
+      "confidenceExplanation": "One-line summary using High/Medium/Low confidence (never the numeric %) followed by a short reason",
+      "confidenceAnalysis": "A detailed 2-4 sentence paragraph explaining how the confidence score was determined."
+    }
+  }
+
+  CONFIDENCE EXPLANATION GUIDELINES:
+  - confidenceExplanation: One-line summary using "High/Medium/Low confidence" (never the numeric %) followed by a short reason (e.g., "High confidence, exact branded product with officially published nutrition data" or "Medium confidence, portion assumed and preparation method unknown")
+  - confidenceAnalysis: A detailed 2-4 sentence paragraph explaining how the confidence score was determined. Write in a neutral tone without referring to "the user" or "you". When referencing a data source, make the source name itself the clickable link (e.g., "sourced from [USDA FoodData Central](https://fdc.nal.usda.gov/fdc-app.html#/food-details/175168)"). Cover: (1) how the food was identified and what data source was used (as a clickable link), (2) whether the portion was specified or assumed and how that affects accuracy, (3) specific uncertainties or factors that raised or lowered confidence.
+
+  CONFIDENCE NUMERIC VALUES (based on data quality, not feedback clarity):
+  - 0.95-1.0: Exact brand match or precise weight given
+  - 0.8-0.9: Standard USDA generic match
+  - 0.6-0.7: AI estimate or complex preparation without recipe                
+                                                         
+  IMPORTANT:                                             
+  - Return ONLY valid JSON, no markdown formatting       
+  - All macro fields are required (use original value if 
+  unchanged)                                             
+  - Always verify calorie/macro consistency before       
+  returning                                              
+  - Use USDA FoodData Central or manufacturer data when  
+  available   
+
+JSON:`;
+
+  const geminiStart = Date.now();
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+        },
+      }),
+    },
+  );
+  console.log(
+    `[Gemini Correction] API call took ${Date.now() - geminiStart}ms`,
+  );
+
+  // Handle rate limiting
+  if (response.status === 429) {
+    console.error(`[Gemini Correction] Model rate limited`);
+    throw new Error("Correction model rate limited, please try again later");
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(
+      `[Gemini Correction] API error ${response.status}: ${errorText}`,
+    );
+    throw new Error(
+      `Gemini API error: ${response.status} ${response.statusText}`,
+    );
+  }
+
+  const data = await response.json();
+
+  if (!data.candidates || data.candidates.length === 0) {
+    console.error(
+      "[Gemini Correction] No candidates in response:",
+      JSON.stringify(data),
+    );
+    throw new Error("Gemini returned no candidates");
+  }
+
+  const candidate = data.candidates[0];
+
+  if (!candidate.content?.parts?.[0]?.text) {
+    console.error(
+      "[Gemini Correction] No text in response:",
+      JSON.stringify(candidate),
+    );
+    throw new Error("Gemini response missing text content");
+  }
+
+  const content = candidate.content.parts[0].text;
+  console.log(
+    `[Gemini Correction] Raw response length: ${content.length} chars`,
+  );
+
+  try {
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error(
+        "[Gemini Correction] No JSON found in response:",
+        content.substring(0, 500),
+      );
+      throw new Error("No JSON found in Gemini response");
+    }
+
+    const correctionData = JSON.parse(jsonMatch[0]);
+
+    // Ensure all required macro fields exist, using current values as fallback
+    const correctedMacros: Macros = {
+      kcal: correctionData.correctedMacros?.kcal ?? currentMacros.kcal,
+      protein: correctionData.correctedMacros?.protein ?? currentMacros.protein,
+      fat: correctionData.correctedMacros?.fat ?? currentMacros.fat,
+      carbs: correctionData.correctedMacros?.carbs ?? currentMacros.carbs,
+      fiber: correctionData.correctedMacros?.fiber ?? currentMacros.fiber,
+      sugar: correctionData.correctedMacros?.sugar ?? currentMacros.sugar,
+      sodium: correctionData.correctedMacros?.sodium ?? currentMacros.sodium,
+      potassium:
+        correctionData.correctedMacros?.potassium ?? currentMacros.potassium,
+      water: correctionData.correctedMacros?.water ?? currentMacros.water,
+    };
+
+    const result: CorrectionResponse = {
+      correctedMacros,
+      correctedLabel: correctionData.correctedLabel || null,
+      explanation:
+        correctionData.explanation ||
+        "Nutrition values have been adjusted based on the provided feedback.",
+      confidence:
+        typeof correctionData.confidence === "number"
+          ? correctionData.confidence
+          : 0.7,
+      reasoning: correctionData.reasoning || undefined,
+    };
+
+    console.log(
+      `[Gemini Correction] Success: ${result.correctedMacros.kcal} kcal (was ${currentMacros.kcal}), confidence: ${result.confidence}`,
+    );
+    return { data: result };
+  } catch (parseError) {
+    console.error(
+      "[Gemini Correction] Parse error:",
+      parseError,
+      "Content:",
+      content.substring(0, 500),
+    );
+    throw new Error(`Failed to parse Gemini response: ${parseError}`);
+  }
+}

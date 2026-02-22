@@ -1,10 +1,11 @@
 import { AnimatedDigits } from "@/components/AnimatedDigits";
 import {
   searchFoodDatabase,
+  fetchFoodPortions,
   FoodSearchError,
 } from "@/services/foodSearchApi";
 import { scaleMacrosToServing } from "@/services/barcodeService";
-import { DatabaseSearchResult, Macros } from "@/types";
+import { CommonPortion, DatabaseSearchResult, Macros } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -94,6 +95,8 @@ export function DatabaseSearchModal({
   const [servingGrams, setServingGrams] = useState("");
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [allResults, setAllResults] = useState<DatabaseSearchResult[]>([]);
+  const [portions, setPortions] = useState<CommonPortion[]>([]);
+  const [portionsLoading, setPortionsLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchInputRef = useRef<TextInput>(null);
   const translateY = useSharedValue(0);
@@ -106,6 +109,8 @@ export function DatabaseSearchModal({
       setSourceFilter("all");
       setServingGrams("");
       setAllResults([]);
+      setPortions([]);
+      setPortionsLoading(false);
       translateY.value = 0;
       // Auto-focus search input
       setTimeout(() => searchInputRef.current?.focus(), 300);
@@ -190,6 +195,15 @@ export function DatabaseSearchModal({
     const defaultServing = result.defaultServingG ?? 100;
     setServingGrams(defaultServing.toString());
     setState({ type: "detail", result });
+
+    // Fetch FDC portions in the background
+    setPortions([]);
+    if (result.source === "FDC" && result.fdcId) {
+      setPortionsLoading(true);
+      fetchFoodPortions(result.fdcId)
+        .then((p) => setPortions(p))
+        .finally(() => setPortionsLoading(false));
+    }
   }, []);
 
   const handleBackToResults = useCallback(() => {
@@ -206,8 +220,12 @@ export function DatabaseSearchModal({
     if (state.type !== "detail") return;
     const grams = parseFloat(servingGrams) || 100;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onAddEntry(state.result, grams);
-  }, [state, servingGrams, onAddEntry]);
+    // Attach fetched portions to the result so they persist on the FoodItem
+    const resultWithPortions = portions.length > 0
+      ? { ...state.result, portions }
+      : state.result;
+    onAddEntry(resultWithPortions, grams);
+  }, [state, servingGrams, portions, onAddEntry]);
 
   const handleClose = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -292,21 +310,21 @@ export function DatabaseSearchModal({
             ]}
           >
             {/* Drag indicator */}
-            <View style={styles.dragIndicatorContainer} pointerEvents="none">
+            <View style={styles.dragIndicatorContainer}>
               <View style={styles.dragIndicator} />
             </View>
 
-            {/* Header with close button */}
+            {/* Header */}
             <View style={styles.header}>
               <TouchableOpacity
-                style={styles.closeButton}
+                style={styles.backButton}
                 onPress={handleClose}
                 activeOpacity={0.7}
               >
-                <Ionicons name="chevron-down" size={26} color="#666" />
+                <Ionicons name="chevron-back" size={20} color="#666" />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>Search Foods</Text>
-              <View style={{ width: 48 }} />
+              <View style={styles.headerRightSpacer} />
             </View>
 
             {/* Search bar */}
@@ -326,7 +344,8 @@ export function DatabaseSearchModal({
                 {searchText.length > 0 && (
                   <TouchableOpacity
                     onPress={() => setSearchText("")}
-                    activeOpacity={0.6}
+                    style={styles.clearButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     <Ionicons name="close-circle" size={18} color="#ccc" />
                   </TouchableOpacity>
@@ -457,22 +476,23 @@ export function DatabaseSearchModal({
                           </View>
                         </View>
                         <View style={styles.resultMacroRow}>
-                          <Text style={styles.resultMacroItem}>
-                            {result.macrosPer100g.kcal} kcal
-                          </Text>
-                          <Text style={styles.resultMacroDot}>{"\u00B7"}</Text>
-                          <Text style={styles.resultMacroItem}>
-                            {result.macrosPer100g.protein}g P
-                          </Text>
-                          <Text style={styles.resultMacroDot}>{"\u00B7"}</Text>
-                          <Text style={styles.resultMacroItem}>
-                            {result.macrosPer100g.fat}g F
-                          </Text>
-                          <Text style={styles.resultMacroDot}>{"\u00B7"}</Text>
-                          <Text style={styles.resultMacroItem}>
-                            {result.macrosPer100g.carbs}g C
-                          </Text>
-                          <Text style={styles.resultMacroSuffix}> /100g</Text>
+                          <View style={styles.macroItem}>
+                            <FontAwesomeIcon icon={MACRO_ICONS.calories} size={10} color={MACRO_COLORS.calories.primary} />
+                            <Text style={styles.macroValue}>{Math.round(result.macrosPer100g.kcal)}</Text>
+                          </View>
+                          <View style={styles.macroItem}>
+                            <FontAwesomeIcon icon={MACRO_ICONS.protein} size={10} color={MACRO_COLORS.protein.primary} />
+                            <Text style={styles.macroValue}>{Math.round(result.macrosPer100g.protein)}g</Text>
+                          </View>
+                          <View style={styles.macroItem}>
+                            <FontAwesomeIcon icon={MACRO_ICONS.fat} size={10} color={MACRO_COLORS.fat.primary} />
+                            <Text style={styles.macroValue}>{Math.round(result.macrosPer100g.fat)}g</Text>
+                          </View>
+                          <View style={styles.macroItem}>
+                            <FontAwesomeIcon icon={MACRO_ICONS.carbs} size={10} color={MACRO_COLORS.carbs.primary} />
+                            <Text style={styles.macroValue}>{Math.round(result.macrosPer100g.carbs)}g</Text>
+                          </View>
+                          <Text style={styles.resultMacroSuffix}>/100g</Text>
                         </View>
                       </TouchableOpacity>
                     </Animated.View>
@@ -489,14 +509,14 @@ export function DatabaseSearchModal({
                     { paddingBottom: keyboardHeight || insets.bottom + 16 },
                   ]}
                 >
-                  {/* Back button */}
+                  {/* Back to results */}
                   <TouchableOpacity
-                    style={styles.backButton}
+                    style={styles.detailBackButton}
                     onPress={handleBackToResults}
                     activeOpacity={0.7}
                   >
                     <Ionicons name="arrow-back" size={18} color="#666" />
-                    <Text style={styles.backButtonText}>Results</Text>
+                    <Text style={styles.detailBackButtonText}>Results</Text>
                   </TouchableOpacity>
 
                   {/* Product info */}
@@ -570,6 +590,36 @@ export function DatabaseSearchModal({
                       </TouchableOpacity>
                     </View>
                   </View>
+
+                  {/* Portion quick-select pills */}
+                  {(portions.length > 0 || portionsLoading) && (
+                    <Animated.View entering={FadeIn.duration(200)} style={styles.portionRow}>
+                      {portionsLoading ? (
+                        <ActivityIndicator size="small" color="#999" style={{ marginVertical: 4 }} />
+                      ) : (
+                        <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          contentContainerStyle={styles.portionScrollContent}
+                        >
+                          {portions.map((portion, i) => (
+                            <TouchableOpacity
+                              key={`${portion.label}-${i}`}
+                              style={styles.portionPill}
+                              onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setServingGrams(portion.grams.toString());
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.portionPillLabel}>{portion.label}</Text>
+                              <Text style={styles.portionPillGrams}>{portion.grams}g</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      )}
+                    </Animated.View>
+                  )}
 
                   {/* Macro pills */}
                   <View style={styles.macrosPreview}>
@@ -662,12 +712,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   dragIndicatorContainer: {
-    position: "absolute",
-    top: 8,
-    left: 0,
-    right: 0,
     alignItems: "center",
-    zIndex: 10,
+    paddingTop: 12,
+    paddingBottom: 8,
+    backgroundColor: "#f8f8f8",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   dragIndicator: {
     width: 36,
@@ -680,15 +730,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 20,
-    paddingHorizontal: 8,
-    paddingBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#f8f8f8",
   },
-  closeButton: {
-    width: 48,
-    height: 48,
-    justifyContent: "center",
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#EBEBEB",
     alignItems: "center",
+    justifyContent: "center",
+  },
+  headerRightSpacer: {
+    width: 36,
   },
   headerTitle: {
     fontSize: 17,
@@ -699,16 +754,16 @@ const styles = StyleSheet.create({
   // Search bar
   searchBarContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingBottom: 12,
+    backgroundColor: "#f8f8f8",
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 10,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
@@ -718,9 +773,14 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
+    fontFamily: "System",
     fontWeight: "400",
     color: "#1a1a1a",
     padding: 0,
+    marginLeft: 8,
+  },
+  clearButton: {
+    padding: 4,
   },
   // Source filter
   filterRow: {
@@ -778,10 +838,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   resultCard: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 8,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
@@ -799,14 +859,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   resultName: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 17,
+    fontFamily: "System",
+    fontWeight: "500",
     color: "#1a1a1a",
-    lineHeight: 20,
+    lineHeight: 22,
     letterSpacing: -0.2,
   },
   resultBrand: {
-    fontSize: 12,
+    fontSize: 13,
+    fontFamily: "System",
     fontWeight: "500",
     color: "#999",
     marginTop: 2,
@@ -836,16 +898,18 @@ const styles = StyleSheet.create({
   resultMacroRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
   },
-  resultMacroItem: {
-    fontSize: 12,
+  macroItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  macroValue: {
+    fontSize: 13,
+    fontFamily: "System",
     fontWeight: "500",
-    color: "#888",
-  },
-  resultMacroDot: {
-    fontSize: 12,
-    color: "#ccc",
-    marginHorizontal: 5,
+    color: "#666",
   },
   resultMacroSuffix: {
     fontSize: 11,
@@ -857,14 +921,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
   },
-  backButton: {
+  detailBackButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     paddingVertical: 8,
     marginBottom: 4,
   },
-  backButtonText: {
+  detailBackButtonText: {
     fontSize: 15,
     fontWeight: "400",
     color: "#666",
@@ -958,6 +1022,35 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: "#888",
     marginLeft: 3,
+  },
+  // Portion quick-select
+  portionRow: {
+    marginBottom: 12,
+  },
+  portionScrollContent: {
+    gap: 8,
+    paddingHorizontal: 2,
+  },
+  portionPill: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    minWidth: 72,
+  },
+  portionPillLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#333",
+  },
+  portionPillGrams: {
+    fontSize: 11,
+    fontWeight: "400",
+    color: "#999",
+    marginTop: 2,
   },
   // Macro pills (matches BarcodeScannerModal)
   macrosPreview: {

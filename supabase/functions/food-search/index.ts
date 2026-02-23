@@ -68,6 +68,15 @@ const NON_FOOD_CATEGORY_PREFIXES = [
   "en:medicines", "en:medical-devices", "en:dental-care", "en:toothpastes", "en:mouthwashes",
 ];
 
+const COMMON_DATA_TYPES = new Set(["Foundation", "SR Legacy", "Survey (FNDDS)"]);
+
+function isCommonFood(result: DatabaseSearchResult): boolean {
+  if (result.source === "FDC" && result.dataType) {
+    return COMMON_DATA_TYPES.has(result.dataType);
+  }
+  return false; // OFF items are branded
+}
+
 function isNonFoodProduct(categoriesTags?: string[]): boolean {
   if (!categoriesTags?.length) return false;
   return categoriesTags.some((tag) =>
@@ -168,9 +177,7 @@ async function searchFDC(
   const body = {
     query,
     pageSize: limit * 2, // fetch extra to account for filtering
-    dataType: ["Foundation", "SR Legacy", "Branded"],
-    sortBy: "dataType.keyword",
-    sortOrder: "asc",
+    dataType: ["Foundation", "SR Legacy", "Survey (FNDDS)", "Branded"],
     nutrients: Object.values(FDC_NUTRIENT_IDS),
   };
 
@@ -363,9 +370,19 @@ serve(async (req) => {
         .update({ hit_count: (cached as any).hit_count + 1 })
         .eq("search_query", cacheKey);
 
+      // Handle old flat array format during cache transition
+      if (Array.isArray(cached.results)) {
+        const common = cached.results.filter(isCommonFood);
+        const branded = cached.results.filter((r: DatabaseSearchResult) => !isCommonFood(r));
+        return new Response(
+          JSON.stringify({ common, branded, query: query.trim(), cached: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
       return new Response(
         JSON.stringify({
-          results: cached.results,
+          ...cached.results,
           query: query.trim(),
           cached: true,
         }),
@@ -401,8 +418,10 @@ serve(async (req) => {
 
     const [fdcResults, offResults] = await Promise.all(searchPromises);
 
-    // Merge: FDC first (higher credibility), then OFF
-    const merged = [...fdcResults, ...offResults].slice(0, limit);
+    // Partition into common (Foundation, SR Legacy, FNDDS) and branded
+    const allResults = [...fdcResults, ...offResults];
+    const common = allResults.filter(isCommonFood).slice(0, limit);
+    const branded = allResults.filter((r) => !isCommonFood(r)).slice(0, limit);
 
     // Cache results (fire and forget)
     supabase
@@ -410,8 +429,8 @@ serve(async (req) => {
       .upsert(
         {
           search_query: cacheKey,
-          results: merged,
-          result_count: merged.length,
+          results: { common, branded },
+          result_count: common.length + branded.length,
           hit_count: 0,
         },
         { onConflict: "search_query" },
@@ -420,7 +439,8 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        results: merged,
+        common,
+        branded,
         query: query.trim(),
         cached: false,
       }),

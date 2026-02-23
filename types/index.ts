@@ -63,7 +63,7 @@ export interface DatabaseSearchResult {
   name: string;
   brand?: string;
   category?: string;
-  dataType?: string; // FDC: 'Foundation' | 'SR Legacy' | 'Branded'
+  dataType?: string; // FDC: 'Foundation' | 'SR Legacy' | 'Survey (FNDDS)' | 'Branded'
   macrosPer100g: Macros;
   defaultServingG?: number;
   defaultServingLabel?: string;
@@ -207,6 +207,7 @@ export interface AppState {
   deleteEntry: (id: string) => void;
   deleteEntries: (ids: string[]) => void;
   setCurrentDate: (date: string) => void;
+  navigateToDate: (newDate: string, oldDate: string, docContent: string) => void;
   getEntriesForDate: (date: string) => Entry[];
   getDailyTotals: (date: string) => DailyTotals;
   // Document actions

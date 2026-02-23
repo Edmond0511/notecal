@@ -100,7 +100,8 @@ export function DatabaseSearchModal({
   const [searchText, setSearchText] = useState("");
   const [servingGrams, setServingGrams] = useState("");
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [allResults, setAllResults] = useState<DatabaseSearchResult[]>([]);
+  const [commonResults, setCommonResults] = useState<DatabaseSearchResult[]>([]);
+  const [brandedResults, setBrandedResults] = useState<DatabaseSearchResult[]>([]);
   const [portions, setPortions] = useState<CommonPortion[]>([]);
   const [portionsLoading, setPortionsLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -120,7 +121,8 @@ export function DatabaseSearchModal({
       setState({ type: "idle" });
       setSearchText("");
       setServingGrams("");
-      setAllResults([]);
+      setCommonResults([]);
+      setBrandedResults([]);
       setPortions([]);
       setPortionsLoading(false);
       setSelectedItems([]);
@@ -166,12 +168,13 @@ export function DatabaseSearchModal({
     debounceRef.current = setTimeout(async () => {
       try {
         const response = await searchFoodDatabase(query);
-        setAllResults(response.results);
+        setCommonResults(response.common);
+        setBrandedResults(response.branded);
 
-        if (response.results.length === 0) {
+        if (response.common.length === 0 && response.branded.length === 0) {
           setState({ type: "empty" });
         } else {
-          setState({ type: "results", results: response.results });
+          setState({ type: "results", results: [...response.common, ...response.branded] });
         }
       } catch (err) {
         const message =
@@ -245,13 +248,14 @@ export function DatabaseSearchModal({
   const handleBackToResults = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditingSelectedId(null);
-    if (allResults.length > 0) {
-      setState({ type: "results", results: allResults });
+    const all = [...commonResults, ...brandedResults];
+    if (all.length > 0) {
+      setState({ type: "results", results: all });
     } else {
       setState({ type: "idle" });
     }
     setServingGrams("");
-  }, [allResults]);
+  }, [commonResults, brandedResults]);
 
   const handleAdd = useCallback(() => {
     if (state.type !== "detail") return;
@@ -278,8 +282,9 @@ export function DatabaseSearchModal({
       );
       setEditingSelectedId(null);
       // Go back to results
-      if (allResults.length > 0) {
-        setState({ type: "results", results: allResults });
+      const allAfterEdit = [...commonResults, ...brandedResults];
+      if (allAfterEdit.length > 0) {
+        setState({ type: "results", results: allAfterEdit });
       } else {
         setState({ type: "idle" });
       }
@@ -291,8 +296,9 @@ export function DatabaseSearchModal({
         ...prev,
         { id, result: resultWithPortions, servingGrams: grams, portions },
       ]);
-      if (allResults.length > 0) {
-        setState({ type: "results", results: allResults });
+      const allAfterAdd = [...commonResults, ...brandedResults];
+      if (allAfterAdd.length > 0) {
+        setState({ type: "results", results: allAfterAdd });
       } else {
         setState({ type: "idle" });
       }
@@ -308,7 +314,8 @@ export function DatabaseSearchModal({
     onAddEntries,
     editingSelectedId,
     selectedItems.length,
-    allResults,
+    commonResults,
+    brandedResults,
   ]);
 
   // Submit all selected items
@@ -421,6 +428,114 @@ export function DatabaseSearchModal({
     );
     return sum + Math.round(scaled.kcal);
   }, 0);
+
+  const renderResultCard = useCallback(
+    (result: DatabaseSearchResult, index: number) => {
+      const selected = isResultSelected(result);
+      return (
+        <Animated.View
+          key={`${result.source}-${result.fdcId ?? result.offId ?? index}`}
+          entering={FadeInDown.delay(index * 30).duration(200)}
+        >
+          <TouchableOpacity
+            style={styles.resultCard}
+            onPress={() => handleSelectResult(result)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.resultCardRow}>
+              <View style={styles.resultCardContent}>
+                <View style={styles.resultCardTop}>
+                  <View style={styles.resultCardInfo}>
+                    <Text style={styles.resultName} numberOfLines={1}>
+                      {result.name}
+                    </Text>
+                    {result.brand && (
+                      <Text style={styles.resultBrand} numberOfLines={1}>
+                        {result.brand}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <View style={styles.resultMacroRow}>
+                  {(() => {
+                    const servG = result.defaultServingG ?? 100;
+                    const scaled = scaleMacrosToServing(
+                      result.macrosPer100g,
+                      servG,
+                    );
+                    const suffix = result.defaultServingLabel
+                      ? result.defaultServingLabel
+                      : `${Math.round(servG)}g`;
+                    return (
+                      <>
+                        <View style={styles.macroItem}>
+                          <FontAwesomeIcon
+                            icon={MACRO_ICONS.calories}
+                            size={10}
+                            color={MACRO_COLORS.calories.primary}
+                          />
+                          <Text style={styles.macroValue}>
+                            {Math.round(scaled.kcal)}
+                          </Text>
+                        </View>
+                        <View style={styles.macroItem}>
+                          <FontAwesomeIcon
+                            icon={MACRO_ICONS.protein}
+                            size={10}
+                            color={MACRO_COLORS.protein.primary}
+                          />
+                          <Text style={styles.macroValue}>
+                            {Math.round(scaled.protein)}g
+                          </Text>
+                        </View>
+                        <View style={styles.macroItem}>
+                          <FontAwesomeIcon
+                            icon={MACRO_ICONS.fat}
+                            size={10}
+                            color={MACRO_COLORS.fat.primary}
+                          />
+                          <Text style={styles.macroValue}>
+                            {Math.round(scaled.fat)}g
+                          </Text>
+                        </View>
+                        <View style={styles.macroItem}>
+                          <FontAwesomeIcon
+                            icon={MACRO_ICONS.carbs}
+                            size={10}
+                            color={MACRO_COLORS.carbs.primary}
+                          />
+                          <Text style={styles.macroValue}>
+                            {Math.round(scaled.carbs)}g
+                          </Text>
+                        </View>
+                        <Text style={styles.resultMacroSuffix}>{suffix}</Text>
+                      </>
+                    );
+                  })()}
+                </View>
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.quickAddButton,
+                  selected && styles.quickAddButtonSelected,
+                ]}
+                onPress={() => handleQuickAdd(result)}
+                activeOpacity={0.6}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons
+                  name={selected ? "checkmark" : "add"}
+                  size={22}
+                  color={selected ? TEAL : "#bbb"}
+                />
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+      );
+    },
+    [isResultSelected, handleSelectResult, handleQuickAdd],
+  );
 
   // Detail button label
   const detailAddLabel = editingSelectedId
@@ -548,124 +663,26 @@ export function DatabaseSearchModal({
                   keyboardShouldPersistTaps="handled"
                   keyboardDismissMode="on-drag"
                 >
-                  {allResults.map((result, index) => {
-                    const selected = isResultSelected(result);
-                    return (
-                      <Animated.View
-                        key={`${result.source}-${result.fdcId ?? result.offId ?? index}`}
-                        entering={FadeInDown.delay(index * 30).duration(200)}
-                      >
-                        <TouchableOpacity
-                          style={styles.resultCard}
-                          onPress={() => handleSelectResult(result)}
-                          activeOpacity={0.7}
-                        >
-                          <View style={styles.resultCardRow}>
-                          <View style={styles.resultCardContent}>
-                          <View style={styles.resultCardTop}>
-                            <View style={styles.resultCardInfo}>
-                              <Text style={styles.resultName} numberOfLines={1}>
-                                {result.name}
-                              </Text>
-                              {result.brand && (
-                                <Text
-                                  style={styles.resultBrand}
-                                  numberOfLines={1}
-                                >
-                                  {result.brand}
-                                </Text>
-                              )}
-                            </View>
-                          </View>
-                          <View style={styles.resultMacroRow}>
-                            {(() => {
-                              const servG = result.defaultServingG ?? 100;
-                              const scaled = scaleMacrosToServing(
-                                result.macrosPer100g,
-                                servG,
-                              );
-                              const suffix = result.defaultServingLabel
-                                ? result.defaultServingLabel
-                                : `${Math.round(servG)}g`;
-                              return (
-                                <>
-                                  <View style={styles.macroItem}>
-                                    <FontAwesomeIcon
-                                      icon={MACRO_ICONS.calories}
-                                      size={10}
-                                      color={MACRO_COLORS.calories.primary}
-                                    />
-                                    <Text style={styles.macroValue}>
-                                      {Math.round(scaled.kcal)}
-                                    </Text>
-                                  </View>
-                                  <View style={styles.macroItem}>
-                                    <FontAwesomeIcon
-                                      icon={MACRO_ICONS.protein}
-                                      size={10}
-                                      color={MACRO_COLORS.protein.primary}
-                                    />
-                                    <Text style={styles.macroValue}>
-                                      {Math.round(scaled.protein)}g
-                                    </Text>
-                                  </View>
-                                  <View style={styles.macroItem}>
-                                    <FontAwesomeIcon
-                                      icon={MACRO_ICONS.fat}
-                                      size={10}
-                                      color={MACRO_COLORS.fat.primary}
-                                    />
-                                    <Text style={styles.macroValue}>
-                                      {Math.round(scaled.fat)}g
-                                    </Text>
-                                  </View>
-                                  <View style={styles.macroItem}>
-                                    <FontAwesomeIcon
-                                      icon={MACRO_ICONS.carbs}
-                                      size={10}
-                                      color={MACRO_COLORS.carbs.primary}
-                                    />
-                                    <Text style={styles.macroValue}>
-                                      {Math.round(scaled.carbs)}g
-                                    </Text>
-                                  </View>
-                                  <Text style={styles.resultMacroSuffix}>
-                                    {suffix}
-                                  </Text>
-                                </>
-                              );
-                            })()}
-                          </View>
-                          </View>
-                          <TouchableOpacity
-                              style={[
-                                styles.quickAddButton,
-                                selected && styles.quickAddButtonSelected,
-                              ]}
-                              onPress={() => handleQuickAdd(result)}
-                              activeOpacity={0.6}
-                              hitSlop={{
-                                top: 8,
-                                bottom: 8,
-                                left: 8,
-                                right: 8,
-                              }}
-                            >
-                              <Ionicons
-                                name={
-                                  selected
-                                    ? "checkmark"
-                                    : "add"
-                                }
-                                size={22}
-                                color={selected ? TEAL : "#bbb"}
-                              />
-                            </TouchableOpacity>
-                          </View>
-                        </TouchableOpacity>
-                      </Animated.View>
-                    );
-                  })}
+                  {commonResults.length > 0 && (
+                    <>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionHeaderText}>Common Foods</Text>
+                      </View>
+                      {commonResults.map((result, index) =>
+                        renderResultCard(result, index),
+                      )}
+                    </>
+                  )}
+                  {brandedResults.length > 0 && (
+                    <>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionHeaderText}>Branded</Text>
+                      </View>
+                      {brandedResults.map((result, index) =>
+                        renderResultCard(result, commonResults.length + index),
+                      )}
+                    </>
+                  )}
                 </ScrollView>
               )}
 
@@ -1064,6 +1081,19 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: "#bbb",
     textAlign: "center",
+  },
+  // Section headers
+  sectionHeader: {
+    paddingHorizontal: 4,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  sectionHeaderText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#999",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   // Results list
   resultsList: {

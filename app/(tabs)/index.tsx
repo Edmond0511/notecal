@@ -2,10 +2,10 @@ import { AddActionMenu } from "@/components/AddActionMenu";
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { DatabaseSearchModal } from "@/components/DatabaseSearchModal";
 import { Calendar } from "@/components/Calendar";
-import { DatePagerView } from "@/components/DatePagerView";
 import { FoodPhotoModal } from "@/components/FoodPhotoModal";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
 import { GoalsPopup } from "@/components/GoalsPopup";
+import { NotesEditor } from "@/components/NotesEditor";
 import { NutritionGoalsModal } from "@/components/NutritionGoalsModal";
 import {
   PhotoProcessingToast,
@@ -16,6 +16,7 @@ import { SettingsModal } from "@/components/SettingsModal";
 import { TotalsBar } from "@/components/TotalsBar";
 import { WeightTrackingModal } from "@/components/WeightTrackingModal";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useSwipeDateNavigation } from "@/hooks/useSwipeDateNavigation";
 import { supabase } from "@/lib/supabase";
 import {
   resolveNutritionFromPhoto,
@@ -24,9 +25,10 @@ import {
 import { useAppStore } from "@/store/app-store";
 import { BarcodeProduct, DatabaseSearchResult, SavedEntry } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   InputAccessoryView,
+  InteractionManager,
   Keyboard,
   Platform,
   StatusBar,
@@ -35,6 +37,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { GestureDetector } from "react-native-gesture-handler";
+import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const INPUT_ACCESSORY_VIEW_ID = "totals-bar-accessory";
@@ -119,9 +123,6 @@ export default function HomeScreen() {
   };
 
   const navigateDate = (direction: "prev" | "next") => {
-    // Save current document before changing date
-    saveCurrentDocument();
-
     const current = stringToDate(currentDate);
 
     const newDate = new Date(current);
@@ -136,7 +137,15 @@ export default function HomeScreen() {
       (newDate.getMonth() + 1).toString().padStart(2, "0") +
       newDate.getDate().toString().padStart(2, "0");
 
+    // Fast: just update currentDate (small MMKV write, quick React re-render)
     setCurrentDate(newDateString);
+
+    // Defer heavy document save until after animation/interactions settle
+    const dateToSave = currentDate;
+    const textToSave = currentDocumentText.trim();
+    InteractionManager.runAfterInteractions(() => {
+      saveDocument(dateToSave, textToSave);
+    });
   };
 
   // Calendar picker function
@@ -151,38 +160,11 @@ export default function HomeScreen() {
     setCurrentDate(newDateString);
   };
 
-  // Handle document text changes from NotesEditor (date-aware for pager)
-  const handleDocumentTextChange = useCallback(
-    (date: string, text: string) => {
-      if (date === currentDate) {
-        setCurrentDocumentText(text);
-      }
-      saveDocument(date, text);
-    },
-    [currentDate, saveDocument],
-  );
-
-  // Get document text for any date (used by DatePagerView)
-  const getDocumentTextForDate = useCallback(
-    (date: string): string => {
-      const doc = getDocument(date);
-      return doc?.content ?? "";
-    },
-    [getDocument],
-  );
-
-  // Handle date change from pager swipe
-  const handleDateChange = useCallback(
-    (newDate: string) => {
-      const state = useAppStore.getState();
-      const currentDoc = state.getDocument(state.currentDate);
-      if (currentDoc) {
-        state.saveDocument(state.currentDate, currentDoc.content.trim());
-      }
-      setCurrentDate(newDate);
-    },
-    [setCurrentDate],
-  );
+  // Handle document text changes from NotesEditor
+  const handleDocumentTextChange = (text: string) => {
+    setCurrentDocumentText(text);
+    saveDocument(currentDate, text);
+  };
 
   // Handle saved entry selection
   const handleSelectSavedEntry = useCallback(
@@ -208,7 +190,7 @@ export default function HomeScreen() {
 
   // Stable callbacks for TotalsBar (prevents React.memo invalidation on re-render)
   const handleAddSavedPress = useCallback(() => {
-    if (Keyboard.isVisible()) {
+    if (showAccessoryBarRef.current) {
       Keyboard.dismiss();
       const sub = Keyboard.addListener("keyboardDidHide", () => {
         sub.remove();
@@ -366,69 +348,75 @@ export default function HomeScreen() {
   );
 
 
-  // Calculate daily totals from entries
+  // Track keyboard open/close for dual-rendering the totals bar.
+  // Debounce the "show" transition to filter out brief keyboardWillShow
+  // events fired when the TextInput momentarily becomes first responder
+  // during swipe gestures (before the gesture handler claims the touch).
+  // The hide transition is immediate so the accessory bar never lingers.
+  const [showAccessoryBar, setShowAccessoryBar] = useState(false);
+  const showAccessoryBarRef = useRef(false);
+  useEffect(() => {
+    let showTimer: ReturnType<typeof setTimeout> | null = null;
+    const willShowSub = Keyboard.addListener("keyboardWillShow", () => {
+      if (showTimer) clearTimeout(showTimer);
+      showTimer = setTimeout(() => {
+        showTimer = null;
+        showAccessoryBarRef.current = true;
+        setShowAccessoryBar(true);
+      }, 80);
+    });
+    const willHideSub = Keyboard.addListener("keyboardWillHide", () => {
+      if (showTimer) {
+        clearTimeout(showTimer);
+        showTimer = null;
+      }
+    });
+    const didHideSub = Keyboard.addListener("keyboardDidHide", () => {
+      if (showTimer) {
+        clearTimeout(showTimer);
+        showTimer = null;
+      }
+      showAccessoryBarRef.current = false;
+      setShowAccessoryBar(false);
+    });
+    return () => {
+      willShowSub.remove();
+      willHideSub.remove();
+      didHideSub.remove();
+      if (showTimer) clearTimeout(showTimer);
+    };
+  }, []);
+
+  // Swipe gesture for date navigation
+  const { gesture: swipeGesture, animatedStyle: swipeAnimatedStyle } =
+    useSwipeDateNavigation({
+      onSwipeLeft: () => navigateDate("next"),
+      onSwipeRight: () => navigateDate("prev"),
+    });
+
+  // Calculate daily totals from entries — single-pass accumulation
   const dailyTotals = React.useMemo(() => {
-    return entries.reduce(
-      (acc, entry) => {
-        if (entry.status === "ok" && entry.items) {
-          const entryProtein = entry.items.reduce(
-            (sum, item) => sum + (item.macros?.protein || 0),
-            0,
-          );
-          const entryFat = entry.items.reduce(
-            (sum, item) => sum + (item.macros?.fat || 0),
-            0,
-          );
-          const entryCarbs = entry.items.reduce(
-            (sum, item) => sum + (item.macros?.carbs || 0),
-            0,
-          );
-          const entryFiber = entry.items.reduce(
-            (sum, item) => sum + (item.macros?.fiber || 0),
-            0,
-          );
-          const entrySugar = entry.items.reduce(
-            (sum, item) => sum + (item.macros?.sugar || 0),
-            0,
-          );
-          const entrySodium = entry.items.reduce(
-            (sum, item) => sum + (item.macros?.sodium || 0),
-            0,
-          );
-          const entryPotassium = entry.items.reduce(
-            (sum, item) => sum + (item.macros?.potassium || 0),
-            0,
-          );
-          const entryWater = entry.items.reduce(
-            (sum, item) => sum + (item.macros?.water || 0),
-            0,
-          );
-          return {
-            kcal: acc.kcal + (entry.inlineKcal || 0),
-            protein: acc.protein + entryProtein,
-            fat: acc.fat + entryFat,
-            carbs: acc.carbs + entryCarbs,
-            fiber: acc.fiber + entryFiber,
-            sugar: acc.sugar + entrySugar,
-            sodium: acc.sodium + entrySodium,
-            potassium: acc.potassium + entryPotassium,
-            water: acc.water + entryWater,
-          };
-        }
-        return acc;
-      },
-      {
-        kcal: 0,
-        protein: 0,
-        fat: 0,
-        carbs: 0,
-        fiber: 0,
-        sugar: 0,
-        sodium: 0,
-        potassium: 0,
-        water: 0,
-      },
-    );
+    let kcal = 0, protein = 0, fat = 0, carbs = 0;
+    let fiber = 0, sugar = 0, sodium = 0, potassium = 0, water = 0;
+
+    for (const entry of entries) {
+      if (entry.status !== "ok" || !entry.items) continue;
+      kcal += entry.inlineKcal || 0;
+      for (const item of entry.items) {
+        const m = item.macros;
+        if (!m) continue;
+        protein += m.protein || 0;
+        fat += m.fat || 0;
+        carbs += m.carbs || 0;
+        fiber += m.fiber || 0;
+        sugar += m.sugar || 0;
+        sodium += m.sodium || 0;
+        potassium += m.potassium || 0;
+        water += m.water || 0;
+      }
+    }
+
+    return { kcal, protein, fat, carbs, fiber, sugar, sodium, potassium, water };
   }, [entries]);
 
   return (
@@ -473,36 +461,49 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <DatePagerView
-        currentDate={currentDate}
-        onDateChange={handleDateChange}
-        allEntries={allEntries}
-        getDocumentText={getDocumentTextForDate}
-        onDocumentTextChange={handleDocumentTextChange}
-        onAddEntry={addEntry}
-        onUpdateEntry={updateEntry}
-        onDeleteEntry={deleteEntry}
-        onDeleteEntries={deleteEntries}
-        isOnline={isOnline}
-        waterTrackingEnabled={goals?.manualTargets?.water !== undefined}
-      />
+      <GestureDetector gesture={swipeGesture}>
+        <Animated.View style={[styles.editorWrapper, swipeAnimatedStyle]}>
+          <NotesEditor
+            entries={entries}
+            initialDocumentText={currentDocumentText}
+            onDocumentTextChange={handleDocumentTextChange}
+            onAddEntry={addEntry}
+            onUpdateEntry={updateEntry}
+            onDeleteEntry={deleteEntry}
+            onDeleteEntries={deleteEntries}
+            currentDate={currentDate}
+            isOnline={isOnline}
+            waterTrackingEnabled={goals?.manualTargets?.water !== undefined}
+            inputAccessoryViewID={
+              Platform.OS === "ios" ? INPUT_ACCESSORY_VIEW_ID : undefined
+            }
+          />
+        </Animated.View>
+      </GestureDetector>
 
       {/* iOS: Totals bar as native keyboard accessory */}
       {Platform.OS === "ios" && (
         <InputAccessoryView nativeID={INPUT_ACCESSORY_VIEW_ID}>
-          <View style={styles.inputAccessoryWrapper}>
-            <TotalsBar
-              dailyTotals={dailyTotals}
-              isOnline={isOnline}
-              onAddSavedPress={handleAddSavedPress}
-              onTotalsPress={handleTotalsPress}
-            />
-          </View>
+          {showAccessoryBar && showAccessoryBarRef.current && (
+            <View style={styles.inputAccessoryWrapper}>
+              <TotalsBar
+                dailyTotals={dailyTotals}
+                isOnline={isOnline}
+                onAddSavedPress={handleAddSavedPress}
+                onTotalsPress={handleTotalsPress}
+              />
+            </View>
+          )}
         </InputAccessoryView>
       )}
 
       {/* Static bottom bar: always visible, keyboard renders on top natively */}
-      <View style={styles.bottomBarContainer}>
+      <View
+        style={styles.bottomBarContainer}
+        pointerEvents={
+          Platform.OS === "ios" && showAccessoryBar ? "none" : "auto"
+        }
+      >
         <TotalsBar
           dailyTotals={dailyTotals}
           isOnline={isOnline}
@@ -657,6 +658,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+  },
+  editorWrapper: {
+    flex: 1,
+    paddingBottom: 88,
   },
   bottomBarContainer: {
     position: "absolute",

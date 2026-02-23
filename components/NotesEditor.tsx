@@ -620,7 +620,6 @@ interface NotesEditorProps {
   isOnline?: boolean;
   waterTrackingEnabled?: boolean;
   inputAccessoryViewID?: string;
-  isActive?: boolean;
 }
 
 export function NotesEditor({
@@ -635,7 +634,6 @@ export function NotesEditor({
   isOnline = true,
   waterTrackingEnabled = false,
   inputAccessoryViewID,
-  isActive = true,
 }: NotesEditorProps) {
   const entryMode = useAppStore((s) => s.entryMode);
   const isFreeform = entryMode === "freeform";
@@ -679,16 +677,17 @@ export function NotesEditor({
   >(undefined);
   // Flag to prevent recursive text change handling during transforms
   const isTransformingRef = useRef<boolean>(false);
-  // Scroll-vs-tap guard: prevent keyboard from opening on scroll.
-  // handleFocus blurs immediately if a scroll/move is detected, before the
-  // keyboard animation becomes visible (~250ms). handleTouchEnd re-focuses
-  // via requestFocusWithKeyboard only after confirming the touch was a tap.
+  // Scroll-vs-tap guard: accept focus immediately on tap (no blur→focus cycle)
+  // and blur only if the touch turns out to be a scroll (handleTouchMove or
+  // handleScrollBeginDrag). This avoids the rapid resignFirstResponder →
+  // becomeFirstResponder cycle that causes iOS to inconsistently drop the
+  // InputAccessoryView.
   const isKeyboardVisibleRef = useRef(false);
   const isFocusPendingRef = useRef(false);
   const isScrollingRef = useRef(false);
-  // Flag: the next onFocus was triggered programmatically (rAF focus()),
-  // so handleFocus should accept it unconditionally without guard checks.
-  const isProgrammaticFocusRef = useRef(false);
+  // Flag: the last blur was initiated by handleScrollBeginDrag. Used to detect
+  // stale keyboardDidHide events that arrive after the user has already refocused.
+  const wasScrollBlurRef = useRef(false);
   // Touch movement tracking for reliable tap-vs-scroll detection.
   // onScrollBeginDrag can fire late for slow scrolls, so we also track
   // raw touch movement to cancel pending keyboard open immediately.
@@ -700,11 +699,8 @@ export function NotesEditor({
   const scrollBeforeTouchRef = useRef(0);
   // Flag: scroll to top after next content sync (set on date change)
   const scrollToTopOnContentRef = useRef(false);
-  // Focus with keyboard: always immediate since showSoftInputOnFocus is always true.
-  const requestFocusWithKeyboard = useCallback(() => {
-    isProgrammaticFocusRef.current = true;
-    textInputRef.current?.focus();
-  }, []);
+  // Cooldown: block focus briefly after date change to prevent native scroll-to-cursor
+  const dateChangeCooldownRef = useRef(false);
 
   // Reanimated scroll handler - runs on UI thread, no JS re-renders
   const scrollHandler = useAnimatedScrollHandler({
@@ -761,25 +757,31 @@ export function NotesEditor({
     [isFreeform],
   );
 
-  // When page becomes inactive: blur input, clear debounce timers.
-  // When page becomes active: reset scroll and layout state.
+  // Reset scroll and touch state on date change.
+  // Reset touch/scroll refs — during a swipe both can be true, which
+  // would cause handleContentSizeChange's guard to skip scroll-to-top.
+  // The 300ms focus cooldown ensures no scroll-to-cursor fires during
+  // that window.
+  // NOTE: We intentionally do NOT clear entryYMap or set layoutStale here.
+  // The render-phase sync (initialDocumentText !== prevInitialText) already
+  // handles that when the text actually changes, and clearing eagerly here
+  // causes a visible opacity flash where indicators disappear then reappear.
+  // The slide transition animation masks the brief re-measurement period.
   useEffect(() => {
-    if (!isActive) {
-      textInputRef.current?.blur();
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-        debounceTimeoutRef.current = null;
-      }
-    } else {
-      // Reset scroll/focus guard refs so stale state from the previous
-      // page interaction doesn't block the next tap from opening the keyboard.
-      isScrollingRef.current = false;
-      isFocusPendingRef.current = false;
-      hasTouchMovedRef.current = false;
-      isTouchActiveRef.current = false;
-      scrollTo(scrollRef, 0, 0, false);
-    }
-  }, [isActive, scrollRef]);
+    isTouchActiveRef.current = false;
+    isScrollingRef.current = false;
+
+    textInputRef.current?.blur();
+    scrollToTopOnContentRef.current = true;
+    scrollTo(scrollRef, 0, 0, false);
+    dateChangeCooldownRef.current = true;
+    const cooldownTimer = setTimeout(() => {
+      dateChangeCooldownRef.current = false;
+    }, 300);
+    return () => {
+      clearTimeout(cooldownTimer);
+    };
+  }, [currentDate]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -796,14 +798,24 @@ export function NotesEditor({
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", () => {
       isKeyboardVisibleRef.current = true;
+      wasScrollBlurRef.current = false;
     });
     const hideSub = Keyboard.addListener("keyboardDidHide", () => {
       isKeyboardVisibleRef.current = false;
-      // Skip blur if a new tap-to-focus sequence is in progress — the late
-      // keyboardDidHide from the previous dismiss would wipe out the new focus.
-      if (!isFocusPendingRef.current && !isProgrammaticFocusRef.current) {
-        textInputRef.current?.blur();
+      // Skip blur if a new focus sequence is in progress — a stale
+      // keyboardDidHide from a previous dismiss would wipe out the new focus.
+      if (isFocusPendingRef.current) {
+        wasScrollBlurRef.current = false;
+        return;
       }
+      // Skip blur if this is a stale keyboardDidHide from a scroll-dismiss
+      // and the TextInput was refocused since then.
+      if (wasScrollBlurRef.current && textInputRef.current?.isFocused()) {
+        wasScrollBlurRef.current = false;
+        return;
+      }
+      wasScrollBlurRef.current = false;
+      textInputRef.current?.blur();
     });
     return () => {
       showSub.remove();
@@ -842,69 +854,65 @@ export function NotesEditor({
     }
   }, [scrollRef]);
 
-  // On focus while keyboard is hidden: either defer to handleTouchEnd or resolve immediately.
-  // If touch is still active, defer (focus fired mid-touch). If touch already ended
-  // (focus fired after touchEnd due to ScrollView gesture recognition), resolve immediately.
+  // On focus: undo the native scrollRangeToVisible snap and decide whether to
+  // accept or reject the focus based on touch/scroll state.
   //
-  // IMPORTANT: Native UITextView.becomeFirstResponder() calls scrollRangeToVisible()
-  // which snaps the parent scroll to the cursor BEFORE this JS callback fires.
-  // We undo this by restoring the scroll position saved in handleTouchStart.
+  // IMPORTANT: We do NOT blur-then-refocus on tap. The rapid resignFirstResponder
+  // → becomeFirstResponder cycle causes iOS UIKit to inconsistently fail to
+  // reattach the InputAccessoryView (~50% of taps). Instead, we accept the focus
+  // immediately and only blur later if the touch turns out to be a scroll
+  // (detected in handleTouchMove or handleScrollBeginDrag).
+  //
+  // Trade-off: brief keyboard flash (~50-100ms) if user scrolls starting from
+  // the TextInput area, since we can't predict tap vs scroll at focus time.
   const handleFocus = useCallback(() => {
-    // Programmatic focus (from rAF in handleTouchEnd) — accept unconditionally.
-    // Guards below are designed for native focus events; the rAF delay can allow
-    // concurrent events (scroll, new touch, gesture) to flip refs and wrongly reject.
-    if (isProgrammaticFocusRef.current) {
-      isProgrammaticFocusRef.current = false;
+    // After date change, block focus to prevent native scroll-to-cursor
+    if (dateChangeCooldownRef.current) {
+      textInputRef.current?.blur();
       return;
     }
     if (isKeyboardVisibleRef.current) return; // already editing, no guard
-    // If a scroll is already active or touch has moved, blur immediately
-    // and undo the native scrollRangeToVisible snap.
+    // If a scroll is already active or touch has moved, reject focus.
     if (isScrollingRef.current || hasTouchMovedRef.current) {
       textInputRef.current?.blur();
       scrollTo(scrollRef, 0, scrollBeforeTouchRef.current, false);
       return;
     }
+    // Undo native scrollRangeToVisible snap from becomeFirstResponder.
+    scrollTo(scrollRef, 0, scrollBeforeTouchRef.current, false);
     if (isTouchActiveRef.current) {
-      // Touch is still in progress — blur immediately to prevent native
-      // scroll-to-cursor, then re-focus in handleTouchEnd if it was a tap.
-      // Restore scroll position to undo scrollRangeToVisible snap.
+      // Touch in progress — accept focus (keyboard starts showing) but mark
+      // as pending so handleTouchMove/handleScrollBeginDrag can blur if needed.
       isFocusPendingRef.current = true;
-      textInputRef.current?.blur();
-      scrollTo(scrollRef, 0, scrollBeforeTouchRef.current, false);
-    } else {
-      // Touch already ended (focus fired after touchEnd) — re-focus with keyboard
-      requestFocusWithKeyboard();
     }
-  }, [scrollRef, requestFocusWithKeyboard]);
+    // If touch already ended, accept focus as-is (tap completed before focus fired).
+  }, [scrollRef]);
 
   // When touch ends (finger lifts), resolve pending focus.
-  // If the touch didn't move and no scroll started, it was a tap → open keyboard.
+  // TextInput was NOT blurred in handleFocus, so no re-focus needed for taps.
+  // Only blur if the touch turned out to be a scroll.
   const handleTouchEnd = useCallback(() => {
     isTouchActiveRef.current = false;
     if (!isFocusPendingRef.current) return;
     isFocusPendingRef.current = false;
     if (hasTouchMovedRef.current || isScrollingRef.current) {
       textInputRef.current?.blur();
-      return;
     }
-    // Tap confirmed — re-focus (was blurred in handleFocus to block
-    // native scroll-to-cursor) and open keyboard.
-    requestFocusWithKeyboard();
-  }, [requestFocusWithKeyboard]);
+    // Tap confirmed — TextInput is already focused, keyboard is showing,
+    // and InputAccessoryView is properly attached. Nothing more to do.
+  }, []);
 
   // Handle system touch cancellation (incoming call, gesture override).
   const handleTouchCancel = useCallback(() => {
     isTouchActiveRef.current = false;
     if (!isFocusPendingRef.current) return;
     isFocusPendingRef.current = false;
-    // No movement detected — gesture system cancelled a tap, re-focus
-    if (!hasTouchMovedRef.current && !isScrollingRef.current) {
-      requestFocusWithKeyboard();
-    } else {
+    // If movement/scroll detected, blur (was a scroll gesture).
+    // Otherwise TextInput stays focused (tap-like cancellation).
+    if (hasTouchMovedRef.current || isScrollingRef.current) {
       textInputRef.current?.blur();
     }
-  }, [requestFocusWithKeyboard]);
+  }, []);
 
   // If a scroll begins while focus is pending, cancel — it was a scroll.
   // Also sets isScrollingRef so that any later-arriving onFocus is rejected.
@@ -913,6 +921,9 @@ export function NotesEditor({
     // Always blur when scroll drag starts to prevent native scrollRangeToVisible
     // from fighting the user's scroll gesture during keyboard dismiss animation
     // and layout inset changes. User must re-tap to resume editing after scroll.
+    // Mark scroll-initiated blur so keyboardDidHide can detect stale events
+    // when the user quickly taps back before the hide animation completes.
+    wasScrollBlurRef.current = true;
     textInputRef.current?.blur();
     if (isFocusPendingRef.current) {
       isFocusPendingRef.current = false;
@@ -1047,8 +1058,6 @@ export function NotesEditor({
   // Handle text changes with debouncing and Apple Notes-style list transforms
   const handleTextChange = useCallback(
     (newText: string) => {
-      // Prevent editing on inactive pages
-      if (!isActive) return;
       // Prevent recursive handling during programmatic text changes
       if (isTransformingRef.current) return;
 
@@ -1146,7 +1155,6 @@ export function NotesEditor({
       }, delay);
     },
     [
-      isActive,
       isFreeform,
       processDocumentChanges,
       onDocumentTextChange,
@@ -1277,8 +1285,7 @@ export function NotesEditor({
           placeholderTextColor="#ccc"
           multiline
           scrollEnabled={false}
-          autoFocus={false}
-          editable={isActive}
+          autoFocus
           textAlignVertical="top"
           autoCorrect={false}
           autoCapitalize="sentences"
@@ -1288,7 +1295,7 @@ export function NotesEditor({
           contextMenuHidden={false}
           selectTextOnFocus={false}
           clearTextOnFocus={false}
-          inputAccessoryViewID={isActive ? inputAccessoryViewID : undefined}
+          inputAccessoryViewID={inputAccessoryViewID}
         />
       </Animated.ScrollView>
 

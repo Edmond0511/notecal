@@ -2,7 +2,8 @@ import { supabase } from '@/lib/supabase';
 import { CommonPortion, DatabaseSearchResult } from '@/types';
 
 export interface FoodSearchResponse {
-  results: DatabaseSearchResult[];
+  common: DatabaseSearchResult[];
+  branded: DatabaseSearchResult[];
   query: string;
   cached: boolean;
 }
@@ -69,7 +70,7 @@ export async function searchFoodDatabase(
       if (error) {
         console.log('[foodSearchApi] ERR:', JSON.stringify({ message: error.message, status: (error as any).status }));
       } else {
-        console.log('[foodSearchApi] RES:', JSON.stringify({ count: data?.results?.length, cached: data?.cached }));
+        console.log('[foodSearchApi] RES:', JSON.stringify({ common: data?.common?.length, branded: data?.branded?.length, cached: data?.cached }));
       }
     }
 
@@ -84,15 +85,24 @@ export async function searchFoodDatabase(
       throw new FoodSearchError('No data returned from food search');
     }
 
-    if (!data.results || !Array.isArray(data.results)) {
-      throw new FoodSearchError('Invalid response format: missing results array');
+    // Backward-compat: handle old flat `results` format
+    if ((data as any).results && !data.common) {
+      const results = (data as any).results as DatabaseSearchResult[];
+      data.common = results.filter((r) => r.source === 'FDC' && r.dataType && r.dataType !== 'Branded');
+      data.branded = results.filter((r) => r.source !== 'FDC' || !r.dataType || r.dataType === 'Branded');
+    }
+
+    if (!Array.isArray(data.common) || !Array.isArray(data.branded)) {
+      throw new FoodSearchError('Invalid response format: missing common/branded arrays');
     }
 
     // Normalize uppercase names from database to title case
-    data.results = data.results.map((r) => ({
+    const normalizeName = (r: DatabaseSearchResult) => ({
       ...r,
       name: r.name === r.name.toUpperCase() ? titleCase(r.name) : r.name,
-    }));
+    });
+    data.common = data.common.map(normalizeName);
+    data.branded = data.branded.map(normalizeName);
 
     return data;
   } catch (error: any) {

@@ -309,6 +309,29 @@ export const useAppStore = create<AppState>()(
     set({ currentDate: date });
   },
 
+  navigateToDate: (newDate: string, oldDate: string, docContent: string) => {
+    const { documents } = get();
+    const trimmed = docContent.trim();
+    const existingDocIndex = documents.findIndex(doc => doc.date === oldDate);
+    const updatedDocument: Document = {
+      date: oldDate,
+      content: trimmed,
+      lastModified: new Date(),
+    };
+
+    let newDocuments: Document[];
+    if (existingDocIndex >= 0) {
+      newDocuments = documents.map((doc, index) =>
+        index === existingDocIndex ? updatedDocument : doc
+      );
+    } else {
+      newDocuments = [...documents, updatedDocument];
+    }
+
+    // Single set() call: one MMKV write, one subscriber notification
+    set({ currentDate: newDate, documents: newDocuments });
+  },
+
   getEntriesForDate: (date: string) => {
     return get().entries.filter(entry => entry.date === date);
   },

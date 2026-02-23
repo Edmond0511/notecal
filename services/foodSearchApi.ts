@@ -12,6 +12,13 @@ export interface FoodSearchOptions {
   limit?: number;
 }
 
+/** Convert "ALL CAPS TEXT" to "All Caps Text" */
+function titleCase(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/(?:^|\s|[-/])\S/g, (ch) => ch.toUpperCase());
+}
+
 export class FoodSearchError extends Error {
   constructor(
     message: string,
@@ -80,6 +87,12 @@ export async function searchFoodDatabase(
     if (!data.results || !Array.isArray(data.results)) {
       throw new FoodSearchError('Invalid response format: missing results array');
     }
+
+    // Normalize uppercase names from database to title case
+    data.results = data.results.map((r) => ({
+      ...r,
+      name: r.name === r.name.toUpperCase() ? titleCase(r.name) : r.name,
+    }));
 
     return data;
   } catch (error: any) {

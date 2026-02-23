@@ -680,19 +680,15 @@ export function NotesEditor({
   // Flag to prevent recursive text change handling during transforms
   const isTransformingRef = useRef<boolean>(false);
   // Scroll-vs-tap guard: prevent keyboard from opening on scroll.
-  // showSoftInputOnFocus=false lets the TextInput receive focus (cursor placed)
-  // without triggering the keyboard animation. We only flip it to true after
-  // confirming the touch was a tap (no movement), which triggers
-  // native reloadInputViews and opens the keyboard in-place.
+  // handleFocus blurs immediately if a scroll/move is detected, before the
+  // keyboard animation becomes visible (~250ms). handleTouchEnd re-focuses
+  // via requestFocusWithKeyboard only after confirming the touch was a tap.
   const isKeyboardVisibleRef = useRef(false);
   const isFocusPendingRef = useRef(false);
   const isScrollingRef = useRef(false);
   // Flag: the next onFocus was triggered programmatically (rAF focus()),
   // so handleFocus should accept it unconditionally without guard checks.
   const isProgrammaticFocusRef = useRef(false);
-  const [showSoftInput, setShowSoftInput] = useState(true);
-  const pendingFocusRef = useRef(false);
-  const showSoftInputRef = useRef(true);
   // Touch movement tracking for reliable tap-vs-scroll detection.
   // onScrollBeginDrag can fire late for slow scrolls, so we also track
   // raw touch movement to cancel pending keyboard open immediately.
@@ -704,18 +700,10 @@ export function NotesEditor({
   const scrollBeforeTouchRef = useRef(0);
   // Flag: scroll to top after next content sync (set on date change)
   const scrollToTopOnContentRef = useRef(false);
-  // Focus with keyboard: fast-path when showSoftInput is already true,
-  // otherwise defer focus to useEffect after React commits the prop change.
+  // Focus with keyboard: always immediate since showSoftInputOnFocus is always true.
   const requestFocusWithKeyboard = useCallback(() => {
-    if (showSoftInputRef.current) {
-      // Prop already true on native side — focus immediately
-      isProgrammaticFocusRef.current = true;
-      textInputRef.current?.focus();
-    } else {
-      // Need state transition — defer focus to useEffect after commit
-      pendingFocusRef.current = true;
-      setShowSoftInput(true);
-    }
+    isProgrammaticFocusRef.current = true;
+    textInputRef.current?.focus();
   }, []);
 
   // Reanimated scroll handler - runs on UI thread, no JS re-renders
@@ -787,7 +775,8 @@ export function NotesEditor({
       // page interaction doesn't block the next tap from opening the keyboard.
       isScrollingRef.current = false;
       isFocusPendingRef.current = false;
-      pendingFocusRef.current = false;
+      hasTouchMovedRef.current = false;
+      isTouchActiveRef.current = false;
       scrollTo(scrollRef, 0, 0, false);
     }
   }, [isActive, scrollRef]);
@@ -801,20 +790,20 @@ export function NotesEditor({
     };
   }, []);
 
-  // Track keyboard visibility and gate showSoftInputOnFocus.
-  // When keyboard hides, disable soft-input AND blur the TextInput so the
-  // cursor is removed. Without blurring, the focused TextInput's native
-  // scroll-to-cursor behavior fights the user's scroll gestures, making
-  // scrolling feel "locked" to the caret position.
+  // Track keyboard visibility. When keyboard hides, blur the TextInput so the
+  // cursor is removed — without blurring, the focused TextInput's native
+  // scroll-to-cursor behavior fights the user's scroll gestures.
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", () => {
       isKeyboardVisibleRef.current = true;
     });
     const hideSub = Keyboard.addListener("keyboardDidHide", () => {
       isKeyboardVisibleRef.current = false;
-      pendingFocusRef.current = false;
-      setShowSoftInput(false);
-      textInputRef.current?.blur();
+      // Skip blur if a new tap-to-focus sequence is in progress — the late
+      // keyboardDidHide from the previous dismiss would wipe out the new focus.
+      if (!isFocusPendingRef.current && !isProgrammaticFocusRef.current) {
+        textInputRef.current?.blur();
+      }
     });
     return () => {
       showSub.remove();
@@ -822,23 +811,6 @@ export function NotesEditor({
     };
   }, []);
 
-  // Keep ref in sync with state so requestFocusWithKeyboard can read it synchronously.
-  showSoftInputRef.current = showSoftInput;
-
-  // After React commits showSoftInput=true, fire deferred focus if pending.
-  useEffect(() => {
-    if (showSoftInput && pendingFocusRef.current) {
-      pendingFocusRef.current = false;
-      // Guard: abort if scrolling started between request and commit
-      if (isScrollingRef.current || hasTouchMovedRef.current) {
-        setShowSoftInput(false);
-        textInputRef.current?.blur();
-        return;
-      }
-      isProgrammaticFocusRef.current = true;
-      textInputRef.current?.focus();
-    }
-  }, [showSoftInput]);
 
   // Track touch start position; clear movement flag.
   // Save scroll position BEFORE native UITextView.becomeFirstResponder can
@@ -860,7 +832,6 @@ export function NotesEditor({
     const dy = Math.abs(touch.pageY - touchStartRef.current.y);
     if (dx > 3 || dy > 3) {
       hasTouchMovedRef.current = true;
-      pendingFocusRef.current = false;
       // Cancel pending focus immediately
       if (isFocusPendingRef.current) {
         isFocusPendingRef.current = false;
@@ -945,7 +916,6 @@ export function NotesEditor({
     textInputRef.current?.blur();
     if (isFocusPendingRef.current) {
       isFocusPendingRef.current = false;
-      pendingFocusRef.current = false;
       // Undo native scrollRangeToVisible snap
       scrollTo(scrollRef, 0, scrollBeforeTouchRef.current, false);
     }
@@ -1298,7 +1268,6 @@ export function NotesEditor({
           value={documentText}
           onChangeText={handleTextChange}
           onFocus={handleFocus}
-          showSoftInputOnFocus={showSoftInput}
           selection={selection}
           placeholder={
             isFreeform

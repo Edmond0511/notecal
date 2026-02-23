@@ -1,10 +1,10 @@
 import { AnimatedDigits } from "@/components/AnimatedDigits";
+import { scaleMacrosToServing } from "@/services/barcodeService";
 import {
-  searchFoodDatabase,
   fetchFoodPortions,
   FoodSearchError,
+  searchFoodDatabase,
 } from "@/services/foodSearchApi";
-import { scaleMacrosToServing } from "@/services/barcodeService";
 import { CommonPortion, DatabaseSearchResult, Macros } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
@@ -54,10 +54,10 @@ const TEAL = "#0a7ea4";
 const DEBOUNCE_MS = 400;
 
 const MACRO_COLORS = {
-  calories: { primary: "#FF6B35" },
-  protein: { primary: "#4A90D9" },
-  fat: { primary: "#F5A623" },
-  carbs: { primary: "#9B6B9E" },
+  calories: { primary: "#FF6B35", secondary: "#FFE5D9" },
+  protein: { primary: "#4A90D9", secondary: "#E3F2FD" },
+  fat: { primary: "#F5A623", secondary: "#FFF8E7" },
+  carbs: { primary: "#9B6B9E", secondary: "#F3E5F5" },
 };
 
 const MACRO_ICONS = {
@@ -75,23 +75,29 @@ type ModalState =
   | { type: "error"; message: string }
   | { type: "detail"; result: DatabaseSearchResult };
 
-type SourceFilter = "all" | "FDC" | "OFF";
+interface SelectedItem {
+  id: string;
+  result: DatabaseSearchResult;
+  servingGrams: number;
+  portions: CommonPortion[];
+}
 
 interface DatabaseSearchModalProps {
   visible: boolean;
   onClose: () => void;
-  onAddEntry: (result: DatabaseSearchResult, servingGrams: number) => void;
+  onAddEntries: (
+    items: { result: DatabaseSearchResult; servingGrams: number }[],
+  ) => void;
 }
 
 export function DatabaseSearchModal({
   visible,
   onClose,
-  onAddEntry,
+  onAddEntries,
 }: DatabaseSearchModalProps) {
   const insets = useSafeAreaInsets();
   const [state, setState] = useState<ModalState>({ type: "idle" });
   const [searchText, setSearchText] = useState("");
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [servingGrams, setServingGrams] = useState("");
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [allResults, setAllResults] = useState<DatabaseSearchResult[]>([]);
@@ -101,19 +107,26 @@ export function DatabaseSearchModal({
   const searchInputRef = useRef<TextInput>(null);
   const translateY = useSharedValue(0);
 
+  // Multi-select state
+  const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
+  const [editingSelectedId, setEditingSelectedId] = useState<string | null>(
+    null,
+  );
+  const selectionIdCounter = useRef(0);
+
   // Reset state when modal opens
   useEffect(() => {
     if (visible) {
       setState({ type: "idle" });
       setSearchText("");
-      setSourceFilter("all");
       setServingGrams("");
       setAllResults([]);
       setPortions([]);
       setPortionsLoading(false);
+      setSelectedItems([]);
+      setEditingSelectedId(null);
+      selectionIdCounter.current = 0;
       translateY.value = 0;
-      // Auto-focus search input
-      setTimeout(() => searchInputRef.current?.focus(), 300);
     }
   }, [visible]);
 
@@ -161,9 +174,8 @@ export function DatabaseSearchModal({
           setState({ type: "results", results: response.results });
         }
       } catch (err) {
-        const message = err instanceof FoodSearchError
-          ? err.message
-          : "Something went wrong";
+        const message =
+          err instanceof FoodSearchError ? err.message : "Something went wrong";
         setState({ type: "error", message });
       }
     }, DEBOUNCE_MS);
@@ -173,27 +185,12 @@ export function DatabaseSearchModal({
     };
   }, [searchText]);
 
-  // Apply source filter to results
-  const filteredResults = sourceFilter === "all"
-    ? allResults
-    : allResults.filter((r) => r.source === sourceFilter);
-
-  // Update displayed results when filter changes
-  useEffect(() => {
-    if (state.type === "results" || (state.type !== "detail" && allResults.length > 0)) {
-      if (filteredResults.length === 0 && allResults.length > 0) {
-        setState({ type: "empty" });
-      } else if (filteredResults.length > 0) {
-        setState({ type: "results", results: filteredResults });
-      }
-    }
-  }, [sourceFilter]);
-
   const handleSelectResult = useCallback((result: DatabaseSearchResult) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Keyboard.dismiss();
     const defaultServing = result.defaultServingG ?? 100;
     setServingGrams(defaultServing.toString());
+    setEditingSelectedId(null);
     setState({ type: "detail", result });
 
     // Fetch FDC portions in the background
@@ -206,26 +203,157 @@ export function DatabaseSearchModal({
     }
   }, []);
 
+  // Quick-add from result card "+" button
+  const handleQuickAdd = useCallback(
+    (result: DatabaseSearchResult) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const defaultServing = result.defaultServingG ?? 100;
+      const id = `sel-${++selectionIdCounter.current}`;
+      setSelectedItems((prev) => [
+        ...prev,
+        { id, result, servingGrams: defaultServing, portions: [] },
+      ]);
+
+      // Fetch portions in the background for this item
+      if (result.source === "FDC" && result.fdcId) {
+        fetchFoodPortions(result.fdcId).then((p) => {
+          setSelectedItems((prev) =>
+            prev.map((item) =>
+              item.id === id ? { ...item, portions: p } : item,
+            ),
+          );
+        });
+      }
+    },
+    [],
+  );
+
+  // Check if a result is already in selection
+  const isResultSelected = useCallback(
+    (result: DatabaseSearchResult) => {
+      return selectedItems.some(
+        (item) =>
+          item.result.source === result.source &&
+          (result.fdcId
+            ? item.result.fdcId === result.fdcId
+            : item.result.offId === result.offId),
+      );
+    },
+    [selectedItems],
+  );
+
   const handleBackToResults = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (filteredResults.length > 0) {
-      setState({ type: "results", results: filteredResults });
+    setEditingSelectedId(null);
+    if (allResults.length > 0) {
+      setState({ type: "results", results: allResults });
     } else {
       setState({ type: "idle" });
     }
     setServingGrams("");
-  }, [filteredResults]);
+  }, [allResults]);
 
   const handleAdd = useCallback(() => {
     if (state.type !== "detail") return;
     const grams = parseFloat(servingGrams) || 100;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // Attach fetched portions to the result so they persist on the FoodItem
-    const resultWithPortions = portions.length > 0
-      ? { ...state.result, portions }
-      : state.result;
-    onAddEntry(resultWithPortions, grams);
-  }, [state, servingGrams, portions, onAddEntry]);
+
+    // Attach fetched portions to the result
+    const resultWithPortions =
+      portions.length > 0 ? { ...state.result, portions } : state.result;
+
+    if (editingSelectedId) {
+      // Update existing selected item
+      setSelectedItems((prev) =>
+        prev.map((item) =>
+          item.id === editingSelectedId
+            ? {
+                ...item,
+                result: resultWithPortions,
+                servingGrams: grams,
+                portions,
+              }
+            : item,
+        ),
+      );
+      setEditingSelectedId(null);
+      // Go back to results
+      if (allResults.length > 0) {
+        setState({ type: "results", results: allResults });
+      } else {
+        setState({ type: "idle" });
+      }
+      setServingGrams("");
+    } else if (selectedItems.length > 0) {
+      // Multi-select mode: add to selection, go back to results
+      const id = `sel-${++selectionIdCounter.current}`;
+      setSelectedItems((prev) => [
+        ...prev,
+        { id, result: resultWithPortions, servingGrams: grams, portions },
+      ]);
+      if (allResults.length > 0) {
+        setState({ type: "results", results: allResults });
+      } else {
+        setState({ type: "idle" });
+      }
+      setServingGrams("");
+    } else {
+      // Single-item quick flow: add immediately and close
+      onAddEntries([{ result: resultWithPortions, servingGrams: grams }]);
+    }
+  }, [
+    state,
+    servingGrams,
+    portions,
+    onAddEntries,
+    editingSelectedId,
+    selectedItems.length,
+    allResults,
+  ]);
+
+  // Submit all selected items
+  const handleSubmitSelection = useCallback(() => {
+    if (selectedItems.length === 0) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onAddEntries(
+      selectedItems.map(({ result, servingGrams, portions: p }) => ({
+        result: p.length > 0 ? { ...result, portions: p } : result,
+        servingGrams,
+      })),
+    );
+  }, [selectedItems, onAddEntries]);
+
+  // Remove item from selection
+  const handleRemoveSelected = useCallback((id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedItems((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
+  // Tap chip to edit in detail view
+  const handleEditSelected = useCallback(
+    (selected: SelectedItem) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Keyboard.dismiss();
+      setEditingSelectedId(selected.id);
+      setServingGrams(selected.servingGrams.toString());
+      setPortions(selected.portions);
+      setPortionsLoading(false);
+      setState({ type: "detail", result: selected.result });
+
+      // Re-fetch portions if we don't have them
+      if (
+        selected.portions.length === 0 &&
+        selected.result.source === "FDC" &&
+        selected.result.fdcId
+      ) {
+        setPortionsLoading(true);
+        fetchFoodPortions(selected.result.fdcId)
+          .then((p) => setPortions(p))
+          .finally(() => setPortionsLoading(false));
+      }
+    },
+    [],
+  );
 
   const handleClose = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -240,7 +368,7 @@ export function DatabaseSearchModal({
       setServingGrams(next.toString());
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
-    [servingGrams]
+    [servingGrams],
   );
 
   // Pan to dismiss
@@ -281,9 +409,25 @@ export function DatabaseSearchModal({
     state.type === "detail"
       ? scaleMacrosToServing(
           state.result.macrosPer100g,
-          parseFloat(servingGrams) || 100
+          parseFloat(servingGrams) || 100,
         )
       : null;
+
+  // Compute selection totals
+  const selectionTotalCal = selectedItems.reduce((sum, item) => {
+    const scaled = scaleMacrosToServing(
+      item.result.macrosPer100g,
+      item.servingGrams,
+    );
+    return sum + Math.round(scaled.kcal);
+  }, 0);
+
+  // Detail button label
+  const detailAddLabel = editingSelectedId
+    ? "Update"
+    : selectedItems.length > 0
+      ? "Add to Selection"
+      : "Add";
 
   return (
     <Modal
@@ -303,11 +447,7 @@ export function DatabaseSearchModal({
         </Animated.View>
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[
-              styles.container,
-              { marginTop: insets.top },
-              animatedStyle,
-            ]}
+            style={[styles.container, { marginTop: insets.top }, animatedStyle]}
           >
             {/* Drag indicator */}
             <View style={styles.dragIndicatorContainer}>
@@ -334,7 +474,7 @@ export function DatabaseSearchModal({
                 <TextInput
                   ref={searchInputRef}
                   style={styles.searchInput}
-                  placeholder="Search foods (e.g. chicken breast)"
+                  placeholder="Search for food item..."
                   placeholderTextColor="#999"
                   value={searchText}
                   onChangeText={setSearchText}
@@ -353,36 +493,6 @@ export function DatabaseSearchModal({
               </View>
             </View>
 
-            {/* Source filter pills */}
-            {allResults.length > 0 && state.type !== "detail" && (
-              <Animated.View entering={FadeIn.duration(200)} style={styles.filterRow}>
-                {(["all", "FDC", "OFF"] as SourceFilter[]).map((filter) => {
-                  const isActive = sourceFilter === filter;
-                  const label = filter === "all" ? "All" : filter === "FDC" ? "USDA" : "OFF";
-                  return (
-                    <TouchableOpacity
-                      key={filter}
-                      style={[
-                        styles.filterPill,
-                        isActive && styles.filterPillActive,
-                      ]}
-                      onPress={() => setSourceFilter(filter)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.filterPillText,
-                          isActive && styles.filterPillTextActive,
-                        ]}
-                      >
-                        {label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </Animated.View>
-            )}
-
             {/* Content area */}
             <View style={styles.contentArea}>
               {/* Idle state */}
@@ -390,7 +500,7 @@ export function DatabaseSearchModal({
                 <View style={styles.centeredMessage}>
                   <Ionicons name="nutrition-outline" size={48} color="#ddd" />
                   <Text style={styles.centeredMessageText}>
-                    Search USDA and Open Food Facts databases
+                    Search for item in database
                   </Text>
                 </View>
               )}
@@ -420,7 +530,9 @@ export function DatabaseSearchModal({
               {state.type === "error" && (
                 <View style={styles.centeredMessage}>
                   <Ionicons name="warning-outline" size={48} color="#F5A623" />
-                  <Text style={styles.centeredMessageText}>{state.message}</Text>
+                  <Text style={styles.centeredMessageText}>
+                    {state.message}
+                  </Text>
                 </View>
               )}
 
@@ -429,74 +541,131 @@ export function DatabaseSearchModal({
                 <ScrollView
                   style={styles.resultsList}
                   contentContainerStyle={{
-                    paddingBottom: keyboardHeight || insets.bottom + 16,
+                    paddingBottom:
+                      (keyboardHeight || insets.bottom + 16) +
+                      (selectedItems.length > 0 ? 90 : 0),
                   }}
                   keyboardShouldPersistTaps="handled"
                   keyboardDismissMode="on-drag"
                 >
-                  {filteredResults.map((result, index) => (
-                    <Animated.View
-                      key={`${result.source}-${result.fdcId ?? result.offId ?? index}`}
-                      entering={FadeInDown.delay(index * 30).duration(200)}
-                    >
-                      <TouchableOpacity
-                        style={styles.resultCard}
-                        onPress={() => handleSelectResult(result)}
-                        activeOpacity={0.7}
+                  {allResults.map((result, index) => {
+                    const selected = isResultSelected(result);
+                    return (
+                      <Animated.View
+                        key={`${result.source}-${result.fdcId ?? result.offId ?? index}`}
+                        entering={FadeInDown.delay(index * 30).duration(200)}
                       >
-                        <View style={styles.resultCardTop}>
-                          <View style={styles.resultCardInfo}>
-                            <Text style={styles.resultName} numberOfLines={2}>
-                              {result.name}
-                            </Text>
-                            {result.brand && (
-                              <Text style={styles.resultBrand} numberOfLines={1}>
-                                {result.brand}
+                        <TouchableOpacity
+                          style={styles.resultCard}
+                          onPress={() => handleSelectResult(result)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.resultCardRow}>
+                          <View style={styles.resultCardContent}>
+                          <View style={styles.resultCardTop}>
+                            <View style={styles.resultCardInfo}>
+                              <Text style={styles.resultName} numberOfLines={1}>
+                                {result.name}
                               </Text>
-                            )}
+                              {result.brand && (
+                                <Text
+                                  style={styles.resultBrand}
+                                  numberOfLines={1}
+                                >
+                                  {result.brand}
+                                </Text>
+                              )}
+                            </View>
                           </View>
-                          <View
-                            style={[
-                              styles.sourceBadge,
-                              result.source === "FDC"
-                                ? styles.sourceBadgeFDC
-                                : styles.sourceBadgeOFF,
-                            ]}
-                          >
-                            <Text
+                          <View style={styles.resultMacroRow}>
+                            {(() => {
+                              const servG = result.defaultServingG ?? 100;
+                              const scaled = scaleMacrosToServing(
+                                result.macrosPer100g,
+                                servG,
+                              );
+                              const suffix = result.defaultServingLabel
+                                ? result.defaultServingLabel
+                                : `${Math.round(servG)}g`;
+                              return (
+                                <>
+                                  <View style={styles.macroItem}>
+                                    <FontAwesomeIcon
+                                      icon={MACRO_ICONS.calories}
+                                      size={10}
+                                      color={MACRO_COLORS.calories.primary}
+                                    />
+                                    <Text style={styles.macroValue}>
+                                      {Math.round(scaled.kcal)}
+                                    </Text>
+                                  </View>
+                                  <View style={styles.macroItem}>
+                                    <FontAwesomeIcon
+                                      icon={MACRO_ICONS.protein}
+                                      size={10}
+                                      color={MACRO_COLORS.protein.primary}
+                                    />
+                                    <Text style={styles.macroValue}>
+                                      {Math.round(scaled.protein)}g
+                                    </Text>
+                                  </View>
+                                  <View style={styles.macroItem}>
+                                    <FontAwesomeIcon
+                                      icon={MACRO_ICONS.fat}
+                                      size={10}
+                                      color={MACRO_COLORS.fat.primary}
+                                    />
+                                    <Text style={styles.macroValue}>
+                                      {Math.round(scaled.fat)}g
+                                    </Text>
+                                  </View>
+                                  <View style={styles.macroItem}>
+                                    <FontAwesomeIcon
+                                      icon={MACRO_ICONS.carbs}
+                                      size={10}
+                                      color={MACRO_COLORS.carbs.primary}
+                                    />
+                                    <Text style={styles.macroValue}>
+                                      {Math.round(scaled.carbs)}g
+                                    </Text>
+                                  </View>
+                                  <Text style={styles.resultMacroSuffix}>
+                                    {suffix}
+                                  </Text>
+                                </>
+                              );
+                            })()}
+                          </View>
+                          </View>
+                          <TouchableOpacity
                               style={[
-                                styles.sourceBadgeText,
-                                result.source === "FDC"
-                                  ? styles.sourceBadgeTextFDC
-                                  : styles.sourceBadgeTextOFF,
+                                styles.quickAddButton,
+                                selected && styles.quickAddButtonSelected,
                               ]}
+                              onPress={() => handleQuickAdd(result)}
+                              activeOpacity={0.6}
+                              hitSlop={{
+                                top: 8,
+                                bottom: 8,
+                                left: 8,
+                                right: 8,
+                              }}
                             >
-                              {result.source === "FDC" ? "USDA" : "OFF"}
-                            </Text>
+                              <Ionicons
+                                name={
+                                  selected
+                                    ? "checkmark"
+                                    : "add"
+                                }
+                                size={22}
+                                color={selected ? TEAL : "#bbb"}
+                              />
+                            </TouchableOpacity>
                           </View>
-                        </View>
-                        <View style={styles.resultMacroRow}>
-                          <View style={styles.macroItem}>
-                            <FontAwesomeIcon icon={MACRO_ICONS.calories} size={10} color={MACRO_COLORS.calories.primary} />
-                            <Text style={styles.macroValue}>{Math.round(result.macrosPer100g.kcal)}</Text>
-                          </View>
-                          <View style={styles.macroItem}>
-                            <FontAwesomeIcon icon={MACRO_ICONS.protein} size={10} color={MACRO_COLORS.protein.primary} />
-                            <Text style={styles.macroValue}>{Math.round(result.macrosPer100g.protein)}g</Text>
-                          </View>
-                          <View style={styles.macroItem}>
-                            <FontAwesomeIcon icon={MACRO_ICONS.fat} size={10} color={MACRO_COLORS.fat.primary} />
-                            <Text style={styles.macroValue}>{Math.round(result.macrosPer100g.fat)}g</Text>
-                          </View>
-                          <View style={styles.macroItem}>
-                            <FontAwesomeIcon icon={MACRO_ICONS.carbs} size={10} color={MACRO_COLORS.carbs.primary} />
-                            <Text style={styles.macroValue}>{Math.round(result.macrosPer100g.carbs)}g</Text>
-                          </View>
-                          <Text style={styles.resultMacroSuffix}>/100g</Text>
-                        </View>
-                      </TouchableOpacity>
-                    </Animated.View>
-                  ))}
+                        </TouchableOpacity>
+                      </Animated.View>
+                    );
+                  })}
                 </ScrollView>
               )}
 
@@ -530,25 +699,6 @@ export function DatabaseSearchModal({
                         )}
                         <Text style={styles.productName} numberOfLines={2}>
                           {state.result.name}
-                        </Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.sourceBadge,
-                          state.result.source === "FDC"
-                            ? styles.sourceBadgeFDC
-                            : styles.sourceBadgeOFF,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.sourceBadgeText,
-                            state.result.source === "FDC"
-                              ? styles.sourceBadgeTextFDC
-                              : styles.sourceBadgeTextOFF,
-                          ]}
-                        >
-                          {state.result.source === "FDC" ? "USDA" : "OFF"}
                         </Text>
                       </View>
                     </View>
@@ -593,9 +743,16 @@ export function DatabaseSearchModal({
 
                   {/* Portion quick-select pills */}
                   {(portions.length > 0 || portionsLoading) && (
-                    <Animated.View entering={FadeIn.duration(200)} style={styles.portionRow}>
+                    <Animated.View
+                      entering={FadeIn.duration(200)}
+                      style={styles.portionRow}
+                    >
                       {portionsLoading ? (
-                        <ActivityIndicator size="small" color="#999" style={{ marginVertical: 4 }} />
+                        <ActivityIndicator
+                          size="small"
+                          color="#999"
+                          style={{ marginVertical: 4 }}
+                        />
                       ) : (
                         <ScrollView
                           horizontal
@@ -607,13 +764,19 @@ export function DatabaseSearchModal({
                               key={`${portion.label}-${i}`}
                               style={styles.portionPill}
                               onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                Haptics.impactAsync(
+                                  Haptics.ImpactFeedbackStyle.Light,
+                                );
                                 setServingGrams(portion.grams.toString());
                               }}
                               activeOpacity={0.7}
                             >
-                              <Text style={styles.portionPillLabel}>{portion.label}</Text>
-                              <Text style={styles.portionPillGrams}>{portion.grams}g</Text>
+                              <Text style={styles.portionPillLabel}>
+                                {portion.label}
+                              </Text>
+                              <Text style={styles.portionPillGrams}>
+                                {portion.grams}g
+                              </Text>
                             </TouchableOpacity>
                           ))}
                         </ScrollView>
@@ -623,20 +786,40 @@ export function DatabaseSearchModal({
 
                   {/* Macro pills */}
                   <View style={styles.macrosPreview}>
-                    {(
-                      [
-                        { key: "calories" as const, value: previewMacros.kcal, suffix: undefined as string | undefined, label: "CAL" },
-                        { key: "protein" as const, value: previewMacros.protein, suffix: "g" as string | undefined, label: "PROTEIN" },
-                        { key: "fat" as const, value: previewMacros.fat, suffix: "g" as string | undefined, label: "FAT" },
-                        { key: "carbs" as const, value: previewMacros.carbs, suffix: "g" as string | undefined, label: "CARBS" },
-                      ]
-                    ).map((macro, i) => (
+                    {[
+                      {
+                        key: "calories" as const,
+                        value: previewMacros.kcal,
+                        suffix: undefined as string | undefined,
+                        label: "CAL",
+                      },
+                      {
+                        key: "protein" as const,
+                        value: previewMacros.protein,
+                        suffix: "g" as string | undefined,
+                        label: "PROTEIN",
+                      },
+                      {
+                        key: "fat" as const,
+                        value: previewMacros.fat,
+                        suffix: "g" as string | undefined,
+                        label: "FAT",
+                      },
+                      {
+                        key: "carbs" as const,
+                        value: previewMacros.carbs,
+                        suffix: "g" as string | undefined,
+                        label: "CARBS",
+                      },
+                    ].map((macro, i) => (
                       <Animated.View
                         key={macro.key}
                         entering={FadeInDown.delay(i * 80).duration(300)}
                         style={[
                           styles.macroPill,
-                          { backgroundColor: `${MACRO_COLORS[macro.key].primary}18` },
+                          {
+                            backgroundColor: MACRO_COLORS[macro.key].secondary,
+                          },
                         ]}
                       >
                         <FontAwesomeIcon
@@ -679,10 +862,87 @@ export function DatabaseSearchModal({
                       onPress={handleAdd}
                       activeOpacity={0.8}
                     >
-                      <Ionicons name="add" size={20} color="#fff" />
-                      <Text style={styles.addButtonText}>Add</Text>
+                      <Ionicons
+                        name={editingSelectedId ? "checkmark" : "add"}
+                        size={20}
+                        color="#fff"
+                      />
+                      <Text style={styles.addButtonText}>
+                        {detailAddLabel}
+                      </Text>
                     </TouchableOpacity>
                   </View>
+                </Animated.View>
+              )}
+
+              {/* Selection tray */}
+              {selectedItems.length > 0 && state.type !== "detail" && (
+                <Animated.View
+                  entering={FadeInDown.duration(200)}
+                  style={[
+                    styles.selectionTray,
+                    { paddingBottom: Math.max(insets.bottom, 12) },
+                  ]}
+                >
+                  <View style={styles.selectionTrayTop}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.selectionChipsContainer}
+                      style={styles.selectionChipsScroll}
+                    >
+                      {selectedItems.map((item) => (
+                        <TouchableOpacity
+                          key={item.id}
+                          style={styles.selectionChip}
+                          onPress={() => handleEditSelected(item)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.selectionChipContent}>
+                            <Text
+                              style={styles.selectionChipName}
+                              numberOfLines={1}
+                            >
+                              {item.result.name}
+                            </Text>
+                            <Text style={styles.selectionChipGrams}>
+                              {item.servingGrams}g
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            style={styles.selectionChipRemove}
+                            onPress={() => handleRemoveSelected(item.id)}
+                            hitSlop={{
+                              top: 6,
+                              bottom: 6,
+                              left: 6,
+                              right: 6,
+                            }}
+                          >
+                            <Ionicons
+                              name="close-circle"
+                              size={16}
+                              color="#999"
+                            />
+                          </TouchableOpacity>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                    <TouchableOpacity
+                      style={styles.selectionDoneButton}
+                      onPress={handleSubmitSelection}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.selectionDoneButtonText}>
+                        Add ({selectedItems.length})
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.selectionSummary}>
+                    {selectedItems.length}{" "}
+                    {selectedItems.length === 1 ? "item" : "items"} ·{" "}
+                    {selectionTotalCal} cal
+                  </Text>
                 </Animated.View>
               )}
             </View>
@@ -713,8 +973,8 @@ const styles = StyleSheet.create({
   },
   dragIndicatorContainer: {
     alignItems: "center",
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 8,
+    paddingBottom: 4,
     backgroundColor: "#f8f8f8",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -782,33 +1042,6 @@ const styles = StyleSheet.create({
   clearButton: {
     padding: 4,
   },
-  // Source filter
-  filterRow: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 8,
-  },
-  filterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-  },
-  filterPillActive: {
-    backgroundColor: TEAL,
-    borderColor: TEAL,
-  },
-  filterPillText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#666",
-  },
-  filterPillTextActive: {
-    color: "#fff",
-  },
   // Content area
   contentArea: {
     flex: 1,
@@ -848,11 +1081,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  resultCardTop: {
+  resultCardRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 10,
+  },
+  resultCardContent: {
+    flex: 1,
+  },
+  resultCardTop: {
     marginBottom: 8,
   },
   resultCardInfo: {
@@ -872,28 +1109,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#999",
     marginTop: 2,
-  },
-  sourceBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  sourceBadgeFDC: {
-    backgroundColor: "#EBF5FF",
-  },
-  sourceBadgeOFF: {
-    backgroundColor: "#ECFDF5",
-  },
-  sourceBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
-  sourceBadgeTextFDC: {
-    color: "#3B82F6",
-  },
-  sourceBadgeTextOFF: {
-    color: "#10B981",
   },
   resultMacroRow: {
     flexDirection: "row",
@@ -915,6 +1130,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "400",
     color: "#bbb",
+  },
+  // Quick add button on result cards
+  quickAddButton: {
+    padding: 2,
+  },
+  quickAddButtonSelected: {
+    opacity: 0.7,
   },
   // Detail view
   detailContainer: {
@@ -994,7 +1216,7 @@ const styles = StyleSheet.create({
   stepperContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f4f4f4",
+    backgroundColor: "#F0F0F0",
     borderRadius: 10,
     overflow: "hidden",
   },
@@ -1020,7 +1242,7 @@ const styles = StyleSheet.create({
   servingUnit: {
     fontSize: 14,
     fontWeight: "400",
-    color: "#888",
+    color: "#999",
     marginLeft: 3,
   },
   // Portion quick-select
@@ -1073,13 +1295,13 @@ const styles = StyleSheet.create({
   macroPillSuffix: {
     fontSize: 12,
     fontWeight: "500",
-    color: "#888",
+    color: "#999",
     marginLeft: 1,
   },
   macroPillLabel: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "600",
-    color: "#888",
+    color: "#999",
     letterSpacing: 0.5,
   },
   // Action row
@@ -1095,12 +1317,12 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: "#e5e5e5",
+    backgroundColor: "#EBEBEB",
   },
   backActionText: {
-    fontSize: 15,
-    fontWeight: "400",
-    color: "#666",
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1a1a1a",
   },
   addButton: {
     flex: 2,
@@ -1113,7 +1335,81 @@ const styles = StyleSheet.create({
     backgroundColor: TEAL,
   },
   addButtonText: {
-    fontSize: 17,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  // Selection tray
+  selectionTray: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+    paddingTop: 10,
+    paddingHorizontal: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  selectionTrayTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  selectionChipsScroll: {
+    flex: 1,
+  },
+  selectionChipsContainer: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  selectionChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E0F2F7",
+    borderRadius: 10,
+    paddingLeft: 10,
+    paddingRight: 4,
+    paddingVertical: 6,
+    gap: 4,
+  },
+  selectionChipContent: {
+    flexDirection: "column",
+    maxWidth: 120,
+  },
+  selectionChipName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#333",
+  },
+  selectionChipGrams: {
+    fontSize: 10,
+    fontWeight: "400",
+    color: "#999",
+  },
+  selectionChipRemove: {
+    padding: 2,
+  },
+  selectionSummary: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#999",
+    marginTop: 6,
+    marginLeft: 2,
+  },
+  selectionDoneButton: {
+    backgroundColor: TEAL,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  selectionDoneButtonText: {
+    fontSize: 15,
     fontWeight: "600",
     color: "#fff",
   },

@@ -226,7 +226,7 @@ export interface AppState {
   deleteSavedEntry: (id: string) => void;
   useSavedEntry: (savedEntry: SavedEntry) => Entry;
   addBarcodeEntry: (product: BarcodeProduct, servingGrams: number) => Entry;
-  addDatabaseSearchEntry: (result: DatabaseSearchResult, servingGrams: number) => Entry;
+  addDatabaseSearchEntry: (result: DatabaseSearchResult, servingGrams: number, idSuffix?: number) => Entry;
   addPhotoEntry: (items: FoodItem[], totals: Macros) => Entry;
   createSavedEntry: (rawText: string) => Promise<{ success: boolean; error?: string }>;
   // Item editing actions

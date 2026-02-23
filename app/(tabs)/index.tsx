@@ -208,7 +208,7 @@ export default function HomeScreen() {
 
   // Stable callbacks for TotalsBar (prevents React.memo invalidation on re-render)
   const handleAddSavedPress = useCallback(() => {
-    if (showAccessoryBarRef.current) {
+    if (Keyboard.isVisible()) {
       Keyboard.dismiss();
       const sub = Keyboard.addListener("keyboardDidHide", () => {
         sub.remove();
@@ -245,22 +245,24 @@ export default function HomeScreen() {
     setShowDatabaseSearch(true);
   }, []);
 
-  const handleDatabaseSearchAdd = useCallback(
-    (result: DatabaseSearchResult, servingGrams: number) => {
-      const storeAddDatabaseSearchEntry = useAppStore.getState().addDatabaseSearchEntry;
-      const newEntry = storeAddDatabaseSearchEntry(result, servingGrams);
+  const handleDatabaseSearchAddEntries = useCallback(
+    (items: { result: DatabaseSearchResult; servingGrams: number }[]) => {
+      const state = useAppStore.getState();
+      const latestDoc = state.getDocument(state.currentDate);
+      let currentText = latestDoc?.content ?? '';
 
-      // Update document text
-      const newLine = newEntry.rawText;
-      const updatedText = currentDocumentText
-        ? `${currentDocumentText}\n${newLine}`
-        : newLine;
-      setCurrentDocumentText(updatedText);
-      saveDocument(currentDate, updatedText);
+      items.forEach(({ result, servingGrams }, index) => {
+        const newEntry = state.addDatabaseSearchEntry(result, servingGrams, index);
+        currentText = currentText
+          ? `${currentText}\n${newEntry.rawText}`
+          : newEntry.rawText;
+      });
 
+      setCurrentDocumentText(currentText);
+      state.saveDocument(state.currentDate, currentText);
       setShowDatabaseSearch(false);
     },
-    [currentDocumentText, currentDate, saveDocument],
+    [],
   );
 
   const handlePhotoCaptured = useCallback(
@@ -363,44 +365,6 @@ export default function HomeScreen() {
     [currentDocumentText, currentDate, addEntry, saveDocument],
   );
 
-  // Track keyboard open/close for dual-rendering the totals bar.
-  // Debounce the "show" transition to filter out brief keyboardWillShow
-  // events fired when the TextInput momentarily becomes first responder
-  // during swipe gestures (before the gesture handler claims the touch).
-  // The hide transition is immediate so the accessory bar never lingers.
-  const [showAccessoryBar, setShowAccessoryBar] = useState(false);
-  const showAccessoryBarRef = useRef(false);
-  useEffect(() => {
-    let showTimer: ReturnType<typeof setTimeout> | null = null;
-    const willShowSub = Keyboard.addListener("keyboardWillShow", () => {
-      if (showTimer) clearTimeout(showTimer);
-      showTimer = setTimeout(() => {
-        showTimer = null;
-        showAccessoryBarRef.current = true;
-        setShowAccessoryBar(true);
-      }, 80);
-    });
-    const willHideSub = Keyboard.addListener("keyboardWillHide", () => {
-      if (showTimer) {
-        clearTimeout(showTimer);
-        showTimer = null;
-      }
-    });
-    const didHideSub = Keyboard.addListener("keyboardDidHide", () => {
-      if (showTimer) {
-        clearTimeout(showTimer);
-        showTimer = null;
-      }
-      showAccessoryBarRef.current = false;
-      setShowAccessoryBar(false);
-    });
-    return () => {
-      willShowSub.remove();
-      willHideSub.remove();
-      didHideSub.remove();
-      if (showTimer) clearTimeout(showTimer);
-    };
-  }, []);
 
   // Calculate daily totals from entries
   const dailyTotals = React.useMemo(() => {
@@ -538,12 +502,7 @@ export default function HomeScreen() {
       )}
 
       {/* Static bottom bar: always visible, keyboard renders on top natively */}
-      <View
-        style={styles.bottomBarContainer}
-        pointerEvents={
-          Platform.OS === "ios" && showAccessoryBar ? "none" : "auto"
-        }
-      >
+      <View style={styles.bottomBarContainer}>
         <TotalsBar
           dailyTotals={dailyTotals}
           isOnline={isOnline}
@@ -626,7 +585,7 @@ export default function HomeScreen() {
       <DatabaseSearchModal
         visible={showDatabaseSearch}
         onClose={() => setShowDatabaseSearch(false)}
-        onAddEntry={handleDatabaseSearchAdd}
+        onAddEntries={handleDatabaseSearchAddEntries}
       />
 
       {/* Food Photo Modal */}
@@ -711,6 +670,6 @@ const styles = StyleSheet.create({
   inputAccessoryWrapper: {
     paddingTop: 0,
     paddingBottom: 16,
-    backgroundColor: "transparent",
+    backgroundColor: "rgba(255, 0, 0, 0.3)",
   },
 });

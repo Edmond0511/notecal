@@ -574,8 +574,8 @@ export const useAppStore = create<AppState>()(
     return newEntry;
   },
 
-  addDatabaseSearchEntry: (result: DatabaseSearchResult, servingGrams: number): Entry => {
-    const entryId = Date.now().toString();
+  addDatabaseSearchEntry: (result: DatabaseSearchResult, servingGrams: number, idSuffix?: number): Entry => {
+    const entryId = `${Date.now()}${idSuffix != null ? `-${idSuffix}` : ''}`;
     const currentDate = get().currentDate;
     const isFreeform = get().entryMode === 'freeform';
 

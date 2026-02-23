@@ -340,7 +340,7 @@ serve(async (req) => {
     }
 
     const cacheKey = normalizeCacheKey(query);
-    const searchSources = sources ?? ["FDC", "OFF"];
+    const searchSources = sources ?? ["FDC"];
 
     // Check cache
     const { data: cached } = await supabase

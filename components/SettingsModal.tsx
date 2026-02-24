@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#fafafa",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 12,
     paddingBottom: 8,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#fafafa",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#fafafa",
   },
   backButton: {
     width: 36,

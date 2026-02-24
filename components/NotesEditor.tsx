@@ -620,6 +620,7 @@ interface NotesEditorProps {
   isOnline?: boolean;
   waterTrackingEnabled?: boolean;
   inputAccessoryViewID?: string;
+  autoFocus?: boolean;
 }
 
 export function NotesEditor({
@@ -634,6 +635,7 @@ export function NotesEditor({
   isOnline = true,
   waterTrackingEnabled = false,
   inputAccessoryViewID,
+  autoFocus = true,
 }: NotesEditorProps) {
   const entryMode = useAppStore((s) => s.entryMode);
   const isFreeform = entryMode === "freeform";
@@ -767,21 +769,9 @@ export function NotesEditor({
   // handles that when the text actually changes, and clearing eagerly here
   // causes a visible opacity flash where indicators disappear then reappear.
   // The slide transition animation masks the brief re-measurement period.
-  useEffect(() => {
-    isTouchActiveRef.current = false;
-    isScrollingRef.current = false;
-
-    textInputRef.current?.blur();
-    scrollToTopOnContentRef.current = true;
-    scrollTo(scrollRef, 0, 0, false);
-    dateChangeCooldownRef.current = true;
-    const cooldownTimer = setTimeout(() => {
-      dateChangeCooldownRef.current = false;
-    }, 300);
-    return () => {
-      clearTimeout(cooldownTimer);
-    };
-  }, [currentDate]);
+  // Date-change reset effect removed — with the pager architecture, each
+  // DatePage has a fixed `currentDate` that never changes, so no blur /
+  // scroll-to-top / cooldown is needed.
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -1285,7 +1275,7 @@ export function NotesEditor({
           placeholderTextColor="#ccc"
           multiline
           scrollEnabled={false}
-          autoFocus
+          autoFocus={autoFocus}
           textAlignVertical="top"
           autoCorrect={false}
           autoCapitalize="sentences"

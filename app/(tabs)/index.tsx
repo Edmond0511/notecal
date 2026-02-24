@@ -675,6 +675,6 @@ const styles = StyleSheet.create({
   inputAccessoryWrapper: {
     paddingTop: 0,
     paddingBottom: 16,
-    backgroundColor: "rgba(255, 0, 0, 0.3)",
+    backgroundColor: "transparent",
   },
 });

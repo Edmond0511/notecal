@@ -70,9 +70,10 @@ export const useAppStore = create<AppState>()(
       savedEntries: [],
       weightEntries: [],
 
-  addEntry: (rawText: string) => {
+  addEntry: (rawText: string, date?: string) => {
     const trimmed = rawText.trim();
     const isFreeform = get().entryMode === 'freeform';
+    const entryDate = date ?? get().currentDate;
 
     let textLine: string;
     if (isFreeform) {
@@ -98,7 +99,7 @@ export const useAppStore = create<AppState>()(
       const entryId = Date.now().toString();
       const waterEntry: Entry = {
         id: entryId,
-        date: get().currentDate,
+        date: entryDate,
         rawText,
         inlineKcal: 0, // Water has no calories
         status: 'ok',
@@ -134,7 +135,7 @@ export const useAppStore = create<AppState>()(
     // Create entry with pending status immediately (for UI loading indicator)
     const pendingEntry: Entry = {
       id: entryId,
-      date: get().currentDate,
+      date: entryDate,
       rawText,
       inlineKcal: null,
       status: 'pending',

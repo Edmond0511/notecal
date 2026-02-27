@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStateStorage } from '@/lib/mmkv';
-import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, EntryMode, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct, DatabaseSearchResult } from '@/types';
+import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, EntryMode, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct, DatabaseSearchResult, PendingInsertion } from '@/types';
 import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
 import { barcodeProductToFoodItem, scaleMacrosToServing } from '@/services/barcodeService';
 import { nutritionQueue } from '@/services/nutritionQueue';
@@ -69,6 +69,7 @@ export const useAppStore = create<AppState>()(
       entryMode: 'dash' as EntryMode,
       savedEntries: [],
       weightEntries: [],
+      pendingInsertion: null,
 
   addEntry: (rawText: string, date?: string) => {
     const trimmed = rawText.trim();
@@ -1161,6 +1162,14 @@ export const useAppStore = create<AppState>()(
       console.error('[correctEntryItem] Error:', error);
       throw error; // Re-throw so the UI can handle it
     }
+  },
+
+  setPendingInsertion: (insertion: PendingInsertion) => {
+    set({ pendingInsertion: insertion });
+  },
+
+  clearPendingInsertion: () => {
+    set({ pendingInsertion: null });
   },
 }),
     {

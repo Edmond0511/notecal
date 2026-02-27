@@ -188,6 +188,12 @@ export interface Document {
   lastModified: Date;
 }
 
+export interface PendingInsertion {
+  date: string;
+  text: string;
+  entry?: Entry;
+}
+
 export interface AppState {
   entries: Entry[];
   documents: Document[];
@@ -201,6 +207,8 @@ export interface AppState {
   savedEntries: SavedEntry[];
   // Weight tracking state
   weightEntries: WeightEntry[];
+  // Pending insertion for cross-component communication (pager ↔ DatePage)
+  pendingInsertion: PendingInsertion | null;
   // Actions
   addEntry: (rawText: string) => void;
   updateEntry: (id: string, rawText: string) => Promise<void>;
@@ -250,4 +258,7 @@ export interface AppState {
   deleteWeightEntry: (id: string) => void;
   // Offline queue drain
   enqueuePendingEntries: () => void;
+  // Pending insertion actions
+  setPendingInsertion: (insertion: PendingInsertion) => void;
+  clearPendingInsertion: () => void;
 }

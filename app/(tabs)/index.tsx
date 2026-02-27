@@ -2,10 +2,10 @@ import { AddActionMenu } from "@/components/AddActionMenu";
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { DatabaseSearchModal } from "@/components/DatabaseSearchModal";
 import { Calendar } from "@/components/Calendar";
+import { DatePage } from "@/components/DatePage";
 import { FoodPhotoModal } from "@/components/FoodPhotoModal";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
 import { GoalsPopup } from "@/components/GoalsPopup";
-import { NotesEditor } from "@/components/NotesEditor";
 import { NutritionGoalsModal } from "@/components/NutritionGoalsModal";
 import {
   PhotoProcessingToast,
@@ -16,19 +16,18 @@ import { SettingsModal } from "@/components/SettingsModal";
 import { TotalsBar } from "@/components/TotalsBar";
 import { WeightTrackingModal } from "@/components/WeightTrackingModal";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import { useSwipeDateNavigation } from "@/hooks/useSwipeDateNavigation";
 import { supabase } from "@/lib/supabase";
 import {
   resolveNutritionFromPhoto,
   NutritionNotFoodError,
 } from "@/services/nutritionApi";
 import { useAppStore } from "@/store/app-store";
-import { BarcodeProduct, DatabaseSearchResult, SavedEntry } from "@/types";
+import { BarcodeProduct, DatabaseSearchResult, Entry, SavedEntry } from "@/types";
+import { dateToIndex, formatDateDisplay, indexToDate } from "@/utils/dateUtils";
 import { Ionicons } from "@expo/vector-icons";
-import React, { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   InputAccessoryView,
-  InteractionManager,
   Keyboard,
   Platform,
   StatusBar,
@@ -37,29 +36,26 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { GestureDetector } from "react-native-gesture-handler";
-import Animated from "react-native-reanimated";
+import type { InfinitePagerImperativeApi } from "react-native-infinite-pager";
+import InfinitePager from "react-native-infinite-pager";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const INPUT_ACCESSORY_VIEW_ID = "totals-bar-accessory";
 
 export default function HomeScreen() {
-  // Get all entries and currentDate from store - single subscription
-  const allEntries = useAppStore((state) => state.entries);
   const currentDate = useAppStore((state) => state.currentDate);
-  const addEntry = useAppStore((state) => state.addEntry);
-  const updateEntry = useAppStore((state) => state.updateEntry);
-  const deleteEntry = useAppStore((state) => state.deleteEntry);
-  const deleteEntries = useAppStore((state) => state.deleteEntries);
+  const allEntries = useAppStore((state) => state.entries);
   const setCurrentDate = useAppStore((state) => state.setCurrentDate);
-  const saveDocument = useAppStore((state) => state.saveDocument);
-  const getDocument = useAppStore((state) => state.getDocument);
   const goals = useAppStore((state) => state.goals);
+  const setPendingInsertion = useAppStore((state) => state.setPendingInsertion);
+  const addEntry = useAppStore((state) => state.addEntry);
   const { isOnline } = useNetworkStatus();
 
-  // Filter entries for current date - memoized to prevent unnecessary re-renders
+  const pagerRef = useRef<InfinitePagerImperativeApi>(null);
+
+  // Filter entries for current date (for TotalsBar)
   const entries = React.useMemo(
-    () => allEntries.filter((entry) => entry.date === currentDate),
+    () => allEntries.filter((entry: Entry) => entry.date === currentDate),
     [allEntries, currentDate],
   );
 
@@ -78,120 +74,74 @@ export default function HomeScreen() {
   const [photoToastState, setPhotoToastState] = useState<PhotoToastState>({
     type: "idle",
   });
-  const [currentDocumentText, setCurrentDocumentText] = useState("");
 
-  // Load document text for current date
-  React.useEffect(() => {
-    const document = getDocument(currentDate);
-    if (document) {
-      setCurrentDocumentText(document.content);
-    } else {
-      setCurrentDocumentText("");
-    }
-  }, [currentDate, getDocument]);
+  // --- Pager callbacks ---
 
-  // Convert YYYYMMDD string to Date object
-  const stringToDate = (dateString: string): Date => {
-    return new Date(
-      Number.parseInt(dateString.substring(0, 4)),
-      Number.parseInt(dateString.substring(4, 6)) - 1,
-      Number.parseInt(dateString.substring(6, 8)),
-    );
-  };
-
-  // Date navigation functions
-  const formatDateDisplay = (dateString: string) => {
-    const today = new Date();
-    const date = stringToDate(dateString);
-
-    // Check if it's today
-    if (date.toDateString() === today.toDateString()) {
-      return "Today";
-    }
-
-    // Otherwise show formatted date
-    return date.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  // Save current document before navigation
-  const saveCurrentDocument = () => {
-    saveDocument(currentDate, currentDocumentText.trim());
-  };
-
-  const navigateDate = (direction: "prev" | "next") => {
-    const current = stringToDate(currentDate);
-
-    const newDate = new Date(current);
-    if (direction === "prev") {
-      newDate.setDate(newDate.getDate() - 1);
-    } else {
-      newDate.setDate(newDate.getDate() + 1);
-    }
-
-    const newDateString =
-      newDate.getFullYear().toString() +
-      (newDate.getMonth() + 1).toString().padStart(2, "0") +
-      newDate.getDate().toString().padStart(2, "0");
-
-    // Mark date change as non-urgent so React can yield to the native
-    // swipe animation instead of synchronously re-rendering the whole tree.
-    startTransition(() => {
-      setCurrentDate(newDateString);
-    });
-
-    // Defer heavy document save until after animation/interactions settle
-    const dateToSave = currentDate;
-    const textToSave = currentDocumentText.trim();
-    InteractionManager.runAfterInteractions(() => {
-      saveDocument(dateToSave, textToSave);
-    });
-  };
-
-  // Calendar picker function
-  const openCalendar = () => {
-    // Save current document before opening calendar
-    saveCurrentDocument();
-    setShowCalendar(true);
-  };
-
-  // Handle calendar date selection
-  const handleCalendarSelect = (newDateString: string) => {
-    setCurrentDate(newDateString);
-  };
-
-  // Handle document text changes from NotesEditor
-  const handleDocumentTextChange = (text: string) => {
-    setCurrentDocumentText(text);
-    saveDocument(currentDate, text);
-  };
-
-  // Handle saved entry selection
-  const handleSelectSavedEntry = useCallback(
-    (savedEntry: SavedEntry) => {
-      // Create entry with pre-loaded nutrition data (no API call)
-      // useSavedEntry is a store function, not a hook - call it directly
-      const storeUseSavedEntry = useAppStore.getState().useSavedEntry;
-      const newEntry = storeUseSavedEntry(savedEntry);
-
-      // Use the returned entry's rawText (mode-aware from useSavedEntry)
-      const newLine = newEntry.rawText;
-      const updatedText = currentDocumentText
-        ? `${currentDocumentText}\n${newLine}`
-        : newLine;
-      setCurrentDocumentText(updatedText);
-      saveDocument(currentDate, updatedText);
-
-      // Close popup
-      setShowSavedEntriesPopup(false);
+  const handlePageChange = useCallback(
+    (index: number) => {
+      const newDate = indexToDate(index);
+      setCurrentDate(newDate);
+      Keyboard.dismiss();
     },
-    [currentDocumentText, currentDate, saveDocument],
+    [setCurrentDate],
   );
 
-  // Stable callbacks for TotalsBar (prevents React.memo invalidation on re-render)
+  const navigateDate = useCallback(
+    (direction: "prev" | "next") => {
+      if (direction === "prev") {
+        pagerRef.current?.decrementPage({ animated: true });
+      } else {
+        pagerRef.current?.incrementPage({ animated: true });
+      }
+    },
+    [],
+  );
+
+  const openCalendar = useCallback(() => {
+    setShowCalendar(true);
+  }, []);
+
+  const handleCalendarSelect = useCallback(
+    (newDateString: string) => {
+      const index = dateToIndex(newDateString);
+      pagerRef.current?.setPage(index, { animated: false });
+      setCurrentDate(newDateString);
+    },
+    [setCurrentDate],
+  );
+
+  // --- Render page for InfinitePager ---
+
+  const renderPage = useCallback(
+    ({ index, isActive }: { index: number; isActive: boolean }) => {
+      const dateString = indexToDate(index);
+      return (
+        <DatePage
+          dateString={dateString}
+          isActive={isActive}
+          isOnline={isOnline}
+          inputAccessoryViewID={
+            Platform.OS === "ios" ? INPUT_ACCESSORY_VIEW_ID : undefined
+          }
+        />
+      );
+    },
+    [isOnline],
+  );
+
+  // --- Insertion handlers (saved entries, barcode, photo, DB search) ---
+
+  const handleSelectSavedEntry = useCallback(
+    (savedEntry: SavedEntry) => {
+      const state = useAppStore.getState();
+      const newEntry = state.useSavedEntry(savedEntry);
+      setPendingInsertion({ date: state.currentDate, text: newEntry.rawText });
+      setShowSavedEntriesPopup(false);
+    },
+    [setPendingInsertion],
+  );
+
+  // Stable callbacks for TotalsBar
   const handleAddSavedPress = useCallback(() => {
     if (showAccessoryBarRef.current) {
       Keyboard.dismiss();
@@ -233,21 +183,19 @@ export default function HomeScreen() {
   const handleDatabaseSearchAddEntries = useCallback(
     (items: { result: DatabaseSearchResult; servingGrams: number }[]) => {
       const state = useAppStore.getState();
-      const latestDoc = state.getDocument(state.currentDate);
-      let currentText = latestDoc?.content ?? '';
+      let insertText = '';
 
       items.forEach(({ result, servingGrams }, index) => {
         const newEntry = state.addDatabaseSearchEntry(result, servingGrams, index);
-        currentText = currentText
-          ? `${currentText}\n${newEntry.rawText}`
+        insertText = insertText
+          ? `${insertText}\n${newEntry.rawText}`
           : newEntry.rawText;
       });
 
-      setCurrentDocumentText(currentText);
-      state.saveDocument(state.currentDate, currentText);
+      setPendingInsertion({ date: state.currentDate, text: insertText });
       setShowDatabaseSearch(false);
     },
-    [],
+    [setPendingInsertion],
   );
 
   const handlePhotoCaptured = useCallback(
@@ -263,21 +211,14 @@ export default function HomeScreen() {
         });
 
         if (response.resolved && response.resolved.length > 0) {
-          // Read latest state to avoid stale closure
           const state = useAppStore.getState();
-          const latestDoc = state.getDocument(state.currentDate);
-          const currentText = latestDoc?.content ?? "";
 
           const newEntry = state.addPhotoEntry(
             response.resolved,
             response.totals,
           );
 
-          const updatedText = currentText
-            ? `${currentText}\n${newEntry.rawText}`
-            : newEntry.rawText;
-          setCurrentDocumentText(updatedText);
-          state.saveDocument(state.currentDate, updatedText);
+          setPendingInsertion({ date: state.currentDate, text: newEntry.rawText });
 
           setPhotoToastState({
             type: "success",
@@ -304,7 +245,7 @@ export default function HomeScreen() {
         }
       }
     },
-    [],
+    [setPendingInsertion],
   );
 
   const handlePhotoToastDismiss = useCallback(() => {
@@ -317,20 +258,12 @@ export default function HomeScreen() {
 
   const handleBarcodeProductAdd = useCallback(
     (product: BarcodeProduct, servingGrams: number) => {
-      const storeAddBarcodeEntry = useAppStore.getState().addBarcodeEntry;
-      const newEntry = storeAddBarcodeEntry(product, servingGrams);
-
-      // Update document text
-      const newLine = newEntry.rawText;
-      const updatedText = currentDocumentText
-        ? `${currentDocumentText}\n${newLine}`
-        : newLine;
-      setCurrentDocumentText(updatedText);
-      saveDocument(currentDate, updatedText);
-
+      const state = useAppStore.getState();
+      const newEntry = state.addBarcodeEntry(product, servingGrams);
+      setPendingInsertion({ date: state.currentDate, text: newEntry.rawText });
       setShowBarcodeScanner(false);
     },
-    [currentDocumentText, currentDate, saveDocument],
+    [setPendingInsertion],
   );
 
   const handleBarcodeManualEntry = useCallback(
@@ -338,24 +271,14 @@ export default function HomeScreen() {
       const isFreeform = useAppStore.getState().entryMode === 'freeform';
       const rawText = isFreeform ? text : `— ${text}`;
       addEntry(rawText);
-
-      const updatedText = currentDocumentText
-        ? `${currentDocumentText}\n${rawText}`
-        : rawText;
-      setCurrentDocumentText(updatedText);
-      saveDocument(currentDate, updatedText);
-
+      const state = useAppStore.getState();
+      setPendingInsertion({ date: state.currentDate, text: rawText });
       setShowBarcodeScanner(false);
     },
-    [currentDocumentText, currentDate, addEntry, saveDocument],
+    [addEntry, setPendingInsertion],
   );
 
-
   // Track keyboard open/close for dual-rendering the totals bar.
-  // Debounce the "show" transition to filter out brief keyboardWillShow
-  // events fired when the TextInput momentarily becomes first responder
-  // during swipe gestures (before the gesture handler claims the touch).
-  // The hide transition is immediate so the accessory bar never lingers.
   const [showAccessoryBar, setShowAccessoryBar] = useState(false);
   const showAccessoryBarRef = useRef(false);
   useEffect(() => {
@@ -389,13 +312,6 @@ export default function HomeScreen() {
       if (showTimer) clearTimeout(showTimer);
     };
   }, []);
-
-  // Swipe gesture for date navigation
-  const { gesture: swipeGesture, animatedStyle: swipeAnimatedStyle } =
-    useSwipeDateNavigation({
-      onSwipeLeft: () => navigateDate("next"),
-      onSwipeRight: () => navigateDate("prev"),
-    });
 
   // Calculate daily totals from entries — single-pass accumulation
   const dailyTotals = React.useMemo(() => {
@@ -464,25 +380,23 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <GestureDetector gesture={swipeGesture}>
-        <Animated.View style={[styles.editorWrapper, swipeAnimatedStyle]}>
-          <NotesEditor
-            entries={entries}
-            initialDocumentText={currentDocumentText}
-            onDocumentTextChange={handleDocumentTextChange}
-            onAddEntry={addEntry}
-            onUpdateEntry={updateEntry}
-            onDeleteEntry={deleteEntry}
-            onDeleteEntries={deleteEntries}
-            currentDate={currentDate}
-            isOnline={isOnline}
-            waterTrackingEnabled={goals?.manualTargets?.water !== undefined}
-            inputAccessoryViewID={
-              Platform.OS === "ios" ? INPUT_ACCESSORY_VIEW_ID : undefined
-            }
-          />
-        </Animated.View>
-      </GestureDetector>
+      <View style={styles.pagerWrapper}>
+        <InfinitePager
+          ref={pagerRef}
+          pageBuffer={1}
+          onPageChange={handlePageChange}
+          renderPage={renderPage}
+          flingVelocity={500}
+          animationConfig={{
+            damping: 20,
+            mass: 0.2,
+            stiffness: 100,
+            overshootClamping: false,
+          }}
+          style={styles.pager}
+          pageWrapperStyle={{ flex: 1 }}
+        />
+      </View>
 
       {/* iOS: Totals bar as native keyboard accessory */}
       {Platform.OS === "ios" && (
@@ -662,9 +576,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  editorWrapper: {
+  pagerWrapper: {
     flex: 1,
     paddingBottom: 88,
+  },
+  pager: {
+    flex: 1,
   },
   bottomBarContainer: {
     position: "absolute",

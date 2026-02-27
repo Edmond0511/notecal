@@ -631,7 +631,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#1a1a1a",
     textAlign: "center",
     letterSpacing: -0.3,
@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#999",
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
   },
   accountEmail: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#1a1a1a",
     marginBottom: 2,
   },
@@ -712,7 +712,7 @@ const styles = StyleSheet.create({
   },
   signOutText: {
     fontSize: 15,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#DC2626",
   },
   signInCard: {
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
   },
   signInTitle: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#1a1a1a",
     marginBottom: 2,
   },
@@ -766,12 +766,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: "#1a1a1a",
-    fontWeight: "400",
+    fontWeight: "500",
   },
   menuItemValue: {
     fontSize: 15,
     color: "#999",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   menuDivider: {
     height: 1,

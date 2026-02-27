@@ -25,7 +25,7 @@ import {
 import { useAppStore } from "@/store/app-store";
 import { BarcodeProduct, DatabaseSearchResult, SavedEntry } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   InputAccessoryView,
   InteractionManager,
@@ -137,8 +137,11 @@ export default function HomeScreen() {
       (newDate.getMonth() + 1).toString().padStart(2, "0") +
       newDate.getDate().toString().padStart(2, "0");
 
-    // Fast: just update currentDate (small MMKV write, quick React re-render)
-    setCurrentDate(newDateString);
+    // Mark date change as non-urgent so React can yield to the native
+    // swipe animation instead of synchronously re-rendering the whole tree.
+    startTransition(() => {
+      setCurrentDate(newDateString);
+    });
 
     // Defer heavy document save until after animation/interactions settle
     const dateToSave = currentDate;

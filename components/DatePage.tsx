@@ -1,28 +1,25 @@
 import { NotesEditor } from '@/components/NotesEditor';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useAppStore } from '@/store/app-store';
 import { Entry } from '@/types';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { StyleSheet, View } from 'react-native';
 
 interface DatePageProps {
   dateString: string;
   isActive: boolean;
-  isOnline: boolean;
   inputAccessoryViewID?: string;
 }
 
 export const DatePage = React.memo(function DatePage({
   dateString,
   isActive,
-  isOnline,
   inputAccessoryViewID,
 }: DatePageProps) {
-  // Subscribe to the full entries array (stable reference from Zustand)
-  // then filter in useMemo to avoid getSnapshot infinite loop from .filter()
-  const allEntries = useAppStore((s) => s.entries);
-  const entries = useMemo(
-    () => allEntries.filter((e: Entry) => e.date === dateString),
-    [allEntries, dateString],
+  const { isOnline } = useNetworkStatus();
+  const entries = useAppStore(
+    useShallow((s) => s.entries.filter((e: Entry) => e.date === dateString)),
   );
 
   const addEntry = useAppStore((s) => s.addEntry);
@@ -31,8 +28,12 @@ export const DatePage = React.memo(function DatePage({
   const deleteEntries = useAppStore((s) => s.deleteEntries);
   const saveDocument = useAppStore((s) => s.saveDocument);
   const getDocument = useAppStore((s) => s.getDocument);
-  const goals = useAppStore((s) => s.goals);
-  const pendingInsertion = useAppStore((s) => s.pendingInsertion);
+  const waterTrackingEnabled = useAppStore(
+    (s) => s.goals?.manualTargets?.water !== undefined,
+  );
+  const pendingInsertion = useAppStore((s) =>
+    s.pendingInsertion?.date === dateString ? s.pendingInsertion : null,
+  );
   const clearPendingInsertion = useAppStore((s) => s.clearPendingInsertion);
 
   // Local document text state
@@ -53,11 +54,7 @@ export const DatePage = React.memo(function DatePage({
 
   // Handle pending insertion for this date
   useEffect(() => {
-    if (
-      pendingInsertion &&
-      pendingInsertion.date === dateString &&
-      isActive
-    ) {
+    if (pendingInsertion && isActive) {
       const newLine = pendingInsertion.text;
       const currentText = documentTextRef.current;
       const updatedText = currentText
@@ -90,7 +87,7 @@ export const DatePage = React.memo(function DatePage({
         onDeleteEntries={deleteEntries}
         currentDate={dateString}
         isOnline={isOnline}
-        waterTrackingEnabled={goals?.manualTargets?.water !== undefined}
+        waterTrackingEnabled={waterTrackingEnabled}
         inputAccessoryViewID={inputAccessoryViewID}
         autoFocus={false}
       />

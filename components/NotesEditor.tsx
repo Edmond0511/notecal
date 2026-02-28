@@ -2,6 +2,7 @@ import { useAppStore } from "@/store/app-store";
 import { Entry } from "@/types";
 import { truncateNumber } from "@/utils/formatNumber";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import React, {
   useCallback,
   useEffect,
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
   },
   hiddenMeasureText: {
     position: "absolute",
-    fontSize: 16,
+    fontSize: 17,
     lineHeight: LINE_HEIGHT,
     paddingLeft: 20,
     paddingRight: 90,
@@ -371,7 +372,7 @@ const styles = StyleSheet.create({
   },
   documentInput: {
     flexGrow: 1,
-    fontSize: 16,
+    fontSize: 17,
     lineHeight: LINE_HEIGHT,
     paddingLeft: 20,
     paddingRight: 90,
@@ -379,6 +380,13 @@ const styles = StyleSheet.create({
     color: "#333",
     fontFamily: "System",
     includeFontPadding: false,
+  },
+  footerFade: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 48,
   },
   overlay: {
     position: "absolute",
@@ -655,7 +663,7 @@ export function NotesEditor({
   // Map of entry text prefix -> y position (for entries starting with "-" or "—")
   const [entryYMap, setEntryYMap] = useState<Map<string, number[]>>(new Map());
   // Track the text that was measured, so we know if positions are stale
-  const [layoutStale, setLayoutStale] = useState(true);
+  const [layoutStale, setLayoutStale] = useState(false);
   // Track previous text for detecting user actions via text diffing
   const previousTextRef = useRef<string>(initialDocumentText);
 
@@ -1258,7 +1266,6 @@ export function NotesEditor({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchCancel}
-        automaticallyAdjustKeyboardInsets
       >
         {/* Document editor - full screen */}
         <TextInput
@@ -1289,6 +1296,13 @@ export function NotesEditor({
           inputAccessoryViewID={inputAccessoryViewID}
         />
       </Animated.ScrollView>
+
+      {/* Footer fade gradient */}
+      <LinearGradient
+        colors={["rgba(255, 255, 255, 0)", "rgba(255, 255, 255, 1)"]}
+        style={styles.footerFade}
+        pointerEvents="none"
+      />
 
       {/* Overlay for inline nutrition indicators */}
       <Animated.View

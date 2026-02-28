@@ -26,6 +26,7 @@ import { BarcodeProduct, DatabaseSearchResult, Entry, SavedEntry } from "@/types
 import { dateToIndex, formatDateDisplay, indexToDate } from "@/utils/dateUtils";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   InputAccessoryView,
   Keyboard,
@@ -42,9 +43,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const INPUT_ACCESSORY_VIEW_ID = "totals-bar-accessory";
 
+const PAGE_WRAPPER_STYLE = { flex: 1 } as const;
+const PAGER_ANIMATION_CONFIG = {
+  damping: 20,
+  mass: 0.2,
+  stiffness: 100,
+  overshootClamping: false,
+} as const;
+
 export default function HomeScreen() {
   const currentDate = useAppStore((state) => state.currentDate);
-  const allEntries = useAppStore((state) => state.entries);
   const setCurrentDate = useAppStore((state) => state.setCurrentDate);
   const goals = useAppStore((state) => state.goals);
   const setPendingInsertion = useAppStore((state) => state.setPendingInsertion);
@@ -53,10 +61,12 @@ export default function HomeScreen() {
 
   const pagerRef = useRef<InfinitePagerImperativeApi>(null);
 
-  // Filter entries for current date (for TotalsBar)
-  const entries = React.useMemo(
-    () => allEntries.filter((entry: Entry) => entry.date === currentDate),
-    [allEntries, currentDate],
+  // Filter entries for current date (for TotalsBar) — useShallow avoids
+  // re-renders when entries on other dates change.
+  const entries = useAppStore(
+    useShallow((state) =>
+      state.entries.filter((entry: Entry) => entry.date === state.currentDate),
+    ),
   );
 
   const [showCalendar, setShowCalendar] = useState(false);
@@ -119,14 +129,13 @@ export default function HomeScreen() {
         <DatePage
           dateString={dateString}
           isActive={isActive}
-          isOnline={isOnline}
           inputAccessoryViewID={
             Platform.OS === "ios" ? INPUT_ACCESSORY_VIEW_ID : undefined
           }
         />
       );
     },
-    [isOnline],
+    [],
   );
 
   // --- Insertion handlers (saved entries, barcode, photo, DB search) ---
@@ -387,14 +396,9 @@ export default function HomeScreen() {
           onPageChange={handlePageChange}
           renderPage={renderPage}
           flingVelocity={500}
-          animationConfig={{
-            damping: 20,
-            mass: 0.2,
-            stiffness: 100,
-            overshootClamping: false,
-          }}
+          animationConfig={PAGER_ANIMATION_CONFIG}
           style={styles.pager}
-          pageWrapperStyle={{ flex: 1 }}
+          pageWrapperStyle={PAGE_WRAPPER_STYLE}
         />
       </View>
 

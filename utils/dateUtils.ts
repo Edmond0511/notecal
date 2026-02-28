@@ -1,8 +1,12 @@
 // Date conversion utilities for pager index ↔ date string mapping.
 // Page index 0 = today, -1 = yesterday, +1 = tomorrow, etc.
 
-const TODAY = new Date();
-TODAY.setHours(0, 0, 0, 0);
+/** Returns today at midnight local time. Called fresh each time to handle midnight rollover. */
+function getToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
 
 /** Parse a YYYYMMDD string into a Date at midnight local time. */
 export function stringToDate(dateString: string): Date {
@@ -24,7 +28,7 @@ export function dateToString(date: Date): string {
 
 /** Convert a pager index to a YYYYMMDD string. Index 0 = today. */
 export function indexToDate(index: number): string {
-  const d = new Date(TODAY);
+  const d = getToday();
   d.setDate(d.getDate() + index);
   return dateToString(d);
 }
@@ -32,7 +36,7 @@ export function indexToDate(index: number): string {
 /** Convert a YYYYMMDD string to a pager index. Today = 0. */
 export function dateToIndex(dateString: string): number {
   const target = stringToDate(dateString);
-  const diffMs = target.getTime() - TODAY.getTime();
+  const diffMs = target.getTime() - getToday().getTime();
   return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 

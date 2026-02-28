@@ -659,6 +659,7 @@ export function NotesEditor({
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
   const scrollOffset = useSharedValue(0);
+  const lastStableScrollY = useSharedValue(0);
   const keyboard = useAnimatedKeyboard();
   // Map of entry text prefix -> y position (for entries starting with "-" or "—")
   const [entryYMap, setEntryYMap] = useState<Map<string, number[]>>(new Map());
@@ -718,6 +719,12 @@ export function NotesEditor({
     onScroll: (event) => {
       scrollOffset.value = event.contentOffset.y;
     },
+    onEndDrag: (event) => {
+      lastStableScrollY.value = event.contentOffset.y;
+    },
+    onMomentumEnd: (event) => {
+      lastStableScrollY.value = event.contentOffset.y;
+    },
   });
 
   // Animated style for overlay - translates indicators to match scroll position
@@ -738,9 +745,13 @@ export function NotesEditor({
       requestAnimationFrame(() => {
         if (isTouchActiveRef.current || isScrollingRef.current) return;
         scrollTo(scrollRef, 0, 0, false);
+        lastStableScrollY.value = 0;
       });
+    } else {
+      // Content changed without date change — sync stable scroll position
+      lastStableScrollY.value = scrollOffset.value;
     }
-  }, [scrollRef]);
+  }, [scrollRef, lastStableScrollY, scrollOffset]);
 
   // Handle text layout - extract y positions for indicator positioning
   const handleTextLayout = useCallback(
@@ -831,8 +842,8 @@ export function NotesEditor({
     touchStartRef.current = { x: touch.pageX, y: touch.pageY };
     hasTouchMovedRef.current = false;
     isTouchActiveRef.current = true;
-    scrollBeforeTouchRef.current = scrollOffset.value;
-  }, [scrollOffset]);
+    scrollBeforeTouchRef.current = lastStableScrollY.value;
+  }, [lastStableScrollY]);
 
   // Detect finger movement (>3px) and cancel pending keyboard open immediately.
   // This fires much earlier than onScrollBeginDrag for slow scrolls.
@@ -848,7 +859,11 @@ export function NotesEditor({
         isFocusPendingRef.current = false;
         textInputRef.current?.blur();
         // Undo native scrollRangeToVisible that fired on becomeFirstResponder
-        scrollTo(scrollRef, 0, scrollBeforeTouchRef.current, false);
+        const savedY = scrollBeforeTouchRef.current;
+        scrollTo(scrollRef, 0, savedY, false);
+        requestAnimationFrame(() => {
+          scrollTo(scrollRef, 0, savedY, false);
+        });
       }
     }
   }, [scrollRef]);
@@ -878,7 +893,15 @@ export function NotesEditor({
       return;
     }
     // Undo native scrollRangeToVisible snap from becomeFirstResponder.
-    scrollTo(scrollRef, 0, scrollBeforeTouchRef.current, false);
+    // Fire across multiple frames to win the race against native scroll.
+    const savedY = scrollBeforeTouchRef.current;
+    scrollTo(scrollRef, 0, savedY, false);
+    requestAnimationFrame(() => {
+      scrollTo(scrollRef, 0, savedY, false);
+      requestAnimationFrame(() => {
+        scrollTo(scrollRef, 0, savedY, false);
+      });
+    });
     if (isTouchActiveRef.current) {
       // Touch in progress — accept focus (keyboard starts showing) but mark
       // as pending so handleTouchMove/handleScrollBeginDrag can blur if needed.
@@ -886,6 +909,15 @@ export function NotesEditor({
     }
     // If touch already ended, accept focus as-is (tap completed before focus fired).
   }, [scrollRef]);
+
+  // On blur: reset cursor to position 0 so the next becomeFirstResponder's
+  // scrollRangeToVisible targets the TOP of the document, not the bottom.
+  const handleBlur = useCallback(() => {
+    setSelection({ start: 0, end: 0 });
+    requestAnimationFrame(() => {
+      setSelection(undefined);
+    });
+  }, []);
 
   // When touch ends (finger lifts), resolve pending focus.
   // TextInput was NOT blurred in handleFocus, so no re-focus needed for taps.
@@ -933,7 +965,8 @@ export function NotesEditor({
 
   const handleScrollEnd = useCallback(() => {
     isScrollingRef.current = false;
-  }, []);
+    lastStableScrollY.value = scrollOffset.value;
+  }, [lastStableScrollY, scrollOffset]);
 
   // Calculate Y position of cursor based on character position
   const getCursorLineY = useCallback(
@@ -1274,6 +1307,7 @@ export function NotesEditor({
           value={documentText}
           onChangeText={handleTextChange}
           onFocus={handleFocus}
+          onBlur={handleBlur}
           selection={selection}
           placeholder={
             isFreeform

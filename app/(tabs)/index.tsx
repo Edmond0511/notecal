@@ -25,6 +25,7 @@ import { useAppStore } from "@/store/app-store";
 import { BarcodeProduct, DatabaseSearchResult, Entry, SavedEntry } from "@/types";
 import { dateToIndex, formatDateDisplay, indexToDate } from "@/utils/dateUtils";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import {
@@ -92,6 +93,7 @@ export default function HomeScreen() {
       const newDate = indexToDate(index);
       setCurrentDate(newDate);
       Keyboard.dismiss();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
     [setCurrentDate],
   );

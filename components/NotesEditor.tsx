@@ -351,6 +351,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 88,
   },
   hiddenMeasureText: {
     position: "absolute",

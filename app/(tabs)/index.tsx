@@ -339,7 +339,7 @@ export default function HomeScreen() {
   }, [entries]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.header}>
@@ -578,7 +578,6 @@ const styles = StyleSheet.create({
   },
   pagerWrapper: {
     flex: 1,
-    paddingBottom: 88,
   },
   pager: {
     flex: 1,

@@ -382,6 +382,12 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     includeFontPadding: false,
   },
+  headerFade: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+  },
   footerFade: {
     position: "absolute",
     bottom: 0,
@@ -1314,6 +1320,15 @@ export function NotesEditor({
           inputAccessoryViewID={inputAccessoryViewID}
         />
       </Animated.ScrollView>
+
+      {/* Header fade gradient */}
+      {contentTopInset > 0 && (
+        <LinearGradient
+          colors={["rgba(250, 250, 247, 1)", "rgba(250, 250, 247, 0)"]}
+          style={[styles.headerFade, { height: contentTopInset }]}
+          pointerEvents="none"
+        />
+      )}
 
       {/* Footer fade gradient */}
       <LinearGradient

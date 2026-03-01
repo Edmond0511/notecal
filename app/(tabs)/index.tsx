@@ -141,7 +141,9 @@ export default function HomeScreen() {
           dateString={dateString}
           isActive={isActive}
           inputAccessoryViewID={
-            Platform.OS === "ios" ? INPUT_ACCESSORY_VIEW_ID : undefined
+            Platform.OS === "ios" && isActive
+              ? INPUT_ACCESSORY_VIEW_ID
+              : undefined
           }
           contentTopInset={contentTopInset}
         />
@@ -164,7 +166,7 @@ export default function HomeScreen() {
 
   // Stable callbacks for TotalsBar
   const handleAddSavedPress = useCallback(() => {
-    if (showAccessoryBarRef.current) {
+    if (keyboardVisibleRef.current) {
       Keyboard.dismiss();
       const sub = Keyboard.addListener("keyboardDidHide", () => {
         sub.remove();
@@ -299,38 +301,21 @@ export default function HomeScreen() {
     [addEntry, setPendingInsertion],
   );
 
-  // Track keyboard open/close for dual-rendering the totals bar.
-  const [showAccessoryBar, setShowAccessoryBar] = useState(false);
-  const showAccessoryBarRef = useRef(false);
+  // Track keyboard visibility to disable the static bottom bar when keyboard is up.
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const keyboardVisibleRef = useRef(false);
   useEffect(() => {
-    let showTimer: ReturnType<typeof setTimeout> | null = null;
     const willShowSub = Keyboard.addListener("keyboardWillShow", () => {
-      if (showTimer) clearTimeout(showTimer);
-      showTimer = setTimeout(() => {
-        showTimer = null;
-        showAccessoryBarRef.current = true;
-        setShowAccessoryBar(true);
-      }, 80);
-    });
-    const willHideSub = Keyboard.addListener("keyboardWillHide", () => {
-      if (showTimer) {
-        clearTimeout(showTimer);
-        showTimer = null;
-      }
+      keyboardVisibleRef.current = true;
+      setKeyboardVisible(true);
     });
     const didHideSub = Keyboard.addListener("keyboardDidHide", () => {
-      if (showTimer) {
-        clearTimeout(showTimer);
-        showTimer = null;
-      }
-      showAccessoryBarRef.current = false;
-      setShowAccessoryBar(false);
+      keyboardVisibleRef.current = false;
+      setKeyboardVisible(false);
     });
     return () => {
       willShowSub.remove();
-      willHideSub.remove();
       didHideSub.remove();
-      if (showTimer) clearTimeout(showTimer);
     };
   }, []);
 
@@ -436,16 +421,14 @@ export default function HomeScreen() {
       {/* iOS: Totals bar as native keyboard accessory */}
       {Platform.OS === "ios" && (
         <InputAccessoryView nativeID={INPUT_ACCESSORY_VIEW_ID}>
-          {showAccessoryBar && showAccessoryBarRef.current && (
-            <View style={styles.inputAccessoryWrapper}>
-              <TotalsBar
-                dailyTotals={dailyTotals}
-                isOnline={isOnline}
-                onAddSavedPress={handleAddSavedPress}
-                onTotalsPress={handleTotalsPress}
-              />
-            </View>
-          )}
+          <View style={styles.inputAccessoryWrapper}>
+            <TotalsBar
+              dailyTotals={dailyTotals}
+              isOnline={isOnline}
+              onAddSavedPress={handleAddSavedPress}
+              onTotalsPress={handleTotalsPress}
+            />
+          </View>
         </InputAccessoryView>
       )}
 
@@ -453,7 +436,7 @@ export default function HomeScreen() {
       <View
         style={styles.bottomBarContainer}
         pointerEvents={
-          Platform.OS === "ios" && showAccessoryBar ? "none" : "auto"
+          Platform.OS === "ios" && keyboardVisible ? "none" : "auto"
         }
       >
         <TotalsBar

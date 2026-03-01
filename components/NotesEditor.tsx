@@ -1096,6 +1096,7 @@ export function NotesEditor({
       >
         {/* Document editor - full screen */}
         <TextInput
+          key={inputAccessoryViewID ?? 'no-accessory'}
           ref={textInputRef}
           style={styles.documentInput}
           value={documentText}

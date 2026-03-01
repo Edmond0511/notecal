@@ -10,12 +10,14 @@ interface DatePageProps {
   dateString: string;
   isActive: boolean;
   inputAccessoryViewID?: string;
+  contentTopInset?: number;
 }
 
 export const DatePage = React.memo(function DatePage({
   dateString,
   isActive,
   inputAccessoryViewID,
+  contentTopInset,
 }: DatePageProps) {
   const { isOnline } = useNetworkStatus();
   const entries = useAppStore(
@@ -90,6 +92,7 @@ export const DatePage = React.memo(function DatePage({
         waterTrackingEnabled={waterTrackingEnabled}
         inputAccessoryViewID={inputAccessoryViewID}
         autoFocus={false}
+        contentTopInset={contentTopInset}
       />
     </View>
   );

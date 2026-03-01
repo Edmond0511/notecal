@@ -16,6 +16,10 @@ import { SettingsModal } from "@/components/SettingsModal";
 import { TotalsBar } from "@/components/TotalsBar";
 import { WeightTrackingModal } from "@/components/WeightTrackingModal";
 import { Tokens } from "@/constants/theme";
+import {
+  isLiquidGlassSupported,
+  LiquidGlassView,
+} from "@callstack/liquid-glass";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { supabase } from "@/lib/supabase";
 import {
@@ -41,7 +45,7 @@ import {
 } from "react-native";
 import type { InfinitePagerImperativeApi } from "react-native-infinite-pager";
 import InfinitePager from "react-native-infinite-pager";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const INPUT_ACCESSORY_VIEW_ID = "totals-bar-accessory";
 
@@ -54,6 +58,7 @@ const PAGER_ANIMATION_CONFIG = {
 } as const;
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
   const currentDate = useAppStore((state) => state.currentDate);
   const setCurrentDate = useAppStore((state) => state.setCurrentDate);
   const goals = useAppStore((state) => state.goals);
@@ -125,6 +130,9 @@ export default function HomeScreen() {
 
   // --- Render page for InfinitePager ---
 
+  // Safe area top + header height so content starts below the floating header
+  const contentTopInset = insets.top + 60;
+
   const renderPage = useCallback(
     ({ index, isActive }: { index: number; isActive: boolean }) => {
       const dateString = indexToDate(index);
@@ -135,10 +143,11 @@ export default function HomeScreen() {
           inputAccessoryViewID={
             Platform.OS === "ios" ? INPUT_ACCESSORY_VIEW_ID : undefined
           }
+          contentTopInset={contentTopInset}
         />
       );
     },
-    [],
+    [contentTopInset],
   );
 
   // --- Insertion handlers (saved entries, barcode, photo, DB search) ---
@@ -351,10 +360,25 @@ export default function HomeScreen() {
   }, [entries]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor={Tokens.background} />
 
-      <View style={styles.header}>
+      <View style={styles.pagerWrapper}>
+        <InfinitePager
+          ref={pagerRef}
+          pageBuffer={1}
+          onPageChange={handlePageChange}
+          renderPage={renderPage}
+          flingVelocity={500}
+          minDistance={15}
+          animationConfig={PAGER_ANIMATION_CONFIG}
+          style={styles.pager}
+          pageWrapperStyle={PAGE_WRAPPER_STYLE}
+        />
+      </View>
+
+      {/* Floating header overlay */}
+      <View style={[styles.header, { top: insets.top }]}>
         <View style={styles.dateNavigationContainer}>
           <TouchableOpacity
             style={styles.navButtonCompact}
@@ -384,24 +408,21 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.settingsButton}
           onPress={() => setShowSettings(true)}
+          activeOpacity={0.8}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="settings-outline" size={22} color={Tokens.textSecondary} />
+          <LiquidGlassView
+            style={[
+              styles.settingsGlass,
+              !isLiquidGlassSupported && styles.settingsGlassFallback,
+            ]}
+            interactive
+            effect="regular"
+            tintColor={Tokens.background}
+          >
+            <Ionicons name="settings-outline" size={20} color={Tokens.textSecondary} />
+          </LiquidGlassView>
         </TouchableOpacity>
-      </View>
-
-      <View style={styles.pagerWrapper}>
-        <InfinitePager
-          ref={pagerRef}
-          pageBuffer={1}
-          onPageChange={handlePageChange}
-          renderPage={renderPage}
-          flingVelocity={500}
-          minDistance={15}
-          animationConfig={PAGER_ANIMATION_CONFIG}
-          style={styles.pager}
-          pageWrapperStyle={PAGE_WRAPPER_STYLE}
-        />
       </View>
 
       {/* iOS: Totals bar as native keyboard accessory */}
@@ -535,21 +556,33 @@ const styles = StyleSheet.create({
     backgroundColor: Tokens.background,
   },
   header: {
-    backgroundColor: Tokens.background,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "transparent",
     paddingHorizontal: 16,
     paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     minHeight: 60,
+    zIndex: 10,
   },
   settingsButton: {
     position: "absolute",
     right: 16,
-    padding: 7,
+  },
+  settingsGlass: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+  },
+  settingsGlassFallback: {
+    backgroundColor: Tokens.surface,
+    ...Tokens.shadowLight,
   },
   dateNavigationContainer: {
     flexDirection: "row",

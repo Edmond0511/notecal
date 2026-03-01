@@ -631,6 +631,7 @@ interface NotesEditorProps {
   waterTrackingEnabled?: boolean;
   inputAccessoryViewID?: string;
   autoFocus?: boolean;
+  contentTopInset?: number;
 }
 
 export function NotesEditor({
@@ -646,6 +647,7 @@ export function NotesEditor({
   waterTrackingEnabled = false,
   inputAccessoryViewID,
   autoFocus = true,
+  contentTopInset = 0,
 }: NotesEditorProps) {
   const entryMode = useAppStore((s) => s.entryMode);
   const isFreeform = entryMode === "freeform";
@@ -1260,7 +1262,7 @@ export function NotesEditor({
     <View style={styles.container}>
       {/* Hidden Text component for reliable layout measurement */}
       {/* TextInput.onTextLayout is unreliable for wrapped text */}
-      <Text style={styles.hiddenMeasureText} onTextLayout={handleTextLayout}>
+      <Text style={[styles.hiddenMeasureText, contentTopInset ? { paddingTop: 12 + contentTopInset } : undefined]} onTextLayout={handleTextLayout}>
         {documentText || " "}
       </Text>
 
@@ -1268,7 +1270,7 @@ export function NotesEditor({
       <Animated.ScrollView
         ref={scrollRef}
         style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, contentTopInset ? { paddingTop: contentTopInset } : undefined]}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
@@ -1322,7 +1324,7 @@ export function NotesEditor({
 
       {/* Overlay for inline nutrition indicators */}
       <Animated.View
-        style={[styles.overlay, animatedOverlayStyle]}
+        style={[styles.overlay, animatedOverlayStyle, contentTopInset ? { top: TEXT_INPUT_PADDING_TOP + FONT_VERTICAL_OFFSET + contentTopInset } : undefined]}
         pointerEvents="box-none"
       >
         {indicatorData.map((item) => (

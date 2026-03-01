@@ -1,3 +1,4 @@
+import { Tokens } from "@/constants/theme";
 import { useAppStore } from "@/store/app-store";
 import { Entry } from "@/types";
 import { truncateNumber } from "@/utils/formatNumber";
@@ -344,7 +345,7 @@ function checkDoubleEnterExit(
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Tokens.background,
     overflow: "hidden",
   },
   scrollContainer: {
@@ -372,12 +373,12 @@ const styles = StyleSheet.create({
   },
   documentInput: {
     flexGrow: 1,
-    fontSize: 17,
+    fontSize: Tokens.fontSize.body,
     lineHeight: LINE_HEIGHT,
     paddingLeft: 20,
     paddingRight: 90,
     paddingTop: 12,
-    color: "#333",
+    color: Tokens.textPrimary,
     fontFamily: "System",
     includeFontPadding: false,
   },
@@ -405,15 +406,15 @@ const styles = StyleSheet.create({
   inlineCalories: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E0F2F7",
+    backgroundColor: Tokens.accentTint,
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 12,
   },
   caloriesText: {
-    fontSize: 12,
+    fontSize: Tokens.fontSize.sm,
     lineHeight: 16,
-    color: "#0a7ea4",
+    color: Tokens.accent,
     fontFamily: "System",
     fontWeight: "500",
     includeFontPadding: false,
@@ -421,7 +422,7 @@ const styles = StyleSheet.create({
   inlineWater: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E0F2F7",
+    backgroundColor: Tokens.accentTint,
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 12,
@@ -429,9 +430,9 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   waterText: {
-    fontSize: 12,
+    fontSize: Tokens.fontSize.sm,
     lineHeight: 16,
-    color: "#0a7ea4",
+    color: Tokens.accent,
     fontFamily: "System",
     fontWeight: "500",
     includeFontPadding: false,
@@ -439,29 +440,29 @@ const styles = StyleSheet.create({
   inlineError: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFEBEE",
+    backgroundColor: Tokens.errorTint,
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 12,
   },
   errorText: {
-    fontSize: 12,
+    fontSize: Tokens.fontSize.sm,
     lineHeight: 16,
-    color: "#C62828",
+    color: Tokens.error,
     fontFamily: "System",
     fontWeight: "500",
     includeFontPadding: false,
   },
   queuedBadge: {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: Tokens.surface,
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 12,
   },
   queuedText: {
-    fontSize: 12,
+    fontSize: Tokens.fontSize.sm,
     lineHeight: 16,
-    color: "#9E9E9E",
+    color: Tokens.textSecondary,
     fontFamily: "System",
     fontWeight: "500",
     includeFontPadding: false,
@@ -709,8 +710,6 @@ export function NotesEditor({
   // Scroll position saved on touch start, used to undo native scrollRangeToVisible
   // that fires when UITextView becomes first responder before our JS blur() can prevent it.
   const scrollBeforeTouchRef = useRef(0);
-  // Flag: scroll to top after next content sync (set on date change)
-  const scrollToTopOnContentRef = useRef(false);
   // Cooldown: block focus briefly after date change to prevent native scroll-to-cursor
   const dateChangeCooldownRef = useRef(false);
 
@@ -732,26 +731,10 @@ export function NotesEditor({
     transform: [{ translateY: -scrollOffset.value }],
   }));
 
-  // Scroll to top after date change content renders.
-  // Called by ScrollView's onContentSizeChange, which fires after the native
-  // layout pass — late enough to override any TextInput scroll-to-cursor.
-  // Guards against user interaction: if the user is already touching or
-  // scrolling, skip the forced scroll-to-top to avoid snap-back.
+  // Sync stable scroll position on content size change
   const handleContentSizeChange = useCallback(() => {
-    if (scrollToTopOnContentRef.current) {
-      scrollToTopOnContentRef.current = false;
-      if (isTouchActiveRef.current || isScrollingRef.current) return;
-      // Delay to next frame so native layout adjustments complete first
-      requestAnimationFrame(() => {
-        if (isTouchActiveRef.current || isScrollingRef.current) return;
-        scrollTo(scrollRef, 0, 0, false);
-        lastStableScrollY.value = 0;
-      });
-    } else {
-      // Content changed without date change — sync stable scroll position
-      lastStableScrollY.value = scrollOffset.value;
-    }
-  }, [scrollRef, lastStableScrollY, scrollOffset]);
+    lastStableScrollY.value = scrollOffset.value;
+  }, [lastStableScrollY, scrollOffset]);
 
   // Handle text layout - extract y positions for indicator positioning
   const handleTextLayout = useCallback(
@@ -893,14 +876,16 @@ export function NotesEditor({
       return;
     }
     // Undo native scrollRangeToVisible snap from becomeFirstResponder.
-    // Fire across multiple frames to win the race against native scroll.
+    // scrollRangeToVisible now targets {0,0} (kept by handleBlur), so the
+    // jump is minimal. Two frames is enough to win the race.
     const savedY = scrollBeforeTouchRef.current;
     scrollTo(scrollRef, 0, savedY, false);
     requestAnimationFrame(() => {
       scrollTo(scrollRef, 0, savedY, false);
-      requestAnimationFrame(() => {
-        scrollTo(scrollRef, 0, savedY, false);
-      });
+      // Release selection control so user can type at their tap position.
+      // scrollRangeToVisible has already fired targeting {0,0} and our
+      // scrollTo has restored the correct position.
+      setSelection(undefined);
     });
     if (isTouchActiveRef.current) {
       // Touch in progress — accept focus (keyboard starts showing) but mark
@@ -914,9 +899,6 @@ export function NotesEditor({
   // scrollRangeToVisible targets the TOP of the document, not the bottom.
   const handleBlur = useCallback(() => {
     setSelection({ start: 0, end: 0 });
-    requestAnimationFrame(() => {
-      setSelection(undefined);
-    });
   }, []);
 
   // When touch ends (finger lifts), resolve pending focus.
@@ -949,13 +931,13 @@ export function NotesEditor({
   // Also sets isScrollingRef so that any later-arriving onFocus is rejected.
   const handleScrollBeginDrag = useCallback(() => {
     isScrollingRef.current = true;
-    // Always blur when scroll drag starts to prevent native scrollRangeToVisible
-    // from fighting the user's scroll gesture during keyboard dismiss animation
-    // and layout inset changes. User must re-tap to resume editing after scroll.
-    // Mark scroll-initiated blur so keyboardDidHide can detect stale events
-    // when the user quickly taps back before the hide animation completes.
-    wasScrollBlurRef.current = true;
-    textInputRef.current?.blur();
+    // Only blur when the keyboard is actually visible (TextInput actively edited)
+    // or focus is pending. When keyboard is hidden, TextInput should already be
+    // blurred so this avoids unnecessary focus/blur cycles.
+    if (isKeyboardVisibleRef.current || isFocusPendingRef.current) {
+      wasScrollBlurRef.current = true;
+      textInputRef.current?.blur();
+    }
     if (isFocusPendingRef.current) {
       isFocusPendingRef.current = false;
       // Undo native scrollRangeToVisible snap
@@ -1311,10 +1293,10 @@ export function NotesEditor({
           selection={selection}
           placeholder={
             isFreeform
-              ? "Start logging food items..."
-              : "Start logging food items starting with '-'"
+              ? "What did you eat today?"
+              : "Type \u2014 to start logging"
           }
-          placeholderTextColor="#ccc"
+          placeholderTextColor={Tokens.textTertiary}
           multiline
           scrollEnabled={false}
           autoFocus={autoFocus}
@@ -1333,7 +1315,7 @@ export function NotesEditor({
 
       {/* Footer fade gradient */}
       <LinearGradient
-        colors={["rgba(255, 255, 255, 0)", "rgba(255, 255, 255, 1)"]}
+        colors={["rgba(250, 250, 247, 0)", "rgba(250, 250, 247, 1)"]}
         style={styles.footerFade}
         pointerEvents="none"
       />

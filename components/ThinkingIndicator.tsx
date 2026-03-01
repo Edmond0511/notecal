@@ -1,3 +1,4 @@
+import { Tokens } from "@/constants/theme";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef } from "react";
 import { Animated, Easing, StyleSheet, Text } from "react-native";
@@ -79,19 +80,19 @@ const styles = StyleSheet.create({
   container: {
     position: "relative",
     overflow: "hidden",
-    backgroundColor: "#E0F2F7",
+    backgroundColor: Tokens.accentTint,
     borderRadius: 12,
     alignSelf: "flex-start",
     paddingHorizontal: 6,
     paddingVertical: 1,
   },
   baseText: {
-    fontSize: 12,
+    fontSize: Tokens.fontSize.sm,
     lineHeight: 16,
     fontFamily: "System",
     fontWeight: "500",
     letterSpacing: 0.3,
-    color: "#0a7ea4",
+    color: Tokens.accent,
     includeFontPadding: false,
   },
   shimmerOverlay: {

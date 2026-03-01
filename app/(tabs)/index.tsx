@@ -15,6 +15,7 @@ import { SavedEntriesPopup } from "@/components/SavedEntriesPopup";
 import { SettingsModal } from "@/components/SettingsModal";
 import { TotalsBar } from "@/components/TotalsBar";
 import { WeightTrackingModal } from "@/components/WeightTrackingModal";
+import { Tokens } from "@/constants/theme";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { supabase } from "@/lib/supabase";
 import {
@@ -351,18 +352,16 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={Tokens.background} />
 
       <View style={styles.header}>
-        <View style={styles.headerPlaceholder} />
-
         <View style={styles.dateNavigationContainer}>
           <TouchableOpacity
             style={styles.navButtonCompact}
             onPress={() => navigateDate("prev")}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="chevron-back" size={20} color="#333" />
+            <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
           </TouchableOpacity>
 
           <TouchableOpacity onPress={openCalendar}>
@@ -378,7 +377,7 @@ export default function HomeScreen() {
             onPress={() => navigateDate("next")}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="chevron-forward" size={20} color="#333" />
+            <Ionicons name="chevron-forward" size={20} color={Tokens.textPrimary} />
           </TouchableOpacity>
         </View>
 
@@ -387,7 +386,7 @@ export default function HomeScreen() {
           onPress={() => setShowSettings(true)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="settings-outline" size={22} color="#333" />
+          <Ionicons name="settings-outline" size={22} color={Tokens.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -398,6 +397,7 @@ export default function HomeScreen() {
           onPageChange={handlePageChange}
           renderPage={renderPage}
           flingVelocity={500}
+          minDistance={15}
           animationConfig={PAGER_ANIMATION_CONFIG}
           style={styles.pager}
           pageWrapperStyle={PAGE_WRAPPER_STYLE}
@@ -532,23 +532,20 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Tokens.background,
   },
   header: {
-    backgroundColor: "#fff",
+    backgroundColor: Tokens.background,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "transparent",
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
     minHeight: 60,
   },
-  headerPlaceholder: {
-    width: 36,
-  },
   settingsButton: {
+    position: "absolute",
+    right: 16,
     padding: 7,
     borderRadius: 20,
     alignItems: "center",
@@ -557,8 +554,10 @@ const styles = StyleSheet.create({
   dateNavigationContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fafaf8ff",
+    backgroundColor: Tokens.surface,
     borderRadius: 25,
+    borderWidth: 1,
+    borderColor: Tokens.border,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -574,7 +573,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "System",
     fontWeight: "600",
-    color: "#333",
+    color: Tokens.textPrimary,
     textAlign: "center",
   },
   dateButtonContent: {

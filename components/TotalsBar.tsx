@@ -1,5 +1,10 @@
 import { AnimatedDigits } from "@/components/AnimatedDigits";
 import { OfflinePill } from "@/components/OfflinePill";
+import { Tokens } from "@/constants/theme";
+import {
+  isLiquidGlassSupported,
+  LiquidGlassView,
+} from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -56,78 +61,98 @@ export const TotalsBar = React.memo(function TotalsBar({
       <View style={styles.row}>
         {/* Add saved entry button */}
         <TouchableOpacity
-          style={styles.addSavedButton}
+          style={styles.addSavedButtonWrapper}
           onPress={onAddSavedPress}
           activeOpacity={0.8}
         >
-          <Ionicons name="add" size={24} color="#0a7ea4" />
+          <LiquidGlassView
+            style={[
+              styles.addSavedButton,
+              !isLiquidGlassSupported && styles.addSavedButtonFallback,
+            ]}
+            interactive
+            effect="regular"
+            tintColor={Tokens.accentTint}
+          >
+            <Ionicons name="add" size={24} color={Tokens.accentBright} />
+          </LiquidGlassView>
         </TouchableOpacity>
 
         {/* Daily Totals Bar - Tap to open goals popup */}
         <TouchableOpacity
-          style={styles.totalsBar}
+          style={styles.totalsBarWrapper}
           onPress={onTotalsPress}
           activeOpacity={0.8}
         >
-          <View style={styles.totalItem}>
-            <AnimatedDigits
-              value={dailyTotals.kcal}
-              maxDigits={5}
-              maxWidth={56}
-              style={styles.totalValue}
-            />
-            <FontAwesomeIcon
-              icon={icons.fire}
-              size={14}
-              color="#FF6B35"
-              style={styles.totalIcon}
-            />
-          </View>
-          <View style={styles.totalDivider} />
-          <View style={styles.totalItem}>
-            <AnimatedDigits
-              value={dailyTotals.protein}
-              maxDigits={4}
-              maxWidth={56}
-              style={styles.totalValue}
-            />
-            <FontAwesomeIcon
-              icon={icons.protein}
-              size={14}
-              color="#4A90D9"
-              style={styles.totalIcon}
-            />
-          </View>
-          <View style={styles.totalDivider} />
-          <View style={styles.totalItem}>
-            <AnimatedDigits
-              value={dailyTotals.fat}
-              maxDigits={4}
-              maxWidth={56}
-              style={styles.totalValue}
-            />
-            <FontAwesomeIcon
-              icon={icons.fat}
-              size={14}
-              color="#F5A623"
-              style={styles.totalIcon}
-            />
-          </View>
-          <View style={styles.totalDivider} />
-          <View style={styles.totalItem}>
-            <AnimatedDigits
-              value={dailyTotals.carbs}
-              maxDigits={4}
-              maxWidth={56}
-              style={styles.totalValue}
-            />
-            <FontAwesomeIcon
-              icon={icons.carbs}
-              size={14}
-              color="#9B6B9E"
-              style={styles.totalIcon}
-            />
-          </View>
+          <LiquidGlassView
+            style={[
+              styles.totalsBar,
+              !isLiquidGlassSupported && styles.totalsBarFallback,
+            ]}
+            interactive
+            effect="regular"
+            tintColor={Tokens.background}
+          >
+            <View style={styles.totalItem}>
+              <AnimatedDigits
+                value={dailyTotals.kcal}
+                maxDigits={5}
+                maxWidth={56}
+                style={styles.totalValue}
+              />
+              <FontAwesomeIcon
+                icon={icons.fire}
+                size={14}
+                color="#FF6B35"
+                style={styles.totalIcon}
+              />
+            </View>
+            <View style={styles.totalDivider} />
+            <View style={styles.totalItem}>
+              <AnimatedDigits
+                value={dailyTotals.protein}
+                maxDigits={4}
+                maxWidth={56}
+                style={styles.totalValue}
+              />
+              <FontAwesomeIcon
+                icon={icons.protein}
+                size={14}
+                color="#4A90D9"
+                style={styles.totalIcon}
+              />
+            </View>
+            <View style={styles.totalDivider} />
+            <View style={styles.totalItem}>
+              <AnimatedDigits
+                value={dailyTotals.fat}
+                maxDigits={4}
+                maxWidth={56}
+                style={styles.totalValue}
+              />
+              <FontAwesomeIcon
+                icon={icons.fat}
+                size={14}
+                color="#F5A623"
+                style={styles.totalIcon}
+              />
+            </View>
+            <View style={styles.totalDivider} />
+            <View style={styles.totalItem}>
+              <AnimatedDigits
+                value={dailyTotals.carbs}
+                maxDigits={4}
+                maxWidth={56}
+                style={styles.totalValue}
+              />
+              <FontAwesomeIcon
+                icon={icons.carbs}
+                size={14}
+                color="#9B6B9E"
+                style={styles.totalIcon}
+              />
+            </View>
+          </LiquidGlassView>
         </TouchableOpacity>
       </View>
     </View>
@@ -146,40 +171,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  addSavedButton: {
+  addSavedButtonWrapper: {
     marginRight: 12,
+  },
+  addSavedButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#E0F2F7",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
+    ...Tokens.shadowLight,
+  },
+  addSavedButtonFallback: {
+    backgroundColor: Tokens.accentTint,
+    ...Tokens.shadowMedium,
+  },
+  totalsBarWrapper: {
+    flex: 1,
   },
   totalsBar: {
-    flexShrink: 1,
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-evenly",
-    backgroundColor: "#ffffffee",
     paddingVertical: 14,
     paddingHorizontal: 8,
     borderRadius: 26,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 6,
+    ...Tokens.shadowLight,
+  },
+  totalsBarFallback: {
+    backgroundColor: Tokens.surface,
+    ...Tokens.shadowMedium,
   },
   totalItem: {
     flex: 1,
@@ -191,7 +213,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "System",
     fontWeight: "600",
-    color: "#222",
+    color: Tokens.textPrimary,
     letterSpacing: -0.3,
   },
   totalIcon: {
@@ -200,6 +222,6 @@ const styles = StyleSheet.create({
   totalDivider: {
     width: 1,
     height: 24,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: Tokens.border,
   },
 });

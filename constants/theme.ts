@@ -1,17 +1,74 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * NoteCal Design Tokens — Warm Sage palette.
+ * Import `Tokens` for all new work. Legacy `Colors` kept for backward compat.
  */
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
+// ── Design Tokens ──────────────────────────────────────────────────────
+
+export const Tokens = {
+  // Backgrounds
+  background: '#FAFAF7',
+  surface: '#F4F3EF',
+  surfaceRaised: '#FFFFFF',
+
+  // Text
+  textPrimary: '#1C1C1E',
+  textSecondary: '#8E8E93',
+  textTertiary: '#C7C7CC',
+
+  // Accent (deep teal — from original colour palette commit)
+  accent: '#1A6872',
+  accentBright: '#1A6872',
+  accentTint: '#E0F2F1',
+
+  // Borders & dividers
+  border: '#E8E7E3',
+
+  // Semantic
+  error: '#C62828',
+  errorTint: '#FFEBEE',
+
+  // Macro colors (unchanged — already well-differentiated)
+  macroKcal: '#FF6B35',
+  macroProtein: '#4A90D9',
+  macroFat: '#F5A623',
+  macroCarbs: '#9B6B9E',
+
+  // Shadows
+  shadowLight: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
+  } as const,
+  shadowMedium: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    elevation: 6,
+  } as const,
+
+  // Typography scale (iOS HIG sizes)
+  fontSize: {
+    sm: 12,
+    body: 17,
+    title: 20,
+  },
+} as const;
+
+// ── Legacy Colors (kept for backward compat) ──────────────────────────
+
+const tintColorLight = Tokens.accent;
 const tintColorDark = '#fff';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: Tokens.textPrimary,
+    background: Tokens.background,
     tint: tintColorLight,
     icon: '#687076',
     tabIconDefault: '#687076',

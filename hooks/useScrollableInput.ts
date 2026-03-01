@@ -20,7 +20,7 @@ export function useScrollableInput(
       isKeyboardUpRef.current = true;
       onKeyboardStateChange?.(true);
     });
-    const hideSub = Keyboard.addListener("keyboardWillHide", () => {
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
       isKeyboardUpRef.current = false;
       onKeyboardStateChange?.(false);
     });

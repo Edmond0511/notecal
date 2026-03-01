@@ -388,13 +388,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  footerFade: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 48,
-  },
   overlay: {
     position: "absolute",
     top: TEXT_INPUT_PADDING_TOP + FONT_VERTICAL_OFFSET,
@@ -1089,6 +1082,7 @@ export function NotesEditor({
         contentContainerStyle={[styles.scrollContent, contentTopInset ? { paddingTop: contentTopInset } : undefined]}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         scrollEventThrottle={16}
         onScroll={scrollHandler}
       >
@@ -1184,12 +1178,6 @@ export function NotesEditor({
         />
       )}
 
-      {/* Footer fade gradient */}
-      <LinearGradient
-        colors={["rgba(250, 250, 247, 0)", "rgba(250, 250, 247, 1)"]}
-        style={styles.footerFade}
-        pointerEvents="none"
-      />
 
       {/* Overlay for inline nutrition indicators */}
       <Animated.View

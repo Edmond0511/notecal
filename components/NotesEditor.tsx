@@ -699,14 +699,12 @@ export function NotesEditor({
   >(undefined);
   // Flag to prevent recursive text change handling during transforms
   const isTransformingRef = useRef<boolean>(false);
-  // Track keyboard state for touch interceptor rendering
+  // Track keyboard state so we can show/hide the touch interceptor
   const [isKeyboardUp, setIsKeyboardUp] = useState(false);
   const onKeyboardStateChange = useCallback((isUp: boolean) => {
     setIsKeyboardUp(isUp);
   }, []);
-  // Keyboard visibility tracking
   useScrollableInput(onKeyboardStateChange);
-
   // Reanimated scroll handler - runs on UI thread, no JS re-renders
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -1123,7 +1121,6 @@ export function NotesEditor({
           clearTextOnFocus={false}
           inputAccessoryViewID={inputAccessoryViewID}
         />
-        {/* Prevents TextInput focus during scroll when keyboard is down */}
         {!isKeyboardUp && (
           <View
             style={StyleSheet.absoluteFill}
@@ -1136,9 +1133,41 @@ export function NotesEditor({
               };
             }}
             onResponderRelease={(e) => {
-              const dx = Math.abs(e.nativeEvent.pageX - touchStartRef.current.x);
-              const dy = Math.abs(e.nativeEvent.pageY - touchStartRef.current.y);
+              const dx = Math.abs(
+                e.nativeEvent.pageX - touchStartRef.current.x,
+              );
+              const dy = Math.abs(
+                e.nativeEvent.pageY - touchStartRef.current.y,
+              );
               if (dx < 10 && dy < 10) {
+                // Estimate cursor position from tap coordinates
+                const tapY =
+                  e.nativeEvent.locationY + scrollOffset.value;
+                const textStartY = contentTopInset + 12; // scroll padding + TextInput paddingTop
+                const lineIndex = Math.max(
+                  0,
+                  Math.floor((tapY - textStartY) / LINE_HEIGHT),
+                );
+                const lines = documentTextRef.current.split("\n");
+                const clampedLine = Math.min(
+                  lineIndex,
+                  lines.length - 1,
+                );
+                // Sum chars before the tapped line
+                let charPos = 0;
+                for (let i = 0; i < clampedLine; i++) {
+                  charPos += lines[i].length + 1;
+                }
+                // Approximate char within line from X
+                const tapX = e.nativeEvent.locationX - 20; // paddingLeft
+                if (tapX > 0) {
+                  const avgCharW = 8.5; // SF Pro 17px average
+                  charPos += Math.min(
+                    Math.round(tapX / avgCharW),
+                    lines[clampedLine].length,
+                  );
+                }
+                setSelection({ start: charPos, end: charPos });
                 textInputRef.current?.focus();
               }
             }}

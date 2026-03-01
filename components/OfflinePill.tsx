@@ -1,3 +1,4 @@
+import { Tokens } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -42,7 +43,7 @@ export const OfflinePill = React.memo(function OfflinePill({
         <Ionicons
           name="cloud-offline-outline"
           size={14}
-          color="#C62828"
+          color={Tokens.error}
           style={styles.icon}
         />
         <Text style={styles.text}>No connection</Text>
@@ -59,7 +60,7 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFEBEE",
+    backgroundColor: Tokens.errorTint,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
@@ -68,8 +69,8 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   text: {
-    fontSize: 13,
+    fontSize: Tokens.fontSize.sm,
     fontWeight: "500",
-    color: "#C62828",
+    color: Tokens.error,
   },
 });

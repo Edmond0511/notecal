@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { Dimensions, StyleSheet, Text, View } from "react-native";
+import { Tokens } from "@/constants/theme";
 import { truncateNumber } from "@/utils/formatNumber";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -53,27 +54,27 @@ const COLORS = {
   },
   // Other nutrients
   fiber: {
-    primary: "#C4B097",
+    primary: "#B08C5A",
     secondary: "#F8F4EF",
     track: "#EDE6DC",
   },
   sugar: {
-    primary: "#D4899E",
+    primary: "#D4687E",
     secondary: "#FDF0F4",
     track: "#F8DDE5",
   },
   sodium: {
-    primary: "#8BACC8",
+    primary: "#6898BE",
     secondary: "#F0F5FA",
     track: "#DCE8F2",
   },
   potassium: {
-    primary: "#9BB893",
+    primary: "#72A868",
     secondary: "#F2F7F0",
     track: "#DEE9DB",
   },
   water: {
-    primary: "#A3CCE8",
+    primary: "#5AADE0",
     secondary: "#F0F7FC",
     track: "#D8EAF5",
   },
@@ -502,11 +503,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2},
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 1,
+    ...Tokens.shadowLight,
   },
   calorieIconContainer: {
     position: "absolute",
@@ -558,20 +555,20 @@ const styles = StyleSheet.create({
   },
   calorieTargetLabel: {
     fontSize: 14,
-    color: "#888",
+    color: Tokens.textSecondary,
     marginHorizontal: 4,
   },
   calorieTargetValue: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#333",
+    color: Tokens.textPrimary,
   },
   calorieRemainingContainer: {
     marginBottom: 12,
   },
   calorieRemainingText: {
     fontSize: 14,
-    color: "#666",
+    color: Tokens.textSecondary,
     fontWeight: "500",
   },
   calorieOverText: {
@@ -591,11 +588,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 1,
+    ...Tokens.shadowLight,
   },
   macroIconContainer: {
     position: "absolute",
@@ -629,7 +622,7 @@ const styles = StyleSheet.create({
   },
   macroLabel: {
     fontSize: 12,
-    color: "#666",
+    color: Tokens.textSecondary,
     fontWeight: "500",
     marginBottom: 4,
   },
@@ -638,18 +631,18 @@ const styles = StyleSheet.create({
   },
   macroProgressText: {
     fontSize: 11,
-    color: "#666",
+    color: Tokens.textSecondary,
   },
   macroConsumed: {
     fontWeight: "500",
-    color: "#333",
+    color: Tokens.textPrimary,
   },
   macroDivider: {
-    color: "#aaa",
+    color: Tokens.textTertiary,
   },
   macroTotal: {
     fontWeight: "500",
-    color: "#888",
+    color: Tokens.textSecondary,
   },
   macroOverText: {
     color: "#EF5350",
@@ -660,7 +653,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   otherNutrientsCard: {
-    backgroundColor: "#fff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     padding: 16,
     gap: 14,
@@ -676,34 +669,34 @@ const styles = StyleSheet.create({
   nutrientBarLabel: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#333",
+    color: Tokens.textPrimary,
   },
   nutrientBarValue: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#333",
+    color: Tokens.textPrimary,
   },
   nutrientBarValueOver: {
     color: "#EF5350",
   },
   nutrientBarConsumed: {
     fontWeight: "500",
-    color: "#333",
+    color: Tokens.textPrimary,
   },
   nutrientBarTotal: {
     fontWeight: "500",
-    color: "#888",
+    color: Tokens.textSecondary,
   },
   nutrientBarUnit: {
     fontSize: 11,
     fontWeight: "500",
   },
   nutrientBarDivider: {
-    color: "#aaa",
+    color: Tokens.textTertiary,
   },
   nutrientBarTrack: {
     height: 6,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: Tokens.surface,
     borderRadius: 3,
     overflow: "hidden",
   },

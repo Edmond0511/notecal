@@ -379,7 +379,15 @@ export default function HomeScreen() {
 
       {/* Floating header overlay */}
       <View style={[styles.header, { top: insets.top }]}>
-        <View style={styles.dateNavigationContainer}>
+        <LiquidGlassView
+          style={[
+            styles.dateNavigationContainer,
+            !isLiquidGlassSupported && styles.dateNavigationFallback,
+          ]}
+          interactive
+          effect="regular"
+          tintColor={Tokens.background}
+        >
           <TouchableOpacity
             style={styles.navButtonCompact}
             onPress={() => navigateDate("prev")}
@@ -403,7 +411,7 @@ export default function HomeScreen() {
           >
             <Ionicons name="chevron-forward" size={20} color={Tokens.textPrimary} />
           </TouchableOpacity>
-        </View>
+        </LiquidGlassView>
 
         <TouchableOpacity
           style={styles.settingsButton}
@@ -420,7 +428,7 @@ export default function HomeScreen() {
             effect="regular"
             tintColor={Tokens.background}
           >
-            <Ionicons name="settings-outline" size={20} color={Tokens.textSecondary} />
+            <Ionicons name="settings-outline" size={20} color="#000" />
           </LiquidGlassView>
         </TouchableOpacity>
       </View>
@@ -587,12 +595,14 @@ const styles = StyleSheet.create({
   dateNavigationContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Tokens.surface,
     borderRadius: 25,
-    borderWidth: 1,
-    borderColor: Tokens.border,
     paddingHorizontal: 8,
     paddingVertical: 4,
+  },
+  dateNavigationFallback: {
+    backgroundColor: Tokens.surface,
+    borderWidth: 1,
+    borderColor: Tokens.border,
   },
   navButtonCompact: {
     padding: 8,

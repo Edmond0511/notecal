@@ -1,3 +1,4 @@
+import { Tokens } from '@/constants/theme';
 import { UserGoals } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -27,7 +28,7 @@ import Animated, {
 import { ProgressRings } from './goals/ProgressRings';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const DISMISS_THRESHOLD = 100;
+const DISMISS_THRESHOLD = 150;
 
 interface GoalsPopupProps {
   visible: boolean;
@@ -147,7 +148,7 @@ export function GoalsPopup({
             {goals ? (
               // Progress View - Goals are configured
               <Animated.View
-                entering={FadeInDown.delay(100).duration(300)}
+                entering={FadeInDown.delay(100).duration(400)}
                 style={styles.progressContent}
               >
                 <View style={styles.progressHeader}>
@@ -157,7 +158,7 @@ export function GoalsPopup({
                     onPress={handleEdit}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <Ionicons name="pencil" size={16} color="#666" />
+                    <Ionicons name="pencil" size={16} color={Tokens.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
@@ -179,11 +180,11 @@ export function GoalsPopup({
             ) : (
               // Setup Prompt - No goals configured
               <Animated.View
-                entering={FadeInDown.delay(100).duration(300)}
+                entering={FadeInDown.delay(100).duration(400)}
                 style={styles.setupContent}
               >
                 <View style={styles.setupIconContainer}>
-                  <Ionicons name="nutrition-outline" size={32} color="#0a7ea4" />
+                  <Ionicons name="nutrition-outline" size={32} color={Tokens.accent} />
                 </View>
                 <Text style={styles.setupTitle}>Set your nutrition goals</Text>
                 <Text style={styles.setupDescription}>
@@ -192,7 +193,7 @@ export function GoalsPopup({
                 <TouchableOpacity
                   style={styles.setupButton}
                   onPress={handleSetup}
-                  activeOpacity={0.8}
+                  activeOpacity={0.7}
                 >
                   <Text style={styles.setupButtonText}>Get Started</Text>
                 </TouchableOpacity>
@@ -218,22 +219,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   popupContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: Tokens.surfaceRaised,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: 32,
     paddingHorizontal: 20,
+    ...Tokens.shadowMedium,
   },
   dragIndicatorContainer: {
     alignItems: 'center',
     paddingTop: 12,
-    paddingBottom: 16,
+    paddingBottom: 8,
   },
   dragIndicator: {
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#ddd',
+    backgroundColor: Tokens.border,
   },
   // Setup prompt styles
   setupContent: {
@@ -244,7 +246,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#E0F2F7',
+    backgroundColor: Tokens.accentTint,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -252,30 +254,30 @@ const styles = StyleSheet.create({
   setupTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: '#333',
+    color: Tokens.textPrimary,
     marginBottom: 8,
     textAlign: 'center',
   },
   setupDescription: {
     fontSize: 14,
-    color: '#666',
+    color: Tokens.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 20,
     paddingHorizontal: 16,
   },
   setupButton: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: Tokens.accent,
     paddingHorizontal: 32,
     paddingVertical: 14,
-    borderRadius: 25,
+    borderRadius: 14,
     minWidth: 160,
     alignItems: 'center',
   },
   setupButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: "400",
+    fontWeight: "600",
   },
   // Progress view styles
   progressContent: {
@@ -290,11 +292,14 @@ const styles = StyleSheet.create({
   progressTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: '#333',
+    color: Tokens.textPrimary,
   },
   editButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Tokens.surface,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
   },
 });

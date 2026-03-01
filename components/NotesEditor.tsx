@@ -665,6 +665,7 @@ export function NotesEditor({
   const textInputRef = useRef<TextInput>(null);
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartRef = useRef({ x: 0, y: 0 });
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
   const scrollOffset = useSharedValue(0);
@@ -1127,8 +1128,18 @@ export function NotesEditor({
             style={StyleSheet.absoluteFill}
             onStartShouldSetResponder={() => true}
             onResponderTerminationRequest={() => true}
-            onResponderRelease={() => {
-              textInputRef.current?.focus();
+            onResponderGrant={(e) => {
+              touchStartRef.current = {
+                x: e.nativeEvent.pageX,
+                y: e.nativeEvent.pageY,
+              };
+            }}
+            onResponderRelease={(e) => {
+              const dx = Math.abs(e.nativeEvent.pageX - touchStartRef.current.x);
+              const dy = Math.abs(e.nativeEvent.pageY - touchStartRef.current.y);
+              if (dx < 10 && dy < 10) {
+                textInputRef.current?.focus();
+              }
             }}
           />
         )}

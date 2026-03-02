@@ -34,6 +34,7 @@ interface TotalsBarProps {
   isOnline: boolean;
   onAddSavedPress: () => void;
   onTotalsPress: () => void;
+  useGlass?: boolean;
 }
 
 function arePropsEqual(prev: TotalsBarProps, next: TotalsBarProps) {
@@ -44,7 +45,8 @@ function arePropsEqual(prev: TotalsBarProps, next: TotalsBarProps) {
     prev.dailyTotals.carbs === next.dailyTotals.carbs &&
     prev.isOnline === next.isOnline &&
     prev.onAddSavedPress === next.onAddSavedPress &&
-    prev.onTotalsPress === next.onTotalsPress
+    prev.onTotalsPress === next.onTotalsPress &&
+    prev.useGlass === next.useGlass
   );
 }
 
@@ -53,7 +55,78 @@ export const TotalsBar = React.memo(function TotalsBar({
   isOnline,
   onAddSavedPress,
   onTotalsPress,
+  useGlass,
 }: TotalsBarProps) {
+  const showGlass = (useGlass ?? true) && isLiquidGlassSupported;
+
+  const addButtonContent = (
+    <Ionicons name="add" size={24} color={Tokens.accentBright} />
+  );
+
+  const totalsContent = (
+    <>
+      <View style={styles.totalItem}>
+        <AnimatedDigits
+          value={dailyTotals.kcal}
+          maxDigits={5}
+          maxWidth={56}
+          style={styles.totalValue}
+        />
+        <FontAwesomeIcon
+          icon={icons.fire}
+          size={14}
+          color="#FF6B35"
+          style={styles.totalIcon}
+        />
+      </View>
+      <View style={styles.totalDivider} />
+      <View style={styles.totalItem}>
+        <AnimatedDigits
+          value={dailyTotals.protein}
+          maxDigits={4}
+          maxWidth={56}
+          style={styles.totalValue}
+        />
+        <FontAwesomeIcon
+          icon={icons.protein}
+          size={14}
+          color="#4A90D9"
+          style={styles.totalIcon}
+        />
+      </View>
+      <View style={styles.totalDivider} />
+      <View style={styles.totalItem}>
+        <AnimatedDigits
+          value={dailyTotals.fat}
+          maxDigits={4}
+          maxWidth={56}
+          style={styles.totalValue}
+        />
+        <FontAwesomeIcon
+          icon={icons.fat}
+          size={14}
+          color="#F5A623"
+          style={styles.totalIcon}
+        />
+      </View>
+      <View style={styles.totalDivider} />
+      <View style={styles.totalItem}>
+        <AnimatedDigits
+          value={dailyTotals.carbs}
+          maxDigits={4}
+          maxWidth={56}
+          style={styles.totalValue}
+        />
+        <FontAwesomeIcon
+          icon={icons.carbs}
+          size={14}
+          color="#9B6B9E"
+          style={styles.totalIcon}
+        />
+      </View>
+    </>
+  );
+
   return (
     <View style={styles.container}>
       <OfflinePill visible={!isOnline} />
@@ -65,17 +138,20 @@ export const TotalsBar = React.memo(function TotalsBar({
           onPress={onAddSavedPress}
           activeOpacity={0.8}
         >
-          <LiquidGlassView
-            style={[
-              styles.addSavedButton,
-              !isLiquidGlassSupported && styles.addSavedButtonFallback,
-            ]}
-            interactive
-            effect="regular"
-            tintColor={Tokens.accentTint}
-          >
-            <Ionicons name="add" size={24} color={Tokens.accentBright} />
-          </LiquidGlassView>
+          {showGlass ? (
+            <LiquidGlassView
+              style={[styles.addSavedButton]}
+              interactive
+              effect="regular"
+              tintColor={Tokens.accentTint}
+            >
+              {addButtonContent}
+            </LiquidGlassView>
+          ) : (
+            <View style={[styles.addSavedButton, styles.addSavedButtonFallback]}>
+              {addButtonContent}
+            </View>
+          )}
         </TouchableOpacity>
 
         {/* Daily Totals Bar - Tap to open goals popup */}
@@ -84,75 +160,20 @@ export const TotalsBar = React.memo(function TotalsBar({
           onPress={onTotalsPress}
           activeOpacity={0.8}
         >
-          <LiquidGlassView
-            style={[
-              styles.totalsBar,
-              !isLiquidGlassSupported && styles.totalsBarFallback,
-            ]}
-            interactive
-            effect="regular"
-            tintColor={Tokens.background}
-          >
-            <View style={styles.totalItem}>
-              <AnimatedDigits
-                value={dailyTotals.kcal}
-                maxDigits={5}
-                maxWidth={56}
-                style={styles.totalValue}
-              />
-              <FontAwesomeIcon
-                icon={icons.fire}
-                size={14}
-                color="#FF6B35"
-                style={styles.totalIcon}
-              />
+          {showGlass ? (
+            <LiquidGlassView
+              style={[styles.totalsBar]}
+              interactive
+              effect="regular"
+              tintColor={Tokens.background}
+            >
+              {totalsContent}
+            </LiquidGlassView>
+          ) : (
+            <View style={[styles.totalsBar, styles.totalsBarFallback]}>
+              {totalsContent}
             </View>
-            <View style={styles.totalDivider} />
-            <View style={styles.totalItem}>
-              <AnimatedDigits
-                value={dailyTotals.protein}
-                maxDigits={4}
-                maxWidth={56}
-                style={styles.totalValue}
-              />
-              <FontAwesomeIcon
-                icon={icons.protein}
-                size={14}
-                color="#4A90D9"
-                style={styles.totalIcon}
-              />
-            </View>
-            <View style={styles.totalDivider} />
-            <View style={styles.totalItem}>
-              <AnimatedDigits
-                value={dailyTotals.fat}
-                maxDigits={4}
-                maxWidth={56}
-                style={styles.totalValue}
-              />
-              <FontAwesomeIcon
-                icon={icons.fat}
-                size={14}
-                color="#F5A623"
-                style={styles.totalIcon}
-              />
-            </View>
-            <View style={styles.totalDivider} />
-            <View style={styles.totalItem}>
-              <AnimatedDigits
-                value={dailyTotals.carbs}
-                maxDigits={4}
-                maxWidth={56}
-                style={styles.totalValue}
-              />
-              <FontAwesomeIcon
-                icon={icons.carbs}
-                size={14}
-                color="#9B6B9E"
-                style={styles.totalIcon}
-              />
-            </View>
-          </LiquidGlassView>
+          )}
         </TouchableOpacity>
       </View>
     </View>

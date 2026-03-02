@@ -418,7 +418,8 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* iOS: Totals bar as native keyboard accessory */}
+      {/* iOS: Totals bar as native keyboard accessory (no glass — moving
+           LiquidGlassView during interactive dismiss causes GPU freeze) */}
       {Platform.OS === "ios" && (
         <InputAccessoryView nativeID={INPUT_ACCESSORY_VIEW_ID}>
           <View style={styles.inputAccessoryWrapper}>
@@ -427,6 +428,7 @@ export default function HomeScreen() {
               isOnline={isOnline}
               onAddSavedPress={handleAddSavedPress}
               onTotalsPress={handleTotalsPress}
+              useGlass={false}
             />
           </View>
         </InputAccessoryView>
@@ -434,10 +436,10 @@ export default function HomeScreen() {
 
       {/* Static bottom bar: always visible, keyboard renders on top natively */}
       <View
-        style={styles.bottomBarContainer}
-        pointerEvents={
-          Platform.OS === "ios" && keyboardVisible ? "none" : "auto"
-        }
+        style={[
+          styles.bottomBarContainer,
+          Platform.OS === "ios" && keyboardVisible && { display: 'none' },
+        ]}
       >
         <TotalsBar
           dailyTotals={dailyTotals}

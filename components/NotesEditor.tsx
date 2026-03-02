@@ -14,6 +14,7 @@ import React, {
 } from "react";
 import {
   Dimensions,
+  Keyboard,
   Animated as RNAnimated,
   StyleSheet,
   Text,
@@ -23,10 +24,8 @@ import {
 } from "react-native";
 import Animated, {
   scrollTo,
-  useAnimatedKeyboard,
   useAnimatedRef,
   useAnimatedScrollHandler,
-  useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
 import { NutritionReasoningPopup } from "./NutritionReasoningPopup";
@@ -669,7 +668,7 @@ export function NotesEditor({
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
   const scrollOffset = useSharedValue(0);
   const lastStableScrollY = useSharedValue(0);
-  const keyboard = useAnimatedKeyboard();
+  const keyboardHeightRef = useRef(0);
   // Map of entry text prefix -> y position (for entries starting with "-" or "—")
   const [entryYMap, setEntryYMap] = useState<Map<string, number[]>>(new Map());
   // Track the text that was measured, so we know if positions are stale
@@ -717,11 +716,6 @@ export function NotesEditor({
     },
   });
 
-  // Animated style for overlay - translates indicators to match scroll position
-  const animatedOverlayStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: -scrollOffset.value }],
-  }));
-
   // Handle text layout - extract y positions for indicator positioning
   const handleTextLayout = useCallback(
     (event: any) => {
@@ -757,6 +751,20 @@ export function NotesEditor({
     };
   }, []);
 
+  // Track keyboard height via standard listeners (lightweight alternative to useAnimatedKeyboard)
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardWillShow", (e) => {
+      keyboardHeightRef.current = e.endCoordinates.height;
+    });
+    const hideSub = Keyboard.addListener("keyboardWillHide", () => {
+      keyboardHeightRef.current = 0;
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   // Release controlled selection after focus so native cursor works
   const handleFocus = useCallback(() => {
     requestAnimationFrame(() => setSelection(undefined));
@@ -777,7 +785,7 @@ export function NotesEditor({
   // so this callback doesn't change on every scroll frame.
   const scrollToKeepCaretVisible = useCallback(
     (cursorPos: number, text: string) => {
-      const kbHeight = keyboard.height.value;
+      const kbHeight = keyboardHeightRef.current;
       if (kbHeight === 0) return;
 
       const cursorY = getCursorLineY(cursorPos, text);
@@ -800,7 +808,7 @@ export function NotesEditor({
         scrollTo(scrollRef, 0, Math.max(0, cursorY - SCROLL_MARGIN), true);
       }
     },
-    [getCursorLineY, scrollRef, keyboard],
+    [getCursorLineY, scrollRef],
   );
 
   // Parse document text to find food entry lines
@@ -1121,6 +1129,25 @@ export function NotesEditor({
           clearTextOnFocus={false}
           inputAccessoryViewID={inputAccessoryViewID}
         />
+
+        {/* Inline nutrition indicators - scrolls naturally with content */}
+        <View
+          style={[styles.overlay, contentTopInset ? { top: TEXT_INPUT_PADDING_TOP + FONT_VERTICAL_OFFSET + contentTopInset } : undefined]}
+          pointerEvents="box-none"
+        >
+          {indicatorData.map((item) => (
+            <IndicatorRow
+              key={item.entryId}
+              entry={item.entry}
+              yPosition={item.yPosition}
+              opacity={hasFreshMeasurements ? 1 : 0}
+              isOnline={isOnline}
+              waterTrackingEnabled={waterTrackingEnabled}
+              onTap={handleIndicatorTap}
+            />
+          ))}
+        </View>
+
         {!isKeyboardUp && (
           <View
             style={StyleSheet.absoluteFill}
@@ -1190,24 +1217,6 @@ export function NotesEditor({
         style={[styles.footerFade, { height: 120 }]}
         pointerEvents="none"
       />
-
-      {/* Overlay for inline nutrition indicators */}
-      <Animated.View
-        style={[styles.overlay, animatedOverlayStyle, contentTopInset ? { top: TEXT_INPUT_PADDING_TOP + FONT_VERTICAL_OFFSET + contentTopInset } : undefined]}
-        pointerEvents="box-none"
-      >
-        {indicatorData.map((item) => (
-          <IndicatorRow
-            key={item.entryId}
-            entry={item.entry}
-            yPosition={item.yPosition}
-            opacity={hasFreshMeasurements ? 1 : 0}
-            isOnline={isOnline}
-            waterTrackingEnabled={waterTrackingEnabled}
-            onTap={handleIndicatorTap}
-          />
-        ))}
-      </Animated.View>
 
       {/* Reasoning Popup */}
       <NutritionReasoningPopup

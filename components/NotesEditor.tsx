@@ -1,5 +1,4 @@
 import { Tokens } from "@/constants/theme";
-import { useScrollableInput } from "@/hooks/useScrollableInput";
 import { useAppStore } from "@/store/app-store";
 import { Entry } from "@/types";
 import { truncateNumber } from "@/utils/formatNumber";
@@ -16,18 +15,14 @@ import {
   Dimensions,
   Keyboard,
   Animated as RNAnimated,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, {
-  scrollTo,
-  useAnimatedRef,
-  useAnimatedScrollHandler,
-  useSharedValue,
-} from "react-native-reanimated";
 import { NutritionReasoningPopup } from "./NutritionReasoningPopup";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
@@ -352,7 +347,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 88,
+    paddingBottom: 400,
   },
   hiddenMeasureText: {
     position: "absolute",
@@ -369,6 +364,10 @@ const styles = StyleSheet.create({
     top: 0,
     opacity: 0,
     pointerEvents: "none",
+  },
+  bottomTapArea: {
+    flexGrow: 1,
+    minHeight: 300,
   },
   documentInput: {
     flexGrow: 1,
@@ -661,13 +660,11 @@ export function NotesEditor({
   documentTextRef.current = documentText;
   const [prevInitialText, setPrevInitialText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
-  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollRef = useRef<ScrollView>(null);
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const touchStartRef = useRef({ x: 0, y: 0 });
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
-  const scrollOffset = useSharedValue(0);
-  const lastStableScrollY = useSharedValue(0);
+  const scrollOffsetRef = useRef(0);
   const keyboardHeightRef = useRef(0);
   // Map of entry text prefix -> y position (for entries starting with "-" or "—")
   const [entryYMap, setEntryYMap] = useState<Map<string, number[]>>(new Map());
@@ -697,24 +694,6 @@ export function NotesEditor({
   >(undefined);
   // Flag to prevent recursive text change handling during transforms
   const isTransformingRef = useRef<boolean>(false);
-  // Track keyboard state so we can show/hide the touch interceptor
-  const [isKeyboardUp, setIsKeyboardUp] = useState(false);
-  const onKeyboardStateChange = useCallback((isUp: boolean) => {
-    setIsKeyboardUp(isUp);
-  }, []);
-  useScrollableInput(onKeyboardStateChange);
-  // Reanimated scroll handler - runs on UI thread, no JS re-renders
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollOffset.value = event.contentOffset.y;
-    },
-    onEndDrag: (event) => {
-      lastStableScrollY.value = event.contentOffset.y;
-    },
-    onMomentumEnd: (event) => {
-      lastStableScrollY.value = event.contentOffset.y;
-    },
-  });
 
   // Handle text layout - extract y positions for indicator positioning
   const handleTextLayout = useCallback(
@@ -781,8 +760,6 @@ export function NotesEditor({
   );
 
   // Scroll to keep caret visible when typing (e.g. after pressing Enter)
-  // Safe with Reanimated: reads scrollOffset.value (shared value, no React dep)
-  // so this callback doesn't change on every scroll frame.
   const scrollToKeepCaretVisible = useCallback(
     (cursorPos: number, text: string) => {
       const kbHeight = keyboardHeightRef.current;
@@ -794,7 +771,7 @@ export function NotesEditor({
       const HEADER_HEIGHT = 100;
       const visibleHeight = screenHeight - HEADER_HEIGHT - kbHeight;
 
-      const visibleTop = scrollOffset.value;
+      const visibleTop = scrollOffsetRef.current;
       const visibleBottom = visibleTop + visibleHeight;
       const SCROLL_MARGIN = LINE_HEIGHT * 2;
 
@@ -802,13 +779,13 @@ export function NotesEditor({
         // Cursor below visible area - scroll down
         const targetScroll =
           cursorY - visibleHeight + LINE_HEIGHT + SCROLL_MARGIN;
-        scrollTo(scrollRef, 0, Math.max(0, targetScroll), true);
+        scrollRef.current?.scrollTo({ y: Math.max(0, targetScroll), animated: true });
       } else if (cursorY < visibleTop + SCROLL_MARGIN) {
         // Cursor above visible area - scroll up
-        scrollTo(scrollRef, 0, Math.max(0, cursorY - SCROLL_MARGIN), true);
+        scrollRef.current?.scrollTo({ y: Math.max(0, cursorY - SCROLL_MARGIN), animated: true });
       }
     },
-    [getCursorLineY, scrollRef],
+    [getCursorLineY],
   );
 
   // Parse document text to find food entry lines
@@ -1089,16 +1066,14 @@ export function NotesEditor({
         {documentText || " "}
       </Text>
 
-      {/* ScrollView wrapper enables keyboard dismiss on drag */}
-      <Animated.ScrollView
+      <ScrollView
         ref={scrollRef}
         style={styles.scrollContainer}
         contentContainerStyle={[styles.scrollContent, contentTopInset ? { paddingTop: contentTopInset } : undefined]}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets
         scrollEventThrottle={16}
-        onScroll={scrollHandler}
+        onScroll={(e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
       >
         {/* Document editor - full screen */}
         <TextInput
@@ -1148,59 +1123,16 @@ export function NotesEditor({
           ))}
         </View>
 
-        {!isKeyboardUp && (
-          <View
-            style={StyleSheet.absoluteFill}
-            onStartShouldSetResponder={() => true}
-            onResponderTerminationRequest={() => true}
-            onResponderGrant={(e) => {
-              touchStartRef.current = {
-                x: e.nativeEvent.pageX,
-                y: e.nativeEvent.pageY,
-              };
-            }}
-            onResponderRelease={(e) => {
-              const dx = Math.abs(
-                e.nativeEvent.pageX - touchStartRef.current.x,
-              );
-              const dy = Math.abs(
-                e.nativeEvent.pageY - touchStartRef.current.y,
-              );
-              if (dx < 10 && dy < 10) {
-                // Estimate cursor position from tap coordinates
-                const tapY =
-                  e.nativeEvent.locationY + scrollOffset.value;
-                const textStartY = contentTopInset + 12; // scroll padding + TextInput paddingTop
-                const lineIndex = Math.max(
-                  0,
-                  Math.floor((tapY - textStartY) / LINE_HEIGHT),
-                );
-                const lines = documentTextRef.current.split("\n");
-                const clampedLine = Math.min(
-                  lineIndex,
-                  lines.length - 1,
-                );
-                // Sum chars before the tapped line
-                let charPos = 0;
-                for (let i = 0; i < clampedLine; i++) {
-                  charPos += lines[i].length + 1;
-                }
-                // Approximate char within line from X
-                const tapX = e.nativeEvent.locationX - 20; // paddingLeft
-                if (tapX > 0) {
-                  const avgCharW = 8.5; // SF Pro 17px average
-                  charPos += Math.min(
-                    Math.round(tapX / avgCharW),
-                    lines[clampedLine].length,
-                  );
-                }
-                setSelection({ start: charPos, end: charPos });
-                textInputRef.current?.focus();
-              }
-            }}
-          />
-        )}
-      </Animated.ScrollView>
+        {/* Bottom spacer — tap below text focuses at end of document */}
+        <Pressable
+          style={styles.bottomTapArea}
+          onPress={() => {
+            const len = documentTextRef.current.length;
+            setSelection({ start: len, end: len });
+            textInputRef.current?.focus();
+          }}
+        />
+      </ScrollView>
 
       {/* Header fade gradient */}
       {contentTopInset > 0 && (

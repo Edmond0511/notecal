@@ -49,7 +49,6 @@ export function AddActionMenu({
         exiting={FadeOutDown.duration(150)}
         style={styles.menuWrapper}
       >
-        <View style={styles.menuContainer}>
           <View style={styles.menuRow}>
             <TouchableOpacity
               style={styles.menuItem}
@@ -111,7 +110,6 @@ export function AddActionMenu({
               <Text style={styles.menuLabel}>Search Foods</Text>
             </TouchableOpacity>
           </View>
-        </View>
       </Animated.View>
     </View>
   );
@@ -137,16 +135,6 @@ const styles = StyleSheet.create({
     marginBottom: 140,
     marginHorizontal: 20,
     alignSelf: "stretch",
-  },
-  menuContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 6,
   },
   menuRow: {
     flexDirection: "row",

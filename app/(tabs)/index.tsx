@@ -168,7 +168,7 @@ export default function HomeScreen() {
   const handleAddSavedPress = useCallback(() => {
     if (keyboardVisibleRef.current) {
       Keyboard.dismiss();
-      const sub = Keyboard.addListener("keyboardDidHide", () => {
+      const sub = Keyboard.addListener("keyboardWillHide", () => {
         sub.remove();
         setShowAddMenu(true);
       });
@@ -309,13 +309,13 @@ export default function HomeScreen() {
       keyboardVisibleRef.current = true;
       setKeyboardVisible(true);
     });
-    const didHideSub = Keyboard.addListener("keyboardDidHide", () => {
+    const willHideSub = Keyboard.addListener("keyboardWillHide", () => {
       keyboardVisibleRef.current = false;
       setKeyboardVisible(false);
     });
     return () => {
       willShowSub.remove();
-      didHideSub.remove();
+      willHideSub.remove();
     };
   }, []);
 

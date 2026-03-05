@@ -838,6 +838,11 @@ export function NotesEditor({
   // layoutStale briefly hides indicators on every keystroke.
   if (initialDocumentText !== prevInitialText) {
     setPrevInitialText(initialDocumentText);
+    // Clear pending debounce from previous date so it doesn't fire with wrong currentDate
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
+    }
     if (initialDocumentText !== documentText) {
       setDocumentText(initialDocumentText);
       previousTextRef.current = initialDocumentText;

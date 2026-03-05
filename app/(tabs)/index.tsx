@@ -27,12 +27,12 @@ import {
   NutritionNotFoodError,
 } from "@/services/nutritionApi";
 import { useAppStore } from "@/store/app-store";
-import { BarcodeProduct, DatabaseSearchResult, Entry, SavedEntry } from "@/types";
+import { useEntriesForDate } from "@/store/selectors";
+import { BarcodeProduct, DatabaseSearchResult, SavedEntry } from "@/types";
 import { dateToIndex, formatDateDisplay, indexToDate } from "@/utils/dateUtils";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useShallow } from "zustand/react/shallow";
 import {
   InputAccessoryView,
   Keyboard,
@@ -68,13 +68,8 @@ export default function HomeScreen() {
 
   const pagerRef = useRef<InfinitePagerImperativeApi>(null);
 
-  // Filter entries for current date (for TotalsBar) — useShallow avoids
-  // re-renders when entries on other dates change.
-  const entries = useAppStore(
-    useShallow((state) =>
-      state.entries.filter((entry: Entry) => entry.date === state.currentDate),
-    ),
-  );
+  // O(1) indexed lookup for current date entries (for TotalsBar)
+  const entries = useEntriesForDate(currentDate);
 
   const [showCalendar, setShowCalendar] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -99,6 +94,9 @@ export default function HomeScreen() {
       const newDate = indexToDate(index);
       setCurrentDate(newDate);
       Keyboard.dismiss();
+      // Dismiss again after spring settles — catches any focus triggered by
+      // the swipe's touch-up landing on the new page's TextInput.
+      setTimeout(() => Keyboard.dismiss(), 250);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
     [setCurrentDate],
@@ -140,6 +138,7 @@ export default function HomeScreen() {
         <DatePage
           dateString={dateString}
           isActive={isActive}
+          isOnline={isOnline}
           inputAccessoryViewID={
             Platform.OS === "ios" && isActive
               ? INPUT_ACCESSORY_VIEW_ID
@@ -149,7 +148,7 @@ export default function HomeScreen() {
         />
       );
     },
-    [contentTopInset],
+    [contentTopInset, isOnline],
   );
 
   // --- Insertion handlers (saved entries, barcode, photo, DB search) ---
@@ -371,7 +370,7 @@ export default function HomeScreen() {
           ]}
           interactive
           effect="regular"
-          tintColor={Tokens.background}
+          tintColor="rgba(250, 250, 247, 0.3)"
         >
           <TouchableOpacity
             style={styles.navButtonCompact}
@@ -411,15 +410,14 @@ export default function HomeScreen() {
             ]}
             interactive
             effect="regular"
-            tintColor={Tokens.background}
+            tintColor="rgba(250, 250, 247, 0.3)"
           >
             <Ionicons name="settings-outline" size={20} color="#000" />
           </LiquidGlassView>
         </TouchableOpacity>
       </View>
 
-      {/* iOS: Totals bar as native keyboard accessory (no glass — moving
-           LiquidGlassView during interactive dismiss causes GPU freeze) */}
+      {/* iOS: Totals bar as native keyboard accessory */}
       {Platform.OS === "ios" && (
         <InputAccessoryView nativeID={INPUT_ACCESSORY_VIEW_ID}>
           <View style={styles.inputAccessoryWrapper}>
@@ -428,7 +426,6 @@ export default function HomeScreen() {
               isOnline={isOnline}
               onAddSavedPress={handleAddSavedPress}
               onTotalsPress={handleTotalsPress}
-              useGlass={false}
             />
           </View>
         </InputAccessoryView>

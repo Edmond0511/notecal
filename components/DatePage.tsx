@@ -1,14 +1,14 @@
 import { NotesEditor } from '@/components/NotesEditor';
-import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useAppStore } from '@/store/app-store';
-import { Entry } from '@/types';
+import { useEntriesForDate } from '@/store/selectors';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { StyleSheet, View } from 'react-native';
+import { Keyboard, StyleSheet, View } from 'react-native';
 
 interface DatePageProps {
   dateString: string;
   isActive: boolean;
+  isOnline: boolean;
   inputAccessoryViewID?: string;
   contentTopInset?: number;
 }
@@ -16,27 +16,55 @@ interface DatePageProps {
 export const DatePage = React.memo(function DatePage({
   dateString,
   isActive,
+  isOnline,
   inputAccessoryViewID,
   contentTopInset,
 }: DatePageProps) {
-  const { isOnline } = useNetworkStatus();
-  const entries = useAppStore(
-    useShallow((s) => s.entries.filter((e: Entry) => e.date === dateString)),
+  // O(1) indexed lookup instead of O(n) filter
+  const entries = useEntriesForDate(dateString);
+
+  // Single selector for all store actions + derived state — one subscription
+  const {
+    addEntry,
+    updateEntry,
+    deleteEntry,
+    deleteEntries,
+    saveDocument,
+    getDocument,
+    waterTrackingEnabled,
+    pendingInsertion,
+    clearPendingInsertion,
+  } = useAppStore(
+    useShallow((s) => ({
+      addEntry: s.addEntry,
+      updateEntry: s.updateEntry,
+      deleteEntry: s.deleteEntry,
+      deleteEntries: s.deleteEntries,
+      saveDocument: s.saveDocument,
+      getDocument: s.getDocument,
+      waterTrackingEnabled: s.goals?.manualTargets?.water !== undefined,
+      pendingInsertion:
+        s.pendingInsertion?.date === dateString ? s.pendingInsertion : null,
+      clearPendingInsertion: s.clearPendingInsertion,
+    })),
   );
 
-  const addEntry = useAppStore((s) => s.addEntry);
-  const updateEntry = useAppStore((s) => s.updateEntry);
-  const deleteEntry = useAppStore((s) => s.deleteEntry);
-  const deleteEntries = useAppStore((s) => s.deleteEntries);
-  const saveDocument = useAppStore((s) => s.saveDocument);
-  const getDocument = useAppStore((s) => s.getDocument);
-  const waterTrackingEnabled = useAppStore(
-    (s) => s.goals?.manualTargets?.water !== undefined,
-  );
-  const pendingInsertion = useAppStore((s) =>
-    s.pendingInsertion?.date === dateString ? s.pendingInsertion : null,
-  );
-  const clearPendingInsertion = useAppStore((s) => s.clearPendingInsertion);
+  // Block pointer events briefly when page becomes active via swipe.
+  // Prevents the swipe's touch-up from triggering keyboard focus on the
+  // new page's TextInput or bottom-tap Pressable.
+  const prevActiveRef = useRef(isActive);
+  const [blockInteraction, setBlockInteraction] = useState(false);
+
+  useEffect(() => {
+    if (isActive && !prevActiveRef.current) {
+      setBlockInteraction(true);
+      Keyboard.dismiss();
+      const timer = setTimeout(() => setBlockInteraction(false), 200);
+      prevActiveRef.current = isActive;
+      return () => clearTimeout(timer);
+    }
+    prevActiveRef.current = isActive;
+  }, [isActive]);
 
   // Local document text state
   const [documentText, setDocumentText] = useState(() => {
@@ -78,7 +106,7 @@ export const DatePage = React.memo(function DatePage({
   );
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} pointerEvents={blockInteraction ? 'none' : 'auto'}>
       <NotesEditor
         entries={entries}
         initialDocumentText={documentText}

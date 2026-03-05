@@ -114,6 +114,7 @@ export default function HomeScreen() {
   );
 
   const openCalendar = useCallback(() => {
+    Keyboard.dismiss();
     setShowCalendar(true);
   }, []);
 
@@ -380,7 +381,11 @@ export default function HomeScreen() {
             <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={openCalendar}>
+          <TouchableOpacity
+            onPress={openCalendar}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <View style={styles.dateButtonContent}>
               <Text style={styles.dateText}>
                 {formatDateDisplay(currentDate)}

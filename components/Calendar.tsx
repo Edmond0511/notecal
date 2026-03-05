@@ -1,4 +1,5 @@
 import * as Haptics from "expo-haptics";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   Dimensions,
@@ -20,6 +21,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppStore } from "@/store/app-store";
+import { Tokens } from "@/constants/theme";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
@@ -85,6 +87,21 @@ function getDotColor(consumed: number, target: number): keyof typeof DOT_COLORS 
   if (ratio >= 0.90) return 'green';
   if (ratio >= 0.50) return 'yellow';
   return 'red';
+}
+
+function buildDayA11yLabel(
+  date: Date,
+  isToday: boolean,
+  isSelected: boolean,
+  kcal: number | undefined,
+): string {
+  const parts: string[] = [
+    `${MONTHS[date.getMonth()]} ${date.getDate()}`,
+  ];
+  if (isToday) parts.push('today');
+  if (isSelected) parts.push('selected');
+  if (kcal && kcal > 0) parts.push(`${Math.round(kcal)} calories`);
+  return parts.join(', ');
 }
 
 export function Calendar({
@@ -189,6 +206,15 @@ export function Calendar({
     onClose();
   }, [onClose]);
 
+  const handleGoToToday = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const today = new Date();
+    setViewMonth(today.getMonth());
+    setViewYear(today.getFullYear());
+    onSelectDate(formatDate(today));
+    onClose();
+  }, [onSelectDate, onClose]);
+
   // Pan gesture for swipe-to-dismiss
   const translateY = useSharedValue(0);
 
@@ -260,29 +286,43 @@ export function Calendar({
             <View style={styles.handle} />
           </View>
 
-          {/* Header - Month Year with text-based navigation */}
-          <View style={styles.header}>
+          {/* Header - Today | Month Year | ← → */}
+          <View style={styles.navBar}>
             <TouchableOpacity
-              onPress={() => navigateMonth("prev")}
-              style={styles.navButton}
-              hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
+              onPress={handleGoToToday}
+              style={styles.navPill}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Go to today"
+              accessibilityHint="Selects today's date"
             >
-              <Text style={styles.navText}>←</Text>
+              <Text style={styles.navPillText}>Today</Text>
             </TouchableOpacity>
 
-            <View style={styles.monthYearContainer}>
-              <Text style={styles.monthText}>
-                {MONTHS[viewMonth]} {viewYear}
-              </Text>
+            <Text style={styles.monthText} accessibilityRole="header">
+              {MONTHS[viewMonth]} {viewYear}
+            </Text>
+
+            <View style={styles.navArrows}>
+              <TouchableOpacity
+                onPress={() => navigateMonth("prev")}
+                style={styles.navPill}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Previous month"
+              >
+                <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigateMonth("next")}
+                style={styles.navPill}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Next month"
+              >
+                <Ionicons name="chevron-forward" size={20} color={Tokens.textPrimary} />
+              </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              onPress={() => navigateMonth("next")}
-              style={styles.navButton}
-              hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
-            >
-              <Text style={styles.navText}>→</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Weekday Headers - ultra light */}
@@ -301,18 +341,16 @@ export function Calendar({
               const isSelected = isSameDay(dateStr, selectedDate);
               const isTodayDate = isSameDay(dateStr, todayStr);
 
+              const consumed = dateCalorieMap?.[dateStr];
+
               let dotColor: keyof typeof DOT_COLORS | null = null;
-              if (dateCalorieMap && item.isCurrentMonth) {
-                const consumed = dateCalorieMap[dateStr];
-                if (consumed && consumed > 0) {
-                  const isFuture = dateStr > todayStr;
-                  if (isFuture) {
-                    // Future dates with entries get a neutral green dot
-                    dotColor = 'green';
-                  } else {
-                    const target = goals!.manualTargets?.kcal ?? goals!.targetKcal;
-                    dotColor = getDotColor(consumed, target);
-                  }
+              if (dateCalorieMap && item.isCurrentMonth && consumed && consumed > 0) {
+                const isFuture = dateStr > todayStr;
+                if (isFuture) {
+                  dotColor = 'green';
+                } else {
+                  const target = goals!.manualTargets?.kcal ?? goals!.targetKcal;
+                  dotColor = getDotColor(consumed, target);
                 }
               }
 
@@ -322,6 +360,13 @@ export function Calendar({
                   style={styles.dayCell}
                   onPress={() => handleSelectDate(item.date)}
                   activeOpacity={0.5}
+                  accessibilityRole="button"
+                  accessibilityLabel={buildDayA11yLabel(
+                    item.date,
+                    isTodayDate,
+                    isSelected,
+                    consumed,
+                  )}
                 >
                   <View
                     style={[
@@ -367,45 +412,52 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sheet: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: Tokens.surfaceRaised,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     paddingHorizontal: CALENDAR_PADDING,
   },
   handleContainer: {
     alignItems: "center",
-    paddingTop: 10,
-    paddingBottom: 6,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   handle: {
-    width: 32,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: "#e0e0e0",
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Tokens.border,
   },
-  header: {
+  navBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 20,
-  },
-  navButton: {
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-  },
-  navText: {
-    fontSize: 20,
-    color: "#0a7ea4",
-    fontWeight: "300",
-  },
-  monthYearContainer: {
-    alignItems: "center",
+    paddingVertical: 12,
   },
   monthText: {
     fontSize: 17,
-    fontWeight: "500",
-    color: "#1a1a1a",
+    fontWeight: "600",
+    color: Tokens.textPrimary,
     letterSpacing: 0.3,
+  },
+  navArrows: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  navPill: {
+    backgroundColor: Tokens.surface,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  navPillText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: Tokens.textPrimary,
   },
   weekdayRow: {
     flexDirection: "row",
@@ -418,7 +470,7 @@ const styles = StyleSheet.create({
   weekdayText: {
     fontSize: 11,
     fontWeight: "400",
-    color: "#999",
+    color: Tokens.textSecondary,
     letterSpacing: 0.5,
   },
   calendarGrid: {
@@ -432,32 +484,33 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   dayInner: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
   dayText: {
     fontSize: 15,
     fontWeight: "400",
-    color: "#333",
+    color: Tokens.textPrimary,
+    fontVariant: ['tabular-nums'],
   },
   otherMonthText: {
-    color: "#ccc",
+    color: Tokens.textTertiary,
   },
   todayDay: {
-    backgroundColor: "rgba(26, 104, 114, 0.12)",
+    backgroundColor: Tokens.accentTint,
   },
   todayDayText: {
-    color: "#0a7ea4",
+    color: Tokens.accent,
     fontWeight: "500",
   },
   selectedDay: {
-    backgroundColor: "#0a7ea4",
+    backgroundColor: Tokens.accent,
   },
   selectedDayText: {
-    color: "#fff",
+    color: Tokens.surfaceRaised,
     fontWeight: "500",
   },
 });

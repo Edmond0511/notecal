@@ -12,8 +12,6 @@ import React, {
   useState,
 } from "react";
 import {
-  Dimensions,
-  Keyboard,
   Animated as RNAnimated,
   Pressable,
   ScrollView,
@@ -665,7 +663,8 @@ export function NotesEditor({
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
   const scrollOffsetRef = useRef(0);
-  const keyboardHeightRef = useRef(0);
+  const scrollViewHeightRef = useRef(0);
+  const cursorPosRef = useRef(0);
   // Map of entry text prefix -> y position (for entries starting with "-" or "—")
   const [entryYMap, setEntryYMap] = useState<Map<string, number[]>>(new Map());
   // Track the text that was measured, so we know if positions are stale
@@ -730,62 +729,33 @@ export function NotesEditor({
     };
   }, []);
 
-  // Track keyboard height via standard listeners (lightweight alternative to useAnimatedKeyboard)
-  useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardWillShow", (e) => {
-      keyboardHeightRef.current = e.endCoordinates.height;
-    });
-    const hideSub = Keyboard.addListener("keyboardWillHide", () => {
-      keyboardHeightRef.current = 0;
-    });
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
   // Release controlled selection after focus so native cursor works
   const handleFocus = useCallback(() => {
     requestAnimationFrame(() => setSelection(undefined));
   }, []);
 
-  // Calculate Y position of cursor based on character position
-  const getCursorLineY = useCallback(
-    (cursorPos: number, text: string): number => {
-      const textBeforeCursor = text.substring(0, cursorPos);
-      const lineIndex = textBeforeCursor.split("\n").length - 1;
-      return lineIndex * LINE_HEIGHT + TEXT_INPUT_PADDING_TOP;
-    },
-    [],
-  );
+  // Scroll to keep caret visible above keyboard after typing
+  const scrollToCaretIfNeeded = useCallback(
+    (text: string) => {
+      const viewHeight = scrollViewHeightRef.current;
+      if (viewHeight === 0) return;
 
-  // Scroll to keep caret visible when typing (e.g. after pressing Enter)
-  const scrollToKeepCaretVisible = useCallback(
-    (cursorPos: number, text: string) => {
-      const kbHeight = keyboardHeightRef.current;
-      if (kbHeight === 0) return;
+      const lineIndex = text.substring(0, cursorPosRef.current).split('\n').length - 1;
+      const cursorY = (contentTopInset || 0) + 12 + lineIndex * LINE_HEIGHT;
+      const cursorBottom = cursorY + LINE_HEIGHT;
+      const scrollY = scrollOffsetRef.current;
+      // automaticallyAdjustKeyboardInsets sets contentInset.bottom = keyboard height,
+      // so viewHeight alone (layout height) is the visible area above the keyboard.
+      const visibleBottom = scrollY + viewHeight;
 
-      const cursorY = getCursorLineY(cursorPos, text);
-
-      const screenHeight = Dimensions.get("window").height;
-      const HEADER_HEIGHT = 100;
-      const visibleHeight = screenHeight - HEADER_HEIGHT - kbHeight;
-
-      const visibleTop = scrollOffsetRef.current;
-      const visibleBottom = visibleTop + visibleHeight;
-      const SCROLL_MARGIN = LINE_HEIGHT * 2;
-
-      if (cursorY + LINE_HEIGHT > visibleBottom - SCROLL_MARGIN) {
-        // Cursor below visible area - scroll down
-        const targetScroll =
-          cursorY - visibleHeight + LINE_HEIGHT + SCROLL_MARGIN;
-        scrollRef.current?.scrollTo({ y: Math.max(0, targetScroll), animated: true });
-      } else if (cursorY < visibleTop + SCROLL_MARGIN) {
-        // Cursor above visible area - scroll up
-        scrollRef.current?.scrollTo({ y: Math.max(0, cursorY - SCROLL_MARGIN), animated: true });
+      if (cursorBottom > visibleBottom) {
+        scrollRef.current?.scrollTo({
+          y: cursorBottom - viewHeight + LINE_HEIGHT,
+          animated: false,
+        });
       }
     },
-    [getCursorLineY],
+    [contentTopInset],
   );
 
   // Parse document text to find food entry lines
@@ -898,14 +868,7 @@ export function NotesEditor({
             setSelection(undefined);
             isTransformingRef.current = false;
             if (diff.type === "insert" && diff.insertedText.includes("\n")) {
-              setTimeout(
-                () =>
-                  scrollToKeepCaretVisible(
-                    result.newCursor,
-                    result.transformedText,
-                  ),
-                100,
-              );
+              requestAnimationFrame(() => scrollToCaretIfNeeded(result.transformedText));
             }
           }, 50);
         });
@@ -914,14 +877,8 @@ export function NotesEditor({
         previousTextRef.current = newText;
         onDocumentTextChange(newText);
 
-        // Scroll if newline was inserted — delay lets native scroll settle
-        if (diff.type === "insert" && diff.insertedText.includes("\n")) {
-          const newCursorPos = diff.position + diff.insertedText.length;
-          setTimeout(
-            () => scrollToKeepCaretVisible(newCursorPos, newText),
-            100,
-          );
-        }
+        // Keep caret above keyboard after typing
+        requestAnimationFrame(() => scrollToCaretIfNeeded(newText));
       }
 
       // Clear previous timeout to properly debounce
@@ -974,7 +931,7 @@ export function NotesEditor({
       isFreeform,
       processDocumentChanges,
       onDocumentTextChange,
-      scrollToKeepCaretVisible,
+      scrollToCaretIfNeeded,
       parseDocumentForFoodEntries,
       entries,
     ],
@@ -1070,9 +1027,11 @@ export function NotesEditor({
         ref={scrollRef}
         style={styles.scrollContainer}
         contentContainerStyle={[styles.scrollContent, contentTopInset ? { paddingTop: contentTopInset } : undefined]}
+        automaticallyAdjustKeyboardInsets
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
+        onLayout={(e) => { scrollViewHeightRef.current = e.nativeEvent.layout.height; }}
         onScroll={(e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
       >
         {/* Document editor - full screen */}
@@ -1103,6 +1062,7 @@ export function NotesEditor({
           selectTextOnFocus={false}
           clearTextOnFocus={false}
           inputAccessoryViewID={inputAccessoryViewID}
+          onSelectionChange={(e) => { cursorPosRef.current = e.nativeEvent.selection.end; }}
         />
 
         {/* Inline nutrition indicators - scrolls naturally with content */}

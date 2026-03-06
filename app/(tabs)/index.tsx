@@ -1,7 +1,7 @@
 import { AddActionMenu } from "@/components/AddActionMenu";
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
-import { DatabaseSearchModal } from "@/components/DatabaseSearchModal";
 import { Calendar } from "@/components/Calendar";
+import { DatabaseSearchModal } from "@/components/DatabaseSearchModal";
 import { DatePage } from "@/components/DatePage";
 import { FoodPhotoModal } from "@/components/FoodPhotoModal";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
@@ -16,20 +16,20 @@ import { SettingsModal } from "@/components/SettingsModal";
 import { TotalsBar } from "@/components/TotalsBar";
 import { WeightTrackingModal } from "@/components/WeightTrackingModal";
 import { Tokens } from "@/constants/theme";
-import {
-  isLiquidGlassSupported,
-  LiquidGlassView,
-} from "@callstack/liquid-glass";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { supabase } from "@/lib/supabase";
 import {
-  resolveNutritionFromPhoto,
   NutritionNotFoodError,
+  resolveNutritionFromPhoto,
 } from "@/services/nutritionApi";
 import { useAppStore } from "@/store/app-store";
 import { useEntriesForDate } from "@/store/selectors";
 import { BarcodeProduct, DatabaseSearchResult, SavedEntry } from "@/types";
 import { dateToIndex, formatDateDisplay, indexToDate } from "@/utils/dateUtils";
+import {
+  isLiquidGlassSupported,
+  LiquidGlassView,
+} from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useRef, useState } from "react";
@@ -44,7 +44,10 @@ import {
 import type { InfinitePagerImperativeApi } from "react-native-infinite-pager";
 import InfinitePager from "react-native-infinite-pager";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 const PAGE_WRAPPER_STYLE = { flex: 1 } as const;
 const PAGER_ANIMATION_CONFIG = {
@@ -99,16 +102,13 @@ export default function HomeScreen() {
     [setCurrentDate],
   );
 
-  const navigateDate = useCallback(
-    (direction: "prev" | "next") => {
-      if (direction === "prev") {
-        pagerRef.current?.decrementPage({ animated: true });
-      } else {
-        pagerRef.current?.incrementPage({ animated: true });
-      }
-    },
-    [],
-  );
+  const navigateDate = useCallback((direction: "prev" | "next") => {
+    if (direction === "prev") {
+      pagerRef.current?.decrementPage({ animated: true });
+    } else {
+      pagerRef.current?.incrementPage({ animated: true });
+    }
+  }, []);
 
   const openCalendar = useCallback(() => {
     Keyboard.dismiss();
@@ -190,10 +190,14 @@ export default function HomeScreen() {
   const handleDatabaseSearchAddEntries = useCallback(
     (items: { result: DatabaseSearchResult; servingGrams: number }[]) => {
       const state = useAppStore.getState();
-      let insertText = '';
+      let insertText = "";
 
       items.forEach(({ result, servingGrams }, index) => {
-        const newEntry = state.addDatabaseSearchEntry(result, servingGrams, index);
+        const newEntry = state.addDatabaseSearchEntry(
+          result,
+          servingGrams,
+          index,
+        );
         insertText = insertText
           ? `${insertText}\n${newEntry.rawText}`
           : newEntry.rawText;
@@ -225,7 +229,10 @@ export default function HomeScreen() {
             response.totals,
           );
 
-          setPendingInsertion({ date: state.currentDate, text: newEntry.rawText });
+          setPendingInsertion({
+            date: state.currentDate,
+            text: newEntry.rawText,
+          });
 
           setPhotoToastState({
             type: "success",
@@ -275,7 +282,7 @@ export default function HomeScreen() {
 
   const handleBarcodeManualEntry = useCallback(
     (text: string) => {
-      const isFreeform = useAppStore.getState().entryMode === 'freeform';
+      const isFreeform = useAppStore.getState().entryMode === "freeform";
       const rawText = isFreeform ? text : `— ${text}`;
       addEntry(rawText);
       const state = useAppStore.getState();
@@ -287,8 +294,15 @@ export default function HomeScreen() {
 
   // Calculate daily totals from entries — single-pass accumulation
   const dailyTotals = React.useMemo(() => {
-    let kcal = 0, protein = 0, fat = 0, carbs = 0;
-    let fiber = 0, sugar = 0, sodium = 0, potassium = 0, water = 0;
+    let kcal = 0,
+      protein = 0,
+      fat = 0,
+      carbs = 0;
+    let fiber = 0,
+      sugar = 0,
+      sodium = 0,
+      potassium = 0,
+      water = 0;
 
     for (const entry of entries) {
       if (entry.status !== "ok" || !entry.items) continue;
@@ -307,11 +321,21 @@ export default function HomeScreen() {
       }
     }
 
-    return { kcal, protein, fat, carbs, fiber, sugar, sodium, potassium, water };
+    return {
+      kcal,
+      protein,
+      fat,
+      carbs,
+      fiber,
+      sugar,
+      sodium,
+      potassium,
+      water,
+    };
   }, [entries]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+    <SafeAreaView style={styles.container} edges={["left", "right"]}>
       <StatusBar barStyle="dark-content" backgroundColor={Tokens.background} />
 
       <View style={styles.pagerWrapper}>
@@ -344,7 +368,11 @@ export default function HomeScreen() {
             onPress={() => navigateDate("prev")}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+            <Ionicons
+              name="chevron-back"
+              size={20}
+              color={Tokens.textPrimary}
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -364,7 +392,11 @@ export default function HomeScreen() {
             onPress={() => navigateDate("next")}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="chevron-forward" size={20} color={Tokens.textPrimary} />
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={Tokens.textPrimary}
+            />
           </TouchableOpacity>
         </LiquidGlassView>
 
@@ -389,7 +421,7 @@ export default function HomeScreen() {
       </View>
 
       {/* TotalsBar: sticks above keyboard during interactive dismiss */}
-      <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
+      <KeyboardStickyView offset={{ closed: 0, opened: 40 }}>
         <View style={styles.bottomBarContainer}>
           <TotalsBar
             dailyTotals={dailyTotals}

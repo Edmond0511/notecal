@@ -200,7 +200,6 @@ export function Calendar({
 
   const handleSelectDate = useCallback(
     (date: Date) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onSelectDate(formatDate(date));
       onClose();
     },

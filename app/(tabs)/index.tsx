@@ -32,11 +32,9 @@ import { BarcodeProduct, DatabaseSearchResult, SavedEntry } from "@/types";
 import { dateToIndex, formatDateDisplay, indexToDate } from "@/utils/dateUtils";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
-  InputAccessoryView,
   Keyboard,
-  Platform,
   StatusBar,
   StyleSheet,
   Text,
@@ -45,9 +43,8 @@ import {
 } from "react-native";
 import type { InfinitePagerImperativeApi } from "react-native-infinite-pager";
 import InfinitePager from "react-native-infinite-pager";
+import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-
-const INPUT_ACCESSORY_VIEW_ID = "totals-bar-accessory";
 
 const PAGE_WRAPPER_STYLE = { flex: 1 } as const;
 const PAGER_ANIMATION_CONFIG = {
@@ -140,11 +137,6 @@ export default function HomeScreen() {
           dateString={dateString}
           isActive={isActive}
           isOnline={isOnline}
-          inputAccessoryViewID={
-            Platform.OS === "ios" && isActive
-              ? INPUT_ACCESSORY_VIEW_ID
-              : undefined
-          }
           contentTopInset={contentTopInset}
         />
       );
@@ -166,15 +158,7 @@ export default function HomeScreen() {
 
   // Stable callbacks for TotalsBar
   const handleAddSavedPress = useCallback(() => {
-    if (keyboardVisibleRef.current) {
-      Keyboard.dismiss();
-      const sub = Keyboard.addListener("keyboardWillHide", () => {
-        sub.remove();
-        setShowAddMenu(true);
-      });
-    } else {
-      setShowAddMenu(true);
-    }
+    setShowAddMenu(true);
   }, []);
   const handleTotalsPress = useCallback(() => setShowGoalsPopup(true), []);
 
@@ -301,24 +285,6 @@ export default function HomeScreen() {
     [addEntry, setPendingInsertion],
   );
 
-  // Track keyboard visibility to disable the static bottom bar when keyboard is up.
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const keyboardVisibleRef = useRef(false);
-  useEffect(() => {
-    const willShowSub = Keyboard.addListener("keyboardWillShow", () => {
-      keyboardVisibleRef.current = true;
-      setKeyboardVisible(true);
-    });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      keyboardVisibleRef.current = false;
-      setKeyboardVisible(false);
-    });
-    return () => {
-      willShowSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
   // Calculate daily totals from entries — single-pass accumulation
   const dailyTotals = React.useMemo(() => {
     let kcal = 0, protein = 0, fat = 0, carbs = 0;
@@ -422,35 +388,17 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* iOS: Totals bar as native keyboard accessory */}
-      {Platform.OS === "ios" && (
-        <InputAccessoryView nativeID={INPUT_ACCESSORY_VIEW_ID}>
-          <View style={styles.inputAccessoryWrapper}>
-            <TotalsBar
-              dailyTotals={dailyTotals}
-              isOnline={isOnline}
-              onAddSavedPress={handleAddSavedPress}
-              onTotalsPress={handleTotalsPress}
-            />
-          </View>
-        </InputAccessoryView>
-      )}
-
-      {/* Static bottom bar: always visible, keyboard renders on top natively */}
-      <View
-        style={[
-          styles.bottomBarContainer,
-          Platform.OS === "ios" && keyboardVisible && { opacity: 0 },
-        ]}
-        pointerEvents={Platform.OS === "ios" && keyboardVisible ? "none" : "auto"}
-      >
-        <TotalsBar
-          dailyTotals={dailyTotals}
-          isOnline={isOnline}
-          onAddSavedPress={handleAddSavedPress}
-          onTotalsPress={handleTotalsPress}
-        />
-      </View>
+      {/* TotalsBar: sticks above keyboard during interactive dismiss */}
+      <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
+        <View style={styles.bottomBarContainer}>
+          <TotalsBar
+            dailyTotals={dailyTotals}
+            isOnline={isOnline}
+            onAddSavedPress={handleAddSavedPress}
+            onTotalsPress={handleTotalsPress}
+          />
+        </View>
+      </KeyboardStickyView>
 
       {/* Photo processing toast */}
       <PhotoProcessingToast
@@ -626,10 +574,5 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
     backgroundColor: "transparent",
     zIndex: 10,
-  },
-  inputAccessoryWrapper: {
-    paddingTop: 0,
-    paddingBottom: 16,
-    backgroundColor: "transparent",
   },
 });

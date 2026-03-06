@@ -9,7 +9,6 @@ interface DatePageProps {
   dateString: string;
   isActive: boolean;
   isOnline: boolean;
-  inputAccessoryViewID?: string;
   contentTopInset?: number;
 }
 
@@ -17,7 +16,6 @@ export const DatePage = React.memo(function DatePage({
   dateString,
   isActive,
   isOnline,
-  inputAccessoryViewID,
   contentTopInset,
 }: DatePageProps) {
   // O(1) indexed lookup instead of O(n) filter
@@ -118,7 +116,6 @@ export const DatePage = React.memo(function DatePage({
         currentDate={dateString}
         isOnline={isOnline}
         waterTrackingEnabled={waterTrackingEnabled}
-        inputAccessoryViewID={inputAccessoryViewID}
         autoFocus={false}
         contentTopInset={contentTopInset}
       />

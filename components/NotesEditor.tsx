@@ -630,7 +630,6 @@ interface NotesEditorProps {
   currentDate?: string;
   isOnline?: boolean;
   waterTrackingEnabled?: boolean;
-  inputAccessoryViewID?: string;
   autoFocus?: boolean;
   contentTopInset?: number;
 }
@@ -646,7 +645,6 @@ export function NotesEditor({
   currentDate,
   isOnline = true,
   waterTrackingEnabled = false,
-  inputAccessoryViewID,
   autoFocus = true,
   contentTopInset = 0,
 }: NotesEditorProps) {
@@ -1028,7 +1026,7 @@ export function NotesEditor({
         style={styles.scrollContainer}
         contentContainerStyle={[styles.scrollContent, contentTopInset ? { paddingTop: contentTopInset } : undefined]}
         automaticallyAdjustKeyboardInsets
-        keyboardDismissMode="on-drag"
+        keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
         onLayout={(e) => { scrollViewHeightRef.current = e.nativeEvent.layout.height; }}
@@ -1036,7 +1034,6 @@ export function NotesEditor({
       >
         {/* Document editor - full screen */}
         <TextInput
-          key={inputAccessoryViewID ?? 'no-accessory'}
           ref={textInputRef}
           style={styles.documentInput}
           value={documentText}
@@ -1061,7 +1058,6 @@ export function NotesEditor({
           contextMenuHidden={false}
           selectTextOnFocus={false}
           clearTextOnFocus={false}
-          inputAccessoryViewID={inputAccessoryViewID}
           onSelectionChange={(e) => { cursorPosRef.current = e.nativeEvent.selection.end; }}
         />
 

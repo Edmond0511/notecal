@@ -309,13 +309,13 @@ export default function HomeScreen() {
       keyboardVisibleRef.current = true;
       setKeyboardVisible(true);
     });
-    const willHideSub = Keyboard.addListener("keyboardWillHide", () => {
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
       keyboardVisibleRef.current = false;
       setKeyboardVisible(false);
     });
     return () => {
       willShowSub.remove();
-      willHideSub.remove();
+      hideSub.remove();
     };
   }, []);
 
@@ -440,8 +440,9 @@ export default function HomeScreen() {
       <View
         style={[
           styles.bottomBarContainer,
-          Platform.OS === "ios" && keyboardVisible && { display: 'none' },
+          Platform.OS === "ios" && keyboardVisible && { opacity: 0 },
         ]}
+        pointerEvents={Platform.OS === "ios" && keyboardVisible ? "none" : "auto"}
       >
         <TotalsBar
           dailyTotals={dailyTotals}

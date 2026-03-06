@@ -1,5 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   Dimensions,
@@ -25,8 +26,11 @@ import { Tokens } from "@/constants/theme";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
-const CALENDAR_PADDING = 24;
-const DAY_SIZE = Math.floor((SCREEN_WIDTH - CALENDAR_PADDING * 2) / 7);
+const CALENDAR_PADDING = 16;
+const DAY_WIDTH = Math.floor((SCREEN_WIDTH - CALENDAR_PADDING * 2) / 7);
+const DAY_HEIGHT = 44;
+const WEEKDAY_ROW_HEIGHT = 20;
+const CONTENT_HEIGHT = WEEKDAY_ROW_HEIGHT + 6 * DAY_HEIGHT; // fixed to 6-row max
 
 const DOT_COLORS = {
   green: '#4CAF50',
@@ -34,7 +38,7 @@ const DOT_COLORS = {
   red: '#EF5350',
 } as const;
 
-const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const MONTHS = [
   "January",
   "February",
@@ -114,6 +118,8 @@ export function Calendar({
   const initialDate = parseDate(selectedDate);
   const [viewMonth, setViewMonth] = useState(initialDate.getMonth());
   const [viewYear, setViewYear] = useState(initialDate.getFullYear());
+  const [wheelMode, setWheelMode] = useState(false);
+  const [wheelDate, setWheelDate] = useState(initialDate);
   const goals = useAppStore((s) => s.goals);
   const entries = useAppStore((s) => s.entries);
 
@@ -215,6 +221,23 @@ export function Calendar({
     onClose();
   }, [onSelectDate, onClose]);
 
+  const toggleWheelMode = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setWheelMode((prev) => {
+      if (!prev) {
+        // Entering wheel mode — seed wheel with current view month/selected date
+        setWheelDate(new Date(viewYear, viewMonth, parseDate(selectedDate).getDate()));
+      }
+      return !prev;
+    });
+  }, [viewYear, viewMonth, selectedDate]);
+
+  const handleWheelConfirm = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onSelectDate(formatDate(wheelDate));
+    onClose();
+  }, [wheelDate, onSelectDate, onClose]);
+
   // Pan gesture for swipe-to-dismiss
   const translateY = useSharedValue(0);
 
@@ -253,6 +276,8 @@ export function Calendar({
     const date = parseDate(selectedDate);
     setViewMonth(date.getMonth());
     setViewYear(date.getFullYear());
+    setWheelMode(false);
+    setWheelDate(date);
   }
   wasVisible.current = visible;
 
@@ -279,117 +304,162 @@ export function Calendar({
         {/* Calendar Sheet */}
         <GestureDetector gesture={panGesture}>
         <Animated.View
-          style={[styles.sheet, { paddingBottom: insets.bottom + 16 }, sheetAnimatedStyle]}
+          style={[styles.sheet, { paddingBottom: insets.bottom + 8 }, sheetAnimatedStyle]}
         >
-          {/* Minimal handle line */}
+          {/* Drag handle */}
           <View style={styles.handleContainer}>
             <View style={styles.handle} />
           </View>
 
-          {/* Header - Today | Month Year | ← → */}
+          {/* Header — "March 2026 >"   "< >" */}
           <View style={styles.navBar}>
             <TouchableOpacity
-              onPress={handleGoToToday}
-              style={styles.navPill}
+              onPress={toggleWheelMode}
               activeOpacity={0.7}
+              style={styles.monthButton}
               accessibilityRole="button"
-              accessibilityLabel="Go to today"
-              accessibilityHint="Selects today's date"
+              accessibilityLabel={`${MONTHS[viewMonth]} ${viewYear}, ${wheelMode ? 'show calendar' : 'open date picker'}`}
             >
-              <Text style={styles.navPillText}>Today</Text>
+              <Text style={styles.monthText}>
+                {MONTHS[viewMonth]} {viewYear}
+              </Text>
+              <Ionicons
+                name={wheelMode ? "chevron-down" : "chevron-forward"}
+                size={16}
+                color={Tokens.textSecondary}
+              />
             </TouchableOpacity>
 
-            <Text style={styles.monthText} accessibilityRole="header">
-              {MONTHS[viewMonth]} {viewYear}
-            </Text>
-
-            <View style={styles.navArrows}>
-              <TouchableOpacity
-                onPress={() => navigateMonth("prev")}
-                style={styles.navPill}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Previous month"
-              >
-                <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => navigateMonth("next")}
-                style={styles.navPill}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Next month"
-              >
-                <Ionicons name="chevron-forward" size={20} color={Tokens.textPrimary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Weekday Headers - ultra light */}
-          <View style={styles.weekdayRow}>
-            {WEEKDAYS.map((day, index) => (
-              <View key={index} style={styles.weekdayCell}>
-                <Text style={styles.weekdayText}>{day}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Calendar Grid */}
-          <View style={styles.calendarGrid}>
-            {calendarDays.map((item, index) => {
-              const dateStr = formatDate(item.date);
-              const isSelected = isSameDay(dateStr, selectedDate);
-              const isTodayDate = isSameDay(dateStr, todayStr);
-
-              const consumed = dateCalorieMap?.[dateStr];
-
-              let dotColor: keyof typeof DOT_COLORS | null = null;
-              if (dateCalorieMap && item.isCurrentMonth && consumed && consumed > 0) {
-                const isFuture = dateStr > todayStr;
-                if (isFuture) {
-                  dotColor = 'green';
-                } else {
-                  const target = goals!.manualTargets?.kcal ?? goals!.targetKcal;
-                  dotColor = getDotColor(consumed, target);
-                }
-              }
-
-              return (
+            {!wheelMode && (
+              <View style={styles.navActions}>
                 <TouchableOpacity
-                  key={index}
-                  style={styles.dayCell}
-                  onPress={() => handleSelectDate(item.date)}
+                  onPress={() => navigateMonth("prev")}
+                  style={styles.navArrow}
                   activeOpacity={0.5}
                   accessibilityRole="button"
-                  accessibilityLabel={buildDayA11yLabel(
-                    item.date,
-                    isTodayDate,
-                    isSelected,
-                    consumed,
-                  )}
+                  accessibilityLabel="Previous month"
                 >
-                  <View
-                    style={[
-                      styles.dayInner,
-                      isTodayDate && !isSelected && styles.todayDay,
-                      isSelected && styles.selectedDay,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.dayText,
-                        !item.isCurrentMonth && styles.otherMonthText,
-                        isTodayDate && !isSelected && styles.todayDayText,
-                        isSelected && styles.selectedDayText,
-                      ]}
-                    >
-                      {item.date.getDate()}
-                    </Text>
-                  </View>
-                  <View style={[dotStyles.dot, dotColor ? { backgroundColor: DOT_COLORS[dotColor] } : { backgroundColor: 'transparent' }]} />
+                  <Ionicons name="chevron-back" size={20} color={Tokens.textSecondary} />
                 </TouchableOpacity>
-              );
-            })}
+                <TouchableOpacity
+                  onPress={() => navigateMonth("next")}
+                  style={styles.navArrow}
+                  activeOpacity={0.5}
+                  accessibilityRole="button"
+                  accessibilityLabel="Next month"
+                >
+                  <Ionicons name="chevron-forward" size={20} color={Tokens.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {wheelMode && (
+              <TouchableOpacity
+                onPress={handleGoToToday}
+                activeOpacity={0.7}
+                style={styles.todayButton}
+                accessibilityRole="button"
+                accessibilityLabel="Go to today"
+              >
+                <Text style={styles.todayButtonText}>Today</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.contentArea}>
+          {wheelMode ? (
+            /* Native iOS wheel date picker */
+            <View style={styles.wheelContainer}>
+              <DateTimePicker
+                value={wheelDate}
+                mode="date"
+                display="spinner"
+                onChange={(_event, date) => {
+                  if (date) setWheelDate(date);
+                }}
+                textColor={Tokens.textPrimary}
+                style={styles.wheelPicker}
+              />
+              <TouchableOpacity
+                onPress={handleWheelConfirm}
+                activeOpacity={0.7}
+                style={styles.wheelGoButton}
+                accessibilityRole="button"
+                accessibilityLabel="Go to selected date"
+              >
+                <Text style={styles.wheelGoButtonText}>Go to date</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              {/* Weekday headers */}
+              <View style={styles.weekdayRow}>
+                {WEEKDAYS.map((day, index) => (
+                  <View key={index} style={styles.weekdayCell}>
+                    <Text style={styles.weekdayText}>{day}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Calendar grid */}
+              <View style={styles.calendarGrid}>
+                {calendarDays.map((item, index) => {
+                  const dateStr = formatDate(item.date);
+                  const isSelected = isSameDay(dateStr, selectedDate);
+                  const isTodayDate = isSameDay(dateStr, todayStr);
+
+                  const consumed = dateCalorieMap?.[dateStr];
+
+                  let dotColor: keyof typeof DOT_COLORS | null = null;
+                  if (dateCalorieMap && item.isCurrentMonth && consumed && consumed > 0) {
+                    const isFuture = dateStr > todayStr;
+                    if (isFuture) {
+                      dotColor = 'green';
+                    } else {
+                      const target = goals!.manualTargets?.kcal ?? goals!.targetKcal;
+                      dotColor = getDotColor(consumed, target);
+                    }
+                  }
+
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.dayCell}
+                      onPress={() => handleSelectDate(item.date)}
+                      activeOpacity={0.5}
+                      accessibilityRole="button"
+                      accessibilityLabel={buildDayA11yLabel(
+                        item.date,
+                        isTodayDate,
+                        isSelected,
+                        consumed,
+                      )}
+                    >
+                      <View
+                        style={[
+                          styles.dayInner,
+                          isTodayDate && !isSelected && styles.todayDay,
+                          isSelected && styles.selectedDay,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.dayText,
+                            !item.isCurrentMonth && styles.otherMonthText,
+                            isTodayDate && !isSelected && styles.todayDayText,
+                            isSelected && styles.selectedDayText,
+                          ]}
+                        >
+                          {item.date.getDate()}
+                        </Text>
+                      </View>
+                      <View style={[dotStyles.dot, dotColor ? { backgroundColor: DOT_COLORS[dotColor] } : { backgroundColor: 'transparent' }]} />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>
+          )}
           </View>
 
         </Animated.View>
@@ -413,80 +483,92 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: Tokens.surfaceRaised,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     paddingHorizontal: CALENDAR_PADDING,
   },
   handleContainer: {
     alignItems: "center",
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 2,
   },
   handle: {
     width: 36,
-    height: 4,
-    borderRadius: 2,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: Tokens.border,
   },
   navBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
+    paddingVertical: 8,
+    paddingLeft: Math.floor(DAY_WIDTH / 2) - 10,
+  },
+  monthButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    minHeight: 44,
   },
   monthText: {
     fontSize: 17,
     fontWeight: "600",
     color: Tokens.textPrimary,
-    letterSpacing: 0.3,
   },
-  navArrows: {
+  navActions: {
     flexDirection: "row",
-    gap: 8,
+    alignItems: "center",
+    gap: 0,
   },
-  navPill: {
-    backgroundColor: Tokens.surface,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  todayButton: {
     minHeight: 44,
-    minWidth: 44,
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  todayButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: Tokens.textSecondary,
+  },
+  navArrow: {
+    width: 44,
+    height: 44,
     justifyContent: "center",
     alignItems: "center",
   },
-  navPillText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: Tokens.textPrimary,
+  contentArea: {
+    height: CONTENT_HEIGHT,
   },
   weekdayRow: {
     flexDirection: "row",
-    paddingBottom: 12,
+    height: WEEKDAY_ROW_HEIGHT,
+    alignItems: "center",
   },
   weekdayCell: {
-    width: DAY_SIZE,
+    width: DAY_WIDTH,
     alignItems: "center",
   },
   weekdayText: {
     fontSize: 11,
-    fontWeight: "400",
+    fontWeight: "600",
     color: Tokens.textSecondary,
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   calendarGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
   },
   dayCell: {
-    width: DAY_SIZE,
-    height: DAY_SIZE,
+    width: DAY_WIDTH,
+    height: DAY_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
   },
   dayInner: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -500,18 +582,43 @@ const styles = StyleSheet.create({
     color: Tokens.textTertiary,
   },
   todayDay: {
-    backgroundColor: Tokens.accentTint,
+    borderWidth: 1.5,
+    borderColor: Tokens.textPrimary,
   },
   todayDayText: {
-    color: Tokens.accent,
-    fontWeight: "500",
+    color: Tokens.textPrimary,
+    fontWeight: "600",
   },
   selectedDay: {
-    backgroundColor: Tokens.accent,
+    backgroundColor: Tokens.textPrimary,
   },
   selectedDayText: {
     color: Tokens.surfaceRaised,
-    fontWeight: "500",
+    fontWeight: "600",
+  },
+  wheelContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  wheelPicker: {
+    width: SCREEN_WIDTH - CALENDAR_PADDING * 2,
+    height: 200,
+  },
+  wheelGoButton: {
+    marginTop: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    backgroundColor: Tokens.textPrimary,
+    borderRadius: 12,
+    minHeight: 44,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  wheelGoButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Tokens.surfaceRaised,
   },
 });
 

@@ -1028,7 +1028,7 @@ export function NotesEditor({
         style={styles.scrollContainer}
         contentContainerStyle={[styles.scrollContent, contentTopInset ? { paddingTop: contentTopInset } : undefined]}
         automaticallyAdjustKeyboardInsets
-        keyboardDismissMode="interactive"
+        keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
         onLayout={(e) => { scrollViewHeightRef.current = e.nativeEvent.layout.height; }}

@@ -776,7 +776,7 @@ const styles = StyleSheet.create({
   menuDivider: {
     height: 1,
     backgroundColor: "#f0f0f0",
-    marginLeft: 20,
+    marginLeft: 45,
     marginRight: 20,
   },
   syncStatus: {

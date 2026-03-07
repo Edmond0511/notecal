@@ -76,7 +76,7 @@ export const TotalsBar = React.memo(function TotalsBar({
   const showGlass = (useGlass ?? true) && isLiquidGlassSupported;
 
   const addButtonContent = (
-    <Ionicons name="add" size={24} color={Tokens.accentBright} />
+    <Ionicons name="add" size={32} color={Tokens.accentBright} />
   );
 
   const totalsContent = (
@@ -156,11 +156,11 @@ export const TotalsBar = React.memo(function TotalsBar({
         <TouchableOpacity
           style={styles.addSavedButtonWrapper}
           onPress={onAddSavedPress}
-          activeOpacity={0.8}
+          activeOpacity={0.5}
         >
           {showGlass ? (
             <LiquidGlassView
-              style={[styles.addSavedButton]}
+              style={[styles.addSavedButton, { opacity: 0.9 }]}
               interactive
               effect="regular"
               tintColor={Tokens.accentTint}
@@ -169,7 +169,8 @@ export const TotalsBar = React.memo(function TotalsBar({
             </LiquidGlassView>
           ) : (
             <View
-              style={[styles.addSavedButton, styles.addSavedButtonFallback]}
+              style={[styles.addSavedButton, styles.addSavedButtonFallback, { opacity: 0.9 }]}
+              
             >
               {addButtonContent}
             </View>
@@ -218,9 +219,9 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   addSavedButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -41,6 +41,7 @@ import {
   GestureDetector,
   GestureHandlerRootView,
 } from "react-native-gesture-handler";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import Animated, {
   Extrapolation,
   FadeIn,
@@ -601,27 +602,63 @@ export function DatabaseSearchModal({
             </View>
 
             {/* Search bar */}
-            <View style={styles.searchBarContainer}>
-              <View style={styles.searchBar}>
-                <Ionicons name="search" size={18} color="#999" />
-                <TextInput
-                  ref={searchInputRef}
-                  style={styles.searchInput}
-                  placeholder="Search for food item..."
-                  placeholderTextColor="#999"
-                  value={searchText}
-                  onChangeText={setSearchText}
-                  autoCorrect={false}
-                  returnKeyType="search"
-                />
-                {searchText.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => setSearchText("")}
-                    style={styles.clearButton}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            <View style={styles.searchContainer}>
+              <View style={styles.searchShadowWrapper}>
+                {showGlass ? (
+                  <LiquidGlassView
+                    style={styles.searchGlass}
+                    interactive
+                    effect="regular"
+                    tintColor="rgba(250, 250, 247, 0.3)"
                   >
-                    <Ionicons name="close-circle" size={18} color="#ccc" />
-                  </TouchableOpacity>
+                    <View style={styles.searchInputWrapper}>
+                      <Ionicons name="search" size={18} color="#8E8E93" style={styles.searchIcon} />
+                      <TextInput
+                        ref={searchInputRef}
+                        style={styles.searchInput}
+                        placeholder="Search for food item..."
+                        placeholderTextColor="#8E8E93"
+                        value={searchText}
+                        onChangeText={setSearchText}
+                        autoCorrect={false}
+                        returnKeyType="search"
+                      />
+                      {searchText.length > 0 && (
+                        <TouchableOpacity
+                          onPress={() => setSearchText("")}
+                          style={styles.clearButton}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Ionicons name="close-circle" size={18} color="#C7C7CC" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </LiquidGlassView>
+                ) : (
+                  <View style={[styles.searchGlass, styles.searchGlassFallback]}>
+                    <View style={styles.searchInputWrapper}>
+                      <Ionicons name="search" size={18} color="#8E8E93" style={styles.searchIcon} />
+                      <TextInput
+                        ref={searchInputRef}
+                        style={styles.searchInput}
+                        placeholder="Search for food item..."
+                        placeholderTextColor="#8E8E93"
+                        value={searchText}
+                        onChangeText={setSearchText}
+                        autoCorrect={false}
+                        returnKeyType="search"
+                      />
+                      {searchText.length > 0 && (
+                        <TouchableOpacity
+                          onPress={() => setSearchText("")}
+                          style={styles.clearButton}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Ionicons name="close-circle" size={18} color="#C7C7CC" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
                 )}
               </View>
             </View>
@@ -671,15 +708,17 @@ export function DatabaseSearchModal({
 
               {/* Results list */}
               {state.type === "results" && (
-                <ScrollView
+                <KeyboardAwareScrollView
                   style={styles.resultsList}
                   contentContainerStyle={{
                     paddingBottom:
-                      (keyboardHeight || insets.bottom + 16) +
+                      insets.bottom + 16 +
                       (selectedItems.length > 0 ? 90 : 0),
                   }}
                   keyboardShouldPersistTaps="handled"
-                  keyboardDismissMode="on-drag"
+                  keyboardDismissMode="interactive"
+                  showsVerticalScrollIndicator={false}
+                  bounces={true}
                 >
                   {commonResults.length > 0 && (
                     <>
@@ -701,7 +740,7 @@ export function DatabaseSearchModal({
                       )}
                     </>
                   )}
-                </ScrollView>
+                </KeyboardAwareScrollView>
               )}
 
               {/* Detail view */}
@@ -1033,46 +1072,53 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#EBEBEB",
     alignItems: "center",
     justifyContent: "center",
+  },
+  backButtonFallback: {
+    backgroundColor: "#EBEBEB",
   },
   headerRightSpacer: {
     width: 36,
   },
   headerTitle: {
     fontSize: 17,
+    fontFamily: "System",
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     letterSpacing: -0.3,
   },
   // Search bar
-  searchBarContainer: {
+  searchContainer: {
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: "#f8f8f8",
   },
-  searchBar: {
+  searchShadowWrapper: {
+    borderRadius: 22,
+  },
+  searchGlass: {
+    borderRadius: 22,
+    overflow: "hidden",
+  },
+  searchGlassFallback: {
+    backgroundColor: Tokens.surfaceRaised,
+  },
+  searchInputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     height: 44,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+  },
+  searchIcon: {
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
     fontFamily: "System",
     fontWeight: "400",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     padding: 0,
-    marginLeft: 8,
   },
   clearButton: {
     padding: 4,
@@ -1119,15 +1165,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   resultCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    ...Tokens.shadowLight,
   },
   resultCardRow: {
     flexDirection: "row",
@@ -1147,7 +1189,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontFamily: "System",
     fontWeight: "500",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     lineHeight: 22,
     letterSpacing: -0.2,
   },
@@ -1172,7 +1214,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "System",
     fontWeight: "500",
-    color: "#666",
+    color: Tokens.textSecondary,
   },
   resultMacroSuffix: {
     fontSize: 11,
@@ -1204,15 +1246,11 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   productHeader: {
-    backgroundColor: "#fff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    ...Tokens.shadowLight,
   },
   productHeaderTop: {
     flexDirection: "row",
@@ -1223,7 +1261,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 19,
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     lineHeight: 24,
     letterSpacing: -0.3,
   },
@@ -1246,15 +1284,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#fff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     padding: 14,
     marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    ...Tokens.shadowLight,
   },
   servingLabel: {
     fontSize: 15,
@@ -1370,7 +1404,7 @@ const styles = StyleSheet.create({
   backActionText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
   },
   addButton: {
     flex: 2,

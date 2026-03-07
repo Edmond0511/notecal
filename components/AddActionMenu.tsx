@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, {
@@ -53,10 +52,7 @@ export function AddActionMenu({
             <TouchableOpacity
               style={styles.menuItem}
               activeOpacity={0.7}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onScanBarcodePress();
-              }}
+              onPress={onScanBarcodePress}
             >
               <Ionicons name="barcode-outline" size={28} color="#1a1a1a" />
               <Text style={styles.menuLabel}>Scan Barcode</Text>
@@ -65,10 +61,7 @@ export function AddActionMenu({
             <TouchableOpacity
               style={styles.menuItem}
               activeOpacity={0.7}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onSavedEntriesPress();
-              }}
+              onPress={onSavedEntriesPress}
             >
               <Ionicons name="bookmark-outline" size={28} color="#1a1a1a" />
               <Text style={styles.menuLabel}>Saved Entries</Text>
@@ -77,10 +70,7 @@ export function AddActionMenu({
             <TouchableOpacity
               style={styles.menuItem}
               activeOpacity={0.7}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onLogWeightPress();
-              }}
+              onPress={onLogWeightPress}
             >
               <Ionicons name="scale-outline" size={28} color="#1a1a1a" />
               <Text style={styles.menuLabel}>Log Weight</Text>
@@ -89,10 +79,7 @@ export function AddActionMenu({
             <TouchableOpacity
               style={styles.menuItem}
               activeOpacity={0.7}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onSnapFoodPress();
-              }}
+              onPress={onSnapFoodPress}
             >
               <Ionicons name="camera-outline" size={28} color="#1a1a1a" />
               <Text style={styles.menuLabel}>Snap Food</Text>
@@ -101,10 +88,7 @@ export function AddActionMenu({
             <TouchableOpacity
               style={styles.menuItem}
               activeOpacity={0.7}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onSearchDatabasePress();
-              }}
+              onPress={onSearchDatabasePress}
             >
               <Ionicons name="search-outline" size={28} color="#1a1a1a" />
               <Text style={styles.menuLabel}>Search Foods</Text>

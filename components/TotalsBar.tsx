@@ -35,9 +35,14 @@ interface TotalsBarProps {
   onAddSavedPress: () => void;
   onTotalsPress: () => void;
   useGlass?: boolean;
+  isPagerSettledRef?: React.RefObject<boolean>;
 }
 
 function arePropsEqual(prev: TotalsBarProps, next: TotalsBarProps) {
+  // Freeze during page transitions — prevent AnimatedDigits flash mid-swipe
+  if (next.isPagerSettledRef && !next.isPagerSettledRef.current) {
+    return true;
+  }
   return (
     prev.dailyTotals.kcal === next.dailyTotals.kcal &&
     prev.dailyTotals.protein === next.dailyTotals.protein &&
@@ -56,6 +61,7 @@ export const TotalsBar = React.memo(function TotalsBar({
   onAddSavedPress,
   onTotalsPress,
   useGlass,
+  // isPagerSettledRef is only read inside arePropsEqual, not used in render
 }: TotalsBarProps) {
   const showGlass = (useGlass ?? true) && isLiquidGlassSupported;
 
@@ -165,7 +171,7 @@ export const TotalsBar = React.memo(function TotalsBar({
               style={[styles.totalsBar]}
               interactive
               effect="regular"
-              tintColor="rgba(250, 250, 247, 0.3)"
+              tintColor="rgba(250, 250, 247, 0)"
             >
               {totalsContent}
             </LiquidGlassView>

@@ -1,5 +1,10 @@
 import { useAppStore } from "@/store/app-store";
+import { Tokens } from "@/constants/theme";
 import { SavedEntry } from "@/types";
+import {
+  isLiquidGlassSupported,
+  LiquidGlassView,
+} from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -85,6 +90,7 @@ export function SavedEntriesPopup({
   const isScrolledToTop = useSharedValue(true);
   const savedEntries = useAppStore((state) => state.savedEntries);
   const deleteSavedEntry = useAppStore((state) => state.deleteSavedEntry);
+  const showGlass = isLiquidGlassSupported;
 
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -201,6 +207,58 @@ export function SavedEntriesPopup({
       { protein: 0, fat: 0, carbs: 0 }
     );
 
+    const cardContent = (
+      <View style={styles.entryCardInner}>
+        <View style={styles.entryContent}>
+          <Text style={styles.entryLabel} numberOfLines={2}>
+            {getDisplayLabel(item)}
+          </Text>
+          <View style={styles.macrosRow}>
+            <View style={styles.macroItem}>
+              <FontAwesomeIcon
+                icon={MACRO_ICONS.calories}
+                size={10}
+                color={MACRO_COLORS.calories.primary}
+              />
+              <Text style={styles.macroValue}>
+                {Math.round(item.totalKcal)}
+              </Text>
+            </View>
+            <View style={styles.macroItem}>
+              <FontAwesomeIcon
+                icon={MACRO_ICONS.protein}
+                size={10}
+                color={MACRO_COLORS.protein.primary}
+              />
+              <Text style={styles.macroValue}>
+                {Math.round(totals.protein)}g
+              </Text>
+            </View>
+            <View style={styles.macroItem}>
+              <FontAwesomeIcon
+                icon={MACRO_ICONS.fat}
+                size={10}
+                color={MACRO_COLORS.fat.primary}
+              />
+              <Text style={styles.macroValue}>
+                {Math.round(totals.fat)}g
+              </Text>
+            </View>
+            <View style={styles.macroItem}>
+              <FontAwesomeIcon
+                icon={MACRO_ICONS.carbs}
+                size={10}
+                color={MACRO_COLORS.carbs.primary}
+              />
+              <Text style={styles.macroValue}>
+                {Math.round(totals.carbs)}g
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+
     return (
       <Animated.View entering={FadeInDown.delay(index * 40).duration(300)}>
         <Swipeable
@@ -208,65 +266,161 @@ export function SavedEntriesPopup({
           overshootRight={false}
         >
           <TouchableOpacity
-            style={styles.entryCard}
             onPress={() => handleSelectEntry(item)}
             activeOpacity={0.7}
           >
-            <View style={styles.entryContent}>
-              <Text style={styles.entryLabel} numberOfLines={2}>
-                {getDisplayLabel(item)}
-              </Text>
-              <View style={styles.macrosRow}>
-                <View style={styles.macroItem}>
-                  <FontAwesomeIcon
-                    icon={MACRO_ICONS.calories}
-                    size={10}
-                    color={MACRO_COLORS.calories.primary}
-                  />
-                  <Text style={styles.macroValue}>
-                    {Math.round(item.totalKcal)}
-                  </Text>
-                </View>
-                <View style={styles.macroItem}>
-                  <FontAwesomeIcon
-                    icon={MACRO_ICONS.protein}
-                    size={10}
-                    color={MACRO_COLORS.protein.primary}
-                  />
-                  <Text style={styles.macroValue}>
-                    {Math.round(totals.protein)}g
-                  </Text>
-                </View>
-                <View style={styles.macroItem}>
-                  <FontAwesomeIcon
-                    icon={MACRO_ICONS.fat}
-                    size={10}
-                    color={MACRO_COLORS.fat.primary}
-                  />
-                  <Text style={styles.macroValue}>
-                    {Math.round(totals.fat)}g
-                  </Text>
-                </View>
-                <View style={styles.macroItem}>
-                  <FontAwesomeIcon
-                    icon={MACRO_ICONS.carbs}
-                    size={10}
-                    color={MACRO_COLORS.carbs.primary}
-                  />
-                  <Text style={styles.macroValue}>
-                    {Math.round(totals.carbs)}g
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.chevronContainer}>
-              <Ionicons name="chevron-forward" size={18} color="#ccc" />
-            </View>
+            <LiquidGlassView
+              style={[
+                styles.entryCard,
+                !showGlass && styles.entryCardFallback,
+              ]}
+              interactive
+              effect="regular"
+              tintColor="rgba(250, 250, 247, 0.3)"
+            >
+              {cardContent}
+            </LiquidGlassView>
           </TouchableOpacity>
         </Swipeable>
       </Animated.View>
     );
   };
+
+  const searchContent = (
+    <View style={styles.searchInputWrapper}>
+      <Ionicons
+        name="search"
+        size={18}
+        color="#8E8E93"
+        style={styles.searchIcon}
+      />
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search saved foods..."
+        placeholderTextColor="#8E8E93"
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        autoCorrect={false}
+        autoCapitalize="none"
+      />
+      {searchQuery.length > 0 && (
+        <TouchableOpacity
+          onPress={() => setSearchQuery("")}
+          style={styles.clearButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="close-circle" size={18} color="#C7C7CC" />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  const renderSheetContent = () => (
+    <>
+      {/* Drag Indicator */}
+      <View style={styles.dragIndicatorContainer}>
+        <View style={styles.dragIndicator} />
+      </View>
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={handleClose}
+          activeOpacity={0.7}
+        >
+          {showGlass ? (
+            <LiquidGlassView
+              style={styles.backButton}
+              interactive
+              effect="regular"
+              tintColor="rgba(250, 250, 247, 0.3)"
+            >
+              <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+            </LiquidGlassView>
+          ) : (
+            <View style={[styles.backButton, styles.backButtonFallback]}>
+              <Ionicons name="chevron-back" size={20} color="#666" />
+            </View>
+          )}
+        </TouchableOpacity>
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>Saved Foods</Text>
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>{savedEntries.length}</Text>
+          </View>
+        </View>
+        <View style={styles.headerRightSpacer} />
+      </View>
+
+      {/* Search Bar — Liquid Glass Pill */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchShadowWrapper}>
+          {showGlass ? (
+            <LiquidGlassView
+              style={styles.searchGlass}
+              interactive
+              effect="regular"
+              tintColor="rgba(250, 250, 247, 0.3)"
+            >
+              {searchContent}
+            </LiquidGlassView>
+          ) : (
+            <View style={[styles.searchGlass, styles.searchGlassFallback]}>
+              {searchContent}
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* Content */}
+      {filteredEntries.length > 0 ? (
+        <Animated.ScrollView
+          style={styles.content}
+          contentContainerStyle={[
+            styles.contentContainer,
+            { paddingBottom: insets.bottom + 20 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={handleScrollBeginDrag}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          bounces={true}
+          keyboardShouldPersistTaps="handled"
+        >
+          {filteredEntries.map((item, index) => (
+            <View key={item.id}>{renderItem({ item, index })}</View>
+          ))}
+        </Animated.ScrollView>
+      ) : searchQuery.length > 0 ? (
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          style={styles.emptyContent}
+        >
+          <View style={styles.emptyIconContainer}>
+            <Ionicons name="search-outline" size={32} color="#999" />
+          </View>
+          <Text style={styles.emptyTitle}>No results found</Text>
+          <Text style={styles.emptyDescription}>
+            Try a different search term
+          </Text>
+        </Animated.View>
+      ) : (
+        <Animated.View
+          entering={FadeInDown.delay(100).duration(300)}
+          style={styles.emptyContent}
+        >
+          <View style={styles.emptyIconContainer}>
+            <Ionicons name="bookmark-outline" size={32} color="#0a7ea4" />
+          </View>
+          <Text style={styles.emptyTitle}>No saved foods yet</Text>
+          <Text style={styles.emptyDescription}>
+            Tap the Save button on any food entry to add it here for quick
+            access
+          </Text>
+        </Animated.View>
+      )}
+    </>
+  );
 
   return (
     <Modal
@@ -295,106 +449,7 @@ export function SavedEntriesPopup({
               animatedStyle,
             ]}
           >
-            {/* Drag Indicator */}
-            <View style={styles.dragIndicatorContainer}>
-              <View style={styles.dragIndicator} />
-            </View>
-
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={handleClose}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="chevron-back" size={20} color="#666" />
-              </TouchableOpacity>
-              <View style={styles.titleContainer}>
-                <Text style={styles.title}>Saved Foods</Text>
-                <View style={styles.countBadge}>
-                  <Text style={styles.countText}>{savedEntries.length}</Text>
-                </View>
-              </View>
-              <View style={styles.headerRightSpacer} />
-            </View>
-
-            {/* Search Bar */}
-            <View style={styles.searchContainer}>
-              <View style={styles.searchInputWrapper}>
-                <Ionicons
-                  name="search"
-                  size={18}
-                  color="#999"
-                  style={styles.searchIcon}
-                />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search saved foods..."
-                  placeholderTextColor="#999"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => setSearchQuery("")}
-                    style={styles.clearButton}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Ionicons name="close-circle" size={18} color="#ccc" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-
-            {/* Content */}
-            {filteredEntries.length > 0 ? (
-              <Animated.ScrollView
-                style={styles.content}
-                contentContainerStyle={[
-                  styles.contentContainer,
-                  { paddingBottom: insets.bottom + 20 },
-                ]}
-                showsVerticalScrollIndicator={false}
-                onScrollBeginDrag={handleScrollBeginDrag}
-                onScroll={handleScroll}
-                scrollEventThrottle={16}
-                bounces={true}
-                keyboardShouldPersistTaps="handled"
-              >
-                {filteredEntries.map((item, index) => (
-                  <View key={item.id}>{renderItem({ item, index })}</View>
-                ))}
-              </Animated.ScrollView>
-            ) : searchQuery.length > 0 ? (
-              <Animated.View
-                entering={FadeIn.duration(300)}
-                style={styles.emptyContent}
-              >
-                <View style={styles.emptyIconContainer}>
-                  <Ionicons name="search-outline" size={32} color="#999" />
-                </View>
-                <Text style={styles.emptyTitle}>No results found</Text>
-                <Text style={styles.emptyDescription}>
-                  Try a different search term
-                </Text>
-              </Animated.View>
-            ) : (
-              <Animated.View
-                entering={FadeInDown.delay(100).duration(300)}
-                style={styles.emptyContent}
-              >
-                <View style={styles.emptyIconContainer}>
-                  <Ionicons name="bookmark-outline" size={32} color="#0a7ea4" />
-                </View>
-                <Text style={styles.emptyTitle}>No saved foods yet</Text>
-                <Text style={styles.emptyDescription}>
-                  Tap the Save button on any food entry to add it here for quick
-                  access
-                </Text>
-              </Animated.View>
-            )}
+            {renderSheetContent()}
           </Animated.View>
         </GestureDetector>
       </View>
@@ -416,7 +471,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: Tokens.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -424,7 +479,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 12,
     paddingBottom: 8,
-    backgroundColor: "#f8f8f8",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -440,15 +494,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#f8f8f8",
   },
   backButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#EBEBEB",
     alignItems: "center",
     justifyContent: "center",
+  },
+  backButtonFallback: {
+    backgroundColor: "#EBEBEB",
   },
   headerRightSpacer: {
     width: 36,
@@ -461,13 +516,13 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontFamily: "System",
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     textAlign: "center",
     letterSpacing: -0.3,
   },
   countBadge: {
     marginLeft: 8,
-    backgroundColor: "#E0F2F7",
+    backgroundColor: Tokens.accentTint,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -476,25 +531,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "System",
     fontWeight: "700",
-    color: "#0a7ea4",
+    color: Tokens.accent,
   },
   searchContainer: {
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: "#f8f8f8",
+  },
+  searchShadowWrapper: {
+    borderRadius: 22,
+    ...Tokens.shadowMedium,
+  },
+  searchGlass: {
+    borderRadius: 22,
+    overflow: "hidden",
+  },
+  searchGlassFallback: {
+    backgroundColor: Tokens.surfaceRaised,
   },
   searchInputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     height: 44,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
   },
   searchIcon: {
     marginRight: 8,
@@ -504,7 +562,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "System",
     fontWeight: "400",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     padding: 0,
   },
   clearButton: {
@@ -517,17 +575,17 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   entryCard: {
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  entryCardFallback: {
+    backgroundColor: Tokens.surfaceRaised,
+    ...Tokens.shadowMedium,
+  },
+  entryCardInner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
   },
   entryContent: {
     flex: 1,
@@ -536,7 +594,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontFamily: "System",
     fontWeight: "500",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     marginBottom: 8,
     lineHeight: 22,
     letterSpacing: -0.2,
@@ -555,10 +613,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "System",
     fontWeight: "500",
-    color: "#666",
-  },
-  chevronContainer: {
-    marginLeft: 12,
+    color: Tokens.textSecondary,
   },
   deleteAction: {
     backgroundColor: "#F87171",
@@ -579,7 +634,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "#E0F2F7",
+    backgroundColor: Tokens.accentTint,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
@@ -588,7 +643,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: "System",
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     marginBottom: 8,
     textAlign: "center",
     letterSpacing: -0.3,
@@ -597,7 +652,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "System",
     fontWeight: "400",
-    color: "#666",
+    color: Tokens.textSecondary,
     textAlign: "center",
     lineHeight: 22,
   },

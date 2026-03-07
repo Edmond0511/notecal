@@ -12,15 +12,15 @@ import React, {
   useState,
 } from "react";
 import {
-  Animated as RNAnimated,
   Pressable,
-  ScrollView,
+  Animated as RNAnimated,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { NutritionReasoningPopup } from "./NutritionReasoningPopup";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
@@ -632,6 +632,7 @@ interface NotesEditorProps {
   waterTrackingEnabled?: boolean;
   autoFocus?: boolean;
   contentTopInset?: number;
+  isPagerSettledRef?: React.RefObject<boolean>;
 }
 
 export function NotesEditor({
@@ -647,6 +648,7 @@ export function NotesEditor({
   waterTrackingEnabled = false,
   autoFocus = true,
   contentTopInset = 0,
+  isPagerSettledRef,
 }: NotesEditorProps) {
   const entryMode = useAppStore((s) => s.entryMode);
   const isFreeform = entryMode === "freeform";
@@ -656,13 +658,11 @@ export function NotesEditor({
   documentTextRef.current = documentText;
   const [prevInitialText, setPrevInitialText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
-  const scrollRef = useRef<ScrollView>(null);
+  const isScrollingRef = useRef(false);
+  const focusTimestampRef = useRef(0);
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
-  const scrollOffsetRef = useRef(0);
-  const scrollViewHeightRef = useRef(0);
-  const cursorPosRef = useRef(0);
   // Map of entry text prefix -> y position (for entries starting with "-" or "—")
   const [entryYMap, setEntryYMap] = useState<Map<string, number[]>>(new Map());
   // Track the text that was measured, so we know if positions are stale
@@ -727,34 +727,42 @@ export function NotesEditor({
     };
   }, []);
 
-  // Release controlled selection after focus so native cursor works
-  const handleFocus = useCallback(() => {
-    requestAnimationFrame(() => setSelection(undefined));
+  // Scroll tracking handlers for focus guard
+  const handleScrollBeginDrag = useCallback(() => {
+    isScrollingRef.current = true;
+    // If focus fired within 200ms, it was from the same touch that became
+    // this scroll gesture — cancel it (matches Apple Notes tap-vs-scroll behavior)
+    if (Date.now() - focusTimestampRef.current < 200) {
+      focusTimestampRef.current = 0;
+      textInputRef.current?.blur();
+    }
   }, []);
 
-  // Scroll to keep caret visible above keyboard after typing
-  const scrollToCaretIfNeeded = useCallback(
-    (text: string) => {
-      const viewHeight = scrollViewHeightRef.current;
-      if (viewHeight === 0) return;
-
-      const lineIndex = text.substring(0, cursorPosRef.current).split('\n').length - 1;
-      const cursorY = (contentTopInset || 0) + 12 + lineIndex * LINE_HEIGHT;
-      const cursorBottom = cursorY + LINE_HEIGHT;
-      const scrollY = scrollOffsetRef.current;
-      // automaticallyAdjustKeyboardInsets sets contentInset.bottom = keyboard height,
-      // so viewHeight alone (layout height) is the visible area above the keyboard.
-      const visibleBottom = scrollY + viewHeight;
-
-      if (cursorBottom > visibleBottom) {
-        scrollRef.current?.scrollTo({
-          y: cursorBottom - viewHeight + LINE_HEIGHT,
-          animated: false,
-        });
+  const handleScrollEndDrag = useCallback(
+    (e: { nativeEvent: { velocity?: { y?: number } } }) => {
+      const vy = Math.abs(e.nativeEvent.velocity?.y ?? 0);
+      if (vy < 0.5) {
+        isScrollingRef.current = false;
       }
     },
-    [contentTopInset],
+    [],
   );
+
+  const handleMomentumScrollEnd = useCallback(() => {
+    requestAnimationFrame(() => {
+      isScrollingRef.current = false;
+    });
+  }, []);
+
+  // Guard focus — reject if triggered during scroll or swipe
+  const handleFocus = useCallback(() => {
+    if (isScrollingRef.current || !(isPagerSettledRef?.current ?? true)) {
+      textInputRef.current?.blur();
+      return;
+    }
+    focusTimestampRef.current = Date.now();
+    requestAnimationFrame(() => setSelection(undefined));
+  }, [isPagerSettledRef]);
 
   // Parse document text to find food entry lines
   const parseDocumentForFoodEntries = useCallback(
@@ -831,7 +839,13 @@ export function NotesEditor({
         onAddEntry(line);
       }
     },
-    [entries, parseDocumentForFoodEntries, onAddEntry, onDeleteEntry, onDeleteEntries],
+    [
+      entries,
+      parseDocumentForFoodEntries,
+      onAddEntry,
+      onDeleteEntry,
+      onDeleteEntries,
+    ],
   );
 
   // Handle text changes with debouncing and Apple Notes-style list transforms
@@ -860,23 +874,17 @@ export function NotesEditor({
         previousTextRef.current = result.transformedText;
         onDocumentTextChange(result.transformedText);
 
-        // Clear selection control after render and scroll if newline was added
+        // Clear selection control after render
         requestAnimationFrame(() => {
           setTimeout(() => {
             setSelection(undefined);
             isTransformingRef.current = false;
-            if (diff.type === "insert" && diff.insertedText.includes("\n")) {
-              requestAnimationFrame(() => scrollToCaretIfNeeded(result.transformedText));
-            }
           }, 50);
         });
       } else {
         setDocumentText(newText);
         previousTextRef.current = newText;
         onDocumentTextChange(newText);
-
-        // Keep caret above keyboard after typing
-        requestAnimationFrame(() => scrollToCaretIfNeeded(newText));
       }
 
       // Clear previous timeout to properly debounce
@@ -929,7 +937,6 @@ export function NotesEditor({
       isFreeform,
       processDocumentChanges,
       onDocumentTextChange,
-      scrollToCaretIfNeeded,
       parseDocumentForFoodEntries,
       entries,
     ],
@@ -1017,20 +1024,29 @@ export function NotesEditor({
     <View style={styles.container}>
       {/* Hidden Text component for reliable layout measurement */}
       {/* TextInput.onTextLayout is unreliable for wrapped text */}
-      <Text style={[styles.hiddenMeasureText, contentTopInset ? { paddingTop: 12 + contentTopInset } : undefined]} onTextLayout={handleTextLayout}>
+      <Text
+        style={[
+          styles.hiddenMeasureText,
+          contentTopInset ? { paddingTop: 12 + contentTopInset } : undefined,
+        ]}
+        onTextLayout={handleTextLayout}
+      >
         {documentText || " "}
       </Text>
 
-      <ScrollView
-        ref={scrollRef}
+      <KeyboardAwareScrollView
         style={styles.scrollContainer}
-        contentContainerStyle={[styles.scrollContent, contentTopInset ? { paddingTop: contentTopInset } : undefined]}
-        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={[
+          styles.scrollContent,
+          contentTopInset ? { paddingTop: contentTopInset } : undefined,
+        ]}
+        bottomOffset={80}
+        extraKeyboardSpace={130}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
-        scrollEventThrottle={16}
-        onLayout={(e) => { scrollViewHeightRef.current = e.nativeEvent.layout.height; }}
-        onScroll={(e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
+        onScrollBeginDrag={handleScrollBeginDrag}
+        onScrollEndDrag={handleScrollEndDrag}
+        onMomentumScrollEnd={handleMomentumScrollEnd}
       >
         {/* Document editor - full screen */}
         <TextInput
@@ -1058,12 +1074,21 @@ export function NotesEditor({
           contextMenuHidden={false}
           selectTextOnFocus={false}
           clearTextOnFocus={false}
-          onSelectionChange={(e) => { cursorPosRef.current = e.nativeEvent.selection.end; }}
         />
 
         {/* Inline nutrition indicators - scrolls naturally with content */}
         <View
-          style={[styles.overlay, contentTopInset ? { top: TEXT_INPUT_PADDING_TOP + FONT_VERTICAL_OFFSET + contentTopInset } : undefined]}
+          style={[
+            styles.overlay,
+            contentTopInset
+              ? {
+                  top:
+                    TEXT_INPUT_PADDING_TOP +
+                    FONT_VERTICAL_OFFSET +
+                    contentTopInset,
+                }
+              : undefined,
+          ]}
           pointerEvents="box-none"
         >
           {indicatorData.map((item) => (
@@ -1088,7 +1113,7 @@ export function NotesEditor({
             textInputRef.current?.focus();
           }}
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* Header fade gradient */}
       {contentTopInset > 0 && (

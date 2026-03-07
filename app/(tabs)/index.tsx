@@ -45,6 +45,11 @@ import type { InfinitePagerImperativeApi } from "react-native-infinite-pager";
 import InfinitePager from "react-native-infinite-pager";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
 import {
+  runOnJS,
+  useAnimatedReaction,
+  useSharedValue,
+} from "react-native-reanimated";
+import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
@@ -67,6 +72,29 @@ export default function HomeScreen() {
   const { isOnline } = useNetworkStatus();
 
   const pagerRef = useRef<InfinitePagerImperativeApi>(null);
+
+  // Track pager animation position — ref-only to avoid re-renders
+  const pageAnim = useSharedValue(0);
+  const isPagerSettledRef = useRef(true);
+
+  // Trigger a re-render when pager settles so TotalsBar can unfreeze
+  const [, setSettleCount] = useState(0);
+
+  const updatePagerSettled = useCallback((settled: boolean) => {
+    isPagerSettledRef.current = settled;
+    if (settled) {
+      setSettleCount((c) => c + 1);
+    }
+  }, []);
+
+  useAnimatedReaction(
+    () => Math.abs(pageAnim.value - Math.round(pageAnim.value)) < 0.01,
+    (settled, prevSettled) => {
+      if (settled !== prevSettled) {
+        runOnJS(updatePagerSettled)(settled);
+      }
+    },
+  );
 
   // O(1) indexed lookup for current date entries (for TotalsBar)
   const entries = useEntriesForDate(currentDate);
@@ -94,9 +122,6 @@ export default function HomeScreen() {
       const newDate = indexToDate(index);
       setCurrentDate(newDate);
       Keyboard.dismiss();
-      // Dismiss again after spring settles — catches any focus triggered by
-      // the swipe's touch-up landing on the new page's TextInput.
-      setTimeout(() => Keyboard.dismiss(), 250);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
     [setCurrentDate],
@@ -136,6 +161,7 @@ export default function HomeScreen() {
         <DatePage
           dateString={dateString}
           isActive={isActive}
+          isPagerSettledRef={isPagerSettledRef}
           isOnline={isOnline}
           contentTopInset={contentTopInset}
         />
@@ -342,6 +368,7 @@ export default function HomeScreen() {
         <InfinitePager
           ref={pagerRef}
           pageBuffer={1}
+          pageCallbackNode={pageAnim}
           onPageChange={handlePageChange}
           renderPage={renderPage}
           flingVelocity={500}
@@ -428,6 +455,7 @@ export default function HomeScreen() {
             isOnline={isOnline}
             onAddSavedPress={handleAddSavedPress}
             onTotalsPress={handleTotalsPress}
+            isPagerSettledRef={isPagerSettledRef}
           />
         </View>
       </KeyboardStickyView>

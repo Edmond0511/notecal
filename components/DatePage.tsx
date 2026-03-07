@@ -3,11 +3,12 @@ import { useAppStore } from '@/store/app-store';
 import { useEntriesForDate } from '@/store/selectors';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { Keyboard, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface DatePageProps {
   dateString: string;
   isActive: boolean;
+  isPagerSettledRef: React.RefObject<boolean>;
   isOnline: boolean;
   contentTopInset?: number;
 }
@@ -15,6 +16,7 @@ interface DatePageProps {
 export const DatePage = React.memo(function DatePage({
   dateString,
   isActive,
+  isPagerSettledRef,
   isOnline,
   contentTopInset,
 }: DatePageProps) {
@@ -46,23 +48,6 @@ export const DatePage = React.memo(function DatePage({
       clearPendingInsertion: s.clearPendingInsertion,
     })),
   );
-
-  // Block pointer events briefly when page becomes active via swipe.
-  // Prevents the swipe's touch-up from triggering keyboard focus on the
-  // new page's TextInput or bottom-tap Pressable.
-  const prevActiveRef = useRef(isActive);
-  const [blockInteraction, setBlockInteraction] = useState(false);
-
-  useEffect(() => {
-    if (isActive && !prevActiveRef.current) {
-      setBlockInteraction(true);
-      Keyboard.dismiss();
-      const timer = setTimeout(() => setBlockInteraction(false), 200);
-      prevActiveRef.current = isActive;
-      return () => clearTimeout(timer);
-    }
-    prevActiveRef.current = isActive;
-  }, [isActive]);
 
   // Local document text state
   const [documentText, setDocumentText] = useState(() => {
@@ -104,7 +89,7 @@ export const DatePage = React.memo(function DatePage({
   );
 
   return (
-    <View style={styles.container} pointerEvents={blockInteraction ? 'none' : 'auto'}>
+    <View style={styles.container} pointerEvents={isActive ? 'auto' : 'none'}>
       <NotesEditor
         entries={entries}
         initialDocumentText={documentText}
@@ -118,6 +103,7 @@ export const DatePage = React.memo(function DatePage({
         waterTrackingEnabled={waterTrackingEnabled}
         autoFocus={false}
         contentTopInset={contentTopInset}
+        isPagerSettledRef={isPagerSettledRef}
       />
     </View>
   );

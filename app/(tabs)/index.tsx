@@ -77,14 +77,8 @@ export default function HomeScreen() {
   const pageAnim = useSharedValue(0);
   const isPagerSettledRef = useRef(true);
 
-  // Trigger a re-render when pager settles so TotalsBar can unfreeze
-  const [, setSettleCount] = useState(0);
-
   const updatePagerSettled = useCallback((settled: boolean) => {
     isPagerSettledRef.current = settled;
-    if (settled) {
-      setSettleCount((c) => c + 1);
-    }
   }, []);
 
   useAnimatedReaction(
@@ -451,11 +445,9 @@ export default function HomeScreen() {
       <KeyboardStickyView offset={{ closed: 0, opened: 40 }}>
         <View style={styles.bottomBarContainer}>
           <TotalsBar
-            dailyTotals={dailyTotals}
             isOnline={isOnline}
             onAddSavedPress={handleAddSavedPress}
             onTotalsPress={handleTotalsPress}
-            isPagerSettledRef={isPagerSettledRef}
           />
         </View>
       </KeyboardStickyView>

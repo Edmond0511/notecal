@@ -17,9 +17,7 @@ import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
 import {
   Dimensions,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   StatusBar,
   StyleSheet,
   Switch,
@@ -45,6 +43,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -616,24 +615,21 @@ export function NutritionGoalsModal({
               <Text style={styles.title}>Nutrition Targets</Text>
             </View>
 
-            <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              style={styles.keyboardView}
+            <KeyboardAwareScrollView
+              ref={scrollViewRef}
+              style={styles.content}
+              contentContainerStyle={[
+                styles.contentContainer,
+                { paddingBottom: insets.bottom + 100 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              onScrollBeginDrag={handleScrollBeginDrag}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              bounces={true}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
             >
-              <Animated.ScrollView
-                ref={scrollViewRef}
-                style={styles.content}
-                contentContainerStyle={[
-                  styles.contentContainer,
-                  { paddingBottom: insets.bottom + 100 },
-                ]}
-                showsVerticalScrollIndicator={false}
-                onScrollBeginDrag={handleScrollBeginDrag}
-                onScroll={handleScroll}
-                scrollEventThrottle={16}
-                bounces={true}
-                keyboardShouldPersistTaps="handled"
-              >
                 {/* Other Nutrients Section */}
                 <Animated.View
                   entering={FadeInDown.delay(100).duration(400)}
@@ -775,8 +771,7 @@ export function NutritionGoalsModal({
                     </View>
                   </Animated.View>
                 </Animated.View>
-              </Animated.ScrollView>
-            </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
 
             <View
               style={[

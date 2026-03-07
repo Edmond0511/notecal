@@ -1,4 +1,5 @@
 import { AnimatedDigits } from "@/components/AnimatedDigits";
+import { Tokens } from "@/constants/theme";
 import { scaleMacrosToServing } from "@/services/barcodeService";
 import {
   fetchFoodPortions,
@@ -6,6 +7,10 @@ import {
   searchFoodDatabase,
 } from "@/services/foodSearchApi";
 import { CommonPortion, DatabaseSearchResult, Macros } from "@/types";
+import {
+  isLiquidGlassSupported,
+  LiquidGlassView,
+} from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -107,6 +112,7 @@ export function DatabaseSearchModal({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchInputRef = useRef<TextInput>(null);
   const translateY = useSharedValue(0);
+  const showGlass = isLiquidGlassSupported;
 
   // Multi-select state
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
@@ -572,11 +578,23 @@ export function DatabaseSearchModal({
             {/* Header */}
             <View style={styles.header}>
               <TouchableOpacity
-                style={styles.backButton}
                 onPress={handleClose}
                 activeOpacity={0.7}
               >
-                <Ionicons name="chevron-back" size={20} color="#666" />
+                {showGlass ? (
+                  <LiquidGlassView
+                    style={styles.backButton}
+                    interactive
+                    effect="regular"
+                    tintColor="rgba(250, 250, 247, 0.3)"
+                  >
+                    <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+                  </LiquidGlassView>
+                ) : (
+                  <View style={[styles.backButton, styles.backButtonFallback]}>
+                    <Ionicons name="chevron-back" size={20} color="#666" />
+                  </View>
+                )}
               </TouchableOpacity>
               <Text style={styles.headerTitle}>Search Foods</Text>
               <View style={styles.headerRightSpacer} />

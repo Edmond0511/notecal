@@ -15,6 +15,7 @@ interface AnimatedDigitsProps {
   maxWidth?: number;
   minimumFontScale?: number;
   style?: TextStyle;
+  skipAnimation?: boolean;
 }
 
 interface CharProps {
@@ -24,24 +25,30 @@ interface CharProps {
   color: string;
   digitHeight: number;
   charWidth: number;
+  skipAnimation?: boolean;
 }
 
-function useCharTransition(char: string) {
+function useCharTransition(char: string, skipAnimation?: boolean) {
   const prevRef = useRef(char);
   const [display, setDisplay] = useState({ old: char, current: char });
   const progress = useSharedValue(1);
 
   useEffect(() => {
     if (char !== prevRef.current) {
-      setDisplay({ old: prevRef.current, current: char });
-      progress.value = 0;
-      progress.value = withTiming(1, {
-        duration: 300,
-        easing: Easing.out(Easing.cubic),
-      });
+      if (skipAnimation) {
+        setDisplay({ old: char, current: char });
+        progress.value = 1;
+      } else {
+        setDisplay({ old: prevRef.current, current: char });
+        progress.value = 0;
+        progress.value = withTiming(1, {
+          duration: 300,
+          easing: Easing.out(Easing.cubic),
+        });
+      }
       prevRef.current = char;
     }
-  }, [char]);
+  }, [char, skipAnimation]);
 
   return { display, progress };
 }
@@ -53,8 +60,9 @@ const FadeSlideChar = memo(function FadeSlideChar({
   color,
   digitHeight,
   charWidth,
+  skipAnimation,
 }: CharProps) {
-  const { display, progress } = useCharTransition(char);
+  const { display, progress } = useCharTransition(char, skipAnimation);
 
   const textBase: TextStyle = {
     fontSize,
@@ -112,6 +120,7 @@ export const AnimatedDigits = memo(function AnimatedDigits({
   maxWidth,
   minimumFontScale = 0.6,
   style,
+  skipAnimation,
 }: AnimatedDigitsProps) {
   const displayStr = truncateNumber(Math.round(value), maxDigits);
   const chars = displayStr.split("");
@@ -152,6 +161,7 @@ export const AnimatedDigits = memo(function AnimatedDigits({
           color={color}
           digitHeight={digitHeight}
           charWidth={charWidth}
+          skipAnimation={skipAnimation}
         />
       ))}
     </View>

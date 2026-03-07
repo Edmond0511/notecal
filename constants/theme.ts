@@ -22,6 +22,7 @@ export const Tokens = {
   accent: '#1A6872',
   accentBright: '#1A6872',
   accentTint: '#E0F2F1',
+  tintColor: 'rgba(250, 250, 247, 0.3)',
 
   // Borders & dividers
   border: '#E8E7E3',

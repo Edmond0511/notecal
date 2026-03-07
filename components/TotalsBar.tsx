@@ -1,6 +1,8 @@
 import { AnimatedDigits } from "@/components/AnimatedDigits";
 import { OfflinePill } from "@/components/OfflinePill";
 import { Tokens } from "@/constants/theme";
+import { useAppStore } from "@/store/app-store";
+import { useEntriesForDate } from "@/store/selectors";
 import {
   isLiquidGlassSupported,
   LiquidGlassView,
@@ -14,7 +16,7 @@ import {
   faWheatAwn,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import React from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 const icons = {
@@ -25,44 +27,52 @@ const icons = {
 };
 
 interface TotalsBarProps {
-  dailyTotals: {
-    kcal: number;
-    protein: number;
-    fat: number;
-    carbs: number;
-  };
   isOnline: boolean;
   onAddSavedPress: () => void;
   onTotalsPress: () => void;
   useGlass?: boolean;
-  isPagerSettledRef?: React.RefObject<boolean>;
-}
-
-function arePropsEqual(prev: TotalsBarProps, next: TotalsBarProps) {
-  // Freeze during page transitions — prevent AnimatedDigits flash mid-swipe
-  if (next.isPagerSettledRef && !next.isPagerSettledRef.current) {
-    return true;
-  }
-  return (
-    prev.dailyTotals.kcal === next.dailyTotals.kcal &&
-    prev.dailyTotals.protein === next.dailyTotals.protein &&
-    prev.dailyTotals.fat === next.dailyTotals.fat &&
-    prev.dailyTotals.carbs === next.dailyTotals.carbs &&
-    prev.isOnline === next.isOnline &&
-    prev.onAddSavedPress === next.onAddSavedPress &&
-    prev.onTotalsPress === next.onTotalsPress &&
-    prev.useGlass === next.useGlass
-  );
 }
 
 export const TotalsBar = React.memo(function TotalsBar({
-  dailyTotals,
   isOnline,
   onAddSavedPress,
   onTotalsPress,
   useGlass,
-  // isPagerSettledRef is only read inside arePropsEqual, not used in render
 }: TotalsBarProps) {
+  const currentDate = useAppStore((s) => s.currentDate);
+  const entries = useEntriesForDate(currentDate);
+
+  const dailyTotals = useMemo(() => {
+    let kcal = 0,
+      protein = 0,
+      fat = 0,
+      carbs = 0;
+    for (const entry of entries) {
+      if (entry.status !== "ok" || !entry.items) continue;
+      kcal += entry.inlineKcal || 0;
+      for (const item of entry.items) {
+        const m = item.macros;
+        if (!m) continue;
+        protein += m.protein || 0;
+        fat += m.fat || 0;
+        carbs += m.carbs || 0;
+      }
+    }
+    return { kcal, protein, fat, carbs };
+  }, [entries]);
+
+  // Detect date changes → skip animation
+  const prevDateRef = useRef(currentDate);
+  const [skipAnimation, setSkipAnimation] = useState(false);
+
+  useEffect(() => {
+    if (currentDate !== prevDateRef.current) {
+      setSkipAnimation(true);
+      prevDateRef.current = currentDate;
+      requestAnimationFrame(() => setSkipAnimation(false));
+    }
+  }, [currentDate]);
+
   const showGlass = (useGlass ?? true) && isLiquidGlassSupported;
 
   const addButtonContent = (
@@ -77,6 +87,7 @@ export const TotalsBar = React.memo(function TotalsBar({
           maxDigits={5}
           maxWidth={56}
           style={styles.totalValue}
+          skipAnimation={skipAnimation}
         />
         <FontAwesomeIcon
           icon={icons.fire}
@@ -92,6 +103,7 @@ export const TotalsBar = React.memo(function TotalsBar({
           maxDigits={4}
           maxWidth={56}
           style={styles.totalValue}
+          skipAnimation={skipAnimation}
         />
         <FontAwesomeIcon
           icon={icons.protein}
@@ -107,6 +119,7 @@ export const TotalsBar = React.memo(function TotalsBar({
           maxDigits={4}
           maxWidth={56}
           style={styles.totalValue}
+          skipAnimation={skipAnimation}
         />
         <FontAwesomeIcon
           icon={icons.fat}
@@ -122,6 +135,7 @@ export const TotalsBar = React.memo(function TotalsBar({
           maxDigits={4}
           maxWidth={56}
           style={styles.totalValue}
+          skipAnimation={skipAnimation}
         />
         <FontAwesomeIcon
           icon={icons.carbs}
@@ -154,7 +168,9 @@ export const TotalsBar = React.memo(function TotalsBar({
               {addButtonContent}
             </LiquidGlassView>
           ) : (
-            <View style={[styles.addSavedButton, styles.addSavedButtonFallback]}>
+            <View
+              style={[styles.addSavedButton, styles.addSavedButtonFallback]}
+            >
               {addButtonContent}
             </View>
           )}
@@ -171,7 +187,7 @@ export const TotalsBar = React.memo(function TotalsBar({
               style={[styles.totalsBar]}
               interactive
               effect="regular"
-              tintColor="rgba(250, 250, 247, 0)"
+              tintColor={Tokens.tintColor}
             >
               {totalsContent}
             </LiquidGlassView>
@@ -184,7 +200,7 @@ export const TotalsBar = React.memo(function TotalsBar({
       </View>
     </View>
   );
-}, arePropsEqual);
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -207,7 +223,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    ...Tokens.shadowLight,
   },
   addSavedButtonFallback: {
     backgroundColor: Tokens.accentTint,
@@ -224,7 +239,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 8,
     borderRadius: 26,
-    ...Tokens.shadowLight,
   },
   totalsBarFallback: {
     backgroundColor: Tokens.surface,

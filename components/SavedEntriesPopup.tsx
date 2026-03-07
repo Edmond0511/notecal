@@ -29,6 +29,7 @@ import {
 import {
   Gesture,
   GestureDetector,
+  GestureHandlerRootView,
   Swipeable,
 } from "react-native-gesture-handler";
 import Animated, {
@@ -41,6 +42,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -269,17 +271,9 @@ export function SavedEntriesPopup({
             onPress={() => handleSelectEntry(item)}
             activeOpacity={0.7}
           >
-            <LiquidGlassView
-              style={[
-                styles.entryCard,
-                !showGlass && styles.entryCardFallback,
-              ]}
-              interactive
-              effect="regular"
-              tintColor="rgba(250, 250, 247, 0.3)"
-            >
+            <View style={styles.entryCard}>
               {cardContent}
-            </LiquidGlassView>
+            </View>
           </TouchableOpacity>
         </Swipeable>
       </Animated.View>
@@ -374,7 +368,7 @@ export function SavedEntriesPopup({
 
       {/* Content */}
       {filteredEntries.length > 0 ? (
-        <Animated.ScrollView
+        <KeyboardAwareScrollView
           style={styles.content}
           contentContainerStyle={[
             styles.contentContainer,
@@ -386,11 +380,12 @@ export function SavedEntriesPopup({
           scrollEventThrottle={16}
           bounces={true}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
         >
           {filteredEntries.map((item, index) => (
             <View key={item.id}>{renderItem({ item, index })}</View>
           ))}
-        </Animated.ScrollView>
+        </KeyboardAwareScrollView>
       ) : searchQuery.length > 0 ? (
         <Animated.View
           entering={FadeIn.duration(300)}
@@ -429,7 +424,7 @@ export function SavedEntriesPopup({
       transparent
       onRequestClose={onClose}
     >
-      <View style={styles.gestureRoot}>
+      <GestureHandlerRootView style={styles.gestureRoot}>
         <StatusBar barStyle="dark-content" />
         {/* Backdrop */}
         <Animated.View style={[styles.backdrop, backdropStyle]}>
@@ -452,7 +447,7 @@ export function SavedEntriesPopup({
             {renderSheetContent()}
           </Animated.View>
         </GestureDetector>
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -471,7 +466,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: Tokens.background,
+    backgroundColor: "#f8f8f8",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -539,7 +534,6 @@ const styles = StyleSheet.create({
   },
   searchShadowWrapper: {
     borderRadius: 22,
-    ...Tokens.shadowMedium,
   },
   searchGlass: {
     borderRadius: 22,
@@ -577,10 +571,8 @@ const styles = StyleSheet.create({
   entryCard: {
     borderRadius: 16,
     marginBottom: 12,
-  },
-  entryCardFallback: {
     backgroundColor: Tokens.surfaceRaised,
-    ...Tokens.shadowMedium,
+    ...Tokens.shadowLight,
   },
   entryCardInner: {
     flexDirection: "row",

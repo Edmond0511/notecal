@@ -104,6 +104,7 @@ export const DatePage = React.memo(function DatePage({
         autoFocus={false}
         contentTopInset={contentTopInset}
         isPagerSettledRef={isPagerSettledRef}
+        isActive={isActive}
       />
     </View>
   );

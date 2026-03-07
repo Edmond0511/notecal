@@ -15,9 +15,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
 import {
   Dimensions,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   StatusBar,
   StyleSheet,
   Text,
@@ -38,6 +36,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Step1Metrics } from './WizardSteps/Step1Metrics';
 import { Step2Activity } from './WizardSteps/Step2Activity';
@@ -460,26 +459,21 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
             </View>
 
             {/* Content */}
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              style={styles.contentContainer}
+            <KeyboardAwareScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              bounces={true}
+              onScrollBeginDrag={handleScrollBeginDrag}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
             >
-              <Animated.ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="interactive"
-                bounces={true}
-                onScrollBeginDrag={handleScrollBeginDrag}
-                onScroll={handleScroll}
-                scrollEventThrottle={16}
-              >
-                <Animated.View entering={FadeInDown.delay(100).duration(400)}>
-                  {renderStep()}
-                </Animated.View>
-              </Animated.ScrollView>
-            </KeyboardAvoidingView>
+              <Animated.View entering={FadeInDown.delay(100).duration(400)}>
+                {renderStep()}
+              </Animated.View>
+            </KeyboardAwareScrollView>
 
             {/* Navigation buttons */}
             <View

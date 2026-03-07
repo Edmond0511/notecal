@@ -20,7 +20,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { runOnJS } from "react-native-reanimated";
 import { NutritionReasoningPopup } from "./NutritionReasoningPopup";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
@@ -633,6 +635,7 @@ interface NotesEditorProps {
   autoFocus?: boolean;
   contentTopInset?: number;
   isPagerSettledRef?: React.RefObject<boolean>;
+  isActive?: boolean;
 }
 
 export function NotesEditor({
@@ -649,6 +652,7 @@ export function NotesEditor({
   autoFocus = true,
   contentTopInset = 0,
   isPagerSettledRef,
+  isActive,
 }: NotesEditorProps) {
   const entryMode = useAppStore((s) => s.entryMode);
   const isFreeform = entryMode === "freeform";
@@ -658,8 +662,7 @@ export function NotesEditor({
   documentTextRef.current = documentText;
   const [prevInitialText, setPrevInitialText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
-  const isScrollingRef = useRef(false);
-  const focusTimestampRef = useRef(0);
+  const [isFocused, setIsFocused] = useState(false);
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
@@ -727,42 +730,37 @@ export function NotesEditor({
     };
   }, []);
 
-  // Scroll tracking handlers for focus guard
-  const handleScrollBeginDrag = useCallback(() => {
-    isScrollingRef.current = true;
-    // If focus fired within 200ms, it was from the same touch that became
-    // this scroll gesture — cancel it (matches Apple Notes tap-vs-scroll behavior)
-    if (Date.now() - focusTimestampRef.current < 200) {
-      focusTimestampRef.current = 0;
-      textInputRef.current?.blur();
-    }
-  }, []);
-
-  const handleScrollEndDrag = useCallback(
-    (e: { nativeEvent: { velocity?: { y?: number } } }) => {
-      const vy = Math.abs(e.nativeEvent.velocity?.y ?? 0);
-      if (vy < 0.5) {
-        isScrollingRef.current = false;
-      }
-    },
-    [],
-  );
-
-  const handleMomentumScrollEnd = useCallback(() => {
-    requestAnimationFrame(() => {
-      isScrollingRef.current = false;
-    });
-  }, []);
-
-  // Guard focus — reject if triggered during scroll or swipe
+  // Focus/blur handlers — pointerEvents="none" on TextInput prevents
+  // touch-down from firing focus during scrolls. Only confirmed taps
+  // (via Gesture.Tap overlay) programmatically focus.
   const handleFocus = useCallback(() => {
-    if (isScrollingRef.current || !(isPagerSettledRef?.current ?? true)) {
+    if (!(isPagerSettledRef?.current ?? true)) {
       textInputRef.current?.blur();
       return;
     }
-    focusTimestampRef.current = Date.now();
+    setIsFocused(true);
     requestAnimationFrame(() => setSelection(undefined));
   }, [isPagerSettledRef]);
+
+  const handleBlur = useCallback(() => {
+    setIsFocused(false);
+  }, []);
+
+  // Tap-to-focus gesture — only fires for confirmed taps (finger < 10pt)
+  const doFocus = useCallback(() => {
+    textInputRef.current?.focus();
+  }, []);
+
+  const tapToFocusGesture = useMemo(
+    () =>
+      Gesture.Tap()
+        .maxDistance(10)
+        .onEnd(() => {
+          "worklet";
+          runOnJS(doFocus)();
+        }),
+    [doFocus],
+  );
 
   // Parse document text to find food entry lines
   const parseDocumentForFoodEntries = useCallback(
@@ -1044,64 +1042,76 @@ export function NotesEditor({
         extraKeyboardSpace={130}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
-        onScrollBeginDrag={handleScrollBeginDrag}
-        onScrollEndDrag={handleScrollEndDrag}
-        onMomentumScrollEnd={handleMomentumScrollEnd}
+        enabled={isActive !== false}
+        disableScrollOnKeyboardHide
       >
-        {/* Document editor - full screen */}
-        <TextInput
-          ref={textInputRef}
-          style={styles.documentInput}
-          value={documentText}
-          onChangeText={handleTextChange}
-          onFocus={handleFocus}
-          selection={selection}
-          placeholder={
-            isFreeform
-              ? "What did you eat today?"
-              : "Type \u2014 to start logging"
-          }
-          placeholderTextColor={Tokens.textTertiary}
-          multiline
-          scrollEnabled={false}
-          autoFocus={autoFocus}
-          textAlignVertical="top"
-          autoCorrect={false}
-          autoCapitalize="sentences"
-          spellCheck={false}
-          underlineColorAndroid="transparent"
-          selectionColor="#007AFF"
-          contextMenuHidden={false}
-          selectTextOnFocus={false}
-          clearTextOnFocus={false}
-        />
-
-        {/* Inline nutrition indicators - scrolls naturally with content */}
-        <View
-          style={[
-            styles.overlay,
-            contentTopInset
-              ? {
-                  top:
-                    TEXT_INPUT_PADDING_TOP +
-                    FONT_VERTICAL_OFFSET +
-                    contentTopInset,
-                }
-              : undefined,
-          ]}
-          pointerEvents="box-none"
-        >
-          {indicatorData.map((item) => (
-            <IndicatorRow
-              key={item.entryId}
-              entry={item.entry}
-              yPosition={item.yPosition}
-              opacity={hasFreshMeasurements ? 1 : 0}
-              isOnline={isOnline}
-              waterTrackingEnabled={waterTrackingEnabled}
-              onTap={handleIndicatorTap}
+        <View style={{ position: "relative" }}>
+          {/* TextInput: only receives touches when focused */}
+          <View pointerEvents={isFocused ? "auto" : "none"}>
+            <TextInput
+              ref={textInputRef}
+              style={styles.documentInput}
+              value={documentText}
+              onChangeText={handleTextChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              selection={selection}
+              placeholder={
+                isFreeform
+                  ? "What did you eat today?"
+                  : "Type \u2014 to start logging"
+              }
+              placeholderTextColor={Tokens.textTertiary}
+              multiline
+              scrollEnabled={false}
+              autoFocus={autoFocus}
+              textAlignVertical="top"
+              autoCorrect={false}
+              autoCapitalize="sentences"
+              spellCheck={false}
+              underlineColorAndroid="transparent"
+              selectionColor="#007AFF"
+              contextMenuHidden={false}
+              selectTextOnFocus={false}
+              clearTextOnFocus={false}
             />
-          ))}
+          </View>
+
+          {/* Tap-to-focus overlay — behind indicators (zIndex: 1) */}
+          {!isFocused && (
+            <GestureDetector gesture={tapToFocusGesture}>
+              <View style={[StyleSheet.absoluteFill, { zIndex: 1 }]} />
+            </GestureDetector>
+          )}
+
+          {/* Inline nutrition indicators — above overlay (zIndex: 2) */}
+          <View
+            style={[
+              styles.overlay,
+              { zIndex: 2 },
+              contentTopInset
+                ? {
+                    top:
+                      TEXT_INPUT_PADDING_TOP +
+                      FONT_VERTICAL_OFFSET +
+                      contentTopInset,
+                  }
+                : undefined,
+            ]}
+            pointerEvents="box-none"
+          >
+            {indicatorData.map((item) => (
+              <IndicatorRow
+                key={item.entryId}
+                entry={item.entry}
+                yPosition={item.yPosition}
+                opacity={hasFreshMeasurements ? 1 : 0}
+                isOnline={isOnline}
+                waterTrackingEnabled={waterTrackingEnabled}
+                onTap={handleIndicatorTap}
+              />
+            ))}
+          </View>
         </View>
 
         {/* Bottom spacer — tap below text focuses at end of document */}

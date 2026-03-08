@@ -34,7 +34,6 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AuthModal } from "./AuthModal";
 import { CalendarLegendModal } from "./CalendarLegendModal";
 import { GoalsWizard } from "./goals/GoalsWizard";
 import { NutritionGoalsModal } from "./NutritionGoalsModal";
@@ -74,7 +73,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [showNutritionGoals, setShowNutritionGoals] = useState(false);
   const [showGoalsWizard, setShowGoalsWizard] = useState(false);
   const [showWeightTracking, setShowWeightTracking] = useState(false);
@@ -183,10 +181,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
     }
   };
 
-  const handleAuthSuccess = () => {
-    fetchUser();
-  };
-
   return (
     <>
       <Modal
@@ -266,8 +260,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                     <View style={styles.loadingContainer}>
                       <ActivityIndicator size="small" color="#666" />
                     </View>
-                  ) : user ? (
-                    /* Signed In State */
+                  ) : user && (
                     <>
                       <View style={styles.accountCard}>
                         <View style={styles.accountInfo}>
@@ -299,31 +292,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         </View>
                       )}
                     </>
-                  ) : (
-                    /* Signed Out State */
-                    <TouchableOpacity
-                      style={styles.signInCard}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setShowAuthModal(true);
-                      }}
-                      activeOpacity={0.8}
-                    >
-                      <View style={styles.signInIconContainer}>
-                        <Ionicons
-                          name="person-outline"
-                          size={24}
-                          color="#22C55E"
-                        />
-                      </View>
-                      <View style={styles.signInContent}>
-                        <Text style={styles.signInTitle}>Sign In</Text>
-                        <Text style={styles.signInSubtitle}>
-                          Sync your data across devices
-                        </Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={20} color="#ccc" />
-                    </TouchableOpacity>
                   )}
                 </Animated.View>
 
@@ -545,14 +513,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           </GestureDetector>
         </GestureHandlerRootView>
 
-        {/* Nested inside Settings Modal — presents on top on iOS */}
-        {showAuthModal && (
-          <AuthModal
-            visible={showAuthModal}
-            onClose={() => setShowAuthModal(false)}
-            onAuthSuccess={handleAuthSuccess}
-          />
-        )}
 
         {showNutritionGoals && (
           <NutritionGoalsModal
@@ -733,36 +693,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#DC2626",
-  },
-  signInCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    elevation: 1,
-  },
-  signInIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#F0FDF4",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  signInContent: {
-    flex: 1,
-  },
-  signInTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1a1a1a",
-    marginBottom: 2,
-  },
-  signInSubtitle: {
-    fontSize: 13,
-    color: "#666",
   },
   menuCardShadow: {
     shadowColor: "#000",

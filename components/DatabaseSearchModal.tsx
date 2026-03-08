@@ -41,7 +41,10 @@ import {
   GestureDetector,
   GestureHandlerRootView,
 } from "react-native-gesture-handler";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import {
+  KeyboardAwareScrollView,
+  KeyboardProvider,
+} from "react-native-keyboard-controller";
 import Animated, {
   Extrapolation,
   FadeIn,
@@ -558,6 +561,7 @@ export function DatabaseSearchModal({
       transparent
       onRequestClose={onClose}
     >
+      <KeyboardProvider>
       <GestureHandlerRootView style={styles.gestureRoot}>
         <StatusBar barStyle="dark-content" />
         <Animated.View style={[styles.backdrop, backdropStyle]}>
@@ -1023,6 +1027,7 @@ export function DatabaseSearchModal({
           </Animated.View>
         </GestureDetector>
       </GestureHandlerRootView>
+      </KeyboardProvider>
     </Modal>
   );
 }

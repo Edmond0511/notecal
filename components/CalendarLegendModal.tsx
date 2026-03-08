@@ -1,3 +1,9 @@
+import { Tokens } from "@/constants/theme";
+import {
+  isLiquidGlassSupported,
+  LiquidGlassView,
+} from "@callstack/liquid-glass";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useEffect } from "react";
 import {
@@ -144,7 +150,27 @@ export function CalendarLegendModal({
             </View>
 
             <View style={styles.header}>
+              <TouchableOpacity
+                onPress={handleClose}
+                activeOpacity={0.7}
+              >
+                {isLiquidGlassSupported ? (
+                  <LiquidGlassView
+                    style={styles.backButton}
+                    interactive
+                    effect="regular"
+                    tintColor="rgba(250, 250, 247, 0.3)"
+                  >
+                    <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+                  </LiquidGlassView>
+                ) : (
+                  <View style={[styles.backButton, styles.backButtonFallback]}>
+                    <Ionicons name="chevron-back" size={20} color="#666" />
+                  </View>
+                )}
+              </TouchableOpacity>
               <Text style={styles.title}>Calendar Legend</Text>
+              <View style={styles.headerRightSpacer} />
             </View>
 
             <Animated.ScrollView
@@ -246,10 +272,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#ddd",
   },
   header: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: "#f8f8f8",
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backButtonFallback: {
+    backgroundColor: "#EBEBEB",
+  },
+  headerRightSpacer: {
+    width: 36,
   },
   title: {
     fontSize: 18,

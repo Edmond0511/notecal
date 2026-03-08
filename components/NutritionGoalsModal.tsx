@@ -1,4 +1,9 @@
+import { Tokens } from "@/constants/theme";
 import { useAppStore } from "@/store/app-store";
+import {
+  isLiquidGlassSupported,
+  LiquidGlassView,
+} from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -612,7 +617,27 @@ export function NutritionGoalsModal({
             </View>
 
             <View style={styles.header}>
+              <TouchableOpacity
+                onPress={handleClose}
+                activeOpacity={0.7}
+              >
+                {isLiquidGlassSupported ? (
+                  <LiquidGlassView
+                    style={styles.backButton}
+                    interactive
+                    effect="regular"
+                    tintColor="rgba(250, 250, 247, 0.3)"
+                  >
+                    <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+                  </LiquidGlassView>
+                ) : (
+                  <View style={[styles.backButton, styles.backButtonFallback]}>
+                    <Ionicons name="chevron-back" size={20} color="#666" />
+                  </View>
+                )}
+              </TouchableOpacity>
               <Text style={styles.title}>Nutrition Targets</Text>
+              <View style={styles.headerRightSpacer} />
             </View>
 
             <KeyboardAwareScrollView
@@ -663,7 +688,7 @@ export function NutritionGoalsModal({
                             <Switch
                               value={enabled}
                               onValueChange={() => toggleNutrient(nutrient.key)}
-                              trackColor={{ true: "#007AFF" }}
+                              trackColor={{ true: "#34C759" }}
                             />
                           </View>
                         );
@@ -826,10 +851,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#ddd",
   },
   header: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: "#f8f8f8",
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backButtonFallback: {
+    backgroundColor: "#EBEBEB",
+  },
+  headerRightSpacer: {
+    width: 36,
   },
   title: {
     fontSize: 18,
@@ -1032,6 +1072,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderWidth: 1,
     borderColor: "rgba(126, 179, 224, 0.2)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
   },
   waterTipTitle: {
     fontSize: 14,

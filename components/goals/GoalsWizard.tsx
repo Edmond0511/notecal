@@ -1,3 +1,4 @@
+import { Tokens } from '@/constants/theme';
 import { useAppStore } from '@/store/app-store';
 import {
   ActivityLevel,
@@ -10,6 +11,10 @@ import {
   UserGoalsInput,
 } from '@/types';
 import { calculateGoals } from '@/utils/goalsCalculator';
+import {
+  isLiquidGlassSupported,
+  LiquidGlassView,
+} from '@callstack/liquid-glass';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
@@ -434,6 +439,25 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
 
             {/* Header */}
             <View style={styles.header}>
+              <TouchableOpacity
+                onPress={handleClose}
+                activeOpacity={0.7}
+              >
+                {isLiquidGlassSupported ? (
+                  <LiquidGlassView
+                    style={styles.headerBackButton}
+                    interactive
+                    effect="regular"
+                    tintColor="rgba(250, 250, 247, 0.3)"
+                  >
+                    <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+                  </LiquidGlassView>
+                ) : (
+                  <View style={[styles.headerBackButton, styles.headerBackButtonFallback]}>
+                    <Ionicons name="chevron-back" size={20} color="#666" />
+                  </View>
+                )}
+              </TouchableOpacity>
               <View style={styles.headerContent}>
                 <Text style={styles.headerTitle}>
                   {existingGoals ? 'Edit Goals' : 'Set Up Goals'}
@@ -442,6 +466,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
                   Step {currentStep} of {totalSteps}
                 </Text>
               </View>
+              <View style={styles.headerRightSpacer} />
             </View>
 
             {/* Progress indicator */}
@@ -566,10 +591,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
     paddingVertical: 8,
     backgroundColor: '#f8f8f8',
+  },
+  headerBackButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerBackButtonFallback: {
+    backgroundColor: '#EBEBEB',
+  },
+  headerRightSpacer: {
+    width: 36,
   },
   headerContent: {
     alignItems: 'center',

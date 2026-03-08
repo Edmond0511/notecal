@@ -42,7 +42,10 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import {
+  KeyboardAwareScrollView,
+  KeyboardProvider,
+} from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -424,6 +427,7 @@ export function SavedEntriesPopup({
       transparent
       onRequestClose={onClose}
     >
+      <KeyboardProvider>
       <GestureHandlerRootView style={styles.gestureRoot}>
         <StatusBar barStyle="dark-content" />
         {/* Backdrop */}
@@ -448,6 +452,7 @@ export function SavedEntriesPopup({
           </Animated.View>
         </GestureDetector>
       </GestureHandlerRootView>
+      </KeyboardProvider>
     </Modal>
   );
 }

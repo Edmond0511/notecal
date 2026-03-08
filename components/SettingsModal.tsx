@@ -1,6 +1,11 @@
+import { Tokens } from "@/constants/theme";
 import { mmkv } from "@/lib/mmkv";
 import { supabase } from "@/lib/supabase";
 import { useAppStore } from "@/store/app-store";
+import {
+  isLiquidGlassSupported,
+  LiquidGlassView,
+} from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
@@ -216,11 +221,23 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
               {/* Header */}
               <View style={styles.header}>
                 <TouchableOpacity
-                  style={styles.backButton}
                   onPress={handleClose}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="chevron-back" size={20} color="#666" />
+                  {isLiquidGlassSupported ? (
+                    <LiquidGlassView
+                      style={styles.backButton}
+                      interactive
+                      effect="regular"
+                      tintColor="rgba(250, 250, 247, 0.3)"
+                    >
+                      <Ionicons name="close" size={20} color={Tokens.textPrimary} />
+                    </LiquidGlassView>
+                  ) : (
+                    <View style={[styles.backButton, styles.backButtonFallback]}>
+                      <Ionicons name="close" size={20} color="#666" />
+                    </View>
+                  )}
                 </TouchableOpacity>
                 <Text style={styles.title}>Settings</Text>
                 <View style={styles.headerRightSpacer} />
@@ -621,9 +638,11 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#EBEBEB",
     alignItems: "center",
     justifyContent: "center",
+  },
+  backButtonFallback: {
+    backgroundColor: "#EBEBEB",
   },
   headerRightSpacer: {
     width: 36,

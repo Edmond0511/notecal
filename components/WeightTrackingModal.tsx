@@ -1,7 +1,12 @@
+import { Tokens } from "@/constants/theme";
 import { photoSyncService } from "@/services/photoSyncService";
 import { useAppStore } from "@/store/app-store";
 import { WeightEntry } from "@/types";
 import { kgToLbs, lbsToKg } from "@/utils/goalsCalculator";
+import {
+  isLiquidGlassSupported,
+  LiquidGlassView,
+} from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, {
@@ -79,6 +84,7 @@ export function WeightTrackingModal({
   const preferredUnits = useAppStore((s) => s.preferredUnits);
   const isImperial = preferredUnits === "imperial";
   const unitLabel = isImperial ? "lbs" : "kg";
+  const showGlass = isLiquidGlassSupported;
 
   const [range, setRange] = useState<TimeRange>("30d");
   const [weightInput, setWeightInput] = useState("");
@@ -624,7 +630,27 @@ export function WeightTrackingModal({
             </View>
 
             <View style={styles.header}>
+              <TouchableOpacity
+                onPress={handleClose}
+                activeOpacity={0.7}
+              >
+                {showGlass ? (
+                  <LiquidGlassView
+                    style={styles.headerBackButton}
+                    interactive
+                    effect="regular"
+                    tintColor="rgba(250, 250, 247, 0.3)"
+                  >
+                    <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+                  </LiquidGlassView>
+                ) : (
+                  <View style={[styles.headerBackButton, styles.headerBackButtonFallback]}>
+                    <Ionicons name="chevron-back" size={20} color="#666" />
+                  </View>
+                )}
+              </TouchableOpacity>
               <Text style={styles.title}>Weight</Text>
+              <View style={styles.headerRightSpacer} />
             </View>
 
             <Animated.ScrollView
@@ -824,11 +850,23 @@ export function WeightTrackingModal({
 
                 <View style={styles.popupOverlayHeader}>
                   <TouchableOpacity
-                    style={styles.popupOverlayCloseButton}
                     onPress={() => setShowLogPopup(false)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="close" size={18} color="#666" />
+                    {showGlass ? (
+                      <LiquidGlassView
+                        style={styles.backButton}
+                        interactive
+                        effect="regular"
+                        tintColor="rgba(250, 250, 247, 0.3)"
+                      >
+                        <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+                      </LiquidGlassView>
+                    ) : (
+                      <View style={[styles.backButton, styles.backButtonFallback]}>
+                        <Ionicons name="chevron-back" size={20} color="#666" />
+                      </View>
+                    )}
                   </TouchableOpacity>
                   <Text style={styles.popupOverlayTitle}>Log Weight</Text>
                   <View style={styles.popupOverlayHeaderSpacer} />
@@ -883,11 +921,23 @@ export function WeightTrackingModal({
 
                 <View style={styles.popupOverlayHeader}>
                   <TouchableOpacity
-                    style={styles.popupOverlayCloseButton}
                     onPress={() => setEditingEntry(null)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="close" size={18} color="#666" />
+                    {showGlass ? (
+                      <LiquidGlassView
+                        style={styles.backButton}
+                        interactive
+                        effect="regular"
+                        tintColor="rgba(250, 250, 247, 0.3)"
+                      >
+                        <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+                      </LiquidGlassView>
+                    ) : (
+                      <View style={[styles.backButton, styles.backButtonFallback]}>
+                        <Ionicons name="chevron-back" size={20} color="#666" />
+                      </View>
+                    )}
                   </TouchableOpacity>
                   <Text style={styles.popupOverlayTitle}>Edit Entry</Text>
                   <View style={styles.popupOverlayHeaderSpacer} />
@@ -973,11 +1023,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#ddd",
   },
   header: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: "#f8f8f8",
+  },
+  headerBackButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerBackButtonFallback: {
+    backgroundColor: "#EBEBEB",
+  },
+  headerRightSpacer: {
+    width: 36,
   },
   title: {
     fontSize: 17,
@@ -1161,13 +1225,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  popupOverlayCloseButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#EBEBEB",
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+  },
+  backButtonFallback: {
+    backgroundColor: "#EBEBEB",
   },
   popupOverlayTitle: {
     fontSize: 17,
@@ -1177,7 +1243,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   popupOverlayHeaderSpacer: {
-    width: 32,
+    width: 36,
   },
   // Popup scroll layout
   popupScrollView: {

@@ -1,5 +1,10 @@
+import { Tokens } from "@/constants/theme";
 import { useAppStore } from "@/store/app-store";
 import { CommonPortion, Entry, Macros } from "@/types";
+import {
+  isLiquidGlassSupported,
+  LiquidGlassView,
+} from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -466,16 +471,32 @@ function SomethingOffPopup({
           {/* Header */}
           <View style={styles.somethingOffHeader}>
             <TouchableOpacity
-              style={styles.backButton}
               onPress={handleClose}
               activeOpacity={0.7}
               disabled={isLoading}
             >
-              <Ionicons
-                name="chevron-back"
-                size={20}
-                color={isLoading ? "#bbb" : "#666"}
-              />
+              {isLiquidGlassSupported ? (
+                <LiquidGlassView
+                  style={styles.backButton}
+                  interactive
+                  effect="regular"
+                  tintColor="rgba(250, 250, 247, 0.3)"
+                >
+                  <Ionicons
+                    name="chevron-back"
+                    size={20}
+                    color={isLoading ? "#bbb" : Tokens.textPrimary}
+                  />
+                </LiquidGlassView>
+              ) : (
+                <View style={[styles.backButton, styles.backButtonFallback]}>
+                  <Ionicons
+                    name="chevron-back"
+                    size={20}
+                    color={isLoading ? "#bbb" : "#666"}
+                  />
+                </View>
+              )}
             </TouchableOpacity>
             <Text style={styles.somethingOffTitle}>Fix Issue</Text>
             <View style={styles.headerRightSpacer} />
@@ -672,11 +693,23 @@ function EditNutrientPopup({
           {/* Header */}
           <View style={styles.editNutrientHeader}>
             <TouchableOpacity
-              style={styles.backButton}
               onPress={handleClose}
               activeOpacity={0.7}
             >
-              <Ionicons name="chevron-back" size={20} color="#666" />
+              {isLiquidGlassSupported ? (
+                <LiquidGlassView
+                  style={styles.backButton}
+                  interactive
+                  effect="regular"
+                  tintColor="rgba(250, 250, 247, 0.3)"
+                >
+                  <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+                </LiquidGlassView>
+              ) : (
+                <View style={[styles.backButton, styles.backButtonFallback]}>
+                  <Ionicons name="chevron-back" size={20} color="#666" />
+                </View>
+              )}
             </TouchableOpacity>
             <View style={styles.editNutrientTitleRow}>
               <View
@@ -1016,11 +1049,23 @@ function EditQuantityPopup({
 
           <View style={styles.editQuantityHeader}>
             <TouchableOpacity
-              style={styles.backButton}
               onPress={handleClose}
               activeOpacity={0.7}
             >
-              <Ionicons name="chevron-back" size={20} color="#666" />
+              {isLiquidGlassSupported ? (
+                <LiquidGlassView
+                  style={styles.backButton}
+                  interactive
+                  effect="regular"
+                  tintColor="rgba(250, 250, 247, 0.3)"
+                >
+                  <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+                </LiquidGlassView>
+              ) : (
+                <View style={[styles.backButton, styles.backButtonFallback]}>
+                  <Ionicons name="chevron-back" size={20} color="#666" />
+                </View>
+              )}
             </TouchableOpacity>
             <Text style={styles.editQuantityTitle}>Edit Quantity</Text>
             <View style={styles.headerRightSpacer} />
@@ -1460,11 +1505,23 @@ export function NutritionReasoningPopup({
             {/* Header */}
             <View style={styles.header}>
               <TouchableOpacity
-                style={styles.backButton}
                 onPress={handleClose}
                 activeOpacity={0.7}
               >
-                <Ionicons name="chevron-back" size={20} color="#666" />
+                {isLiquidGlassSupported ? (
+                  <LiquidGlassView
+                    style={styles.backButton}
+                    interactive
+                    effect="regular"
+                    tintColor="rgba(250, 250, 247, 0.3)"
+                  >
+                    <Ionicons name="close" size={20} color={Tokens.textPrimary} />
+                  </LiquidGlassView>
+                ) : (
+                  <View style={[styles.backButton, styles.backButtonFallback]}>
+                    <Ionicons name="close" size={20} color="#666" />
+                  </View>
+                )}
               </TouchableOpacity>
               <Text style={styles.title}>Nutrition Details</Text>
               <View style={styles.headerRightSpacer} />
@@ -2112,9 +2169,11 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#EBEBEB",
     alignItems: "center",
     justifyContent: "center",
+  },
+  backButtonFallback: {
+    backgroundColor: "#EBEBEB",
   },
   headerRightSpacer: {
     width: 36,

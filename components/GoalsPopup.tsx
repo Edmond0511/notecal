@@ -1,5 +1,9 @@
 import { Tokens } from '@/constants/theme';
 import { UserGoals } from '@/types';
+import {
+  isLiquidGlassSupported,
+  LiquidGlassView,
+} from '@callstack/liquid-glass';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect } from 'react';
@@ -57,6 +61,7 @@ export function GoalsPopup({
   goals,
   consumed,
 }: GoalsPopupProps) {
+  const showGlass = isLiquidGlassSupported;
   const translateY = useSharedValue(0);
 
   useEffect(() => {
@@ -147,21 +152,35 @@ export function GoalsPopup({
 
             {goals ? (
               // Progress View - Goals are configured
-              <Animated.View
-                entering={FadeInDown.delay(100).duration(400)}
-                style={styles.progressContent}
-              >
+              <>
                 <View style={styles.progressHeader}>
                   <Text style={styles.progressTitle}>Daily Progress</Text>
                   <TouchableOpacity
-                    style={styles.editButton}
                     onPress={handleEdit}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    activeOpacity={0.7}
                   >
-                    <Ionicons name="pencil" size={16} color={Tokens.textSecondary} />
+                    {showGlass ? (
+                      <LiquidGlassView
+                        style={styles.editButton}
+                        interactive
+                        effect="regular"
+                        tintColor="rgba(250, 250, 247, 0.3)"
+                      >
+                        <Ionicons name="pencil" size={16} color={Tokens.textPrimary} />
+                      </LiquidGlassView>
+                    ) : (
+                      <View style={[styles.editButton, styles.editButtonFallback]}>
+                        <Ionicons name="pencil" size={16} color={Tokens.textSecondary} />
+                      </View>
+                    )}
                   </TouchableOpacity>
                 </View>
 
+                <Animated.View
+                  entering={FadeInDown.delay(100).duration(400)}
+                  style={styles.progressContent}
+                >
                 <ProgressRings
                   consumed={consumed}
                   targets={{
@@ -177,6 +196,7 @@ export function GoalsPopup({
                   }}
                 />
               </Animated.View>
+              </>
             ) : (
               // Setup Prompt - No goals configured
               <Animated.View
@@ -298,8 +318,10 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: Tokens.surface,
-    justifyContent: 'center' as const,
     alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  editButtonFallback: {
+    backgroundColor: '#EBEBEB',
   },
 });

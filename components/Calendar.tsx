@@ -582,14 +582,14 @@ const styles = StyleSheet.create({
   },
   todayDay: {
     borderWidth: 1.5,
-    borderColor: Tokens.textPrimary,
+    borderColor: Tokens.accent,
   },
   todayDayText: {
-    color: Tokens.textPrimary,
+    color: Tokens.accent,
     fontWeight: "600",
   },
   selectedDay: {
-    backgroundColor: Tokens.textPrimary,
+    backgroundColor: Tokens.accent,
   },
   selectedDayText: {
     color: Tokens.surfaceRaised,
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 12,
     paddingHorizontal: 32,
-    backgroundColor: Tokens.textPrimary,
+    backgroundColor: Tokens.accent,
     borderRadius: 12,
     minHeight: 44,
     justifyContent: "center",

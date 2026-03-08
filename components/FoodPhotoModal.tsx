@@ -269,7 +269,7 @@ export function FoodPhotoModal({
                   onPress={handleClose}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="chevron-down" size={26} color="#fff" />
+                  <Ionicons name="close" size={26} color="#fff" />
                 </TouchableOpacity>
 
                 {/* Flash toggle */}

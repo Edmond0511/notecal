@@ -9,6 +9,7 @@ import {
 } from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { KeyboardAwareScrollView, KeyboardProvider } from "react-native-keyboard-controller";
 import React, {
   useCallback,
   useEffect,
@@ -109,7 +110,7 @@ export function WeightTrackingModal({
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
   const yesterdayStr = toLocalYMD(yesterdayDate);
 
-  // Reset form state when modal opens
+  // Reset form state when modal opens/closes
   useEffect(() => {
     if (visible) {
       translateY.value = 0;
@@ -117,9 +118,8 @@ export function WeightTrackingModal({
       setWeightInput("");
       setPhotoUris([]);
       setLogDateInput(toLocalYMD(new Date()));
-      if (openToLog) {
-        setShowLogPopup(true);
-      }
+    } else {
+      setShowLogPopup(false);
     }
   }, [visible]);
 
@@ -278,8 +278,12 @@ export function WeightTrackingModal({
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setWeightInput("");
     setPhotoUris([]);
-    setShowLogPopup(false);
-  }, [weightInput, photoUris, isImperial, logDateInput, addWeightEntry]);
+    if (openToLog) {
+      onClose();
+    } else {
+      setShowLogPopup(false);
+    }
+  }, [weightInput, photoUris, isImperial, logDateInput, addWeightEntry, openToLog, onClose]);
 
   const pickFromLibrary = useCallback(async (onPick: (uri: string) => void) => {
     const ImagePicker = await import("expo-image-picker");
@@ -483,12 +487,13 @@ export function WeightTrackingModal({
   }) => {
     return (
       <>
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.popupScrollView}
-          contentContainerStyle={styles.popupScrollContent}
+          contentContainerStyle={[styles.popupScrollContent, { flexGrow: 1 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          bounces={false}
+          keyboardDismissMode="interactive"
+          bounces={true}
         >
           {/* Hero Weight Input */}
           <Animated.View
@@ -565,7 +570,7 @@ export function WeightTrackingModal({
               </TouchableOpacity>
             </View>
           </Animated.View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         {/* Save Button - pinned below scroll */}
         <Animated.View
@@ -611,6 +616,7 @@ export function WeightTrackingModal({
       transparent
       onRequestClose={handleClose}
     >
+      <KeyboardProvider>
       <GestureHandlerRootView style={styles.gestureRoot}>
         <StatusBar barStyle="dark-content" />
         <Animated.View style={[styles.backdrop, backdropStyle]}>
@@ -629,6 +635,49 @@ export function WeightTrackingModal({
               <View style={styles.dragIndicator} />
             </View>
 
+            {openToLog ? (
+              <>
+                <View style={styles.popupOverlayHeader}>
+                  <TouchableOpacity
+                    onPress={handleClose}
+                    activeOpacity={0.7}
+                  >
+                    {showGlass ? (
+                      <LiquidGlassView
+                        style={styles.backButton}
+                        interactive
+                        effect="regular"
+                        tintColor="rgba(250, 250, 247, 0.3)"
+                      >
+                        <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+                      </LiquidGlassView>
+                    ) : (
+                      <View style={[styles.backButton, styles.backButtonFallback]}>
+                        <Ionicons name="chevron-back" size={20} color="#666" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  <Text style={styles.popupOverlayTitle}>Log Weight</Text>
+                  <View style={styles.popupOverlayHeaderSpacer} />
+                </View>
+
+                {renderPopupContent({
+                  weightValue: weightInput,
+                  onWeightChange: setWeightInput,
+                  dateValue: logDateInput,
+                  showCalendar: showLogCalendar,
+                  onCloseCalendar: () => setShowLogCalendar(false),
+                  onSelectDate: setLogDateInput,
+                  photos: photoUris,
+                  onAddPhoto: handleAddPhoto,
+                  onRemovePhoto: handleRemovePhoto,
+                  saveEnabled: !!weightInput,
+                  onSave: handleLogWeight,
+                  isEdit: false,
+                })}
+              </>
+            ) : (
+            <>
             <View style={styles.header}>
               <TouchableOpacity
                 onPress={handleClose}
@@ -817,15 +866,19 @@ export function WeightTrackingModal({
                 <Text style={styles.logButtonText}>Log Weight</Text>
               </TouchableOpacity>
             </View>
+            </>
+            )}
           </Animated.View>
         </GestureDetector>
 
         {/* Log Weight Popup */}
-        {showLogPopup && (
-          <Animated.View
-            entering={FadeIn.duration(200)}
-            style={styles.popupOverlayRoot}
-          >
+        <Modal
+          visible={showLogPopup}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setShowLogPopup(false)}
+        >
+          <GestureHandlerRootView style={styles.popupOverlayRoot}>
             <Animated.View
               style={[styles.popupOverlayBackdrop, logPopupBackdropStyle]}
             >
@@ -888,15 +941,17 @@ export function WeightTrackingModal({
                 })}
               </Animated.View>
             </GestureDetector>
-          </Animated.View>
-        )}
+          </GestureHandlerRootView>
+        </Modal>
 
         {/* Edit Entry Popup */}
-        {editingEntry !== null && (
-          <Animated.View
-            entering={FadeIn.duration(200)}
-            style={styles.popupOverlayRoot}
-          >
+        <Modal
+          visible={editingEntry !== null}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setEditingEntry(null)}
+        >
+          <GestureHandlerRootView style={styles.popupOverlayRoot}>
             <Animated.View
               style={[styles.popupOverlayBackdrop, editPopupBackdropStyle]}
             >
@@ -959,8 +1014,8 @@ export function WeightTrackingModal({
                 })}
               </Animated.View>
             </GestureDetector>
-          </Animated.View>
-        )}
+          </GestureHandlerRootView>
+        </Modal>
         {/* Full-screen image preview */}
         {previewImageUri && (
           <Modal
@@ -986,6 +1041,7 @@ export function WeightTrackingModal({
           </Modal>
         )}
       </GestureHandlerRootView>
+      </KeyboardProvider>
     </Modal>
   );
 }

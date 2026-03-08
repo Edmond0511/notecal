@@ -332,11 +332,11 @@ export function SavedEntriesPopup({
               effect="regular"
               tintColor="rgba(250, 250, 247, 0.3)"
             >
-              <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+              <Ionicons name="close" size={20} color={Tokens.textPrimary} />
             </LiquidGlassView>
           ) : (
             <View style={[styles.backButton, styles.backButtonFallback]}>
-              <Ionicons name="chevron-back" size={20} color="#666" />
+              <Ionicons name="close" size={20} color="#666" />
             </View>
           )}
         </TouchableOpacity>

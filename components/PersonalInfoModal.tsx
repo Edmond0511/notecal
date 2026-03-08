@@ -13,6 +13,7 @@ import {
 } from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { KeyboardAwareScrollView, KeyboardProvider } from "react-native-keyboard-controller";
 import React, { useEffect, useState } from "react";
 import {
   Dimensions,
@@ -541,6 +542,7 @@ export function PersonalInfoModal({
       transparent
       onRequestClose={handleClose}
     >
+      <KeyboardProvider>
       <GestureHandlerRootView style={styles.gestureRoot}>
         <StatusBar barStyle="dark-content" />
         <Animated.View style={[styles.backdrop, backdropStyle]}>
@@ -583,7 +585,7 @@ export function PersonalInfoModal({
               <View style={styles.headerRightSpacer} />
             </View>
 
-            <Animated.ScrollView
+            <KeyboardAwareScrollView
               style={styles.content}
               contentContainerStyle={[
                 styles.contentContainer,
@@ -594,6 +596,7 @@ export function PersonalInfoModal({
               scrollEventThrottle={16}
               bounces={true}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
             >
               {/* Metrics */}
               <Animated.View
@@ -619,7 +622,7 @@ export function PersonalInfoModal({
                   <BmiNumberLine bmi={bmi} />
                 </View>
               </Animated.View>
-            </Animated.ScrollView>
+            </KeyboardAwareScrollView>
 
             {/* Save button */}
             {hasChanges && (
@@ -643,6 +646,7 @@ export function PersonalInfoModal({
           </Animated.View>
         </GestureDetector>
       </GestureHandlerRootView>
+      </KeyboardProvider>
     </Modal>
   );
 }

@@ -763,7 +763,7 @@ export function NutritionGoalsModal({
                     layout={Layout.springify()}
                   >
                     <View style={styles.goalsCard}>
-                      {renderTargetRow("kcal", "Calories", "kcal", false, MACRO_CONFIG.kcal.icon, MACRO_CONFIG.kcal.color)}
+                      {renderTargetRow("kcal", "Calories", "cal", false, MACRO_CONFIG.kcal.icon, MACRO_CONFIG.kcal.color)}
                       {renderTargetRow("protein", "Protein", "g", false, MACRO_CONFIG.protein.icon, MACRO_CONFIG.protein.color)}
                       {renderTargetRow("fat", "Fat", "g", false, MACRO_CONFIG.fat.icon, MACRO_CONFIG.fat.color)}
                       {renderTargetRow(

@@ -114,6 +114,7 @@ export default function HomeScreen() {
   const handlePageChange = useCallback(
     (index: number) => {
       const newDate = indexToDate(index);
+      if (newDate === useAppStore.getState().currentDate) return;
       setCurrentDate(newDate);
       Keyboard.dismiss();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

@@ -808,6 +808,7 @@ export function NotesEditor({
   const handleFocus = useCallback(() => {
     if (!(isPagerSettledRef?.current ?? true)) {
       textInputRef.current?.blur();
+      setIsFocused(false);
       return;
     }
     setIsFocused(true);
@@ -819,6 +820,10 @@ export function NotesEditor({
   }, []);
 
   // Tap-to-focus gesture — positions cursor at tap location
+  // IMPORTANT: set isFocused=true BEFORE focus() so the wrapper has
+  // pointerEvents="auto" when the native focus command is processed.
+  // Calling focus() while pointerEvents="none" causes iOS/Fabric to
+  // re-evaluate the responder chain on the prop transition, revoking focus.
   const doFocusAtPosition = useCallback((x: number, y: number) => {
     const lines = linesLayoutRef.current;
     const textLength = documentTextRef.current.length;
@@ -826,7 +831,10 @@ export function NotesEditor({
       const pos = calculateCursorPosition(x, y, lines, textLength);
       setSelection({ start: pos, end: pos });
     }
-    textInputRef.current?.focus();
+    setIsFocused(true);
+    requestAnimationFrame(() => {
+      textInputRef.current?.focus();
+    });
   }, []);
 
   const tapToFocusGesture = useMemo(
@@ -1119,7 +1127,7 @@ export function NotesEditor({
         bottomOffset={80}
         extraKeyboardSpace={130}
         keyboardDismissMode="interactive"
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="always"
         enabled={isActive !== false}
         disableScrollOnKeyboardHide
       >

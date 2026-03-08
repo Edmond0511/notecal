@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
+import { Directions, Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
   interpolate,
@@ -255,6 +255,23 @@ export function Calendar({
       }
     });
 
+  // Fling gestures for horizontal month swiping
+  const flingLeft = Gesture.Fling()
+    .direction(Directions.LEFT)
+    .onEnd(() => {
+      runOnJS(navigateMonth)("next");
+    });
+
+  const flingRight = Gesture.Fling()
+    .direction(Directions.RIGHT)
+    .onEnd(() => {
+      runOnJS(navigateMonth)("prev");
+    });
+
+  const composedGesture = wheelMode
+    ? panGesture
+    : Gesture.Simultaneous(panGesture, flingLeft, flingRight);
+
   const sheetAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
   }));
@@ -301,7 +318,7 @@ export function Calendar({
         </Animated.View>
 
         {/* Calendar Sheet */}
-        <GestureDetector gesture={panGesture}>
+        <GestureDetector gesture={composedGesture}>
         <Animated.View
           style={[styles.sheet, { paddingBottom: insets.bottom + 8 }, sheetAnimatedStyle]}
         >
@@ -582,14 +599,14 @@ const styles = StyleSheet.create({
   },
   todayDay: {
     borderWidth: 1.5,
-    borderColor: Tokens.accent,
+    borderColor: Tokens.textPrimary,
   },
   todayDayText: {
-    color: Tokens.accent,
+    color: Tokens.textPrimary,
     fontWeight: "600",
   },
   selectedDay: {
-    backgroundColor: Tokens.accent,
+    backgroundColor: Tokens.textPrimary,
   },
   selectedDayText: {
     color: Tokens.surfaceRaised,

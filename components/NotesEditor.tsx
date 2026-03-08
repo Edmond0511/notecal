@@ -33,6 +33,14 @@ const FONT_VERTICAL_OFFSET = 4;
 const INDICATOR_VERTICAL_OFFSET = 3;
 const EM_DASH = "—"; // U+2014
 
+interface LayoutLine {
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 // Adaptive debounce delays based on entry completeness
 const DELAY_COMPLETE_ENTRY = 1500; // Entry appears complete → responsive feedback
 const DELAY_INCOMPLETE_ENTRY = 2500; // Entry appears incomplete → wait for user to finish
@@ -96,6 +104,59 @@ function computeTextDiff(oldText: string, newText: string): TextDiff {
     };
   }
   return { type: "replace", position: prefixEnd, deletedText, insertedText };
+}
+
+// Calculate document cursor offset from tap coordinates and layout lines
+function calculateCursorPosition(
+  tapX: number,
+  tapY: number,
+  lines: LayoutLine[],
+  textLength: number,
+): number {
+  if (lines.length === 0) return textLength;
+
+  // Map tap to text-relative coordinates (account for TextInput padding)
+  const textY = tapY - 12; // paddingTop
+  const textX = tapX - 20; // paddingLeft
+
+  // Find the tapped visual line
+  let lineIndex = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (textY >= line.y && textY < line.y + line.height) {
+      lineIndex = i;
+      break;
+    }
+  }
+
+  // Tap above all lines -> position 0
+  if (lineIndex === -1 && textY < lines[0].y) return 0;
+  // Tap below all lines -> end of text
+  if (lineIndex === -1) return textLength;
+
+  const line = lines[lineIndex];
+
+  // Approximate character position within line using proportional estimation
+  let charIndex: number;
+  if (line.width <= 0 || line.text.length === 0) {
+    charIndex = 0;
+  } else if (textX >= line.width) {
+    // Tap right of line text -> end of line
+    charIndex = line.text.length;
+  } else if (textX <= 0) {
+    charIndex = 0;
+  } else {
+    charIndex = Math.round((textX / line.width) * line.text.length);
+  }
+
+  // Convert visual-line-local offset to document offset
+  let docOffset = 0;
+  for (let i = 0; i < lineIndex; i++) {
+    docOffset += lines[i].text.length;
+  }
+  docOffset += charIndex;
+
+  return Math.max(0, Math.min(docOffset, textLength));
 }
 
 function getLineAtPosition(text: string, position: number, freeform = false) {
@@ -672,6 +733,8 @@ export function NotesEditor({
   const [layoutStale, setLayoutStale] = useState(false);
   // Track previous text for detecting user actions via text diffing
   const previousTextRef = useRef<string>(initialDocumentText);
+  // Store onTextLayout line data for tap-to-cursor positioning
+  const linesLayoutRef = useRef<LayoutLine[]>([]);
 
   // Sync prop to state during render (eliminates 1-frame flash on date change).
   // Only reset layout when the incoming text differs from what we already have
@@ -700,6 +763,15 @@ export function NotesEditor({
     (event: any) => {
       const { lines } = event.nativeEvent;
       if (!lines?.length) return;
+
+      // Store full line data for tap-to-cursor positioning
+      linesLayoutRef.current = lines.map((line: any) => ({
+        text: line.text ?? "",
+        x: line.x ?? 0,
+        y: line.y ?? 0,
+        width: line.width ?? 0,
+        height: line.height ?? LINE_HEIGHT,
+      }));
 
       // Group y-positions by text prefix for indicator positioning
       const yMap = new Map<string, number[]>();
@@ -746,8 +818,14 @@ export function NotesEditor({
     setIsFocused(false);
   }, []);
 
-  // Tap-to-focus gesture — only fires for confirmed taps (finger < 10pt)
-  const doFocus = useCallback(() => {
+  // Tap-to-focus gesture — positions cursor at tap location
+  const doFocusAtPosition = useCallback((x: number, y: number) => {
+    const lines = linesLayoutRef.current;
+    const textLength = documentTextRef.current.length;
+    if (lines.length > 0) {
+      const pos = calculateCursorPosition(x, y, lines, textLength);
+      setSelection({ start: pos, end: pos });
+    }
     textInputRef.current?.focus();
   }, []);
 
@@ -755,11 +833,11 @@ export function NotesEditor({
     () =>
       Gesture.Tap()
         .maxDistance(10)
-        .onEnd(() => {
+        .onEnd((e) => {
           "worklet";
-          runOnJS(doFocus)();
+          runOnJS(doFocusAtPosition)(e.x, e.y);
         }),
-    [doFocus],
+    [doFocusAtPosition],
   );
 
   // Parse document text to find food entry lines

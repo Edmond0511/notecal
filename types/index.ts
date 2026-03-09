@@ -101,6 +101,14 @@ export interface WeightEntry {
   createdAt: string;   // ISO string
 }
 
+export interface MealReminder {
+  id: string;
+  name: string;        // "Breakfast", "Lunch", "Dinner", or custom
+  time: string;        // "08:00" (HH:mm 24h format)
+  enabled: boolean;
+  isDefault: boolean;  // true for breakfast/lunch/dinner (can't be deleted)
+}
+
 export interface DailyTotals {
   date: string;
   kcal: number;
@@ -207,6 +215,9 @@ export interface AppState {
   savedEntries: SavedEntry[];
   // Weight tracking state
   weightEntries: WeightEntry[];
+  // Notifications state
+  notificationsEnabled: boolean;
+  mealReminders: MealReminder[];
   // Pending insertion for cross-component communication (pager ↔ DatePage)
   pendingInsertion: PendingInsertion | null;
   // Actions
@@ -258,6 +269,13 @@ export interface AppState {
   deleteWeightEntry: (id: string) => void;
   // Offline queue drain
   enqueuePendingEntries: () => void;
+  // Notification actions
+  setNotificationsEnabled: (enabled: boolean) => void;
+  setMealReminders: (reminders: MealReminder[]) => void;
+  toggleMealReminder: (id: string) => void;
+  updateMealReminderTime: (id: string, time: string) => void;
+  addMealReminder: (name: string, time: string) => void;
+  deleteMealReminder: (id: string) => void;
   // Pending insertion actions
   setPendingInsertion: (insertion: PendingInsertion) => void;
   clearPendingInsertion: () => void;

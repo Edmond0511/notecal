@@ -723,6 +723,7 @@ export function NotesEditor({
   const [prevInitialText, setPrevInitialText] = useState(initialDocumentText);
   const textInputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const pendingFocusRef = useRef(false);
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
@@ -818,6 +819,14 @@ export function NotesEditor({
     setIsFocused(false);
   }, []);
 
+  // Fire focus() after React commits isFocused=true (pointerEvents="auto" applied)
+  useEffect(() => {
+    if (isFocused && pendingFocusRef.current) {
+      pendingFocusRef.current = false;
+      textInputRef.current?.focus();
+    }
+  }, [isFocused]);
+
   // Tap-to-focus gesture — positions cursor at tap location
   // IMPORTANT: set isFocused=true BEFORE focus() so the wrapper has
   // pointerEvents="auto" when the native focus command is processed.
@@ -830,11 +839,15 @@ export function NotesEditor({
       const pos = calculateCursorPosition(x, y, lines, textLength);
       setSelection({ start: pos, end: pos });
     }
-    setIsFocused(true);
-    requestAnimationFrame(() => {
+    if (isFocused) {
+      // Already focused — just re-focus to position cursor
       textInputRef.current?.focus();
-    });
-  }, []);
+    } else {
+      // Not focused — wait for pointerEvents="auto" render commit
+      pendingFocusRef.current = true;
+      setIsFocused(true);
+    }
+  }, [isFocused]);
 
   const tapToFocusGesture = useMemo(
     () =>

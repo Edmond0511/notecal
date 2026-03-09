@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStateStorage } from '@/lib/mmkv';
-import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, EntryMode, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct, DatabaseSearchResult, PendingInsertion } from '@/types';
+import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, EntryMode, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct, DatabaseSearchResult, PendingInsertion, MealReminder } from '@/types';
 import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
 import { barcodeProductToFoodItem, scaleMacrosToServing } from '@/services/barcodeService';
 import { nutritionQueue } from '@/services/nutritionQueue';
@@ -70,6 +70,12 @@ export const useAppStore = create<AppState>()(
       savedEntries: [],
       weightEntries: [],
       pendingInsertion: null,
+      notificationsEnabled: false,
+      mealReminders: [
+        { id: 'breakfast', name: 'Breakfast', time: '08:00', enabled: true, isDefault: true },
+        { id: 'lunch', name: 'Lunch', time: '12:00', enabled: true, isDefault: true },
+        { id: 'dinner', name: 'Dinner', time: '18:00', enabled: true, isDefault: true },
+      ],
 
   addEntry: (rawText: string, date?: string) => {
     const trimmed = rawText.trim();
@@ -1164,6 +1170,49 @@ export const useAppStore = create<AppState>()(
     }
   },
 
+  setNotificationsEnabled: (enabled: boolean) => {
+    set({ notificationsEnabled: enabled });
+  },
+
+  setMealReminders: (reminders: MealReminder[]) => {
+    set({ mealReminders: reminders });
+  },
+
+  toggleMealReminder: (id: string) => {
+    set((state) => ({
+      mealReminders: state.mealReminders.map((r) =>
+        r.id === id ? { ...r, enabled: !r.enabled } : r
+      ),
+    }));
+  },
+
+  updateMealReminderTime: (id: string, time: string) => {
+    set((state) => ({
+      mealReminders: state.mealReminders.map((r) =>
+        r.id === id ? { ...r, time } : r
+      ),
+    }));
+  },
+
+  addMealReminder: (name: string, time: string) => {
+    const newReminder: MealReminder = {
+      id: Date.now().toString(),
+      name,
+      time,
+      enabled: true,
+      isDefault: false,
+    };
+    set((state) => ({
+      mealReminders: [...state.mealReminders, newReminder],
+    }));
+  },
+
+  deleteMealReminder: (id: string) => {
+    set((state) => ({
+      mealReminders: state.mealReminders.filter((r) => r.id !== id),
+    }));
+  },
+
   setPendingInsertion: (insertion: PendingInsertion) => {
     set({ pendingInsertion: insertion });
   },
@@ -1184,9 +1233,11 @@ export const useAppStore = create<AppState>()(
         entryMode: state.entryMode,
         savedEntries: state.savedEntries,
         weightEntries: state.weightEntries,
+        notificationsEnabled: state.notificationsEnabled,
+        mealReminders: state.mealReminders,
       }),
       // Handle version migrations
-      version: 4,
+      version: 5,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           persistedState = {
@@ -1206,6 +1257,17 @@ export const useAppStore = create<AppState>()(
             entryMode: persistedState.entryMode || 'dash',
           };
         }
+        if (version < 5) {
+          persistedState = {
+            ...persistedState,
+            notificationsEnabled: persistedState.notificationsEnabled ?? false,
+            mealReminders: persistedState.mealReminders ?? [
+              { id: 'breakfast', name: 'Breakfast', time: '08:00', enabled: true, isDefault: true },
+              { id: 'lunch', name: 'Lunch', time: '12:00', enabled: true, isDefault: true },
+              { id: 'dinner', name: 'Dinner', time: '18:00', enabled: true, isDefault: true },
+            ],
+          };
+        }
         return persistedState;
       },
       // Ensure proper merge with initial state
@@ -1217,6 +1279,8 @@ export const useAppStore = create<AppState>()(
         savedEntries: persistedState?.savedEntries ?? currentState.savedEntries ?? [],
         // Ensure weightEntries is always an array
         weightEntries: persistedState?.weightEntries ?? currentState.weightEntries ?? [],
+        // Ensure mealReminders is always an array
+        mealReminders: persistedState?.mealReminders ?? currentState.mealReminders ?? [],
       }),
     }
   )

@@ -55,6 +55,12 @@
         {
           "cameraPermission": "Allow NoteCal to scan barcodes on food products"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "sounds": []
+        }
       ]
     ],
     "experiments": {

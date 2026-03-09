@@ -36,6 +36,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CalendarLegendModal } from "./CalendarLegendModal";
 import { GoalsWizard } from "./goals/GoalsWizard";
+import { NotificationsModal } from "./NotificationsModal";
 import { NutritionGoalsModal } from "./NutritionGoalsModal";
 import { PersonalInfoModal } from "./PersonalInfoModal";
 import { WeightTrackingModal } from "./WeightTrackingModal";
@@ -78,6 +79,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [showWeightTracking, setShowWeightTracking] = useState(false);
   const [showCalendarLegend, setShowCalendarLegend] = useState(false);
   const [showPersonalInfo, setShowPersonalInfo] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const goals = useAppStore((s) => s.goals);
   const entryMode = useAppStore((s) => s.entryMode ?? 'dash');
   const [user, setUser] = useState<UserInfo | null>(null);
@@ -447,6 +449,32 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           Haptics.impactAsync(
                             Haptics.ImpactFeedbackStyle.Light,
                           );
+                          setShowNotifications(true);
+                        }}
+                      >
+                        <Ionicons
+                          name="notifications-outline"
+                          size={20}
+                          color="#333"
+                          style={{ marginRight: 12 }}
+                        />
+                        <Text style={styles.menuItemText}>Notifications</Text>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color="#ccc"
+                        />
+                      </TouchableOpacity>
+
+                      <View style={styles.menuDivider} />
+
+                      <TouchableOpacity
+                        style={styles.menuItem}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
                           const next = entryMode === 'dash' ? 'freeform' : 'dash';
                           useAppStore.getState().setEntryMode(next);
                         }}
@@ -547,6 +575,13 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           <PersonalInfoModal
             visible={showPersonalInfo}
             onClose={() => setShowPersonalInfo(false)}
+          />
+        )}
+
+        {showNotifications && (
+          <NotificationsModal
+            visible={showNotifications}
+            onClose={() => setShowNotifications(false)}
           />
         )}
       </Modal>

@@ -443,7 +443,7 @@ export default function HomeScreen() {
       </View>
 
       {/* TotalsBar: sticks above keyboard during interactive dismiss */}
-      <KeyboardStickyView offset={{ closed: 0, opened: 40 }}>
+      <KeyboardStickyView offset={{ closed: 0, opened: 25 }}>
         <View style={styles.bottomBarContainer}>
           <TotalsBar
             isOnline={isOnline}

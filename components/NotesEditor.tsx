@@ -416,7 +416,6 @@ const styles = StyleSheet.create({
     lineHeight: LINE_HEIGHT,
     paddingLeft: 20,
     paddingRight: 90,
-    paddingTop: 12,
     color: "transparent",
     fontFamily: "System",
     includeFontPadding: false,
@@ -1109,10 +1108,7 @@ export function NotesEditor({
       {/* Hidden Text component for reliable layout measurement */}
       {/* TextInput.onTextLayout is unreliable for wrapped text */}
       <Text
-        style={[
-          styles.hiddenMeasureText,
-          contentTopInset ? { paddingTop: 12 + contentTopInset } : undefined,
-        ]}
+        style={styles.hiddenMeasureText}
         onTextLayout={handleTextLayout}
       >
         {documentText || " "}
@@ -1172,18 +1168,7 @@ export function NotesEditor({
 
           {/* Inline nutrition indicators — above overlay (zIndex: 2) */}
           <View
-            style={[
-              styles.overlay,
-              { zIndex: 2 },
-              contentTopInset
-                ? {
-                    top:
-                      TEXT_INPUT_PADDING_TOP +
-                      FONT_VERTICAL_OFFSET +
-                      contentTopInset,
-                  }
-                : undefined,
-            ]}
+            style={[styles.overlay, { zIndex: 2 }]}
             pointerEvents="box-none"
           >
             {indicatorData.map((item) => (

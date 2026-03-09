@@ -812,7 +812,9 @@ export function NotesEditor({
       return;
     }
     setIsFocused(true);
-    requestAnimationFrame(() => setSelection(undefined));
+    requestAnimationFrame(() => {
+      setTimeout(() => setSelection(undefined), 50);
+    });
   }, [isPagerSettledRef]);
 
   const handleBlur = useCallback(() => {
@@ -838,6 +840,9 @@ export function NotesEditor({
     if (lines.length > 0) {
       const pos = calculateCursorPosition(x, y, lines, textLength);
       setSelection({ start: pos, end: pos });
+    } else {
+      const fallback = textLength === 0 ? 0 : textLength;
+      setSelection({ start: fallback, end: fallback });
     }
     if (isFocused) {
       // Already focused — just re-focus to position cursor
@@ -1204,7 +1209,12 @@ export function NotesEditor({
           onPress={() => {
             const len = documentTextRef.current.length;
             setSelection({ start: len, end: len });
-            textInputRef.current?.focus();
+            if (isFocused) {
+              textInputRef.current?.focus();
+            } else {
+              pendingFocusRef.current = true;
+              setIsFocused(true);
+            }
           }}
         />
       </KeyboardAwareScrollView>

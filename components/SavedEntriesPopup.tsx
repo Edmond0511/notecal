@@ -144,9 +144,6 @@ export function SavedEntriesPopup({
   };
 
   const panGesture = Gesture.Pan()
-    .onStart(() => {
-      runOnJS(Keyboard.dismiss)();
-    })
     .onUpdate((event) => {
       if (isScrolledToTop.value && event.translationY > 0) {
         translateY.value = event.translationY;

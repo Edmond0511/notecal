@@ -805,19 +805,28 @@ export function NotesEditor({
   // Focus/blur handlers — pointerEvents="none" on TextInput prevents
   // touch-down from firing focus during scrolls. Only confirmed taps
   // (via Gesture.Tap overlay) programmatically focus.
+  const wasFocusedRef = useRef(false);
+
   const handleFocus = useCallback(() => {
     if (!(isPagerSettledRef?.current ?? true)) {
       textInputRef.current?.blur();
       setIsFocused(false);
+      wasFocusedRef.current = false;
       return;
     }
+    const wasAlreadyFocused = wasFocusedRef.current;
+    wasFocusedRef.current = true;
     setIsFocused(true);
-    requestAnimationFrame(() => {
-      setTimeout(() => setSelection(undefined), 50);
-    });
+    // Only clear selection on genuine blur→focus transition, not on re-focus
+    if (!wasAlreadyFocused) {
+      requestAnimationFrame(() => {
+        setTimeout(() => setSelection(undefined), 50);
+      });
+    }
   }, [isPagerSettledRef]);
 
   const handleBlur = useCallback(() => {
+    wasFocusedRef.current = false;
     setIsFocused(false);
   }, []);
 
@@ -844,13 +853,15 @@ export function NotesEditor({
       const fallback = textLength === 0 ? 0 : textLength;
       setSelection({ start: fallback, end: fallback });
     }
-    if (isFocused) {
-      // Already focused — just re-focus to position cursor
-      textInputRef.current?.focus();
-    } else {
+    if (!isFocused) {
       // Not focused — wait for pointerEvents="auto" render commit
       pendingFocusRef.current = true;
       setIsFocused(true);
+    } else {
+      // Already focused — clear selection after cursor moves
+      requestAnimationFrame(() => {
+        setTimeout(() => setSelection(undefined), 50);
+      });
     }
   }, [isFocused]);
 
@@ -1155,7 +1166,7 @@ export function NotesEditor({
               onChangeText={handleTextChange}
               onFocus={handleFocus}
               onBlur={handleBlur}
-              selection={selection}
+              {...(selection !== undefined ? { selection } : {})}
               placeholder={
                 isFreeform
                   ? "What did you eat today?"
@@ -1177,12 +1188,10 @@ export function NotesEditor({
             />
           </View>
 
-          {/* Tap-to-focus overlay — behind indicators (zIndex: 1) */}
-          {!isFocused && (
-            <GestureDetector gesture={tapToFocusGesture}>
-              <View style={[StyleSheet.absoluteFill, { zIndex: 1 }]} />
-            </GestureDetector>
-          )}
+          {/* Tap-to-focus overlay — all taps go through gesture handler (zIndex: 1) */}
+          <GestureDetector gesture={tapToFocusGesture}>
+            <View style={[StyleSheet.absoluteFill, { zIndex: 1 }]} />
+          </GestureDetector>
 
           {/* Inline nutrition indicators — above overlay (zIndex: 2) */}
           <View
@@ -1209,11 +1218,13 @@ export function NotesEditor({
           onPress={() => {
             const len = documentTextRef.current.length;
             setSelection({ start: len, end: len });
-            if (isFocused) {
-              textInputRef.current?.focus();
-            } else {
+            if (!isFocused) {
               pendingFocusRef.current = true;
               setIsFocused(true);
+            } else {
+              requestAnimationFrame(() => {
+                setTimeout(() => setSelection(undefined), 50);
+              });
             }
           }}
         />

@@ -18,6 +18,7 @@ import * as Haptics from "expo-haptics";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Dimensions,
+  Keyboard,
   Modal,
   StatusBar,
   StyleSheet,
@@ -143,6 +144,9 @@ export function SavedEntriesPopup({
   };
 
   const panGesture = Gesture.Pan()
+    .onStart(() => {
+      runOnJS(Keyboard.dismiss)();
+    })
     .onUpdate((event) => {
       if (isScrolledToTop.value && event.translationY > 0) {
         translateY.value = event.translationY;
@@ -181,6 +185,7 @@ export function SavedEntriesPopup({
   };
 
   const handleScrollBeginDrag = (event: any) => {
+    Keyboard.dismiss();
     scrollOffset.value = event.nativeEvent.contentOffset.y;
     isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
   };

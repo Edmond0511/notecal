@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Keyboard, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -27,6 +27,10 @@ export function AddActionMenu({
   onSnapFoodPress,
   onSearchDatabasePress,
 }: AddActionMenuProps) {
+  React.useEffect(() => {
+    if (visible) Keyboard.dismiss();
+  }, [visible]);
+
   if (!visible) return null;
 
   return (

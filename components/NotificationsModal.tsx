@@ -27,12 +27,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { KeyboardAwareScrollView, KeyboardProvider } from "react-native-keyboard-controller";
 import {
   Gesture,
   GestureDetector,
   GestureHandlerRootView,
 } from "react-native-gesture-handler";
+import {
+  KeyboardAwareScrollView,
+  KeyboardProvider,
+} from "react-native-keyboard-controller";
 import Animated, {
   Extrapolation,
   FadeInDown,
@@ -148,7 +151,7 @@ function ReminderRow({
       translateX.value,
       [-SWIPE_ACTION_WIDTH * 0.3, 0],
       [1, 0],
-      Extrapolation.CLAMP
+      Extrapolation.CLAMP,
     ),
     transform: [
       {
@@ -156,7 +159,7 @@ function ReminderRow({
           translateX.value,
           [-SWIPE_ACTION_WIDTH, -SWIPE_ACTION_WIDTH * 0.3, 0],
           [1, 0.8, 0.5],
-          Extrapolation.CLAMP
+          Extrapolation.CLAMP,
         ),
       },
     ],
@@ -171,9 +174,7 @@ function ReminderRow({
           style={styles.timePill}
           activeOpacity={0.7}
         >
-          <Text style={styles.timePillText}>
-            {formatTime(reminder.time)}
-          </Text>
+          <Text style={styles.timePillText}>{formatTime(reminder.time)}</Text>
         </TouchableOpacity>
         {isDefault ? (
           <Switch
@@ -299,7 +300,7 @@ function AddReminderPopup({
       translateY.value,
       [0, SCREEN_HEIGHT * 0.3],
       [1, 0],
-      Extrapolation.CLAMP
+      Extrapolation.CLAMP,
     ),
   }));
 
@@ -352,9 +353,7 @@ function AddReminderPopup({
                     />
                   </LiquidGlassView>
                 ) : (
-                  <View
-                    style={[styles.backButton, styles.backButtonFallback]}
-                  >
+                  <View style={[styles.backButton, styles.backButtonFallback]}>
                     <Ionicons name="close" size={20} color="#666" />
                   </View>
                 )}
@@ -377,7 +376,7 @@ function AddReminderPopup({
                     tintColor={Tokens.tintColor}
                   >
                     <Ionicons
-                      name="checkmark"
+                      name="checkmark-sharp"
                       size={20}
                       color={Tokens.accent}
                     />
@@ -390,7 +389,11 @@ function AddReminderPopup({
                       !canConfirm && { opacity: 0.4 },
                     ]}
                   >
-                    <Ionicons name="checkmark" size={20} color={Tokens.accent} />
+                    <Ionicons
+                      name="checkmark-sharp"
+                      size={20}
+                      color={Tokens.accent}
+                    />
                   </View>
                 )}
               </TouchableOpacity>
@@ -445,13 +448,9 @@ export function NotificationsModal({
 
   const notificationsEnabled = useAppStore((s) => s.notificationsEnabled);
   const mealReminders = useAppStore((s) => s.mealReminders);
-  const setNotificationsEnabled = useAppStore(
-    (s) => s.setNotificationsEnabled
-  );
+  const setNotificationsEnabled = useAppStore((s) => s.setNotificationsEnabled);
   const toggleMealReminder = useAppStore((s) => s.toggleMealReminder);
-  const updateMealReminderTime = useAppStore(
-    (s) => s.updateMealReminderTime
-  );
+  const updateMealReminderTime = useAppStore((s) => s.updateMealReminderTime);
   const addMealReminder = useAppStore((s) => s.addMealReminder);
   const deleteMealReminder = useAppStore((s) => s.deleteMealReminder);
 
@@ -498,7 +497,7 @@ export function NotificationsModal({
       translateY.value,
       [0, SCREEN_HEIGHT * 0.5],
       [1, 0],
-      Extrapolation.CLAMP
+      Extrapolation.CLAMP,
     ),
   }));
 
@@ -519,7 +518,7 @@ export function NotificationsModal({
           Alert.alert(
             "Notifications Disabled",
             "Please enable notifications in Settings to receive meal reminders.",
-            [{ text: "OK" }]
+            [{ text: "OK" }],
           );
           return;
         }
@@ -531,7 +530,7 @@ export function NotificationsModal({
         await cancelAllReminders();
       }
     },
-    [setNotificationsEnabled]
+    [setNotificationsEnabled],
   );
 
   const handleToggleReminder = useCallback(
@@ -542,7 +541,7 @@ export function NotificationsModal({
       const reminders = useAppStore.getState().mealReminders;
       await scheduleAllReminders(reminders);
     },
-    [toggleMealReminder]
+    [toggleMealReminder],
   );
 
   const handleTimeConfirm = useCallback(
@@ -554,7 +553,7 @@ export function NotificationsModal({
       const reminders = useAppStore.getState().mealReminders;
       await scheduleAllReminders(reminders);
     },
-    [updateMealReminderTime, draftTime]
+    [updateMealReminderTime, draftTime],
   );
 
   const handleAddReminder = useCallback(async () => {
@@ -578,7 +577,7 @@ export function NotificationsModal({
       const reminders = useAppStore.getState().mealReminders;
       await scheduleAllReminders(reminders);
     },
-    [deleteMealReminder]
+    [deleteMealReminder],
   );
 
   return (
@@ -589,61 +588,31 @@ export function NotificationsModal({
       onRequestClose={onClose}
     >
       <KeyboardProvider>
-      <GestureHandlerRootView style={styles.gestureRoot}>
-        <StatusBar barStyle="dark-content" />
-        <Animated.View style={[styles.backdrop, backdropStyle]}>
-          <TouchableOpacity
-            style={styles.backdropPressable}
-            onPress={handleClose}
-            activeOpacity={1}
-          />
-        </Animated.View>
-        <GestureDetector gesture={panGesture}>
-          <Animated.View
-            style={[
-              styles.container,
-              { marginTop: insets.top },
-              animatedStyle,
-            ]}
-          >
-            {/* Drag Indicator */}
-            <View style={styles.dragIndicatorContainer}>
-              <View style={styles.dragIndicator} />
-            </View>
+        <GestureHandlerRootView style={styles.gestureRoot}>
+          <StatusBar barStyle="dark-content" />
+          <Animated.View style={[styles.backdrop, backdropStyle]}>
+            <TouchableOpacity
+              style={styles.backdropPressable}
+              onPress={handleClose}
+              activeOpacity={1}
+            />
+          </Animated.View>
+          <GestureDetector gesture={panGesture}>
+            <Animated.View
+              style={[
+                styles.container,
+                { marginTop: insets.top },
+                animatedStyle,
+              ]}
+            >
+              {/* Drag Indicator */}
+              <View style={styles.dragIndicatorContainer}>
+                <View style={styles.dragIndicator} />
+              </View>
 
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity onPress={handleClose} activeOpacity={0.7}>
-                {isLiquidGlassSupported ? (
-                  <LiquidGlassView
-                    style={styles.backButton}
-                    interactive
-                    effect="regular"
-                    tintColor={Tokens.tintColor}
-                  >
-                    <Ionicons
-                      name="chevron-back"
-                      size={20}
-                      color={Tokens.textPrimary}
-                    />
-                  </LiquidGlassView>
-                ) : (
-                  <View
-                    style={[styles.backButton, styles.backButtonFallback]}
-                  >
-                    <Ionicons name="chevron-back" size={20} color="#666" />
-                  </View>
-                )}
-              </TouchableOpacity>
-              <Text style={styles.title}>Notifications</Text>
-              {notificationsEnabled ? (
-                <TouchableOpacity
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setShowAddPopup(true);
-                  }}
-                  activeOpacity={0.7}
-                >
+              {/* Header */}
+              <View style={styles.header}>
+                <TouchableOpacity onPress={handleClose} activeOpacity={0.7}>
                   {isLiquidGlassSupported ? (
                     <LiquidGlassView
                       style={styles.backButton}
@@ -652,7 +621,7 @@ export function NotificationsModal({
                       tintColor={Tokens.tintColor}
                     >
                       <Ionicons
-                        name="add"
+                        name="chevron-back"
                         size={20}
                         color={Tokens.textPrimary}
                       />
@@ -661,91 +630,121 @@ export function NotificationsModal({
                     <View
                       style={[styles.backButton, styles.backButtonFallback]}
                     >
-                      <Ionicons name="add" size={20} color="#666" />
+                      <Ionicons name="chevron-back" size={20} color="#666" />
                     </View>
                   )}
                 </TouchableOpacity>
-              ) : (
-                <View style={styles.headerRightSpacer} />
-              )}
-            </View>
+                <Text style={styles.title}>Notifications</Text>
+                {notificationsEnabled ? (
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setShowAddPopup(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    {isLiquidGlassSupported ? (
+                      <LiquidGlassView
+                        style={styles.backButton}
+                        interactive
+                        effect="regular"
+                        tintColor={Tokens.tintColor}
+                      >
+                        <Ionicons
+                          name="add-sharp"
+                          size={20}
+                          color={Tokens.textPrimary}
+                        />
+                      </LiquidGlassView>
+                    ) : (
+                      <View
+                        style={[styles.backButton, styles.backButtonFallback]}
+                      >
+                        <Ionicons name="add-sharp" size={20} color="#666" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.headerRightSpacer} />
+                )}
+              </View>
 
-            <KeyboardAwareScrollView
-              style={styles.content}
-              contentContainerStyle={[
-                styles.contentContainer,
-                { paddingBottom: insets.bottom + 20 },
-              ]}
-              showsVerticalScrollIndicator={false}
-              onScrollBeginDrag={handleScrollBeginDrag}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
-              bounces
-            >
-              {/* Enable Notifications */}
-              <Animated.View
-                entering={FadeInDown.delay(100).duration(400)}
-                style={styles.section}
+              <KeyboardAwareScrollView
+                style={styles.content}
+                contentContainerStyle={[
+                  styles.contentContainer,
+                  { paddingBottom: insets.bottom + 20 },
+                ]}
+                showsVerticalScrollIndicator={false}
+                onScrollBeginDrag={handleScrollBeginDrag}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+                bounces
               >
-                <View style={styles.cardShadow}>
-                  <View style={styles.card}>
-                    <View style={styles.row}>
-                      <Text style={styles.rowLabel}>
-                        Enable Notifications
-                      </Text>
-                      <Switch
-                        value={notificationsEnabled}
-                        onValueChange={handleMasterToggle}
-                        trackColor={{ false: "#E8E7E3", true: "#34C759" }}
-                      />
-                    </View>
-                  </View>
-                </View>
-              </Animated.View>
-
-              {/* Meal Reminders */}
-              {notificationsEnabled && (
+                {/* Enable Notifications */}
                 <Animated.View
-                  entering={FadeInDown.delay(200).duration(400)}
+                  entering={FadeInDown.delay(100).duration(400)}
                   style={styles.section}
                 >
-                  <Text style={styles.sectionTitle}>MEAL REMINDERS</Text>
                   <View style={styles.cardShadow}>
                     <View style={styles.card}>
-                      {mealReminders.map((reminder, index) => (
-                        <React.Fragment key={reminder.id}>
-                          {index > 0 && <View style={styles.divider} />}
-                          <ReminderRow
-                            reminder={reminder}
-                            isDefault={!!reminder.isDefault}
-                            editingTimeId={editingTimeId}
-                            draftTime={draftTime}
-                            onToggleTime={(id) => {
-                              Haptics.impactAsync(
-                                Haptics.ImpactFeedbackStyle.Light
-                              );
-                              if (editingTimeId === id) {
-                                setEditingTimeId(null);
-                              } else {
-                                setDraftTime(reminder.time);
-                                setEditingTimeId(id);
-                              }
-                            }}
-                            onDraftTimeChange={setDraftTime}
-                            onTimeConfirm={handleTimeConfirm}
-                            onToggleReminder={handleToggleReminder}
-                            onDelete={handleDeleteReminder}
-                          />
-                        </React.Fragment>
-                      ))}
+                      <View style={styles.row}>
+                        <Text style={styles.rowLabel}>
+                          Enable Notifications
+                        </Text>
+                        <Switch
+                          value={notificationsEnabled}
+                          onValueChange={handleMasterToggle}
+                          trackColor={{ false: "#E8E7E3", true: "#34C759" }}
+                        />
+                      </View>
                     </View>
                   </View>
                 </Animated.View>
-              )}
-            </KeyboardAwareScrollView>
-          </Animated.View>
-        </GestureDetector>
-      </GestureHandlerRootView>
+
+                {/* Meal Reminders */}
+                {notificationsEnabled && (
+                  <Animated.View
+                    entering={FadeInDown.delay(200).duration(400)}
+                    style={styles.section}
+                  >
+                    <Text style={styles.sectionTitle}>MEAL REMINDERS</Text>
+                    <View style={styles.cardShadow}>
+                      <View style={styles.card}>
+                        {mealReminders.map((reminder, index) => (
+                          <React.Fragment key={reminder.id}>
+                            {index > 0 && <View style={styles.divider} />}
+                            <ReminderRow
+                              reminder={reminder}
+                              isDefault={!!reminder.isDefault}
+                              editingTimeId={editingTimeId}
+                              draftTime={draftTime}
+                              onToggleTime={(id) => {
+                                Haptics.impactAsync(
+                                  Haptics.ImpactFeedbackStyle.Light,
+                                );
+                                if (editingTimeId === id) {
+                                  setEditingTimeId(null);
+                                } else {
+                                  setDraftTime(reminder.time);
+                                  setEditingTimeId(id);
+                                }
+                              }}
+                              onDraftTimeChange={setDraftTime}
+                              onTimeConfirm={handleTimeConfirm}
+                              onToggleReminder={handleToggleReminder}
+                              onDelete={handleDeleteReminder}
+                            />
+                          </React.Fragment>
+                        ))}
+                      </View>
+                    </View>
+                  </Animated.View>
+                )}
+              </KeyboardAwareScrollView>
+            </Animated.View>
+          </GestureDetector>
+        </GestureHandlerRootView>
       </KeyboardProvider>
       <AddReminderPopup
         visible={showAddPopup}

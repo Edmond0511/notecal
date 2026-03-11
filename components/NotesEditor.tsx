@@ -14,6 +14,7 @@ import React, {
 import {
   Pressable,
   Animated as RNAnimated,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -21,8 +22,8 @@ import {
   View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { runOnJS } from "react-native-reanimated";
+import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
+import Animated, { runOnJS, useAnimatedStyle } from "react-native-reanimated";
 import { NutritionReasoningPopup } from "./NutritionReasoningPopup";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
@@ -31,6 +32,8 @@ const LINE_HEIGHT = 24;
 const TEXT_INPUT_PADDING_TOP = 10;
 const FONT_VERTICAL_OFFSET = 4;
 const INDICATOR_VERTICAL_OFFSET = 3;
+const TOTALS_BAR_OBSCURED_HEIGHT = 90;
+const CARET_SCROLL_PADDING = 40;
 const EM_DASH = "—"; // U+2014
 
 interface LayoutLine {
@@ -157,6 +160,25 @@ function calculateCursorPosition(
   docOffset += charIndex;
 
   return Math.max(0, Math.min(docOffset, textLength));
+}
+
+// Map a character index to the visual line containing it using onTextLayout data
+function getCaretLine(
+  charIndex: number,
+  lines: LayoutLine[],
+): { y: number; height: number } | null {
+  if (!lines.length) return null;
+  let charCount = 0;
+  for (const line of lines) {
+    const lineEnd = charCount + line.text.length;
+    if (charIndex <= lineEnd) {
+      return { y: line.y, height: line.height };
+    }
+    charCount = lineEnd;
+  }
+  // Past end — return position after last line
+  const last = lines[lines.length - 1];
+  return { y: last.y + last.height, height: last.height };
 }
 
 function getLineAtPosition(text: string, position: number, freeform = false) {
@@ -408,7 +430,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 400,
   },
   hiddenMeasureText: {
     position: "absolute",
@@ -735,6 +756,80 @@ export function NotesEditor({
   const previousTextRef = useRef<string>(initialDocumentText);
   // Store onTextLayout line data for tap-to-cursor positioning
   const linesLayoutRef = useRef<LayoutLine[]>([]);
+
+  // Caret-aware auto-scrolling
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollOffsetRef = useRef(0);
+  const scrollViewHeightRef = useRef(0);
+  const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
+
+  const keyboardSpacerStyle = useAnimatedStyle(() => {
+    const kbH = -keyboardHeight.value; // Negate: shared value is negative when open
+    return {
+      height: kbH > 0
+        ? kbH + TOTALS_BAR_OBSCURED_HEIGHT
+        : TOTALS_BAR_OBSCURED_HEIGHT,
+    };
+  });
+
+  const handleScroll = useCallback((event: any) => {
+    scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+  }, []);
+
+  const handleScrollViewLayout = useCallback((event: any) => {
+    scrollViewHeightRef.current = event.nativeEvent.layout.height;
+  }, []);
+
+  const scrollToKeepCaretVisible = useCallback(
+    (charIndex: number) => {
+      const lines = linesLayoutRef.current;
+      if (!lines.length) return;
+
+      const caretLine = getCaretLine(charIndex, lines);
+      if (!caretLine) return;
+
+      const textInputTop = (contentTopInset || 0) + 12;
+      const caretBottomY = textInputTop + caretLine.y + caretLine.height;
+      const caretTopY = textInputTop + caretLine.y;
+
+      const kbHeight = -keyboardHeight.value; // Negate: shared value is negative when open
+      const scrollViewH = scrollViewHeightRef.current;
+      const scrollY = scrollOffsetRef.current;
+
+      const obscuredBottom =
+        kbHeight > 0
+          ? kbHeight + TOTALS_BAR_OBSCURED_HEIGHT
+          : TOTALS_BAR_OBSCURED_HEIGHT;
+      const visibleBottom = scrollY + scrollViewH - obscuredBottom;
+      const visibleTop = scrollY + (contentTopInset || 0);
+
+      if (caretBottomY + CARET_SCROLL_PADDING > visibleBottom) {
+        scrollRef.current?.scrollTo({
+          y: caretBottomY + CARET_SCROLL_PADDING - scrollViewH + obscuredBottom,
+          animated: true,
+        });
+      } else if (caretTopY - CARET_SCROLL_PADDING < visibleTop) {
+        scrollRef.current?.scrollTo({
+          y: Math.max(
+            0,
+            caretTopY - (contentTopInset || 0) - CARET_SCROLL_PADDING,
+          ),
+          animated: true,
+        });
+      }
+    },
+    [contentTopInset, keyboardHeight],
+  );
+
+  const handleSelectionChange = useCallback(
+    (event: any) => {
+      const { start } = event.nativeEvent.selection;
+      // Check after layout updates and again after keyboard animation settles
+      setTimeout(() => scrollToKeepCaretVisible(start), 50);
+      setTimeout(() => scrollToKeepCaretVisible(start), 400);
+    },
+    [scrollToKeepCaretVisible],
+  );
 
   // Sync prop to state during render (eliminates 1-frame flash on date change).
   // Only reset layout when the incoming text differs from what we already have
@@ -1143,18 +1238,18 @@ export function NotesEditor({
         {documentText || " "}
       </Text>
 
-      <KeyboardAwareScrollView
+      <ScrollView
+        ref={scrollRef}
         style={styles.scrollContainer}
         contentContainerStyle={[
           styles.scrollContent,
           contentTopInset ? { paddingTop: contentTopInset } : undefined,
         ]}
-        bottomOffset={80}
-        extraKeyboardSpace={130}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="always"
-        enabled={isActive !== false}
-        disableScrollOnKeyboardHide
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        onLayout={handleScrollViewLayout}
       >
         <View style={{ position: "relative" }}>
           {/* TextInput: only receives touches when focused */}
@@ -1166,6 +1261,7 @@ export function NotesEditor({
               onChangeText={handleTextChange}
               onFocus={handleFocus}
               onBlur={handleBlur}
+              onSelectionChange={handleSelectionChange}
               {...(selection !== undefined ? { selection } : {})}
               placeholder={
                 isFreeform
@@ -1228,7 +1324,10 @@ export function NotesEditor({
             }
           }}
         />
-      </KeyboardAwareScrollView>
+
+        {/* Animated keyboard spacer — replaces static paddingBottom */}
+        <Animated.View style={keyboardSpacerStyle} />
+      </ScrollView>
 
       {/* Header fade gradient */}
       {contentTopInset > 0 && (

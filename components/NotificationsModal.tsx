@@ -13,10 +13,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   Alert,
-  Animated as RNAnimated,
   Dimensions,
   Modal,
   ScrollView,
@@ -33,7 +32,6 @@ import {
   Gesture,
   GestureDetector,
   GestureHandlerRootView,
-  Swipeable,
 } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
@@ -48,6 +46,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
+const SWIPE_ACTION_WIDTH = 72;
 
 interface NotificationsModalProps {
   visible: boolean;
@@ -99,54 +98,69 @@ function ReminderRow({
   onToggleReminder,
   onDelete,
 }: ReminderRowProps) {
-  const switchOpacity = useRef(new RNAnimated.Value(1)).current;
-  const swipeableRef = useRef<Swipeable>(null);
+  const translateX = useSharedValue(0);
+  const isOpen = useSharedValue(false);
 
-  const handleSwipeableWillOpen = useCallback(() => {
-    RNAnimated.timing(switchOpacity, {
-      toValue: 0,
-      duration: 100,
-      useNativeDriver: true,
-    }).start();
-  }, [switchOpacity]);
+  const handleDelete = useCallback(() => {
+    translateX.value = withSpring(0, { damping: 25, stiffness: 300 });
+    isOpen.value = false;
+    onDelete(reminder.id);
+  }, [onDelete, reminder.id]);
 
-  const handleSwipeableClose = useCallback(() => {
-    RNAnimated.timing(switchOpacity, {
-      toValue: 1,
-      duration: 100,
-      useNativeDriver: true,
-    }).start();
-  }, [switchOpacity]);
-
-  const renderRightActions = (
-    progress: RNAnimated.AnimatedInterpolation<number>,
-  ) => {
-    const scale = progress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.6, 1],
-      extrapolate: "clamp",
+  const panGesture = Gesture.Pan()
+    .enabled(!isDefault)
+    .activeOffsetX([-10, 10])
+    .failOffsetY([-5, 5])
+    .onUpdate((event) => {
+      const base = isOpen.value ? -SWIPE_ACTION_WIDTH : 0;
+      const raw = base + event.translationX;
+      if (raw > 0) {
+        translateX.value = raw * 0.15;
+      } else if (raw < -SWIPE_ACTION_WIDTH) {
+        const overshoot = raw + SWIPE_ACTION_WIDTH;
+        translateX.value = -SWIPE_ACTION_WIDTH + overshoot * 0.15;
+      } else {
+        translateX.value = raw;
+      }
+    })
+    .onEnd(() => {
+      if (translateX.value < -SWIPE_ACTION_WIDTH / 2) {
+        translateX.value = withSpring(-SWIPE_ACTION_WIDTH, {
+          damping: 25,
+          stiffness: 300,
+        });
+        isOpen.value = true;
+      } else {
+        translateX.value = withSpring(0, {
+          damping: 25,
+          stiffness: 300,
+        });
+        isOpen.value = false;
+      }
     });
 
-    return (
-      <TouchableOpacity
-        onPress={() => {
-          swipeableRef.current?.close();
-          onDelete(reminder.id);
-        }}
-        activeOpacity={0.8}
-        style={styles.deleteAction}
-      >
-        <RNAnimated.View
-          style={[
-            styles.deleteActionCircle,
-            { transform: [{ scale }] },
-          ]}
-        >
-          <Ionicons name="trash-outline" size={18} color="#fff" />
-        </RNAnimated.View>
-      </TouchableOpacity>
-    );
-  };
+  const rowStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  const actionStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateX.value,
+      [-SWIPE_ACTION_WIDTH * 0.3, 0],
+      [1, 0],
+      Extrapolation.CLAMP
+    ),
+    transform: [
+      {
+        scale: interpolate(
+          translateX.value,
+          [-SWIPE_ACTION_WIDTH, -SWIPE_ACTION_WIDTH * 0.3, 0],
+          [1, 0.8, 0.5],
+          Extrapolation.CLAMP
+        ),
+      },
+    ],
+  }));
 
   const content = (
     <>
@@ -168,13 +182,11 @@ function ReminderRow({
             trackColor={{ false: "#E8E7E3", true: "#34C759" }}
           />
         ) : (
-          <RNAnimated.View style={{ opacity: switchOpacity }}>
-            <Switch
-              value={reminder.enabled}
-              onValueChange={() => onToggleReminder(reminder.id)}
-              trackColor={{ false: "#E8E7E3", true: "#34C759" }}
-            />
-          </RNAnimated.View>
+          <Switch
+            value={reminder.enabled}
+            onValueChange={() => onToggleReminder(reminder.id)}
+            trackColor={{ false: "#E8E7E3", true: "#34C759" }}
+          />
         )}
       </View>
       {editingTimeId === reminder.id && (
@@ -202,22 +214,25 @@ function ReminderRow({
     </>
   );
 
-  if (isDefault) {
-    return content;
-  }
-
   return (
-    <Swipeable
-      ref={swipeableRef}
-      renderRightActions={renderRightActions}
-      overshootRight={false}
-      friction={2}
-      rightThreshold={28}
-      onSwipeableWillOpen={handleSwipeableWillOpen}
-      onSwipeableClose={handleSwipeableClose}
-    >
-      {content}
-    </Swipeable>
+    <View style={styles.swipeContainer}>
+      {!isDefault && (
+        <Animated.View style={[styles.swipeActionBehind, actionStyle]}>
+          <TouchableOpacity
+            onPress={handleDelete}
+            activeOpacity={0.8}
+            style={styles.swipeDeleteButton}
+          >
+            <Ionicons name="trash-outline" size={18} color="#fff" />
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+      <GestureDetector gesture={panGesture}>
+        <Animated.View style={[styles.swipeRowContent, rowStyle]}>
+          {content}
+        </Animated.View>
+      </GestureDetector>
+    </View>
   );
 }
 
@@ -862,18 +877,27 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
   },
-  deleteAction: {
-    width: 56,
-    justifyContent: "center",
-    alignItems: "center",
+  swipeContainer: {
+    overflow: "hidden",
   },
-  deleteActionCircle: {
+  swipeActionBehind: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: SWIPE_ACTION_WIDTH,
     backgroundColor: "#F87171",
     justifyContent: "center",
     alignItems: "center",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  },
+  swipeDeleteButton: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  swipeRowContent: {
+    backgroundColor: Tokens.surfaceRaised,
   },
   reminderName: {
     flex: 1,

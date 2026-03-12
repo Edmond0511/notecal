@@ -915,17 +915,10 @@ export function NotesEditor({
       const fallback = textLength === 0 ? 0 : textLength;
       setSelection({ start: fallback, end: fallback });
     }
-    if (!isFocused) {
-      // Not focused — wait for pointerEvents="auto" render commit
-      pendingFocusRef.current = true;
-      setIsFocused(true);
-    } else {
-      // Already focused — clear selection after cursor moves
-      requestAnimationFrame(() => {
-        setTimeout(() => setSelection(undefined), 50);
-      });
-    }
-  }, [isFocused]);
+    // Overlay only shown when not focused — wait for pointerEvents="auto" render commit
+    pendingFocusRef.current = true;
+    setIsFocused(true);
+  }, []);
 
   const tapToFocusGesture = useMemo(
     () =>
@@ -1217,7 +1210,7 @@ export function NotesEditor({
           contentTopInset ? { paddingTop: contentTopInset } : undefined,
         ]}
         automaticallyAdjustKeyboardInsets
-        keyboardDismissMode="none"
+        keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
         onLayout={(e) => { scrollViewHeightRef.current = e.nativeEvent.layout.height; }}
@@ -1259,10 +1252,13 @@ export function NotesEditor({
             />
           </View>
 
-          {/* Tap-to-focus overlay — all taps go through gesture handler (zIndex: 1) */}
-          <GestureDetector gesture={tapToFocusGesture}>
-            <View style={[StyleSheet.absoluteFill, { zIndex: 1 }]} />
-          </GestureDetector>
+          {/* Tap-to-focus overlay — only active when NOT focused so native
+              TextInput handles cursor positioning + double-tap-to-select */}
+          {!isFocused && (
+            <GestureDetector gesture={tapToFocusGesture}>
+              <View style={[StyleSheet.absoluteFill, { zIndex: 1 }]} />
+            </GestureDetector>
+          )}
 
           {/* Inline nutrition indicators — above overlay (zIndex: 2) */}
           <View

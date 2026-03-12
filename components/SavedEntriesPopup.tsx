@@ -392,32 +392,54 @@ export function SavedEntriesPopup({
           ))}
         </KeyboardAwareScrollView>
       ) : searchQuery.length > 0 ? (
-        <Animated.View
-          entering={FadeIn.duration(300)}
-          style={styles.emptyContent}
+        <KeyboardAwareScrollView
+          style={styles.content}
+          contentContainerStyle={[
+            styles.emptyContentScrollContainer,
+            { paddingBottom: insets.bottom + 20 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          bounces={false}
         >
-          <View style={styles.emptyIconContainer}>
-            <Ionicons name="search-outline" size={32} color="#999" />
-          </View>
-          <Text style={styles.emptyTitle}>No results found</Text>
-          <Text style={styles.emptyDescription}>
-            Try a different search term
-          </Text>
-        </Animated.View>
+          <Animated.View
+            entering={FadeIn.duration(300)}
+            style={styles.emptyContent}
+          >
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="search-outline" size={32} color="#999" />
+            </View>
+            <Text style={styles.emptyTitle}>No results found</Text>
+            <Text style={styles.emptyDescription}>
+              Try a different search term
+            </Text>
+          </Animated.View>
+        </KeyboardAwareScrollView>
       ) : (
-        <Animated.View
-          entering={FadeInDown.delay(100).duration(300)}
-          style={styles.emptyContent}
+        <KeyboardAwareScrollView
+          style={styles.content}
+          contentContainerStyle={[
+            styles.emptyContentScrollContainer,
+            { paddingBottom: insets.bottom + 20 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          bounces={false}
         >
-          <View style={styles.emptyIconContainer}>
-            <Ionicons name="bookmark-outline" size={32} color="#1A6872" />
-          </View>
-          <Text style={styles.emptyTitle}>No saved foods yet</Text>
-          <Text style={styles.emptyDescription}>
-            Tap the Save button on any food entry to add it here for quick
-            access
-          </Text>
-        </Animated.View>
+          <Animated.View
+            entering={FadeInDown.delay(100).duration(300)}
+            style={styles.emptyContent}
+          >
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="bookmark-outline" size={32} color="#1A6872" />
+            </View>
+            <Text style={styles.emptyTitle}>No saved foods yet</Text>
+            <Text style={styles.emptyDescription}>
+              Tap the Save button on any food entry to add it here for quick
+              access
+            </Text>
+          </Animated.View>
+        </KeyboardAwareScrollView>
       )}
     </>
   );
@@ -622,6 +644,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginLeft: 8,
     marginBottom: 12,
+  },
+  emptyContentScrollContainer: {
+    flexGrow: 1,
   },
   emptyContent: {
     flex: 1,

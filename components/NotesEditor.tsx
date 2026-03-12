@@ -800,17 +800,20 @@ export function NotesEditor({
   // layoutStale briefly hides indicators on every keystroke.
   if (initialDocumentText !== prevInitialText) {
     setPrevInitialText(initialDocumentText);
-    // Clear pending debounce from previous date so it doesn't fire with wrong currentDate
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-      debounceTimeoutRef.current = null;
-    }
     if (initialDocumentText !== documentText) {
+      // Genuine external change (date navigation) — reset layout and cancel any
+      // pending debounce so it doesn't fire with the wrong date's entries.
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+        debounceTimeoutRef.current = null;
+      }
       setDocumentText(initialDocumentText);
       previousTextRef.current = initialDocumentText;
       setLayoutStale(true);
       setEntryYMap(new Map());
     }
+    // If initialDocumentText === documentText, the parent is just echoing back
+    // text we already set via handleTextChange — do nothing (preserves debounce).
   }
 
   // Controlled selection for cursor positioning after transforms

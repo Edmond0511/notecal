@@ -1,4 +1,3 @@
-import { AnimatedDigits } from "@/components/AnimatedDigits";
 import {
   BarcodeLookupError,
   BarcodeNonFoodError,
@@ -63,8 +62,7 @@ try {
   cameraAvailable = false;
 }
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } =
-  Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const VIEWFINDER_WIDTH = SCREEN_WIDTH * 0.78;
 const VIEWFINDER_HEIGHT = SCREEN_WIDTH * 0.44;
 const VIEWFINDER_RADIUS = 20;
@@ -253,7 +251,7 @@ export function BarcodeScannerModal({
       setServingGrams(next.toString());
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
-    [servingGrams]
+    [servingGrams],
   );
 
   // Compute scaled macros for preview
@@ -261,7 +259,7 @@ export function BarcodeScannerModal({
     state.type === "found"
       ? scaleMacrosToServing(
           state.product.nutrimentsPer100g,
-          parseFloat(servingGrams) || 100
+          parseFloat(servingGrams) || 100,
         )
       : null;
 
@@ -287,411 +285,412 @@ export function BarcodeScannerModal({
           />
         </Animated.View>
         <GestureDetector gesture={panGesture}>
-          <Animated.View style={[styles.container, { marginTop: insets.top }, animatedStyle]}>
-
-        {!cameraAvailable ? (
-          // Native module not built yet
-          <View style={styles.permissionContainer}>
-            <View style={styles.permissionContent}>
-              <View style={styles.permissionIconCircle}>
-                <Ionicons name="build-outline" size={48} color={TEAL} />
+          <Animated.View
+            style={[styles.container, { marginTop: insets.top }, animatedStyle]}
+          >
+            {!cameraAvailable ? (
+              // Native module not built yet
+              <View style={styles.permissionContainer}>
+                <View style={styles.permissionContent}>
+                  <View style={styles.permissionIconCircle}>
+                    <Ionicons name="build-outline" size={48} color={TEAL} />
+                  </View>
+                  <Text style={styles.permissionTitle}>Rebuild Required</Text>
+                  <Text style={styles.permissionDescription}>
+                    The camera module requires a native rebuild. Run{"\n"}
+                    <Text style={{ fontWeight: "600" }}>npx expo run:ios</Text>
+                    {"\n"}then reopen the app.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.permissionCancelButton}
+                    onPress={handleClose}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.permissionCancelText}>Close</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <Text style={styles.permissionTitle}>Rebuild Required</Text>
-              <Text style={styles.permissionDescription}>
-                The camera module requires a native rebuild. Run{"\n"}
-                <Text style={{ fontWeight: "600" }}>npx expo run:ios</Text>
-                {"\n"}then reopen the app.
-              </Text>
-              <TouchableOpacity
-                style={styles.permissionCancelButton}
-                onPress={handleClose}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.permissionCancelText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : !permission.granted ? (
-          // Permission denied / not yet granted
-          <View style={styles.permissionContainer}>
-            <View style={styles.permissionContent}>
-              <View style={styles.permissionIconCircle}>
-                <Ionicons name="camera-outline" size={48} color={TEAL} />
+            ) : !permission.granted ? (
+              // Permission denied / not yet granted
+              <View style={styles.permissionContainer}>
+                <View style={styles.permissionContent}>
+                  <View style={styles.permissionIconCircle}>
+                    <Ionicons name="camera-outline" size={48} color={TEAL} />
+                  </View>
+                  <Text style={styles.permissionTitle}>Camera Access</Text>
+                  <Text style={styles.permissionDescription}>
+                    NoteCal needs camera access to scan barcodes on food
+                    products
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.permissionButton}
+                    onPress={requestPermission}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.permissionButtonText}>
+                      Allow Camera
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.permissionCancelButton}
+                    onPress={handleClose}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.permissionCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <Text style={styles.permissionTitle}>Camera Access</Text>
-              <Text style={styles.permissionDescription}>
-                NoteCal needs camera access to scan barcodes on food products
-              </Text>
-              <TouchableOpacity
-                style={styles.permissionButton}
-                onPress={requestPermission}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.permissionButtonText}>Allow Camera</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.permissionCancelButton}
-                onPress={handleClose}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.permissionCancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          // Camera view
-          <>
-            <CameraView
-              style={StyleSheet.absoluteFill}
-              facing="back"
-              barcodeScannerSettings={{
-                barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e", "code128"],
-              }}
-              onBarcodeScanned={
-                state.type === "scanning" ? handleBarcodeScanned : undefined
-              }
-            />
+            ) : (
+              // Camera view
+              <>
+                <CameraView
+                  style={StyleSheet.absoluteFill}
+                  facing="back"
+                  barcodeScannerSettings={{
+                    barcodeTypes: [
+                      "ean13",
+                      "ean8",
+                      "upc_a",
+                      "upc_e",
+                      "code128",
+                    ],
+                  }}
+                  onBarcodeScanned={
+                    state.type === "scanning" ? handleBarcodeScanned : undefined
+                  }
+                />
 
-            {/* Dark overlay with rounded viewfinder cutout */}
-            <View style={StyleSheet.absoluteFill} pointerEvents="none">
-              <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT}>
-                <Defs>
-                  <Mask id="hole">
+                {/* Dark overlay with rounded viewfinder cutout */}
+                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                  <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT}>
+                    <Defs>
+                      <Mask id="hole">
+                        <Rect
+                          width={SCREEN_WIDTH}
+                          height={SCREEN_HEIGHT}
+                          fill="white"
+                        />
+                        <Rect
+                          x={(SCREEN_WIDTH - VIEWFINDER_WIDTH) / 2}
+                          y={SCREEN_HEIGHT * 0.23}
+                          width={VIEWFINDER_WIDTH}
+                          height={VIEWFINDER_HEIGHT}
+                          rx={VIEWFINDER_RADIUS}
+                          ry={VIEWFINDER_RADIUS}
+                          fill="black"
+                        />
+                      </Mask>
+                    </Defs>
                     <Rect
                       width={SCREEN_WIDTH}
                       height={SCREEN_HEIGHT}
-                      fill="white"
+                      fill="rgba(0,0,0,0.55)"
+                      mask="url(#hole)"
                     />
-                    <Rect
-                      x={(SCREEN_WIDTH - VIEWFINDER_WIDTH) / 2}
-                      y={SCREEN_HEIGHT * 0.23}
-                      width={VIEWFINDER_WIDTH}
-                      height={VIEWFINDER_HEIGHT}
-                      rx={VIEWFINDER_RADIUS}
-                      ry={VIEWFINDER_RADIUS}
-                      fill="black"
-                    />
-                  </Mask>
-                </Defs>
-                <Rect
-                  width={SCREEN_WIDTH}
-                  height={SCREEN_HEIGHT}
-                  fill="rgba(0,0,0,0.55)"
-                  mask="url(#hole)"
-                />
-              </Svg>
-              {/* Corner decorations */}
-              <View
-                style={[
-                  styles.viewfinderFrame,
-                  { top: SCREEN_HEIGHT * 0.23 },
-                ]}
-              >
-                <View style={[styles.corner, styles.cornerTL]} />
-                <View style={[styles.corner, styles.cornerTR]} />
-                <View style={[styles.corner, styles.cornerBL]} />
-                <View style={[styles.corner, styles.cornerBR]} />
-              </View>
-            </View>
-
-            {/* Close button */}
-            <TouchableOpacity
-              style={[styles.closeButton, { top: 12 }]}
-              onPress={handleClose}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="close" size={26} color="#fff" />
-            </TouchableOpacity>
-
-            {/* Drag indicator */}
-            <View style={styles.dragIndicatorContainer} pointerEvents="none">
-              <View style={styles.dragIndicator} />
-            </View>
-
-            {/* Scanning hint */}
-            {state.type === "scanning" && (
-              <Animated.View
-                entering={FadeIn.duration(300)}
-                style={styles.hintContainer}
-              >
-                <View style={styles.hintPill}>
-                  <Ionicons
-                    name="barcode-outline"
-                    size={18}
-                    color="rgba(255,255,255,0.8)"
-                  />
-                  <Text style={styles.hintText}>
-                    Point camera at a barcode
-                  </Text>
-                </View>
-              </Animated.View>
-            )}
-
-            {/* Loading state */}
-            {state.type === "loading" && (
-              <Animated.View
-                entering={FadeIn.duration(200)}
-                style={styles.bottomCard}
-              >
-                <View style={styles.loadingContent}>
-                  <ActivityIndicator size="small" color={TEAL} />
-                  <Text style={styles.loadingText}>Looking up product...</Text>
-                </View>
-              </Animated.View>
-            )}
-
-            {/* Found state - product card */}
-            {state.type === "found" && previewMacros && (
-              <Animated.View
-                entering={FadeInDown.duration(300)}
-                style={[
-                  styles.bottomCard,
-                  { paddingBottom: keyboardHeight || insets.bottom + 16 },
-                ]}
-              >
-                {/* Product info */}
-                <View style={styles.productHeader}>
-                  {state.product.brand && (
-                    <Text style={styles.productBrand}>
-                      {state.product.brand}
-                    </Text>
-                  )}
-                  <Text style={styles.productName} numberOfLines={2}>
-                    {state.product.name}
-                  </Text>
-                </View>
-
-                {/* Serving stepper */}
-                <View style={styles.servingCard}>
-                  <Text style={styles.servingLabel}>Serving</Text>
-                  <View style={styles.stepperContainer}>
-                    <TouchableOpacity
-                      style={styles.stepperButton}
-                      onPress={() => handleServingStep(-10)}
-                      activeOpacity={0.6}
-                    >
-                      <Ionicons name="remove" size={18} color="#666" />
-                    </TouchableOpacity>
-                    <View style={styles.servingInputWrapper}>
-                      <TextInput
-                        style={styles.servingInput}
-                        value={servingGrams}
-                        onChangeText={setServingGrams}
-                        keyboardType="numeric"
-                        selectTextOnFocus
-                        returnKeyType="done"
-                      />
-                      <Text style={styles.servingUnit}>g</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.stepperButton}
-                      onPress={() => handleServingStep(10)}
-                      activeOpacity={0.6}
-                    >
-                      <Ionicons name="add" size={18} color="#666" />
-                    </TouchableOpacity>
+                  </Svg>
+                  {/* Corner decorations */}
+                  <View
+                    style={[
+                      styles.viewfinderFrame,
+                      { top: SCREEN_HEIGHT * 0.23 },
+                    ]}
+                  >
+                    <View style={[styles.corner, styles.cornerTL]} />
+                    <View style={[styles.corner, styles.cornerTR]} />
+                    <View style={[styles.corner, styles.cornerBL]} />
+                    <View style={[styles.corner, styles.cornerBR]} />
                   </View>
                 </View>
 
-                {/* Macro pills */}
-                <View style={styles.macrosPreview}>
-                  {(
-                    [
-                      {
-                        key: "calories" as const,
-                        value: previewMacros.kcal,
-                        suffix: undefined as string | undefined,
-                        label: "CAL",
-                      },
-                      {
-                        key: "protein" as const,
-                        value: previewMacros.protein,
-                        suffix: "g" as string | undefined,
-                        label: "PROTEIN",
-                      },
-                      {
-                        key: "fat" as const,
-                        value: previewMacros.fat,
-                        suffix: "g" as string | undefined,
-                        label: "FAT",
-                      },
-                      {
-                        key: "carbs" as const,
-                        value: previewMacros.carbs,
-                        suffix: "g" as string | undefined,
-                        label: "CARBS",
-                      },
-                    ]
-                  ).map((macro, i) => (
-                    <Animated.View
-                      key={macro.key}
-                      entering={FadeInDown.delay(i * 80).duration(300)}
-                      style={[
-                        styles.macroPill,
-                        {
-                          backgroundColor: `${MACRO_COLORS[macro.key].primary}18`,
-                        },
-                      ]}
-                    >
-                      <FontAwesomeIcon
-                        icon={MACRO_ICONS[macro.key]}
-                        size={11}
-                        color={MACRO_COLORS[macro.key].primary}
+                {/* Close button */}
+                <TouchableOpacity
+                  style={[styles.closeButton, { top: 12 }]}
+                  onPress={handleClose}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close" size={26} color="#fff" />
+                </TouchableOpacity>
+
+                {/* Drag indicator */}
+                <View
+                  style={styles.dragIndicatorContainer}
+                  pointerEvents="none"
+                >
+                  <View style={styles.dragIndicator} />
+                </View>
+
+                {/* Scanning hint */}
+                {state.type === "scanning" && (
+                  <Animated.View
+                    entering={FadeIn.duration(300)}
+                    style={styles.hintContainer}
+                  >
+                    <View style={styles.hintPill}>
+                      <Ionicons
+                        name="barcode-outline"
+                        size={18}
+                        color="rgba(255,255,255,0.8)"
                       />
-                      <View style={styles.macroPillValueRow}>
-                        <AnimatedDigits
-                          value={macro.value}
-                          style={{
-                            fontSize: 17,
-                            fontWeight: "700",
-                            color: "#333",
-                          }}
-                        />
-                        {macro.suffix && (
-                          <Text style={styles.macroPillSuffix}>
-                            {macro.suffix}
-                          </Text>
-                        )}
-                      </View>
-                      <Text style={styles.macroPillLabel}>{macro.label}</Text>
-                    </Animated.View>
-                  ))}
-                </View>
+                      <Text style={styles.hintText}>
+                        Point camera at a barcode
+                      </Text>
+                    </View>
+                  </Animated.View>
+                )}
 
-                {/* Action buttons */}
-                <View style={styles.actionRow}>
-                  <TouchableOpacity
-                    style={styles.scanAgainButton}
-                    onPress={handleScanAgain}
-                    activeOpacity={0.7}
+                {/* Loading state */}
+                {state.type === "loading" && (
+                  <Animated.View
+                    entering={FadeIn.duration(200)}
+                    style={styles.bottomCard}
                   >
-                    <Ionicons name="scan-outline" size={18} color="#666" />
-                    <Text style={styles.scanAgainText}>Scan Again</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={handleAdd}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="add" size={20} color="#fff" />
-                    <Text style={styles.addButtonText}>Add</Text>
-                  </TouchableOpacity>
-                </View>
-              </Animated.View>
-            )}
+                    <View style={styles.loadingContent}>
+                      <ActivityIndicator size="small" color={TEAL} />
+                      <Text style={styles.loadingText}>
+                        Looking up product...
+                      </Text>
+                    </View>
+                  </Animated.View>
+                )}
 
-            {/* Not found state */}
-            {state.type === "not_found" && (
-              <Animated.View
-                entering={FadeInDown.duration(300)}
-                style={[
-                  styles.bottomCard,
-                  { paddingBottom: keyboardHeight || insets.bottom + 16 },
-                ]}
-              >
-                <View style={styles.notFoundHeader}>
-                  <Ionicons
-                    name="alert-circle-outline"
-                    size={24}
-                    color="#F5A623"
-                  />
-                  <Text style={styles.notFoundTitle}>Product not found</Text>
-                </View>
-                <Text style={styles.notFoundDescription}>
-                  This barcode isn't in our database. Type the product name
-                  below and we'll calculate the macros for you.
-                </Text>
-                <View style={styles.manualInputRow}>
-                  <TextInput
-                    style={styles.manualInput}
-                    placeholder="e.g. Kirkland Protein Bar"
-                    placeholderTextColor="#999"
-                    value={manualText}
-                    onChangeText={setManualText}
-                    autoFocus
-                    returnKeyType="go"
-                    onSubmitEditing={handleManualSubmit}
-                  />
-                  <TouchableOpacity
+                {/* Found state - product card */}
+                {state.type === "found" && previewMacros && (
+                  <Animated.View
+                    entering={FadeInDown.duration(300)}
                     style={[
-                      styles.manualSubmitButton,
-                      !manualText.trim() && styles.manualSubmitDisabled,
+                      styles.bottomCard,
+                      { paddingBottom: keyboardHeight || insets.bottom + 16 },
                     ]}
-                    onPress={handleManualSubmit}
-                    disabled={!manualText.trim()}
-                    activeOpacity={0.8}
                   >
-                    <Ionicons
-                      name="arrow-forward"
-                      size={20}
-                      color={manualText.trim() ? "#fff" : "#ccc"}
-                    />
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity
-                  style={styles.scanAgainButtonAlt}
-                  onPress={handleScanAgain}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="scan-outline" size={16} color="#666" />
-                  <Text style={styles.scanAgainText}>Scan Again</Text>
-                </TouchableOpacity>
-              </Animated.View>
-            )}
+                    {/* Product info */}
+                    <View style={styles.productHeader}>
+                      {state.product.brand && (
+                        <Text style={styles.productBrand}>
+                          {state.product.brand}
+                        </Text>
+                      )}
+                      <Text style={styles.productName} numberOfLines={2}>
+                        {state.product.name}
+                      </Text>
+                    </View>
 
-            {/* Non-food state */}
-            {state.type === "non_food" && (
-              <Animated.View
-                entering={FadeInDown.duration(300)}
-                style={[
-                  styles.bottomCard,
-                  { paddingBottom: insets.bottom + 16 },
-                ]}
-              >
-                <View style={styles.notFoundHeader}>
-                  <Ionicons name="ban-outline" size={24} color="#F87171" />
-                  <Text style={styles.notFoundTitle}>Not a food item</Text>
-                </View>
-                <Text style={styles.notFoundDescription}>
-                  This product doesn't appear to be a food or drink. Only food
-                  items can be tracked.
-                </Text>
-                <TouchableOpacity
-                  style={styles.scanAgainButtonAlt}
-                  onPress={handleScanAgain}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="scan-outline" size={16} color="#666" />
-                  <Text style={styles.scanAgainText}>Scan Again</Text>
-                </TouchableOpacity>
-              </Animated.View>
-            )}
+                    {/* Serving stepper */}
+                    <View style={styles.servingCard}>
+                      <Text style={styles.servingLabel}>Serving</Text>
+                      <View style={styles.stepperContainer}>
+                        <TouchableOpacity
+                          style={styles.stepperButton}
+                          onPress={() => handleServingStep(-10)}
+                          activeOpacity={0.6}
+                        >
+                          <Ionicons name="remove" size={18} color="#666" />
+                        </TouchableOpacity>
+                        <View style={styles.servingInputWrapper}>
+                          <TextInput
+                            style={styles.servingInput}
+                            value={servingGrams}
+                            onChangeText={setServingGrams}
+                            keyboardType="numeric"
+                            selectTextOnFocus
+                          />
+                          <Text style={styles.servingUnit}>g</Text>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.stepperButton}
+                          onPress={() => handleServingStep(10)}
+                          activeOpacity={0.6}
+                        >
+                          <Ionicons name="add" size={18} color="#666" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
 
-            {/* Error state */}
-            {state.type === "error" && (
-              <Animated.View
-                entering={FadeInDown.duration(300)}
-                style={[
-                  styles.bottomCard,
-                  { paddingBottom: insets.bottom + 16 },
-                ]}
-              >
-                <View style={styles.notFoundHeader}>
-                  <Ionicons name="warning-outline" size={24} color="#F87171" />
-                  <Text style={styles.notFoundTitle}>{state.message}</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.scanAgainButtonAlt}
-                  onPress={handleScanAgain}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="scan-outline" size={16} color="#666" />
-                  <Text style={styles.scanAgainText}>Try Again</Text>
-                </TouchableOpacity>
-              </Animated.View>
+                    {/* Macro columns */}
+                    <View style={styles.macrosCard}>
+                      {[
+                        {
+                          key: "calories" as const,
+                          label: "Cal",
+                          value: previewMacros.kcal,
+                          unit: undefined as string | undefined,
+                        },
+                        {
+                          key: "protein" as const,
+                          label: "Protein",
+                          value: previewMacros.protein,
+                          unit: "g" as string | undefined,
+                        },
+                        {
+                          key: "fat" as const,
+                          label: "Fat",
+                          value: previewMacros.fat,
+                          unit: "g" as string | undefined,
+                        },
+                        {
+                          key: "carbs" as const,
+                          label: "Carbs",
+                          value: previewMacros.carbs,
+                          unit: "g" as string | undefined,
+                        },
+                      ].map((macro, i) => (
+                        <Animated.View
+                          key={macro.key}
+                          entering={FadeInDown.delay(i * 80).duration(300)}
+                          style={styles.macroColumn}
+                        >
+                          <View style={styles.macroIconContainer}>
+                            <FontAwesomeIcon
+                              icon={MACRO_ICONS[macro.key]}
+                              size={12}
+                              color={MACRO_COLORS[macro.key].primary}
+                            />
+                          </View>
+                          <View style={styles.macroValueWrapper}>
+                            <Text style={styles.macroValue}>
+                              {Math.round(macro.value)}
+                              {macro.unit}
+                            </Text>
+                          </View>
+                          <Text style={styles.macroLabel}>{macro.label}</Text>
+                        </Animated.View>
+                      ))}
+                    </View>
+
+                    {/* Action buttons */}
+                    <View style={styles.actionRow}>
+                      <TouchableOpacity
+                        style={styles.scanAgainButton}
+                        onPress={handleScanAgain}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="scan-outline" size={18} color="#666" />
+                        <Text style={styles.scanAgainText}>Scan Again</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={handleAdd}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="add" size={20} color="#fff" />
+                        <Text style={styles.addButtonText}>Add</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </Animated.View>
+                )}
+
+                {/* Not found state */}
+                {state.type === "not_found" && (
+                  <Animated.View
+                    entering={FadeInDown.duration(300)}
+                    style={[
+                      styles.bottomCard,
+                      { paddingBottom: keyboardHeight || insets.bottom + 16 },
+                    ]}
+                  >
+                    <View style={styles.notFoundHeader}>
+                      <Text style={styles.notFoundTitle}>
+                        Product not found
+                      </Text>
+                    </View>
+                    <Text style={styles.notFoundDescription}>
+                      This barcode isn't in our database. Type the product name
+                      below and we'll calculate the macros for you.
+                    </Text>
+                    <View style={styles.manualInputRow}>
+                      <TextInput
+                        style={styles.manualInput}
+                        placeholder="Search"
+                        placeholderTextColor="#999"
+                        value={manualText}
+                        onChangeText={setManualText}
+                        autoFocus
+                        returnKeyType="go"
+                        onSubmitEditing={handleManualSubmit}
+                      />
+                      <TouchableOpacity
+                        style={[
+                          styles.manualSubmitButton,
+                          !manualText.trim() && styles.manualSubmitDisabled,
+                        ]}
+                        onPress={handleManualSubmit}
+                        disabled={!manualText.trim()}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons
+                          name="arrow-forward"
+                          size={20}
+                          color={manualText.trim() ? "#fff" : "#ccc"}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.scanAgainButtonAlt}
+                      onPress={handleScanAgain}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="scan-outline" size={16} color="#666" />
+                      <Text style={styles.scanAgainText}>Scan Again</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                )}
+
+                {/* Non-food state */}
+                {state.type === "non_food" && (
+                  <Animated.View
+                    entering={FadeInDown.duration(300)}
+                    style={[
+                      styles.bottomCard,
+                      { paddingBottom: insets.bottom + 16 },
+                    ]}
+                  >
+                    <View style={styles.notFoundHeader}>
+                      <Ionicons name="ban-outline" size={24} color="#F87171" />
+                      <Text style={styles.notFoundTitle}>Not a food item</Text>
+                    </View>
+                    <Text style={styles.notFoundDescription}>
+                      This product doesn't appear to be a food or drink. Only
+                      food items can be tracked.
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.scanAgainButtonAlt}
+                      onPress={handleScanAgain}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="scan-outline" size={16} color="#666" />
+                      <Text style={styles.scanAgainText}>Scan Again</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                )}
+
+                {/* Error state */}
+                {state.type === "error" && (
+                  <Animated.View
+                    entering={FadeInDown.duration(300)}
+                    style={[
+                      styles.bottomCard,
+                      { paddingBottom: insets.bottom + 16 },
+                    ]}
+                  >
+                    <View style={styles.notFoundHeader}>
+                      <Ionicons
+                        name="warning-outline"
+                        size={24}
+                        color="#F87171"
+                      />
+                      <Text style={styles.notFoundTitle}>{state.message}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.scanAgainButtonAlt}
+                      onPress={handleScanAgain}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="scan-outline" size={16} color="#666" />
+                      <Text style={styles.scanAgainText}>Try Again</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                )}
+              </>
             )}
-          </>
-        )}
           </Animated.View>
         </GestureDetector>
       </GestureHandlerRootView>
@@ -773,7 +772,7 @@ const styles = StyleSheet.create({
     backgroundColor: TEAL,
     paddingVertical: 14,
     paddingHorizontal: 36,
-    borderRadius: 14,
+    borderRadius: 999,
     marginBottom: 12,
   },
   permissionButtonText: {
@@ -975,36 +974,41 @@ const styles = StyleSheet.create({
     color: "#888",
     marginLeft: 3,
   },
-  macrosPreview: {
+  macrosCard: {
     flexDirection: "row",
-    gap: 8,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 14,
     marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  macroPill: {
+  macroColumn: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderRadius: 14,
-    gap: 5,
   },
-  macroPillValueRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
+  macroIconContainer: {
+    marginBottom: 6,
   },
-  macroPillSuffix: {
-    fontSize: 12,
+  macroValueWrapper: {
+    marginBottom: 2,
+  },
+  macroValue: {
+    fontSize: 18,
+    fontFamily: "System",
+    fontWeight: "700",
+    color: "#333",
+  },
+  macroLabel: {
+    fontSize: 10,
     fontFamily: "System",
     fontWeight: "500",
+    textTransform: "capitalize",
+    letterSpacing: 0.3,
     color: "#888",
-    marginLeft: 1,
-  },
-  macroPillLabel: {
-    fontSize: 9,
-    fontFamily: "System",
-    fontWeight: "600",
-    color: "#888",
-    letterSpacing: 0.5,
   },
   actionRow: {
     flexDirection: "row",
@@ -1017,8 +1021,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: "#e5e5e5",
+    borderRadius: 999,
+    backgroundColor: "#efefef",
   },
   scanAgainText: {
     fontSize: 15,
@@ -1033,7 +1037,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 999,
     backgroundColor: TEAL,
   },
   addButtonText: {
@@ -1076,16 +1080,16 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: "#1a1a1a",
     backgroundColor: "#ffffff",
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: "#e5e5e5",
-    borderRadius: 14,
+    borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   manualSubmitButton: {
     width: 48,
     height: 48,
-    borderRadius: 14,
+    borderRadius: 999,
     backgroundColor: TEAL,
     justifyContent: "center",
     alignItems: "center",

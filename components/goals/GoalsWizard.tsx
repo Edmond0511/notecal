@@ -660,9 +660,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 16,
-    backgroundColor: '#f8f8f8',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+    backgroundColor: 'transparent',
   },
   backButton: {
     flexDirection: 'row',

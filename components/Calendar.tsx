@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 32,
     backgroundColor: Tokens.accent,
-    borderRadius: 12,
+    borderRadius: 999,
     minHeight: 44,
     justifyContent: "center",
     alignItems: "center",

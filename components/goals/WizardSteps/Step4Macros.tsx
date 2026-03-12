@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 16,
     alignItems: "center",
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: "transparent",
   },
   optionButtonSelected: {

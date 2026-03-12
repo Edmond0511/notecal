@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#f8f8f8",
     borderRadius: 16,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: "transparent",
   },
   optionCardSelected: {

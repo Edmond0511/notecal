@@ -293,7 +293,10 @@ function ConfidencePopup({
         activeOpacity={1}
         onPress={onClose}
       >
-        <View style={styles.confidencePopup} onStartShouldSetResponder={() => true}>
+        <View
+          style={styles.confidencePopup}
+          onStartShouldSetResponder={() => true}
+        >
           {/* Header */}
           <View style={styles.popupHeader}>
             <View
@@ -305,7 +308,9 @@ function ConfidencePopup({
                 },
               ]}
             >
-              <Text style={[styles.popupConfidenceValue, { color: colors.text }]}>
+              <Text
+                style={[styles.popupConfidenceValue, { color: colors.text }]}
+              >
                 {confidencePercent}%
               </Text>
             </View>
@@ -692,10 +697,7 @@ function EditNutrientPopup({
 
           {/* Header */}
           <View style={styles.editNutrientHeader}>
-            <TouchableOpacity
-              onPress={handleClose}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity onPress={handleClose} activeOpacity={0.7}>
               {isLiquidGlassSupported ? (
                 <LiquidGlassView
                   style={styles.backButton}
@@ -703,7 +705,11 @@ function EditNutrientPopup({
                   effect="regular"
                   tintColor="rgba(250, 250, 247, 0.3)"
                 >
-                  <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+                  <Ionicons
+                    name="chevron-back"
+                    size={20}
+                    color={Tokens.textPrimary}
+                  />
                 </LiquidGlassView>
               ) : (
                 <View style={[styles.backButton, styles.backButtonFallback]}>
@@ -712,14 +718,7 @@ function EditNutrientPopup({
               )}
             </TouchableOpacity>
             <View style={styles.editNutrientTitleRow}>
-              <View
-                style={[
-                  styles.editNutrientIconContainer,
-                  { backgroundColor: colors.secondary },
-                ]}
-              >
-                <FontAwesomeIcon icon={icon} size={18} color={colors.primary} />
-              </View>
+   
               <Text style={styles.editNutrientTitle}>Edit {label}</Text>
             </View>
             <View style={styles.headerRightSpacer} />
@@ -809,9 +808,9 @@ function EditNutrientPopup({
 }
 
 // Unit conversion constants
-type QuantityUnit = 'servings' | 'g' | 'oz' | 'lbs' | 'portion';
+type QuantityUnit = "servings" | "g" | "oz" | "lbs" | "portion";
 
-const WEIGHT_UNITS: QuantityUnit[] = ['servings', 'g', 'oz', 'lbs'];
+const WEIGHT_UNITS: QuantityUnit[] = ["servings", "g", "oz", "lbs"];
 
 const GRAMS_PER: Record<string, number> = {
   g: 1,
@@ -821,19 +820,25 @@ const GRAMS_PER: Record<string, number> = {
 
 function normalizeUnit(unit: string): QuantityUnit | null {
   const lower = unit.toLowerCase().trim();
-  if (lower === 'g' || lower === 'gram' || lower === 'grams') return 'g';
-  if (lower === 'oz' || lower === 'ounce' || lower === 'ounces') return 'oz';
-  if (lower === 'lb' || lower === 'lbs' || lower === 'pound' || lower === 'pounds') return 'lbs';
+  if (lower === "g" || lower === "gram" || lower === "grams") return "g";
+  if (lower === "oz" || lower === "ounce" || lower === "ounces") return "oz";
+  if (
+    lower === "lb" ||
+    lower === "lbs" ||
+    lower === "pound" ||
+    lower === "pounds"
+  )
+    return "lbs";
   return null;
 }
 
 function toGrams(value: number, unit: QuantityUnit): number | null {
-  if (unit === 'servings') return null;
+  if (unit === "servings") return null;
   return value * (GRAMS_PER[unit] ?? 1);
 }
 
 function fromGrams(grams: number, unit: QuantityUnit): number | null {
-  if (unit === 'servings') return null;
+  if (unit === "servings") return null;
   return grams / (GRAMS_PER[unit] ?? 1);
 }
 
@@ -867,25 +872,27 @@ function EditQuantityPopup({
   const translateY = useSharedValue(0);
 
   const normalizedUnit = normalizeUnit(itemUnit);
-  const initialUnit: QuantityUnit = normalizedUnit ?? 'servings';
+  const initialUnit: QuantityUnit = normalizedUnit ?? "servings";
   const originalGrams = normalizedUnit
     ? toGrams(itemQty, normalizedUnit)
     : null;
 
   const [selectedUnit, setSelectedUnit] = useState<QuantityUnit>(initialUnit);
-  const [selectedPortion, setSelectedPortion] = useState<CommonPortion | null>(null);
+  const [selectedPortion, setSelectedPortion] = useState<CommonPortion | null>(
+    null,
+  );
   const [inputValue, setInputValue] = useState(
-    initialUnit === 'servings'
+    initialUnit === "servings"
       ? formatQtyValue(currentServings)
       : formatQtyValue(itemQty),
   );
 
   // Convert current value to grams based on selected unit
   const getCurrentGrams = (num: number): number | null => {
-    if (selectedUnit === 'portion' && selectedPortion) {
+    if (selectedUnit === "portion" && selectedPortion) {
       return num * selectedPortion.grams;
     }
-    if (selectedUnit === 'servings') {
+    if (selectedUnit === "servings") {
       return originalGrams != null ? num * originalGrams : null;
     }
     return toGrams(num, selectedUnit);
@@ -897,13 +904,13 @@ function EditQuantityPopup({
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    if (selectedUnit === 'servings') {
+    if (selectedUnit === "servings") {
       onSave(numValue);
-    } else if (selectedUnit === 'portion' && selectedPortion) {
+    } else if (selectedUnit === "portion" && selectedPortion) {
       const newGrams = numValue * selectedPortion.grams;
       if (originalGrams != null && originalGrams > 0) {
         const scaleFactor = newGrams / originalGrams;
-        onSave(scaleFactor, newGrams, 'g');
+        onSave(scaleFactor, newGrams, "g");
       } else {
         onSave(numValue);
       }
@@ -930,28 +937,27 @@ function EditQuantityPopup({
 
     const currentNum = parseFloat(inputValue);
     // Convert current value to grams, then to this portion's units
-    const curGrams = (!isNaN(currentNum) && currentNum > 0)
-      ? getCurrentGrams(currentNum)
-      : null;
+    const curGrams =
+      !isNaN(currentNum) && currentNum > 0 ? getCurrentGrams(currentNum) : null;
 
-    setSelectedUnit('portion');
+    setSelectedUnit("portion");
     setSelectedPortion(portion);
 
     if (curGrams != null && portion.grams > 0) {
       setInputValue(formatQtyValue(curGrams / portion.grams));
     } else {
-      setInputValue('1');
+      setInputValue("1");
     }
   };
 
   const handleUnitSwitch = (newUnit: QuantityUnit) => {
-    if (newUnit === selectedUnit && newUnit !== 'portion') return;
+    if (newUnit === selectedUnit && newUnit !== "portion") return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const currentNum = parseFloat(inputValue);
     if (isNaN(currentNum) || currentNum <= 0) {
       setSelectedUnit(newUnit);
-      if (newUnit !== 'portion') setSelectedPortion(null);
+      if (newUnit !== "portion") setSelectedPortion(null);
       return;
     }
 
@@ -960,20 +966,20 @@ function EditQuantityPopup({
     // Get current value in grams
     const curGrams = getCurrentGrams(currentNum);
 
-    if (newUnit === 'servings') {
+    if (newUnit === "servings") {
       if (curGrams != null && originalGrams != null && originalGrams > 0) {
         convertedValue = curGrams / originalGrams;
       } else {
         convertedValue = 1;
       }
-    } else if (newUnit === 'portion') {
+    } else if (newUnit === "portion") {
       // Handled by handlePortionSelect
       return;
     } else {
       // Switching to g/oz/lbs
       if (curGrams != null) {
         convertedValue = fromGrams(curGrams, newUnit)!;
-      } else if (selectedUnit === 'servings' && originalGrams != null) {
+      } else if (selectedUnit === "servings" && originalGrams != null) {
         const gramsVal = currentNum * originalGrams;
         convertedValue = fromGrams(gramsVal, newUnit)!;
       } else {
@@ -1048,10 +1054,7 @@ function EditQuantityPopup({
           </View>
 
           <View style={styles.editQuantityHeader}>
-            <TouchableOpacity
-              onPress={handleClose}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity onPress={handleClose} activeOpacity={0.7}>
               {isLiquidGlassSupported ? (
                 <LiquidGlassView
                   style={styles.backButton}
@@ -1059,7 +1062,11 @@ function EditQuantityPopup({
                   effect="regular"
                   tintColor="rgba(250, 250, 247, 0.3)"
                 >
-                  <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+                  <Ionicons
+                    name="chevron-back"
+                    size={20}
+                    color={Tokens.textPrimary}
+                  />
                 </LiquidGlassView>
               ) : (
                 <View style={[styles.backButton, styles.backButtonFallback]}>
@@ -1094,7 +1101,9 @@ function EditQuantityPopup({
                 contentContainerStyle={styles.portionPillScrollContent}
               >
                 {commonPortions.map((portion, i) => {
-                  const isActive = selectedUnit === 'portion' && selectedPortion?.label === portion.label;
+                  const isActive =
+                    selectedUnit === "portion" &&
+                    selectedPortion?.label === portion.label;
                   return (
                     <TouchableOpacity
                       key={`${portion.label}-${i}`}
@@ -1154,9 +1163,9 @@ function EditQuantityPopup({
 
             {/* Hint */}
             <Text style={styles.editQuantityHint}>
-              {selectedUnit === 'servings'
-                ? 'Nutrients will scale proportionally'
-                : selectedUnit === 'portion' && selectedPortion
+              {selectedUnit === "servings"
+                ? "Nutrients will scale proportionally"
+                : selectedUnit === "portion" && selectedPortion
                   ? `1 ${selectedPortion.label} = ${selectedPortion.grams}g`
                   : `Based on ${formatQtyValue(itemQty)}${itemUnit} = ${Math.round(itemKcal)} kcal`}
             </Text>
@@ -1452,9 +1461,23 @@ export function NutritionReasoningPopup({
 
   // Handler for when quantity badge is pressed
   const handleQuantityPress = useCallback(
-    (itemId: string, currentServings: number, qty: number, unit: string, kcal: number, itemCommonPortions?: CommonPortion[]) => {
+    (
+      itemId: string,
+      currentServings: number,
+      qty: number,
+      unit: string,
+      kcal: number,
+      itemCommonPortions?: CommonPortion[],
+    ) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setEditQuantityPopup({ itemId, currentServings, itemQty: qty, itemUnit: unit, itemKcal: kcal, commonPortions: itemCommonPortions });
+      setEditQuantityPopup({
+        itemId,
+        currentServings,
+        itemQty: qty,
+        itemUnit: unit,
+        itemKcal: kcal,
+        commonPortions: itemCommonPortions,
+      });
     },
     [],
   );
@@ -1504,10 +1527,7 @@ export function NutritionReasoningPopup({
 
             {/* Header */}
             <View style={styles.header}>
-              <TouchableOpacity
-                onPress={handleClose}
-                activeOpacity={0.7}
-              >
+              <TouchableOpacity onPress={handleClose} activeOpacity={0.7}>
                 {isLiquidGlassSupported ? (
                   <LiquidGlassView
                     style={styles.backButton}
@@ -1515,7 +1535,11 @@ export function NutritionReasoningPopup({
                     effect="regular"
                     tintColor="rgba(250, 250, 247, 0.3)"
                   >
-                    <Ionicons name="close" size={20} color={Tokens.textPrimary} />
+                    <Ionicons
+                      name="close"
+                      size={20}
+                      color={Tokens.textPrimary}
+                    />
                   </LiquidGlassView>
                 ) : (
                   <View style={[styles.backButton, styles.backButtonFallback]}>
@@ -1626,9 +1650,11 @@ export function NutritionReasoningPopup({
                           <Text style={styles.quantityText}>
                             {normalizeUnit(item.unit)
                               ? `${formatQtyValue(item.qty)}${item.unit}`
-                              : `×${Number.isInteger(item.servings ?? 1)
-                                  ? (item.servings ?? 1)
-                                  : (item.servings ?? 1).toFixed(1)}`}
+                              : `×${
+                                  Number.isInteger(item.servings ?? 1)
+                                    ? (item.servings ?? 1)
+                                    : (item.servings ?? 1).toFixed(1)
+                                }`}
                           </Text>
                           <Ionicons
                             name="pencil"
@@ -2347,7 +2373,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "System",
     fontWeight: "500",
-    textTransform: "uppercase",
+    textTransform: "capitalize",
     letterSpacing: 0.3,
     color: "#888",
   },
@@ -2535,11 +2561,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  editNutrientTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
+
   editNutrientIconContainer: {
     width: 36,
     height: 36,
@@ -2567,7 +2589,7 @@ const styles = StyleSheet.create({
   editNutrientInput: {
     flex: 1,
     height: 56,
-    borderWidth: 2,
+    borderWidth: 1,
     borderRadius: 14,
     paddingHorizontal: 18,
     fontSize: 24,
@@ -2595,7 +2617,7 @@ const styles = StyleSheet.create({
   editNutrientRevertButton: {
     flex: 1,
     height: 52,
-    borderRadius: 14,
+    borderRadius: 999,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -2616,7 +2638,7 @@ const styles = StyleSheet.create({
   editNutrientSaveButton: {
     flex: 1,
     height: 52,
-    borderRadius: 14,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2841,32 +2863,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
-    backgroundColor: '#EBEBEB',
-    alignItems: 'center',
+    backgroundColor: "#EBEBEB",
+    alignItems: "center",
     minWidth: 64,
   },
   portionPillItemSelected: {
-    backgroundColor: '#1A6872',
+    backgroundColor: "#1A6872",
   },
   portionPillItemLabel: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#444',
+    fontWeight: "600",
+    color: "#444",
   },
   portionPillItemLabelSelected: {
-    color: '#ffffff',
+    color: "#ffffff",
   },
   portionPillItemGrams: {
     fontSize: 10,
-    fontWeight: '400',
-    color: '#999',
+    fontWeight: "400",
+    color: "#999",
     marginTop: 1,
   },
   portionPillItemGramsSelected: {
-    color: 'rgba(255,255,255,0.7)',
+    color: "rgba(255,255,255,0.7)",
   },
   unitPillRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     marginBottom: 16,
   },
@@ -2874,21 +2896,21 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: '#EBEBEB',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#EBEBEB",
+    alignItems: "center",
+    justifyContent: "center",
   },
   unitPillSelected: {
-    backgroundColor: '#1A6872',
+    backgroundColor: "#1A6872",
   },
   unitPillText: {
     fontSize: 14,
-    fontFamily: 'System',
-    fontWeight: '600',
-    color: '#666',
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#666",
   },
   unitPillTextSelected: {
-    color: '#ffffff',
+    color: "#ffffff",
   },
   editQuantityInputContainer: {
     flexDirection: "row",

@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 16,
     backgroundColor: "#fff",
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: "transparent",
   },
   sexOptionActive: {

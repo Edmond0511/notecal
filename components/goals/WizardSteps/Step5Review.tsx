@@ -20,9 +20,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import * as Haptics from "expo-haptics";
-import React, { useState, useRef } from "react";
+import React, { useRef, useState } from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 import { WizardFormData } from "../GoalsWizard";
 
 // Cast icons to IconProp to fix type mismatch between FA packages
@@ -44,7 +44,8 @@ const CALORIE_EXPLANATIONS = {
     title: "BMR (Basal Metabolic Rate)",
     description:
       "The calories your body burns at complete rest - just to keep vital organs like your heart, lungs, and brain functioning.",
-    formula: "Calculated using the Mifflin-St Jeor equation based on your age, sex, height, and weight.",
+    formula:
+      "Calculated using the Mifflin-St Jeor equation based on your age, sex, height, and weight.",
   },
   tdee: {
     title: "TDEE (Total Daily Energy Expenditure)",
@@ -124,7 +125,9 @@ function CalorieExplanationPopup({
             <Ionicons name="information-circle" size={22} color="#1A6872" />
             <Text style={styles.explanationTitle}>{explanation.title}</Text>
           </View>
-          <Text style={styles.explanationDescription}>{explanation.description}</Text>
+          <Text style={styles.explanationDescription}>
+            {explanation.description}
+          </Text>
           <View style={styles.explanationFormulaBox}>
             <Text style={styles.explanationFormula}>{explanation.formula}</Text>
           </View>
@@ -134,8 +137,14 @@ function CalorieExplanationPopup({
   );
 }
 
-export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps) {
-  const [activeExplanation, setActiveExplanation] = useState<"bmr" | "tdee" | null>(null);
+export function Step5Review({
+  goals,
+  formData,
+  existingGoals,
+}: Step5ReviewProps) {
+  const [activeExplanation, setActiveExplanation] = useState<
+    "bmr" | "tdee" | null
+  >(null);
   const lastExplanationType = useRef<"bmr" | "tdee">("bmr");
 
   const handleExplanationPress = (type: "bmr" | "tdee") => {
@@ -160,20 +169,57 @@ export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps
 
   // Check for manual modifications
   const manualTargets = existingGoals?.manualTargets;
-  const modifications: Array<{ label: string; calculated: number; manual: number; unit: string }> = [];
+  const modifications: Array<{
+    label: string;
+    calculated: number;
+    manual: number;
+    unit: string;
+  }> = [];
 
   if (manualTargets) {
-    if (manualTargets.kcal !== undefined && manualTargets.kcal !== goals.targetKcal) {
-      modifications.push({ label: "Calories", calculated: goals.targetKcal, manual: manualTargets.kcal, unit: "cal" });
+    if (
+      manualTargets.kcal !== undefined &&
+      manualTargets.kcal !== goals.targetKcal
+    ) {
+      modifications.push({
+        label: "Calories",
+        calculated: goals.targetKcal,
+        manual: manualTargets.kcal,
+        unit: "cal",
+      });
     }
-    if (manualTargets.protein !== undefined && manualTargets.protein !== goals.targetProtein) {
-      modifications.push({ label: "Protein", calculated: goals.targetProtein, manual: manualTargets.protein, unit: "g" });
+    if (
+      manualTargets.protein !== undefined &&
+      manualTargets.protein !== goals.targetProtein
+    ) {
+      modifications.push({
+        label: "Protein",
+        calculated: goals.targetProtein,
+        manual: manualTargets.protein,
+        unit: "g",
+      });
     }
-    if (manualTargets.fat !== undefined && manualTargets.fat !== goals.targetFat) {
-      modifications.push({ label: "Fat", calculated: goals.targetFat, manual: manualTargets.fat, unit: "g" });
+    if (
+      manualTargets.fat !== undefined &&
+      manualTargets.fat !== goals.targetFat
+    ) {
+      modifications.push({
+        label: "Fat",
+        calculated: goals.targetFat,
+        manual: manualTargets.fat,
+        unit: "g",
+      });
     }
-    if (manualTargets.carbs !== undefined && manualTargets.carbs !== goals.targetCarbs) {
-      modifications.push({ label: "Carbs", calculated: goals.targetCarbs, manual: manualTargets.carbs, unit: "g" });
+    if (
+      manualTargets.carbs !== undefined &&
+      manualTargets.carbs !== goals.targetCarbs
+    ) {
+      modifications.push({
+        label: "Carbs",
+        calculated: goals.targetCarbs,
+        manual: manualTargets.carbs,
+        unit: "g",
+      });
     }
   }
 
@@ -205,10 +251,9 @@ export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps
       {hasModifications && (
         <View style={styles.modificationNotice}>
           <View style={styles.modificationHeader}>
-            <View style={styles.modificationIconContainer}>
-              <Ionicons name="swap-horizontal" size={16} color="#666" />
-            </View>
-            <Text style={styles.modificationTitle}>Custom targets will update</Text>
+            <Text style={styles.modificationTitle}>
+              Custom targets will update
+            </Text>
           </View>
           {modifications.map((mod, index) => {
             const iconConfig = {
@@ -223,16 +268,26 @@ export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps
                 key={mod.label}
                 style={[
                   styles.modificationItem,
-                  index < modifications.length - 1 && styles.modificationItemBorder
+                  index < modifications.length - 1 &&
+                    styles.modificationItemBorder,
                 ]}
               >
                 <View style={styles.modificationLabelRow}>
-                  <FontAwesomeIcon icon={iconConfig.icon} size={14} color={iconConfig.color} />
+                  <FontAwesomeIcon
+                    icon={iconConfig.icon}
+                    size={14}
+                    color={iconConfig.color}
+                  />
                   <Text style={styles.modificationLabel}>{mod.label}</Text>
                 </View>
                 <View style={styles.modificationValuesRow}>
                   <Text style={styles.oldValue}>{mod.manual}</Text>
-                  <Ionicons name="arrow-forward" size={12} color="#ccc" style={styles.modificationArrowIcon} />
+                  <Ionicons
+                    name="arrow-forward"
+                    size={12}
+                    color="#ccc"
+                    style={styles.modificationArrowIcon}
+                  />
                   <Text style={styles.newValue}>{mod.calculated}</Text>
                   <Text style={styles.modificationUnit}>{mod.unit}</Text>
                 </View>
@@ -258,7 +313,12 @@ export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps
               activeOpacity={0.7}
             >
               <Text style={styles.breakdownLabel}>BMR</Text>
-              <Ionicons name="information-circle-outline" size={12} color="#aaa" style={styles.breakdownInfoIcon} />
+              <Ionicons
+                name="information-circle-outline"
+                size={12}
+                color="#aaa"
+                style={styles.breakdownInfoIcon}
+              />
             </TouchableOpacity>
             <Text style={styles.breakdownValue}>{goals.bmr}</Text>
           </View>
@@ -271,7 +331,12 @@ export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps
               activeOpacity={0.7}
             >
               <Text style={styles.breakdownLabel}>TDEE</Text>
-              <Ionicons name="information-circle-outline" size={12} color="#aaa" style={styles.breakdownInfoIcon} />
+              <Ionicons
+                name="information-circle-outline"
+                size={12}
+                color="#aaa"
+                style={styles.breakdownInfoIcon}
+              />
             </TouchableOpacity>
             <Text style={styles.breakdownValue}>{goals.tdee}</Text>
           </View>
@@ -377,7 +442,8 @@ export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps
       </View>
 
       {/* Weight target info (when set) */}
-      {goals.targetWeightKg != null && goals.timelineWeeks != null && (
+      {goals.targetWeightKg != null &&
+        goals.timelineWeeks != null &&
         (() => {
           const useImperial = formData.weightUseImperial;
           const currentDisplay = useImperial
@@ -386,7 +452,7 @@ export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps
           const targetDisplay = useImperial
             ? `${Math.round(kgToLbs(goals.targetWeightKg))} lbs`
             : `${goals.targetWeightKg} kg`;
-          const isLosing = goals.goalType === 'lose';
+          const isLosing = goals.goalType === "lose";
 
           return (
             <View style={styles.weightTargetCard}>
@@ -399,15 +465,19 @@ export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps
                 <Ionicons name="arrow-forward" size={16} color="#ccc" />
                 <View style={styles.weightTargetItem}>
                   <Text style={styles.weightTargetLabel}>Target</Text>
-                  <Text style={[styles.weightTargetValue, { color: isLosing ? '#FB8C00' : '#1E88E5' }]}>
+                  <Text
+                    style={[
+                      styles.weightTargetValue,
+                      { color: isLosing ? "#FB8C00" : "#1E88E5" },
+                    ]}
+                  >
                     {targetDisplay}
                   </Text>
                 </View>
               </View>
             </View>
           );
-        })()
-      )}
+        })()}
 
       {/* Goal expectation */}
       <View style={styles.expectationBox}>
@@ -420,7 +490,7 @@ export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps
                   ? `${kgToLbs(diffKg)} lbs`
                   : `${Math.round(diffKg * 10) / 10} kg`;
                 const months = Math.round(goals.timelineWeeks! / (52 / 12));
-                return `${goals.goalType === 'lose' ? 'Lose' : 'Gain'} ${diffDisplay} in ${months} ${months === 1 ? 'month' : 'months'}`;
+                return `${goals.goalType === "lose" ? "Lose" : "Gain"} ${diffDisplay} in ${months} ${months === 1 ? "month" : "months"}`;
               })()
             : `Expected: ${goalInfo.weeklyChange}`}
         </Text>
@@ -512,9 +582,6 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   macrosCard: {
-    backgroundColor: "#f8f8f8",
-    borderRadius: 16,
-    padding: 16,
     marginBottom: 16,
   },
   cardTitle: {
@@ -661,14 +728,6 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
-  },
-  modificationIconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: "#f5f5f5",
-    alignItems: "center",
-    justifyContent: "center",
   },
   modificationTitle: {
     fontSize: 14,

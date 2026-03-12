@@ -290,7 +290,7 @@ export function SavedEntriesPopup({
       <Ionicons
         name="search"
         size={18}
-        color="#8E8E93"
+        color={Tokens.accent}
         style={styles.searchIcon}
       />
       <TextInput

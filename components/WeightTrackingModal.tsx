@@ -87,6 +87,7 @@ export function WeightTrackingModal({
   const unitLabel = isImperial ? "lbs" : "kg";
   const showGlass = isLiquidGlassSupported;
 
+  const [isLogView, setIsLogView] = useState(!!openToLog);
   const [range, setRange] = useState<TimeRange>("30d");
   const [weightInput, setWeightInput] = useState("");
   const [photoUris, setPhotoUris] = useState<string[]>([]);
@@ -118,6 +119,7 @@ export function WeightTrackingModal({
       setWeightInput("");
       setPhotoUris([]);
       setLogDateInput(toLocalYMD(new Date()));
+      setIsLogView(!!openToLog);
     } else {
       setShowLogPopup(false);
     }
@@ -278,12 +280,12 @@ export function WeightTrackingModal({
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setWeightInput("");
     setPhotoUris([]);
-    if (openToLog) {
-      onClose();
+    if (isLogView && openToLog) {
+      setIsLogView(false);
     } else {
       setShowLogPopup(false);
     }
-  }, [weightInput, photoUris, isImperial, logDateInput, addWeightEntry, openToLog, onClose]);
+  }, [weightInput, photoUris, isImperial, logDateInput, addWeightEntry, isLogView, openToLog, onClose]);
 
   const pickFromLibrary = useCallback(async (onPick: (uri: string) => void) => {
     const ImagePicker = await import("expo-image-picker");
@@ -635,11 +637,11 @@ export function WeightTrackingModal({
               <View style={styles.dragIndicator} />
             </View>
 
-            {openToLog ? (
+            {isLogView ? (
               <>
                 <View style={styles.popupOverlayHeader}>
                   <TouchableOpacity
-                    onPress={handleClose}
+                    onPress={openToLog ? () => setIsLogView(false) : handleClose}
                     activeOpacity={0.7}
                   >
                     {showGlass ? (

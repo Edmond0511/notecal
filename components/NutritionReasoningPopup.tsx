@@ -1578,7 +1578,7 @@ export function NutritionReasoningPopup({
                               : "bookmark-outline"
                           }
                           size={14}
-                          color={isSaved || isEntrySaved ? "#fff" : "#0a7ea4"}
+                          color={isSaved || isEntrySaved ? "#fff" : "#1A6872"}
                         />
                         <Text
                           style={[
@@ -2211,19 +2211,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#E0F2F7",
+    backgroundColor: "#E0F2F1",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 14,
   },
   saveButtonSaved: {
-    backgroundColor: "#0a7ea4",
+    backgroundColor: "#1A6872",
   },
   saveButtonText: {
     fontSize: 12,
     fontFamily: "System",
     fontWeight: "500",
-    color: "#0a7ea4",
+    color: "#1A6872",
   },
   saveButtonTextSaved: {
     color: "#fff",
@@ -2778,7 +2778,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0a7ea4",
+    backgroundColor: "#1A6872",
   },
   somethingOffSubmitButtonDisabled: {
     backgroundColor: "#9CA3AF",
@@ -2846,7 +2846,7 @@ const styles = StyleSheet.create({
     minWidth: 64,
   },
   portionPillItemSelected: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#1A6872',
   },
   portionPillItemLabel: {
     fontSize: 13,
@@ -2879,7 +2879,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   unitPillSelected: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#1A6872',
   },
   unitPillText: {
     fontSize: 14,
@@ -2924,7 +2924,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0a7ea4",
+    backgroundColor: "#1A6872",
   },
   editQuantitySaveText: {
     fontSize: 16,

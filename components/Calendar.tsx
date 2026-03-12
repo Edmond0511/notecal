@@ -599,14 +599,14 @@ const styles = StyleSheet.create({
   },
   todayDay: {
     borderWidth: 1.5,
-    borderColor: Tokens.textPrimary,
+    borderColor: '#1A6872',
   },
   todayDayText: {
     color: Tokens.textPrimary,
     fontWeight: "600",
   },
   selectedDay: {
-    backgroundColor: Tokens.textPrimary,
+    backgroundColor: '#1A6872',
   },
   selectedDayText: {
     color: Tokens.surfaceRaised,

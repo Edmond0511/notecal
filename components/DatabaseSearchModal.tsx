@@ -59,7 +59,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
-const TEAL = "#0a7ea4";
+const TEAL = "#1A6872";
 const DEBOUNCE_MS = 400;
 
 const MACRO_COLORS = {
@@ -1458,7 +1458,7 @@ const styles = StyleSheet.create({
   selectionChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E0F2F7",
+    backgroundColor: "#E0F2F1",
     borderRadius: 10,
     paddingLeft: 10,
     paddingRight: 4,

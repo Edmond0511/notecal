@@ -70,7 +70,7 @@ const VIEWFINDER_HEIGHT = SCREEN_WIDTH * 0.44;
 const VIEWFINDER_RADIUS = 20;
 
 const DISMISS_THRESHOLD = 150;
-const TEAL = "#0a7ea4";
+const TEAL = "#1A6872";
 
 const MACRO_COLORS = {
   calories: { primary: "#FF6B35" },
@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: "#E0F2F7",
+    backgroundColor: "#E0F2F1",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 24,

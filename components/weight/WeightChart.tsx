@@ -228,7 +228,7 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
         {/* Weight line */}
         <Path
           d={linePath}
-          stroke="#0a7ea4"
+          stroke="#1A6872"
           strokeWidth={2.5}
           fill="none"
           strokeLinecap="round"
@@ -245,7 +245,7 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
                   cx={point.x}
                   cy={point.y}
                   r={8}
-                  fill="#0a7ea4"
+                  fill="#1A6872"
                   opacity={0.12}
                 />
               )}
@@ -254,7 +254,7 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
                 cy={point.y}
                 r={isLatest ? 5 : 4}
                 fill="#fff"
-                stroke="#0a7ea4"
+                stroke="#1A6872"
                 strokeWidth={2}
               />
             </React.Fragment>

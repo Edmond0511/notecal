@@ -44,7 +44,7 @@ try {
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
-const TEAL = "#0a7ea4";
+const TEAL = "#1A6872";
 
 interface FoodPhotoModalProps {
   visible: boolean;
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: "#E0F2F7",
+    backgroundColor: "#E0F2F1",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 24,

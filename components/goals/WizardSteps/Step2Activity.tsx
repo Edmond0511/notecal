@@ -64,7 +64,7 @@ export function Step2Activity({
                 <Ionicons
                   name={activityIcons[level]}
                   size={24}
-                  color={isSelected ? "#fff" : "#0a7ea4"}
+                  color={isSelected ? "#fff" : "#1A6872"}
                 />
               </View>
               <View style={styles.textContainer}>
@@ -84,7 +84,7 @@ export function Step2Activity({
                 <Ionicons
                   name="checkmark-circle"
                   size={22}
-                  color="#0a7ea4"
+                  color="#1A6872"
                   style={styles.checkIcon}
                 />
               )}
@@ -125,8 +125,8 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   optionCardSelected: {
-    backgroundColor: "#E0F2F7",
-    borderColor: "#0a7ea4",
+    backgroundColor: "#E0F2F1",
+    borderColor: "#1A6872",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -137,13 +137,13 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#E0F2F7",
+    backgroundColor: "#E0F2F1",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
   iconContainerSelected: {
-    backgroundColor: "#0a7ea4",
+    backgroundColor: "#1A6872",
   },
   textContainer: {
     flex: 1,
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   optionTitleSelected: {
-    color: "#0a7ea4",
+    color: "#1A6872",
   },
   optionDescription: {
     fontSize: 13,

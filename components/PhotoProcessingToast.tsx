@@ -120,7 +120,7 @@ export function PhotoProcessingToast({
         <View style={styles.pill}>
           {state.type === "analyzing" && (
             <>
-              <ActivityIndicator size="small" color="#0a7ea4" />
+              <ActivityIndicator size="small" color="#1A6872" />
               <Text style={styles.text}>Analyzing photo...</Text>
               <TouchableOpacity
                 style={styles.closeButton}

@@ -1160,7 +1160,7 @@ const styles = StyleSheet.create({
     color: "#999",
   },
   rangeButtonTextActive: {
-    color: "#0a7ea4",
+    color: "#1A6872",
   },
   // History entries
   entryCard: {
@@ -1245,7 +1245,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 16,
     borderRadius: 25,
-    backgroundColor: "#0a7ea4",
+    backgroundColor: "#1A6872",
   },
   logButtonText: {
     fontSize: 15,
@@ -1413,12 +1413,12 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flexDirection: "row",
-    backgroundColor: "#0a7ea4",
+    backgroundColor: "#1A6872",
     paddingVertical: 15,
     borderRadius: 25,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#0a7ea4",
+    shadowColor: "#1A6872",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

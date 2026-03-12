@@ -355,7 +355,7 @@ export function PersonalInfoModal({
             <Ionicons
               name="pencil"
               size={12}
-              color={isEditing ? "#0a7ea4" : "#999"}
+              color={isEditing ? "#1A6872" : "#999"}
               style={styles.metricEditIcon}
             />
           </View>
@@ -766,7 +766,7 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
   },
   metricValueEditing: {
-    color: "#0a7ea4",
+    color: "#1A6872",
   },
   metricUnit: {
     fontSize: 13,
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
     minWidth: 80,
     borderWidth: 1,
-    borderColor: "#0a7ea4",
+    borderColor: "#1A6872",
   },
   editUnit: {
     fontSize: 14,
@@ -814,12 +814,12 @@ const styles = StyleSheet.create({
   sexPill: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 20,
     backgroundColor: "#f5f5f5",
     alignItems: "center",
   },
   sexPillActive: {
-    backgroundColor: "#0a7ea4",
+    backgroundColor: "#1A6872",
   },
   sexPillText: {
     fontSize: 15,
@@ -843,7 +843,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
   },
   unitPillActive: {
-    backgroundColor: "#E0F2F7",
+    backgroundColor: "#E0F2F1",
   },
   unitPillText: {
     fontSize: 13,
@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
     color: "#999",
   },
   unitPillTextActive: {
-    color: "#0a7ea4",
+    color: "#1A6872",
   },
   // Save button
   saveButtonContainer: {
@@ -866,7 +866,7 @@ const styles = StyleSheet.create({
     borderTopColor: "#e0e0e0",
   },
   saveButton: {
-    backgroundColor: "#0a7ea4",
+    backgroundColor: "#1A6872",
     borderRadius: 999,
     paddingVertical: 16,
     alignItems: "center",

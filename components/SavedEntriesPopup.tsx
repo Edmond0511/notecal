@@ -410,7 +410,7 @@ export function SavedEntriesPopup({
           style={styles.emptyContent}
         >
           <View style={styles.emptyIconContainer}>
-            <Ionicons name="bookmark-outline" size={32} color="#0a7ea4" />
+            <Ionicons name="bookmark-outline" size={32} color="#1A6872" />
           </View>
           <Text style={styles.emptyTitle}>No saved foods yet</Text>
           <Text style={styles.emptyDescription}>

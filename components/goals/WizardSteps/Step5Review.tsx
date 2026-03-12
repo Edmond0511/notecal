@@ -121,7 +121,7 @@ function CalorieExplanationPopup({
           style={styles.explanationPopup}
         >
           <View style={styles.explanationHeader}>
-            <Ionicons name="information-circle" size={22} color="#0a7ea4" />
+            <Ionicons name="information-circle" size={22} color="#1A6872" />
             <Text style={styles.explanationTitle}>{explanation.title}</Text>
           </View>
           <Text style={styles.explanationDescription}>{explanation.description}</Text>
@@ -411,7 +411,7 @@ export function Step5Review({ goals, formData, existingGoals }: Step5ReviewProps
 
       {/* Goal expectation */}
       <View style={styles.expectationBox}>
-        <FontAwesomeIcon icon={icons.arrowTrendUp} size={20} color="#0a7ea4" />
+        <FontAwesomeIcon icon={icons.arrowTrendUp} size={20} color="#1A6872" />
         <Text style={styles.expectationText}>
           {goals.targetWeightKg != null && goals.timelineWeeks != null
             ? (() => {
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   otherNutrientValue: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#0a7ea4",
+    color: "#1A6872",
   },
   otherNutrientUnit: {
     fontSize: 12,
@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#E0F2F7",
+    backgroundColor: "#E0F2F1",
     padding: 12,
     borderRadius: 12,
     gap: 8,
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   expectationText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#0a7ea4",
+    color: "#1A6872",
   },
   modificationNotice: {
     backgroundColor: "#ffffff",
@@ -752,7 +752,7 @@ const styles = StyleSheet.create({
   explanationTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#0a7ea4",
+    color: "#1A6872",
     flex: 1,
   },
   explanationDescription: {
@@ -762,13 +762,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   explanationFormulaBox: {
-    backgroundColor: "#E0F2F7",
+    backgroundColor: "#E0F2F1",
     borderRadius: 8,
     padding: 12,
   },
   explanationFormula: {
     fontSize: 13,
-    color: "#0a7ea4",
+    color: "#1A6872",
     fontStyle: "italic",
   },
 });

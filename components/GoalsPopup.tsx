@@ -203,9 +203,6 @@ export function GoalsPopup({
                 entering={FadeInDown.delay(100).duration(400)}
                 style={styles.setupContent}
               >
-                <View style={styles.setupIconContainer}>
-                  <Ionicons name="nutrition-outline" size={32} color={Tokens.accent} />
-                </View>
                 <Text style={styles.setupTitle}>Set your nutrition goals</Text>
                 <Text style={styles.setupDescription}>
                   Track your progress with personalized daily targets based on your body and goals
@@ -290,7 +287,7 @@ const styles = StyleSheet.create({
     backgroundColor: Tokens.accent,
     paddingHorizontal: 32,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 999,
     minWidth: 160,
     alignItems: 'center',
   },

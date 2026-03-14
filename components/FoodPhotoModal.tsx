@@ -219,9 +219,6 @@ export function FoodPhotoModal({
             ) : !permission.granted ? (
               <View style={styles.permissionContainer}>
                 <View style={styles.permissionContent}>
-                  <View style={styles.permissionIconCircle}>
-                    <Ionicons name="camera-outline" size={48} color={TEAL} />
-                  </View>
                   <Text style={styles.permissionTitle}>Camera Access</Text>
                   <Text style={styles.permissionDescription}>
                     NoteCal needs camera access to photograph food and calculate
@@ -437,7 +434,7 @@ const styles = StyleSheet.create({
     backgroundColor: TEAL,
     paddingVertical: 14,
     paddingHorizontal: 36,
-    borderRadius: 14,
+    borderRadius: 999,
     marginBottom: 12,
   },
   permissionButtonText: {

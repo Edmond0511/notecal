@@ -164,6 +164,7 @@ export const TotalsBar = React.memo(function TotalsBar({
               interactive
               effect="regular"
               tintColor={Tokens.accentTint}
+              colorScheme="light"
             >
               {addButtonContent}
             </LiquidGlassView>
@@ -189,6 +190,7 @@ export const TotalsBar = React.memo(function TotalsBar({
               interactive
               effect="regular"
               tintColor={Tokens.tintColor}
+              colorScheme="light"
             >
               {totalsContent}
             </LiquidGlassView>

@@ -12,6 +12,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
+  Image,
   Modal,
   StatusBar,
   StyleSheet,
@@ -68,6 +69,7 @@ interface SettingsModalProps {
 interface UserInfo {
   email: string;
   provider: string;
+  avatarUrl?: string;
 }
 
 export function SettingsModal({ visible, onClose }: SettingsModalProps) {
@@ -155,9 +157,14 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       } = await supabase.auth.getUser();
       if (user) {
         const provider = user.app_metadata?.provider || "email";
+        const avatarUrl =
+          user.user_metadata?.avatar_url ||
+          user.user_metadata?.picture ||
+          undefined;
         setUser({
           email: user.email || "",
           provider: provider.charAt(0).toUpperCase() + provider.slice(1),
+          avatarUrl,
         });
       } else {
         setUser(null);
@@ -267,9 +274,16 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                       <View style={styles.accountCard}>
                         <View style={styles.accountInfo}>
                           <View style={styles.avatarContainer}>
-                            <Text style={styles.avatarText}>
-                              {user.email.charAt(0).toUpperCase()}
-                            </Text>
+                            {user.avatarUrl ? (
+                              <Image
+                                source={{ uri: user.avatarUrl }}
+                                style={styles.avatarImage}
+                              />
+                            ) : (
+                              <Text style={styles.avatarText}>
+                                {user.email.charAt(0).toUpperCase()}
+                              </Text>
+                            )}
                           </View>
                           <View style={styles.accountDetails}>
                             <Text style={styles.accountEmail} numberOfLines={1}>
@@ -699,6 +713,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "600",
     color: "#ffffff",
+  },
+  avatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   accountDetails: {
     flex: 1,

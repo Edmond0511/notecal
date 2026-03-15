@@ -208,7 +208,7 @@ export function GoalsPopup({
                   <View style={styles.previewImageContainer}>
                     <View style={styles.previewImageAspect}>
                       <Image
-                        source={require('../image.png')}
+                        source={require('../assets/images/goals-preview.png')}
                         style={styles.previewImage}
                         resizeMode="cover"
                       />

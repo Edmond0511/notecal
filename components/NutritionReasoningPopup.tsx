@@ -854,7 +854,6 @@ function EditQuantityPopup({
   currentServings,
   itemQty,
   itemUnit,
-  itemKcal,
   commonPortions,
   onSave,
   onClose,
@@ -862,7 +861,6 @@ function EditQuantityPopup({
   currentServings: number;
   itemQty: number;
   itemUnit: string;
-  itemKcal: number;
   commonPortions?: CommonPortion[];
   onSave: (servings: number, qty?: number, unit?: string) => void;
   onClose: () => void;
@@ -1161,15 +1159,6 @@ function EditQuantityPopup({
               ))}
             </View>
 
-            {/* Hint */}
-            <Text style={styles.editQuantityHint}>
-              {selectedUnit === "servings"
-                ? "Nutrients will scale proportionally"
-                : selectedUnit === "portion" && selectedPortion
-                  ? `1 ${selectedPortion.label} = ${selectedPortion.grams}g`
-                  : `Based on ${formatQtyValue(itemQty)}${itemUnit} = ${Math.round(itemKcal)} kcal`}
-            </Text>
-
             {/* Save Button */}
             <TouchableOpacity
               style={styles.editQuantitySaveButton}
@@ -1225,7 +1214,6 @@ export function NutritionReasoningPopup({
     currentServings: number;
     itemQty: number;
     itemUnit: string;
-    itemKcal: number;
     commonPortions?: CommonPortion[];
   } | null>(null);
 
@@ -1475,7 +1463,6 @@ export function NutritionReasoningPopup({
         currentServings,
         itemQty: qty,
         itemUnit: unit,
-        itemKcal: kcal,
         commonPortions: itemCommonPortions,
       });
     },
@@ -2060,7 +2047,6 @@ export function NutritionReasoningPopup({
             currentServings={editQuantityPopup.currentServings}
             itemQty={editQuantityPopup.itemQty}
             itemUnit={editQuantityPopup.itemUnit}
-            itemKcal={editQuantityPopup.itemKcal}
             commonPortions={editQuantityPopup.commonPortions}
             onSave={handleSaveQuantity}
             onClose={() => setEditQuantityPopup(null)}
@@ -2862,7 +2848,7 @@ const styles = StyleSheet.create({
   portionPillItem: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 10,
+    borderRadius: 999,
     backgroundColor: "#EBEBEB",
     alignItems: "center",
     minWidth: 64,
@@ -2895,7 +2881,7 @@ const styles = StyleSheet.create({
   unitPill: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 999,
     backgroundColor: "#EBEBEB",
     alignItems: "center",
     justifyContent: "center",
@@ -2921,7 +2907,7 @@ const styles = StyleSheet.create({
   editQuantityInput: {
     flex: 1,
     height: 56,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: "#e5e5e5",
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -2932,18 +2918,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     letterSpacing: -0.5,
   },
-  editQuantityHint: {
-    fontSize: 13,
-    fontFamily: "System",
-    fontWeight: "400",
-    color: "#999",
-    marginBottom: 24,
-    lineHeight: 18,
-    paddingHorizontal: 4,
-  },
   editQuantitySaveButton: {
     height: 52,
-    borderRadius: 14,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#1A6872",

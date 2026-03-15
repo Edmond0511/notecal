@@ -121,16 +121,11 @@ function CalorieExplanationPopup({
           entering={FadeIn.duration(200)}
           style={styles.explanationPopup}
         >
-          <View style={styles.explanationHeader}>
-            <Ionicons name="information-circle" size={22} color="#1A6872" />
-            <Text style={styles.explanationTitle}>{explanation.title}</Text>
-          </View>
+          <Text style={styles.explanationTitle}>{explanation.title}</Text>
           <Text style={styles.explanationDescription}>
             {explanation.description}
           </Text>
-          <View style={styles.explanationFormulaBox}>
-            <Text style={styles.explanationFormula}>{explanation.formula}</Text>
-          </View>
+          <Text style={styles.explanationFormula}>{explanation.formula}</Text>
         </Animated.View>
       </View>
     </Modal>
@@ -802,17 +797,11 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  explanationHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
   explanationTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1A6872",
-    flex: 1,
+    color: "#1C1C1E",
+    marginBottom: 12,
   },
   explanationDescription: {
     fontSize: 14,
@@ -820,14 +809,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 12,
   },
-  explanationFormulaBox: {
-    backgroundColor: "#E0F2F1",
-    borderRadius: 8,
-    padding: 12,
-  },
   explanationFormula: {
     fontSize: 13,
-    color: "#1A6872",
+    color: "#8E8E93",
     fontStyle: "italic",
   },
 });

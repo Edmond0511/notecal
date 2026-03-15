@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useEffect } from 'react';
 import {
   Dimensions,
+  Image,
   Modal,
   StyleSheet,
   Text,
@@ -203,9 +204,20 @@ export function GoalsPopup({
                 entering={FadeInDown.delay(100).duration(400)}
                 style={styles.setupContent}
               >
+                <View style={styles.previewImageWrapper}>
+                  <View style={styles.previewImageContainer}>
+                    <View style={styles.previewImageAspect}>
+                      <Image
+                        source={require('../image.png')}
+                        style={styles.previewImage}
+                        resizeMode="cover"
+                      />
+                    </View>
+                  </View>
+                </View>
                 <Text style={styles.setupTitle}>Set your nutrition goals</Text>
                 <Text style={styles.setupDescription}>
-                  Track your progress with personalized daily targets based on your body and goals
+                  Track your progress with personalized daily targets
                 </Text>
                 <TouchableOpacity
                   style={styles.setupButton}
@@ -257,16 +269,8 @@ const styles = StyleSheet.create({
   // Setup prompt styles
   setupContent: {
     alignItems: 'center',
-    paddingVertical: 8,
-  },
-  setupIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: Tokens.accentTint,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
   setupTitle: {
     fontSize: 18,
@@ -280,8 +284,26 @@ const styles = StyleSheet.create({
     color: Tokens.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 20,
+    marginBottom: 24,
     paddingHorizontal: 16,
+  },
+  previewImageWrapper: {
+    width: '100%',
+    marginTop: 30,
+    marginBottom: 40,
+  },
+  previewImageContainer: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  previewImageAspect: {
+    width: '100%',
+    aspectRatio: 1805 / 552,
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
   },
   setupButton: {
     backgroundColor: Tokens.accent,

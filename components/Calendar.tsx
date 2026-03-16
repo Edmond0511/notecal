@@ -428,13 +428,8 @@ export function Calendar({
 
                   let dotColor: keyof typeof DOT_COLORS | null = null;
                   if (dateCalorieMap && item.isCurrentMonth && consumed && consumed > 0) {
-                    const isFuture = dateStr > todayStr;
-                    if (isFuture) {
-                      dotColor = 'green';
-                    } else {
-                      const target = goals!.manualTargets?.kcal ?? goals!.targetKcal;
-                      dotColor = getDotColor(consumed, target);
-                    }
+                    const target = goals!.manualTargets?.kcal ?? goals!.targetKcal;
+                    dotColor = getDotColor(consumed, target);
                   }
 
                   return (

@@ -24,6 +24,7 @@ import React, { useCallback, useRef, useState } from "react";
 import {
   Dimensions,
   Keyboard,
+  LayoutAnimation,
   Linking,
   Modal,
   ScrollView,
@@ -325,8 +326,6 @@ function ConfidencePopup({
             </TouchableOpacity>
           </View>
 
-          {/* AI Explanation Label */}
-          <Text style={styles.popupSectionLabel}>AI Explanation</Text>
 
           {/* Explanation Paragraph */}
           <ParsedText text={displayText} style={styles.popupExplanation} />
@@ -717,10 +716,7 @@ function EditNutrientPopup({
                 </View>
               )}
             </TouchableOpacity>
-            <View style={styles.editNutrientTitleRow}>
-   
-              <Text style={styles.editNutrientTitle}>Edit {label}</Text>
-            </View>
+            <Text style={styles.editNutrientTitle}>Edit {label}</Text>
             <View style={styles.headerRightSpacer} />
           </View>
 
@@ -1209,6 +1205,7 @@ export function NutritionReasoningPopup({
     macros: Macros;
   } | null>(null);
   const [isCorrecting, setIsCorrecting] = useState(false);
+  const [totalsExpanded, setTotalsExpanded] = useState(false);
   const [editQuantityPopup, setEditQuantityPopup] = useState<{
     itemId: string;
     currentServings: number;
@@ -1371,6 +1368,7 @@ export function NutritionReasoningPopup({
     setEditNutrientPopup(null);
     setSomethingOffItem(null);
     setIsCorrecting(false);
+    setTotalsExpanded(false);
     setEditQuantityPopup(null);
   }, [visible]);
 
@@ -1691,12 +1689,7 @@ export function NutritionReasoningPopup({
                             >
                               {Math.round(item.confidence * 100)}%
                             </Text>
-                            <Ionicons
-                              name="information-circle-outline"
-                              size={14}
-                              color={getConfidenceColors(item.confidence).text}
-                              style={{ opacity: 0.6 }}
-                            />
+                           
                           </View>
                         </TouchableOpacity>
                       </View>
@@ -1991,17 +1984,202 @@ export function NutritionReasoningPopup({
                 ).duration(400)}
                 style={styles.totalsSection}
               >
-                <View style={styles.totalsLeft}>
-                  <FontAwesomeIcon
-                    icon={MACRO_ICONS.calories}
-                    size={18}
-                    color={MACRO_COLORS.calories.primary}
-                  />
-                  <Text style={styles.totalsLabel}>Total</Text>
-                </View>
-                <Text style={styles.totalsValue}>
-                  {displayEntry.inlineKcal} cal
-                </Text>
+                {/* Calorie header — always visible */}
+                <TouchableOpacity
+                  style={styles.totalsHeaderRow}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    LayoutAnimation.configureNext(
+                      LayoutAnimation.Presets.easeInEaseOut,
+                    );
+                    setTotalsExpanded(!totalsExpanded);
+                  }}
+                >
+                  <View style={styles.totalsLeft}>
+                    <FontAwesomeIcon
+                      icon={MACRO_ICONS.calories}
+                      size={18}
+                      color={MACRO_COLORS.calories.primary}
+                    />
+                    <Text style={styles.totalsLabel}>Total Calories</Text>
+                  </View>
+                  <View style={styles.totalsRight}>
+                    <Text style={styles.totalsValue}>
+                      {displayEntry.inlineKcal} cal
+                    </Text>
+                    <Ionicons
+                      name={totalsExpanded ? "chevron-up" : "chevron-down"}
+                      size={16}
+                      color={Tokens.textTertiary}
+                    />
+                  </View>
+                </TouchableOpacity>
+
+                {/* Expanded nutrient rows */}
+                {totalsExpanded && (
+                  <View style={styles.totalsDropdown}>
+                    {/* Protein */}
+                    <View style={styles.totalsNutrientRow}>
+                      <View style={styles.totalsNutrientLeft}>
+                        <FontAwesomeIcon
+                          icon={MACRO_ICONS.protein}
+                          size={16}
+                          color={MACRO_COLORS.protein.primary}
+                        />
+                        <Text style={styles.totalsNutrientLabel}>Protein</Text>
+                      </View>
+                      <Text style={styles.totalsNutrientValue}>
+                        {Math.round(
+                          displayEntry.items.reduce(
+                            (sum, it) =>
+                              sum + it.macros.protein * (it.servings ?? 1),
+                            0,
+                          ),
+                        )}
+                        g
+                      </Text>
+                    </View>
+                    {/* Fat */}
+                    <View style={styles.totalsNutrientRow}>
+                      <View style={styles.totalsNutrientLeft}>
+                        <FontAwesomeIcon
+                          icon={MACRO_ICONS.fat}
+                          size={16}
+                          color={MACRO_COLORS.fat.primary}
+                        />
+                        <Text style={styles.totalsNutrientLabel}>Fat</Text>
+                      </View>
+                      <Text style={styles.totalsNutrientValue}>
+                        {Math.round(
+                          displayEntry.items.reduce(
+                            (sum, it) =>
+                              sum + it.macros.fat * (it.servings ?? 1),
+                            0,
+                          ),
+                        )}
+                        g
+                      </Text>
+                    </View>
+                    {/* Carbs */}
+                    <View style={styles.totalsNutrientRow}>
+                      <View style={styles.totalsNutrientLeft}>
+                        <FontAwesomeIcon
+                          icon={MACRO_ICONS.carbs}
+                          size={16}
+                          color={MACRO_COLORS.carbs.primary}
+                        />
+                        <Text style={styles.totalsNutrientLabel}>Carbs</Text>
+                      </View>
+                      <Text style={styles.totalsNutrientValue}>
+                        {Math.round(
+                          displayEntry.items.reduce(
+                            (sum, it) =>
+                              sum + it.macros.carbs * (it.servings ?? 1),
+                            0,
+                          ),
+                        )}
+                        g
+                      </Text>
+                    </View>
+                    {/* Micronutrients — only if enabled in goals */}
+                    {enabledMicros.fiber && (
+                      <View style={styles.totalsNutrientRow}>
+                        <View style={styles.totalsNutrientLeft}>
+                          <FontAwesomeIcon
+                            icon={MICRO_ICONS.fiber}
+                            size={16}
+                            color={MICRO_COLORS.fiber.primary}
+                          />
+                          <Text style={styles.totalsNutrientLabel}>Fiber</Text>
+                        </View>
+                        <Text style={styles.totalsNutrientValue}>
+                          {Math.round(
+                            displayEntry.items.reduce(
+                              (sum, it) =>
+                                sum +
+                                (it.macros.fiber ?? 0) * (it.servings ?? 1),
+                              0,
+                            ),
+                          )}
+                          g
+                        </Text>
+                      </View>
+                    )}
+                    {enabledMicros.sugar && (
+                      <View style={styles.totalsNutrientRow}>
+                        <View style={styles.totalsNutrientLeft}>
+                          <FontAwesomeIcon
+                            icon={MICRO_ICONS.sugar}
+                            size={16}
+                            color={MICRO_COLORS.sugar.primary}
+                          />
+                          <Text style={styles.totalsNutrientLabel}>Sugar</Text>
+                        </View>
+                        <Text style={styles.totalsNutrientValue}>
+                          {Math.round(
+                            displayEntry.items.reduce(
+                              (sum, it) =>
+                                sum +
+                                (it.macros.sugar ?? 0) * (it.servings ?? 1),
+                              0,
+                            ),
+                          )}
+                          g
+                        </Text>
+                      </View>
+                    )}
+                    {enabledMicros.sodium && (
+                      <View style={styles.totalsNutrientRow}>
+                        <View style={styles.totalsNutrientLeft}>
+                          <FontAwesomeIcon
+                            icon={MICRO_ICONS.sodium}
+                            size={16}
+                            color={MICRO_COLORS.sodium.primary}
+                          />
+                          <Text style={styles.totalsNutrientLabel}>Sodium</Text>
+                        </View>
+                        <Text style={styles.totalsNutrientValue}>
+                          {Math.round(
+                            displayEntry.items.reduce(
+                              (sum, it) =>
+                                sum +
+                                (it.macros.sodium ?? 0) * (it.servings ?? 1),
+                              0,
+                            ),
+                          )}
+                          mg
+                        </Text>
+                      </View>
+                    )}
+                    {enabledMicros.potassium && (
+                      <View style={styles.totalsNutrientRow}>
+                        <View style={styles.totalsNutrientLeft}>
+                          <FontAwesomeIcon
+                            icon={MICRO_ICONS.potassium}
+                            size={16}
+                            color={MICRO_COLORS.potassium.primary}
+                          />
+                          <Text style={styles.totalsNutrientLabel}>
+                            Potassium
+                          </Text>
+                        </View>
+                        <Text style={styles.totalsNutrientValue}>
+                          {Math.round(
+                            displayEntry.items.reduce(
+                              (sum, it) =>
+                                sum +
+                                (it.macros.potassium ?? 0) *
+                                  (it.servings ?? 1),
+                              0,
+                            ),
+                          )}
+                          mg
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
               </Animated.View>
             </Animated.ScrollView>
 
@@ -2294,9 +2472,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F3F4F6",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
   quantityText: {
     fontSize: 13,
@@ -2308,7 +2486,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
-    borderWidth: 1,
   },
   confidenceBadgeContent: {
     flexDirection: "row",
@@ -2409,24 +2586,33 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   totalsSection: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
     marginTop: 12,
     backgroundColor: "#ffffff",
     borderRadius: 16,
+    padding: 0,
+    marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 1,
   },
+  totalsHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
   totalsLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+  },
+  totalsRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   totalsLabel: {
     fontSize: 18,
@@ -2436,11 +2622,46 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   totalsValue: {
-    fontSize: 24,
+    fontSize: 22,
     fontFamily: "System",
     fontWeight: "700",
-    color: MACRO_COLORS.calories.primary,
+    color: "#1a1a1a",
     letterSpacing: -0.5,
+  },
+  totalsDropdown: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#f0f0f0",
+    paddingBottom: 8,
+    paddingHorizontal: 20,
+  },
+  totalsNutrientRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 14,
+    minHeight: 52,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#f0f0f0",
+  },
+  totalsNutrientRowLast: {
+    borderBottomWidth: 0,
+  },
+  totalsNutrientLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  totalsNutrientLabel: {
+    fontSize: 15,
+    fontFamily: "System",
+    fontWeight: "500",
+    color: "#333",
+  },
+  totalsNutrientValue: {
+    fontSize: 16,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: "#333",
   },
   // Confidence popup styles
   confidencePopupBackdrop: {

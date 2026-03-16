@@ -66,7 +66,7 @@ export const useAppStore = create<AppState>()(
       isLoading: false,
       goals: null,
       preferredUnits: 'metric' as UnitSystem,
-      entryMode: 'dash' as EntryMode,
+      entryMode: 'freeform' as EntryMode,
       savedEntries: [],
       weightEntries: [],
       pendingInsertion: null,

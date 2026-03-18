@@ -682,7 +682,7 @@ export function DatabaseSearchModal({
               {/* Searching state */}
               {state.type === "searching" && (
                 <View style={styles.centeredMessage}>
-                  <ActivityIndicator size="large" color={TEAL} />
+                  <ActivityIndicator size="large" color="#666" />
                   <Text style={styles.centeredMessageText}>Searching...</Text>
                 </View>
               )}
@@ -828,7 +828,7 @@ export function DatabaseSearchModal({
                       {portionsLoading ? (
                         <ActivityIndicator
                           size="small"
-                          color="#999"
+                          color="#666"
                           style={{ marginVertical: 4 }}
                         />
                       ) : (

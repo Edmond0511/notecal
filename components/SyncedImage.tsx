@@ -19,7 +19,7 @@ export function SyncedImage({ uri, style, resizeMode }: SyncedImageProps) {
   if (isLoading) {
     return (
       <View style={[style, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0' }]}>
-        <ActivityIndicator size="small" color="#1A6872" />
+        <ActivityIndicator size="small" color="#666" />
       </View>
     );
   }

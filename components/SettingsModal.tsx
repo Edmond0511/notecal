@@ -543,7 +543,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                       activeOpacity={0.7}
                     >
                       {isSigningOut ? (
-                        <ActivityIndicator size="small" color="#DC2626" />
+                        <ActivityIndicator size="small" color="#666" />
                       ) : (
                         <Text style={styles.signOutText}>Sign Out</Text>
                       )}

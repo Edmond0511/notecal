@@ -165,7 +165,7 @@ export default function AuthScreen() {
             activeOpacity={0.8}
           >
             {isLoading === "google" ? (
-              <ActivityIndicator size="small" color="#1a1a1a" />
+              <ActivityIndicator size="small" color="#666" />
             ) : (
               <>
                 <Ionicons name="logo-google" size={20} />

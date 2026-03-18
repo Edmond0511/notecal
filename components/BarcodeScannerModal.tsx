@@ -445,7 +445,7 @@ export function BarcodeScannerModal({
                     style={styles.bottomCard}
                   >
                     <View style={styles.loadingContent}>
-                      <ActivityIndicator size="small" color={TEAL} />
+                      <ActivityIndicator size="small" color="#666" />
                       <Text style={styles.loadingText}>
                         Looking up product...
                       </Text>

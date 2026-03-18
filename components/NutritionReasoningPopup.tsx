@@ -144,6 +144,17 @@ function getConfidenceColors(confidence: number): {
   }
 }
 
+function getTimeBadgeStyle(date: Date): { background: string; text: string; icon: "sunny" | "moon" } {
+  const hour = date.getHours();
+  if (hour >= 6 && hour < 18) {
+    // Day — warm golden
+    return { background: "#FFF3E0", text: "#BF6C00", icon: "sunny" };
+  } else {
+    // Night — deep navy
+    return { background: "#3949AB", text: "#E8EAF6", icon: "moon" };
+  }
+}
+
 // Parse both markdown [text](url) and HTML <a href="url">text</a> links
 function ParsedText({ text, style }: { text: string; style: any }) {
   if (!text) return <Text style={style}></Text>;
@@ -1555,21 +1566,24 @@ export function NutritionReasoningPopup({
                 </Text>
                 {/* Metadata Row - Time & Save */}
                 <View style={styles.metadataRow}>
-                  {displayEntry.createdAt && (
-                    <View style={styles.entryTimeBadge}>
-                      <Ionicons name="time-outline" size={13} color="#8B6914" />
-                      <Text style={styles.entryTimeText}>
-                        {new Date(displayEntry.createdAt).toLocaleTimeString(
-                          "en-US",
-                          {
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          },
-                        )}
-                      </Text>
-                    </View>
-                  )}
+                  {displayEntry.createdAt && (() => {
+                    const timeBadge = getTimeBadgeStyle(new Date(displayEntry.createdAt));
+                    return (
+                      <View style={[styles.entryTimeBadge, { backgroundColor: timeBadge.background }]}>
+                        <Ionicons name={timeBadge.icon} size={13} color={timeBadge.text} />
+                        <Text style={[styles.entryTimeText, { color: timeBadge.text }]}>
+                          {new Date(displayEntry.createdAt).toLocaleTimeString(
+                            "en-US",
+                            {
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            },
+                          )}
+                        </Text>
+                      </View>
+                    );
+                  })()}
                   {displayEntry.status === "ok" &&
                     displayEntry.items.length > 0 && (
                       <TouchableOpacity
@@ -1900,7 +1914,7 @@ export function NutritionReasoningPopup({
                           <View style={styles.assumptionsList}>
                             {item.reasoning.assumptions.map((assumption, i) => (
                               <Text key={i} style={styles.assumptionText}>
-                                {"\u2022"} {assumption}
+                                {item.reasoning!.assumptions!.length > 1 ? `\u2022 ${assumption}` : assumption}
                               </Text>
                             ))}
                           </View>
@@ -2024,7 +2038,7 @@ export function NutritionReasoningPopup({
                       <View style={styles.totalsNutrientLeft}>
                         <FontAwesomeIcon
                           icon={MACRO_ICONS.protein}
-                          size={16}
+                          size={13}
                           color={MACRO_COLORS.protein.primary}
                         />
                         <Text style={styles.totalsNutrientLabel}>Protein</Text>
@@ -2045,7 +2059,7 @@ export function NutritionReasoningPopup({
                       <View style={styles.totalsNutrientLeft}>
                         <FontAwesomeIcon
                           icon={MACRO_ICONS.fat}
-                          size={16}
+                          size={13}
                           color={MACRO_COLORS.fat.primary}
                         />
                         <Text style={styles.totalsNutrientLabel}>Fat</Text>
@@ -2066,7 +2080,7 @@ export function NutritionReasoningPopup({
                       <View style={styles.totalsNutrientLeft}>
                         <FontAwesomeIcon
                           icon={MACRO_ICONS.carbs}
-                          size={16}
+                          size={13}
                           color={MACRO_COLORS.carbs.primary}
                         />
                         <Text style={styles.totalsNutrientLabel}>Carbs</Text>
@@ -2088,7 +2102,7 @@ export function NutritionReasoningPopup({
                         <View style={styles.totalsNutrientLeft}>
                           <FontAwesomeIcon
                             icon={MICRO_ICONS.fiber}
-                            size={16}
+                            size={13}
                             color={MICRO_COLORS.fiber.primary}
                           />
                           <Text style={styles.totalsNutrientLabel}>Fiber</Text>
@@ -2111,7 +2125,7 @@ export function NutritionReasoningPopup({
                         <View style={styles.totalsNutrientLeft}>
                           <FontAwesomeIcon
                             icon={MICRO_ICONS.sugar}
-                            size={16}
+                            size={13}
                             color={MICRO_COLORS.sugar.primary}
                           />
                           <Text style={styles.totalsNutrientLabel}>Sugar</Text>
@@ -2134,7 +2148,7 @@ export function NutritionReasoningPopup({
                         <View style={styles.totalsNutrientLeft}>
                           <FontAwesomeIcon
                             icon={MICRO_ICONS.sodium}
-                            size={16}
+                            size={13}
                             color={MICRO_COLORS.sodium.primary}
                           />
                           <Text style={styles.totalsNutrientLabel}>Sodium</Text>
@@ -2157,7 +2171,7 @@ export function NutritionReasoningPopup({
                         <View style={styles.totalsNutrientLeft}>
                           <FontAwesomeIcon
                             icon={MICRO_ICONS.potassium}
-                            size={16}
+                            size={13}
                             color={MICRO_COLORS.potassium.primary}
                           />
                           <Text style={styles.totalsNutrientLabel}>
@@ -2386,7 +2400,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#F5F0EB",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 14,
@@ -2395,7 +2408,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "System",
     fontWeight: "500",
-    color: "#8B6914",
   },
   saveButton: {
     flexDirection: "row",
@@ -2579,10 +2591,10 @@ const styles = StyleSheet.create({
   },
   sourceText: {
     fontSize: 14,
-    color: "#4A90D9",
+    color: "#4a4a4a",
     flex: 1,
     fontFamily: "System",
-    fontWeight: "500",
+    fontWeight: "400",
     lineHeight: 22,
   },
   totalsSection: {
@@ -2622,7 +2634,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   totalsValue: {
-    fontSize: 22,
+    fontSize: 18,
     fontFamily: "System",
     fontWeight: "700",
     color: "#1a1a1a",

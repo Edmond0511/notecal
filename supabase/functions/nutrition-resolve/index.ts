@@ -193,6 +193,17 @@ serve(async (req) => {
 
       nutritionData = cachedData.nutrition_data as NutritionData;
 
+      // Strip legacy bracket annotations from cached dataSource/confidenceAnalysis
+      const bracketAnnotationRe = /\s*\[[^\]]*\]/g;
+      for (const item of nutritionData.items) {
+        if (item.reasoning?.dataSource) {
+          item.reasoning.dataSource = item.reasoning.dataSource.replace(bracketAnnotationRe, "").trim();
+        }
+        if (item.reasoning?.confidenceAnalysis) {
+          item.reasoning.confidenceAnalysis = item.reasoning.confidenceAnalysis.replace(bracketAnnotationRe, "").trim();
+        }
+      }
+
       // Log cache hit usage (fire-and-forget)
       if (userId) {
         logApiUsage(supabase, userId, 0, 0, "cache_hit", startTime);
@@ -341,7 +352,7 @@ async function callAIService(
 
 // Models in order of preference
 const GEMINI_MODELS = {
-  primary: "gemini-2.5-flash",
+  primary: "gemini-3.1-flash-lite-preview",
   fallback: "gemini-2.5-flash-lite",
   correction: "gemini-2.5-flash-lite",
 };
@@ -389,6 +400,7 @@ DATA HIERARCHY & ACCURACY RULES:
 2. Niche Items: For less common foods, prioritize finding the most specific entry available in nutritional databases (USDA, NCCDB).
 3. Ranges: If a food item implies a caloric range (e.g., a medium apple is 80-100kcal), you MUST calculate and return the MEDIAN value (90kcal). Do not return ranges.
 4. Validation: Cross-reference caloric estimates against standard nutritional density to ensure physical realism (e.g., pure fat cannot exceed 9kcal/g).
+5. Cross-Reference: Cross-reference nutritional values against at least two sources when possible (e.g., USDA data + brand data, or database values + nutritional density math). Verify: kcal ≈ (protein × 4) + (carbs × 4) + (fat × 9). Flag discrepancies in the reasoning.
 
 UNRESOLVABLE INPUT RULES:
 - If the input is clearly NOT a food item (e.g., a bare number like "3", a random word like "hello", gibberish, a sentence/question, or anything that cannot reasonably be interpreted as food), return a single item with all macros set to 0 and confidence 0. Use the reasoning fields to explain why this could not be resolved.
@@ -440,9 +452,14 @@ REASONING GUIDELINES:
 - interpretation: How you identified/interpreted this food item
 - assumptions: List any assumptions made (e.g., "raw weight", "boneless", "standard portion")
 - portionNotes: How you handled the quantity (e.g., "specified 150g", "assumed medium size")
-- dataSource: Which database or source you used. ONLY use links from official TRUSTED food data sources (restaurants, USDA, NCCDB, etc). ALWAYS format as markdown link [Display Name](URL) when a URL is available (e.g., "[USDA FDC #123456](https://fdc.nal.usda.gov/fdc-app.html#/food-details/123456)"). If no URL exists, return "No source available".
+- dataSource: The database or source used. Format rules:
+  1. If you are CERTAIN of the exact database ID/URL (e.g., you know the specific USDA FDC ID), format as markdown link: "[USDA FoodData Central](https://fdc.nal.usda.gov/fdc-app.html#/food-details/{ID}/nutrients)"
+  2. If you used a database but are NOT certain of the exact ID, use plain text: "USDA FoodData Central" or "NCCDB"
+  3. For branded items with official nutrition pages, link ONLY if you are certain the URL is real
+  4. NEVER guess or fabricate a database ID or URL. When in doubt, use plain text.
+  5. Do NOT add bracket annotations like [snapshot], [cached], [estimated], [from database] — keep it clean.
 - confidenceExplanation: One-line summary using "High/Medium/Low confidence" (never the numeric %) followed by a short reason (e.g., "High confidence, USDA generic match with specified weight" or "Medium confidence, portion assumed and preparation method unknown")
-- confidenceAnalysis: A detailed 2-4 sentence paragraph explaining how the confidence score was determined. Write in a neutral tone without referring to "the user" or "you". When referencing a data source, make the source name itself the clickable link (e.g., "sourced from [USDA FoodData Central](https://fdc.nal.usda.gov/fdc-app.html#/food-details/175168)" NOT "sourced from USDA FoodData Central (FDC ID: 175168)"). Cover: (1) how the food was identified and what data source was used (as a clickable link), (2) whether the portion was specified or assumed and how that affects accuracy, (3) specific uncertainties or factors that raised or lowered confidence (e.g., preparation method unknown, brand vs generic, weight estimated from "1 medium").
+- confidenceAnalysis: 2-4 sentence paragraph. When referencing a source, only make it a clickable markdown link if you included a verified URL in dataSource. Otherwise reference by plain text name. Mention whether values were cross-referenced across sources. Cover: (1) how the food was identified and what data source was used, (2) whether the portion was specified or assumed and how that affects accuracy, (3) specific uncertainties or factors that raised or lowered confidence (e.g., preparation method unknown, brand vs generic, weight estimated from "1 medium").
 
 COMMON PORTIONS:
 For each food item, include a "commonPortions" array with 3-5 context-appropriate portion options. Each entry has a "label" (human-readable) and "grams" (gram equivalent). Choose portions that make sense for the specific food:
@@ -771,13 +788,10 @@ async function handlePhotoRequest(
       );
     }
 
-    return new Response(
-      JSON.stringify({ error: "Failed to analyze photo" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify({ error: "Failed to analyze photo" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 }
 
@@ -812,6 +826,7 @@ DATA ACCURACY:
 - Cross-reference caloric estimates against standard nutritional density
 - Pure fat cannot exceed 9kcal/g
 - Ensure calories ≈ (protein × 4) + (carbs × 4) + (fat × 9)
+- Cross-Reference: Cross-reference nutritional values against at least two sources when possible (e.g., USDA data + visual estimate cross-check). Flag discrepancies in the reasoning.
 
 OUTPUT FORMAT (JSON only, no markdown):
 {
@@ -827,7 +842,7 @@ OUTPUT FORMAT (JSON only, no markdown):
         "interpretation": "Identified grilled chicken breast from visual appearance — pale, lean meat with grill marks",
         "assumptions": ["Boneless skinless breast", "No added oil or sauce visible", "Grilled preparation based on char marks"],
         "portionNotes": "Estimated ~150g based on size relative to dinner plate",
-        "dataSource": "[USDA FDC #171077](https://fdc.nal.usda.gov/fdc-app.html#/food-details/171077)",
+        "dataSource": "USDA FoodData Central (visual estimate)",
         "confidenceExplanation": "Medium confidence, visual identification with estimated portion size",
         "confidenceAnalysis": "This item was identified as grilled chicken breast based on visual characteristics. The portion was estimated at 150g using plate-size reference. Exact weight and preparation method introduce uncertainty."
       }
@@ -886,7 +901,9 @@ Analyze the food in this photo:`;
   if (!response.ok) {
     const errorText = await response.text();
     console.error(`[Gemini Photo] API error ${response.status}: ${errorText}`);
-    throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Gemini API error: ${response.status} ${response.statusText}`,
+    );
   }
 
   const data = await response.json();
@@ -900,7 +917,10 @@ Analyze the food in this photo:`;
 
   const candidate = data.candidates[0];
   if (!candidate.content?.parts?.[0]?.text) {
-    console.error("[Gemini Photo] No text in response:", JSON.stringify(candidate));
+    console.error(
+      "[Gemini Photo] No text in response:",
+      JSON.stringify(candidate),
+    );
     throw new Error("Gemini response missing text content");
   }
 
@@ -918,7 +938,13 @@ Analyze the food in this photo:`;
 
     // Check for not_food response
     if (rawData.not_food === true) {
-      return { data: { items: [], totals: { kcal: 0, protein: 0, fat: 0, carbs: 0 }, notFood: true } };
+      return {
+        data: {
+          items: [],
+          totals: { kcal: 0, protein: 0, fat: 0, carbs: 0 },
+          notFood: true,
+        },
+      };
     }
 
     const items: FoodItem[] =
@@ -944,8 +970,14 @@ Analyze the food in this photo:`;
     const nutritionData: NutritionData & { notFood?: boolean } = {
       items,
       totals: rawData.totals || {
-        kcal: 0, protein: 0, fat: 0, carbs: 0,
-        fiber: 0, sugar: 0, sodium: 0, potassium: 0,
+        kcal: 0,
+        protein: 0,
+        fat: 0,
+        carbs: 0,
+        fiber: 0,
+        sugar: 0,
+        sodium: 0,
+        potassium: 0,
       },
     };
 
@@ -954,7 +986,11 @@ Analyze the food in this photo:`;
     );
     return { data: nutritionData };
   } catch (parseError) {
-    console.error("[Gemini Photo] Parse error:", parseError, content.substring(0, 500));
+    console.error(
+      "[Gemini Photo] Parse error:",
+      parseError,
+      content.substring(0, 500),
+    );
     throw new Error(`Failed to parse Gemini response: ${parseError}`);
   }
 }
@@ -1121,15 +1157,16 @@ async function callCorrectionAI(
       "interpretation": "<how the feedback was interpreted - e.g., 'This entry was re-identified as grilled salmon based on the clarification provided'>",
       "assumptions": ["<list of assumptions made>"],
       "portionNotes": "<any notes about portion/quantity adjustments>",
-      "dataSource": "Which database or source was used. ALWAYS format as markdown link [Display Name](URL) when URL is available (e.g., '[USDA FDC #123456](https://fdc.nal.usda.gov/fdc-app.html#/food-details/123456)'). If no URL exists, provide plain text name.",
+      "dataSource": "The database or source used. If CERTAIN of the exact ID/URL, format as markdown link; otherwise plain text name (e.g., 'USDA FoodData Central'). NEVER fabricate IDs or URLs. No bracket annotations like [snapshot] or [estimated].",
       "confidenceExplanation": "One-line summary using High/Medium/Low confidence (never the numeric %) followed by a short reason",
-      "confidenceAnalysis": "A detailed 2-4 sentence paragraph explaining how the confidence score was determined."
+      "confidenceAnalysis": "2-4 sentence paragraph. Only use clickable markdown links for sources where you included a verified URL in dataSource. Otherwise reference by plain text name. Mention whether values were cross-referenced."
     }
   }
 
   CONFIDENCE EXPLANATION GUIDELINES:
   - confidenceExplanation: One-line summary using "High/Medium/Low confidence" (never the numeric %) followed by a short reason (e.g., "High confidence, exact branded product with officially published nutrition data" or "Medium confidence, portion assumed and preparation method unknown")
-  - confidenceAnalysis: A detailed 2-4 sentence paragraph explaining how the confidence score was determined. Write in a neutral tone without referring to "the user" or "you". When referencing a data source, make the source name itself the clickable link (e.g., "sourced from [USDA FoodData Central](https://fdc.nal.usda.gov/fdc-app.html#/food-details/175168)"). Cover: (1) how the food was identified and what data source was used (as a clickable link), (2) whether the portion was specified or assumed and how that affects accuracy, (3) specific uncertainties or factors that raised or lowered confidence.
+  - confidenceAnalysis: 2-4 sentence paragraph. When referencing a source, only make it a clickable markdown link if you included a verified URL in dataSource. Otherwise reference by plain text name. Mention whether values were cross-referenced. Cover: (1) how the food was identified and what data source was used, (2) whether the portion was specified or assumed and how that affects accuracy, (3) specific uncertainties or factors that raised or lowered confidence.
+  - Cross-Reference: Cross-reference nutritional values against at least two sources when possible. Verify: kcal ≈ (protein × 4) + (carbs × 4) + (fat × 9). Flag discrepancies in the reasoning.
 
   CONFIDENCE NUMERIC VALUES (based on data quality, not feedback clarity):
   - 0.95-1.0: Exact brand match or precise weight given

@@ -2402,7 +2402,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 14,
+    borderRadius: 16,
   },
   entryTimeText: {
     fontSize: 12,
@@ -2857,7 +2857,7 @@ const styles = StyleSheet.create({
   editNutrientSaveButton: {
     flex: 1,
     height: 52,
-    borderRadius: 999,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },

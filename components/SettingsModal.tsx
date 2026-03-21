@@ -84,6 +84,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const goals = useAppStore((s) => s.goals);
   const entryMode = useAppStore((s) => s.entryMode ?? 'dash');
+  const enterOnlyMode = useAppStore((s) => s.enterOnlyMode ?? false);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -480,8 +481,19 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         />
                       </TouchableOpacity>
 
-                      <View style={styles.menuDivider} />
+                    </View>
+                  </View>
+                </Animated.View>
 
+                {/* Entry Section */}
+                <Animated.View
+                  entering={FadeInDown.delay(300).duration(400)}
+                  style={styles.section}
+                >
+                  <Text style={styles.sectionTitle}>Entry</Text>
+
+                  <View style={styles.menuCardShadow}>
+                    <View style={styles.menuCard}>
                       <TouchableOpacity
                         style={styles.menuItem}
                         activeOpacity={0.7}
@@ -504,13 +516,37 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           {entryMode === 'freeform' ? 'Freeform' : 'Dash'}
                         </Text>
                       </TouchableOpacity>
+
+                      <View style={styles.menuDivider} />
+
+                      <TouchableOpacity
+                        style={styles.menuItem}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
+                          useAppStore.getState().setEnterOnlyMode(!enterOnlyMode);
+                        }}
+                      >
+                        <Ionicons
+                          name="return-down-back-outline"
+                          size={20}
+                          color="#333"
+                          style={{ marginRight: 12 }}
+                        />
+                        <Text style={styles.menuItemText}>Submit on Enter</Text>
+                        <Text style={styles.menuItemValue}>
+                          {enterOnlyMode ? 'On' : 'Off'}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 </Animated.View>
 
                 {/* About Section */}
                 <Animated.View
-                  entering={FadeInDown.delay(300).duration(400)}
+                  entering={FadeInDown.delay(400).duration(400)}
                   style={styles.section}
                 >
                   <Text style={styles.sectionTitle}>About</Text>
@@ -533,7 +569,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
                 {user && (
                   <Animated.View
-                    entering={FadeInDown.delay(400).duration(400)}
+                    entering={FadeInDown.delay(500).duration(400)}
                     style={styles.section}
                   >
                     <TouchableOpacity

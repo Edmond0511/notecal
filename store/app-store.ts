@@ -67,6 +67,7 @@ export const useAppStore = create<AppState>()(
       goals: null,
       preferredUnits: 'metric' as UnitSystem,
       entryMode: 'freeform' as EntryMode,
+      enterOnlyMode: false,
       savedEntries: [],
       weightEntries: [],
       pendingInsertion: null,
@@ -448,6 +449,10 @@ export const useAppStore = create<AppState>()(
 
   setEntryMode: (mode: EntryMode) => {
     set({ entryMode: mode });
+  },
+
+  setEnterOnlyMode: (enabled: boolean) => {
+    set({ enterOnlyMode: enabled });
   },
 
   setManualTargets: (targets: ManualTargets | null) => {
@@ -1231,13 +1236,14 @@ export const useAppStore = create<AppState>()(
         goals: state.goals,
         preferredUnits: state.preferredUnits,
         entryMode: state.entryMode,
+        enterOnlyMode: state.enterOnlyMode,
         savedEntries: state.savedEntries,
         weightEntries: state.weightEntries,
         notificationsEnabled: state.notificationsEnabled,
         mealReminders: state.mealReminders,
       }),
       // Handle version migrations
-      version: 5,
+      version: 6,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           persistedState = {
@@ -1266,6 +1272,12 @@ export const useAppStore = create<AppState>()(
               { id: 'lunch', name: 'Lunch', time: '12:00', enabled: true, isDefault: true },
               { id: 'dinner', name: 'Dinner', time: '18:00', enabled: true, isDefault: true },
             ],
+          };
+        }
+        if (version < 6) {
+          persistedState = {
+            ...persistedState,
+            enterOnlyMode: persistedState.enterOnlyMode ?? false,
           };
         }
         return persistedState;

@@ -717,6 +717,7 @@ export function NotesEditor({
 }: NotesEditorProps) {
   const entryMode = useAppStore((s) => s.entryMode);
   const isFreeform = entryMode === "freeform";
+  const enterOnlyMode = useAppStore((s) => s.enterOnlyMode);
 
   const [documentText, setDocumentText] = useState(initialDocumentText);
   const documentTextRef = useRef(initialDocumentText);
@@ -1102,12 +1103,15 @@ export function NotesEditor({
         ? assessEntryCompleteness(mostRecentEntry)
         : DELAY_COMPLETE_ENTRY;
 
-      debounceTimeoutRef.current = setTimeout(() => {
-        processDocumentChanges(finalText);
-      }, delay);
+      if (!enterOnlyMode) {
+        debounceTimeoutRef.current = setTimeout(() => {
+          processDocumentChanges(finalText);
+        }, delay);
+      }
     },
     [
       isFreeform,
+      enterOnlyMode,
       processDocumentChanges,
       onDocumentTextChange,
       parseDocumentForFoodEntries,
@@ -1193,6 +1197,14 @@ export function NotesEditor({
 
     return indicators;
   }, [entries, entryYMap, isFreeform]);
+
+  // Clear any pending debounce when enterOnlyMode is toggled on
+  useEffect(() => {
+    if (enterOnlyMode && debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
+    }
+  }, [enterOnlyMode]);
 
   return (
     <View style={styles.container}>

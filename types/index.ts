@@ -211,6 +211,7 @@ export interface AppState {
   goals: UserGoals | null;
   preferredUnits: UnitSystem;
   entryMode: EntryMode;
+  enterOnlyMode: boolean;
   // Saved entries state
   savedEntries: SavedEntry[];
   // Weight tracking state
@@ -240,6 +241,7 @@ export interface AppState {
   clearUserData: () => void;
   setPreferredUnits: (units: UnitSystem) => void;
   setEntryMode: (mode: EntryMode) => void;
+  setEnterOnlyMode: (enabled: boolean) => void;
   setManualTargets: (targets: ManualTargets | null) => void;
   // Saved entries actions
   saveEntry: (entry: Entry) => void;

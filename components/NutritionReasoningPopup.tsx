@@ -2840,7 +2840,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e5e5e5",
+    backgroundColor: "#EBEBEB",
   },
   editNutrientRevertButtonDisabled: {
     backgroundColor: "#f5f5f5",
@@ -2857,7 +2857,7 @@ const styles = StyleSheet.create({
   editNutrientSaveButton: {
     flex: 1,
     height: 52,
-    borderRadius: 16,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2973,7 +2973,7 @@ const styles = StyleSheet.create({
   },
   somethingOffInput: {
     height: 120,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: "#e5e5e5",
     borderRadius: 14,
     paddingHorizontal: 16,
@@ -3002,10 +3002,10 @@ const styles = StyleSheet.create({
   somethingOffCancelButton: {
     flex: 1,
     height: 52,
-    borderRadius: 14,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e5e5e5",
+    backgroundColor: "#EBEBEB",
   },
   somethingOffCancelText: {
     fontSize: 16,
@@ -3016,13 +3016,13 @@ const styles = StyleSheet.create({
   somethingOffSubmitButton: {
     flex: 1,
     height: 52,
-    borderRadius: 14,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#1A6872",
   },
   somethingOffSubmitButtonDisabled: {
-    backgroundColor: "#9CA3AF",
+    backgroundColor: "#A8D5DA",
   },
   somethingOffSubmitText: {
     fontSize: 16,

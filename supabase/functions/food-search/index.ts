@@ -70,6 +70,63 @@ const NON_FOOD_CATEGORY_PREFIXES = [
 
 const COMMON_DATA_TYPES = new Set(["Foundation", "SR Legacy", "Survey (FNDDS)"]);
 
+const QUALIFIER_PENALTIES = [
+  "dehydrated", "dried", "canned", "frozen", "powder", "concentrate",
+  "infant", "commercial", "industrial", "unprepared", "dry mix",
+];
+
+function normalizeForRanking(s: string): string {
+  return s.toLowerCase().replace(/,/g, "").trim();
+}
+
+function rankCommonResults(
+  results: DatabaseSearchResult[],
+  query: string,
+): DatabaseSearchResult[] {
+  const normQuery = normalizeForRanking(query);
+  const queryWords = normQuery.split(/\s+/).filter(Boolean);
+
+  const scored = results.map((result) => {
+    const normName = normalizeForRanking(result.name);
+    let score = 0;
+
+    // Exact match
+    if (normName === normQuery) score += 50;
+    // Starts with query
+    else if (normName.startsWith(normQuery)) score += 30;
+
+    // Word match scoring
+    const nameWords = normName.split(/\s+/).filter(Boolean);
+    const matchedWords = queryWords.filter((w) => normName.includes(w));
+    if (matchedWords.length === queryWords.length && score === 0) score += 20;
+    else score += matchedWords.length * 5;
+
+    // Simplicity bonus: fewer commas and words = simpler = better
+    const commaCount = (result.name.match(/,/g) || []).length;
+    const wordCount = nameWords.length;
+    score += Math.max(0, 15 - commaCount * 3 - Math.max(0, wordCount - 3));
+
+    // DataType priority
+    if (result.dataType === "Foundation") score += 10;
+    else if (result.dataType === "SR Legacy") score += 5;
+
+    // Qualifier penalties (only if not in the query)
+    let penaltyApplied = 0;
+    for (const qualifier of QUALIFIER_PENALTIES) {
+      if (normName.includes(qualifier) && !normQuery.includes(qualifier)) {
+        penaltyApplied += 3;
+        if (penaltyApplied >= 15) break;
+      }
+    }
+    score -= Math.min(penaltyApplied, 15);
+
+    return { result, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map((s) => s.result);
+}
+
 function isCommonFood(result: DatabaseSearchResult): boolean {
   if (result.source === "FDC" && result.dataType) {
     return COMMON_DATA_TYPES.has(result.dataType);
@@ -420,7 +477,7 @@ serve(async (req) => {
 
     // Partition into common (Foundation, SR Legacy, FNDDS) and branded
     const allResults = [...fdcResults, ...offResults];
-    const common = allResults.filter(isCommonFood).slice(0, limit);
+    const common = rankCommonResults(allResults.filter(isCommonFood), query.trim()).slice(0, limit);
     const branded = allResults.filter((r) => !isCommonFood(r)).slice(0, limit);
 
     // Cache results (fire and forget)

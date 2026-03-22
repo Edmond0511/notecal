@@ -6,6 +6,7 @@ import {
   FoodSearchError,
   searchFoodDatabase,
 } from "@/services/foodSearchApi";
+import { useAppStore } from "@/store/app-store";
 import { CommonPortion, DatabaseSearchResult, Macros } from "@/types";
 import {
   isLiquidGlassSupported,
@@ -21,7 +22,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -117,6 +118,90 @@ export function DatabaseSearchModal({
   const searchInputRef = useRef<TextInput>(null);
   const translateY = useSharedValue(0);
   const showGlass = isLiquidGlassSupported;
+
+  const entries = useAppStore((s) => s.entries);
+  const savedEntries = useAppStore((s) => s.savedEntries);
+
+  // Recently logged: show most recent items when search bar is empty
+  const recentlyLoggedResults = useMemo((): DatabaseSearchResult[] => {
+    if (searchText.trim().length > 0) return [];
+
+    const seen = new Map<string, { result: DatabaseSearchResult; updatedAt: Date }>();
+
+    // Saved entries first (higher priority)
+    for (const saved of savedEntries) {
+      for (const item of saved.items) {
+        const key = item.label.toLowerCase();
+        if (!seen.has(key)) {
+          const macrosPer100g: Macros =
+            item.qty > 0
+              ? {
+                  kcal: Math.round((item.macros.kcal / item.qty) * 100),
+                  protein: Math.round((item.macros.protein / item.qty) * 100 * 10) / 10,
+                  fat: Math.round((item.macros.fat / item.qty) * 100 * 10) / 10,
+                  carbs: Math.round((item.macros.carbs / item.qty) * 100 * 10) / 10,
+                  ...(item.macros.fiber != null && { fiber: Math.round((item.macros.fiber / item.qty) * 100 * 10) / 10 }),
+                  ...(item.macros.sugar != null && { sugar: Math.round((item.macros.sugar / item.qty) * 100 * 10) / 10 }),
+                  ...(item.macros.sodium != null && { sodium: Math.round((item.macros.sodium / item.qty) * 100) }),
+                  ...(item.macros.potassium != null && { potassium: Math.round((item.macros.potassium / item.qty) * 100) }),
+                }
+              : item.macros;
+          seen.set(key, {
+            result: {
+              source: "OFF",
+              offId: `local-${key}`,
+              name: item.label,
+              macrosPer100g,
+              defaultServingG: item.qty > 0 ? item.qty : 100,
+              defaultServingLabel: item.qty > 0 ? `${item.qty}${item.unit}` : undefined,
+            },
+            updatedAt: new Date(saved.lastUsedAt),
+          });
+        }
+      }
+    }
+
+    // Then entries (most recent first)
+    const sortedEntries = [...entries]
+      .filter((e) => e.status === "ok")
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+    for (const entry of sortedEntries) {
+      for (const item of entry.items) {
+        const key = item.label.toLowerCase();
+        if (seen.has(key)) continue;
+        const macrosPer100g: Macros =
+          item.qty > 0
+            ? {
+                kcal: Math.round((item.macros.kcal / item.qty) * 100),
+                protein: Math.round((item.macros.protein / item.qty) * 100 * 10) / 10,
+                fat: Math.round((item.macros.fat / item.qty) * 100 * 10) / 10,
+                carbs: Math.round((item.macros.carbs / item.qty) * 100 * 10) / 10,
+                ...(item.macros.fiber != null && { fiber: Math.round((item.macros.fiber / item.qty) * 100 * 10) / 10 }),
+                ...(item.macros.sugar != null && { sugar: Math.round((item.macros.sugar / item.qty) * 100 * 10) / 10 }),
+                ...(item.macros.sodium != null && { sodium: Math.round((item.macros.sodium / item.qty) * 100) }),
+                ...(item.macros.potassium != null && { potassium: Math.round((item.macros.potassium / item.qty) * 100) }),
+              }
+            : item.macros;
+        seen.set(key, {
+          result: {
+            source: "OFF",
+            offId: `local-${key}`,
+            name: item.label,
+            macrosPer100g,
+            defaultServingG: item.qty > 0 ? item.qty : 100,
+            defaultServingLabel: item.qty > 0 ? `${item.qty}${item.unit}` : undefined,
+          },
+          updatedAt: new Date(entry.updatedAt),
+        });
+      }
+    }
+
+    return Array.from(seen.values())
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      .slice(0, 5)
+      .map((v) => v.result);
+  }, [searchText, entries, savedEntries]);
 
   // Multi-select state
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
@@ -616,7 +701,7 @@ export function DatabaseSearchModal({
                     tintColor="rgba(250, 250, 247, 0.3)"
                   >
                     <View style={styles.searchInputWrapper}>
-                      <Ionicons name="search" size={18} color="#8E8E93" style={styles.searchIcon} />
+                      <Ionicons name="search" size={18} color={Tokens.accent} style={styles.searchIcon} />
                       <TextInput
                         ref={searchInputRef}
                         style={styles.searchInput}
@@ -625,6 +710,7 @@ export function DatabaseSearchModal({
                         value={searchText}
                         onChangeText={setSearchText}
                         autoCorrect={false}
+                        autoCapitalize="none"
                         returnKeyType="search"
                       />
                       {searchText.length > 0 && (
@@ -641,7 +727,7 @@ export function DatabaseSearchModal({
                 ) : (
                   <View style={[styles.searchGlass, styles.searchGlassFallback]}>
                     <View style={styles.searchInputWrapper}>
-                      <Ionicons name="search" size={18} color="#8E8E93" style={styles.searchIcon} />
+                      <Ionicons name="search" size={18} color={Tokens.accent} style={styles.searchIcon} />
                       <TextInput
                         ref={searchInputRef}
                         style={styles.searchInput}
@@ -650,6 +736,7 @@ export function DatabaseSearchModal({
                         value={searchText}
                         onChangeText={setSearchText}
                         autoCorrect={false}
+                        autoCapitalize="none"
                         returnKeyType="search"
                       />
                       {searchText.length > 0 && (
@@ -671,17 +758,43 @@ export function DatabaseSearchModal({
             <View style={styles.contentArea}>
               {/* Idle state */}
               {state.type === "idle" && (
-                <View style={styles.centeredMessage}>
-                  <Ionicons name="nutrition-outline" size={48} color="#ddd" />
-                  <Text style={styles.centeredMessageText}>
-                    Search for item in database
-                  </Text>
-                </View>
+                recentlyLoggedResults.length > 0 ? (
+                  <KeyboardAwareScrollView
+                    style={styles.resultsList}
+                    contentContainerStyle={{
+                      paddingBottom: insets.bottom + 16 + (selectedItems.length > 0 ? 90 : 0),
+                    }}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="interactive"
+                    showsVerticalScrollIndicator={false}
+                    bounces={true}
+                  >
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionHeaderText}>Recently Logged</Text>
+                    </View>
+                    {recentlyLoggedResults.map((result, index) =>
+                      renderResultCard(result, index),
+                    )}
+                  </KeyboardAwareScrollView>
+                ) : (
+                  <Animated.View
+                    entering={FadeInDown.delay(100).duration(300)}
+                    style={[styles.centeredMessage, { paddingBottom: keyboardHeight }]}
+                  >
+                    <View style={styles.idleIconContainer}>
+                      <Ionicons name="search-outline" size={32} color={TEAL} />
+                    </View>
+                    <Text style={styles.idleTitle}>Search for item in database</Text>
+                    <Text style={styles.idleDescription}>
+                      Type a food name to search the nutrition database
+                    </Text>
+                  </Animated.View>
+                )
               )}
 
               {/* Searching state */}
               {state.type === "searching" && (
-                <View style={styles.centeredMessage}>
+                <View style={[styles.centeredMessage, { paddingBottom: keyboardHeight }]}>
                   <ActivityIndicator size="large" color="#666" />
                   <Text style={styles.centeredMessageText}>Searching...</Text>
                 </View>
@@ -689,7 +802,7 @@ export function DatabaseSearchModal({
 
               {/* Empty state */}
               {state.type === "empty" && (
-                <View style={styles.centeredMessage}>
+                <View style={[styles.centeredMessage, { paddingBottom: keyboardHeight }]}>
                   <Ionicons name="search-outline" size={48} color="#ddd" />
                   <Text style={styles.centeredMessageText}>
                     No results found
@@ -702,7 +815,7 @@ export function DatabaseSearchModal({
 
               {/* Error state */}
               {state.type === "error" && (
-                <View style={styles.centeredMessage}>
+                <View style={[styles.centeredMessage, { paddingBottom: keyboardHeight }]}>
                   <Ionicons name="warning-outline" size={48} color="#F5A623" />
                   <Text style={styles.centeredMessageText}>
                     {state.message}
@@ -1035,6 +1148,7 @@ export function DatabaseSearchModal({
 const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
+    justifyContent: "flex-end",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -1052,9 +1166,8 @@ const styles = StyleSheet.create({
   },
   dragIndicatorContainer: {
     alignItems: "center",
-    paddingTop: 8,
-    paddingBottom: 4,
-    backgroundColor: "#f8f8f8",
+    paddingTop: 12,
+    paddingBottom: 8,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -1071,7 +1184,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#f8f8f8",
   },
   backButton: {
     width: 36,
@@ -1136,7 +1248,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: 12,
     paddingHorizontal: 40,
   },
   centeredMessageText: {
@@ -1150,6 +1261,32 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: "#bbb",
     textAlign: "center",
+  },
+  idleIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Tokens.accentTint,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  idleTitle: {
+    fontSize: 20,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: Tokens.textPrimary,
+    marginBottom: 8,
+    textAlign: "center",
+    letterSpacing: -0.3,
+  },
+  idleDescription: {
+    fontSize: 15,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: Tokens.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
   },
   // Section headers
   sectionHeader: {

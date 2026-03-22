@@ -150,8 +150,8 @@ function getTimeBadgeStyle(date: Date): { background: string; text: string; icon
     // Day — warm golden
     return { background: "#FFF3E0", text: "#BF6C00", icon: "sunny" };
   } else {
-    // Night — deep navy
-    return { background: "#3949AB", text: "#E8EAF6", icon: "moon" };
+    // Night — soft blue-gray
+    return { background: "#DCE0F4", text: "#3F51B5", icon: "moon" };
   }
 }
 
@@ -889,6 +889,8 @@ function EditQuantityPopup({
   const [inputValue, setInputValue] = useState(
     initialUnit === "servings"
       ? formatQtyValue(currentServings)
+      : initialUnit === "g"
+      ? "100"
       : formatQtyValue(itemQty * currentServings),
   );
 
@@ -1860,10 +1862,10 @@ export function NutritionReasoningPopup({
                   {item.reasoning && (
                     <View style={styles.reasoningSection}>
 
-                      {/* Identified as */}
+                      {/* Summary */}
                       {item.reasoning.interpretation && (
                         <View style={styles.sectionBlock}>
-                          <Text style={styles.sectionLabel}>Identified as</Text>
+                          <Text style={styles.sectionLabel}>Summary</Text>
                           <Text style={styles.reasoningText}>
                             {item.reasoning.interpretation}
                             {item.reasoning.portionNotes && item.reasoning.portionNotes !== 'N/A'

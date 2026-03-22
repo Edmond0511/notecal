@@ -156,7 +156,7 @@ export function PhotoProcessingToast({
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: 130,
+    bottom: 110,
     left: 16,
     right: 16,
     zIndex: 20,

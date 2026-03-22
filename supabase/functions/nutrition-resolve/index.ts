@@ -193,16 +193,6 @@ serve(async (req) => {
 
       nutritionData = cachedData.nutrition_data as NutritionData;
 
-      // Strip legacy bracket annotations from cached dataSource/confidenceAnalysis
-      const bracketAnnotationRe = /\s*\[[^\]]*\]/g;
-      for (const item of nutritionData.items) {
-        if (item.reasoning?.dataSource) {
-          item.reasoning.dataSource = item.reasoning.dataSource.replace(bracketAnnotationRe, "").trim();
-        }
-        if (item.reasoning?.confidenceAnalysis) {
-          item.reasoning.confidenceAnalysis = item.reasoning.confidenceAnalysis.replace(bracketAnnotationRe, "").trim();
-        }
-      }
 
       // Log cache hit usage (fire-and-forget)
       if (userId) {
@@ -452,11 +442,11 @@ REASONING GUIDELINES:
 - interpretation: How you identified/interpreted this food item
 - assumptions: List any assumptions made (e.g., "raw weight", "boneless", "standard portion")
 - portionNotes: How you handled the quantity (e.g., "specified 150g", "assumed medium size")
-- dataSource: The database or source used. Format rules:
-  1. If you are CERTAIN of the exact database ID/URL (e.g., you know the specific USDA FDC ID), format as markdown link: "[USDA FoodData Central](https://fdc.nal.usda.gov/fdc-app.html#/food-details/{ID}/nutrients)"
-  2. If you used a database but are NOT certain of the exact ID, use plain text: "USDA FoodData Central" or "NCCDB"
-  3. For branded items with official nutrition pages, link ONLY if you are certain the URL is real
-  4. NEVER guess or fabricate a database ID or URL. When in doubt, use plain text.
+- dataSource: The database or source used. Format as a markdown link "[Name](url)" whenever you know a real URL. Rules:
+  1. For well-known branded items (McDonald's, Starbucks, KFC, etc.), link to their official nutrition page if you know the real URL.
+  2. For USDA generic foods, use the FDC food search URL: "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)" — replace FOOD_NAME with the URL-encoded food label (e.g., "banana" → "https://fdc.nal.usda.gov/food-search?query=banana", "chicken breast" → "https://fdc.nal.usda.gov/food-search?query=chicken+breast"). Do NOT fabricate a specific food ID number.
+  3. NEVER output a bare/raw URL like "https://..." or "(https://...)". Every URL must be wrapped in a markdown link [Name](url).
+  4. NEVER fabricate specific food ID numbers (e.g., do not guess FDC numeric IDs). Use the search URL format instead.
   5. Do NOT add bracket annotations like [snapshot], [cached], [estimated], [from database] — keep it clean.
 - confidenceExplanation: One-line summary using "High/Medium/Low confidence" (never the numeric %) followed by a short reason (e.g., "High confidence, USDA generic match with specified weight" or "Medium confidence, portion assumed and preparation method unknown")
 - confidenceAnalysis: 2-4 sentence paragraph. When referencing a source, only make it a clickable markdown link if you included a verified URL in dataSource. Otherwise reference by plain text name. Mention whether values were cross-referenced across sources. Cover: (1) how the food was identified and what data source was used, (2) whether the portion was specified or assumed and how that affects accuracy, (3) specific uncertainties or factors that raised or lowered confidence (e.g., preparation method unknown, brand vs generic, weight estimated from "1 medium").
@@ -1157,7 +1147,7 @@ async function callCorrectionAI(
       "interpretation": "<how the feedback was interpreted - e.g., 'This entry was re-identified as grilled salmon based on the clarification provided'>",
       "assumptions": ["<list of assumptions made>"],
       "portionNotes": "<any notes about portion/quantity adjustments>",
-      "dataSource": "The database or source used. If CERTAIN of the exact ID/URL, format as markdown link; otherwise plain text name (e.g., 'USDA FoodData Central'). NEVER fabricate IDs or URLs. No bracket annotations like [snapshot] or [estimated].",
+      "dataSource": "Markdown link '[Name](url)' to the source if you know a real URL. For USDA generic foods use the search URL format: '[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)' with the URL-encoded food name. For branded items use their official nutrition page. NEVER output a bare URL or fabricate specific food ID numbers. Plain text if no real URL is known.",
       "confidenceExplanation": "One-line summary using High/Medium/Low confidence (never the numeric %) followed by a short reason",
       "confidenceAnalysis": "2-4 sentence paragraph. Only use clickable markdown links for sources where you included a verified URL in dataSource. Otherwise reference by plain text name. Mention whether values were cross-referenced."
     }

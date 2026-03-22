@@ -585,12 +585,9 @@ export const useAppStore = create<AppState>()(
     const isFreeform = get().entryMode === 'freeform';
 
     const item = barcodeProductToFoodItem(product, entryId, servingGrams);
-    const label = product.brand
-      ? `${product.name} (${product.brand})`
-      : product.name;
     const rawText = isFreeform
-      ? `${label}, ${servingGrams}g`
-      : `— ${label}, ${servingGrams}g`;
+      ? product.name
+      : `— ${product.name}`;
 
     const newEntry: Entry = {
       id: entryId,
@@ -616,12 +613,9 @@ export const useAppStore = create<AppState>()(
     const isFreeform = get().entryMode === 'freeform';
 
     const macros = scaleMacrosToServing(result.macrosPer100g, servingGrams);
-    const label = result.brand
-      ? `${result.name} (${result.brand})`
-      : result.name;
     const rawText = isFreeform
-      ? `${label}, ${servingGrams}g`
-      : `— ${label}, ${servingGrams}g`;
+      ? result.name
+      : `— ${result.name}`;
 
     const sourceId = result.source === 'FDC'
       ? String(result.fdcId ?? '')
@@ -644,7 +638,7 @@ export const useAppStore = create<AppState>()(
       confidence: 0.95,
       citations,
       reasoning: {
-        interpretation: `Database search: ${label}`,
+        interpretation: `Database search: ${result.name}`,
         assumptions: [
           `Nutrition data from ${result.source === 'FDC' ? 'USDA FoodData Central' : 'Open Food Facts'} database`,
           `Serving size: ${servingGrams}g`,

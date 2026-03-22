@@ -1021,8 +1021,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 14,
-    borderRadius: 999,
-    backgroundColor: "#efefef",
   },
   scanAgainText: {
     fontSize: 15,

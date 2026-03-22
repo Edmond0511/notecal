@@ -889,7 +889,7 @@ function EditQuantityPopup({
   const [inputValue, setInputValue] = useState(
     initialUnit === "servings"
       ? formatQtyValue(currentServings)
-      : formatQtyValue(itemQty),
+      : formatQtyValue(itemQty * currentServings),
   );
 
   // Convert current value to grams based on selected unit
@@ -914,8 +914,7 @@ function EditQuantityPopup({
     } else if (selectedUnit === "portion" && selectedPortion) {
       const newGrams = numValue * selectedPortion.grams;
       if (originalGrams != null && originalGrams > 0) {
-        const scaleFactor = newGrams / originalGrams;
-        onSave(scaleFactor, newGrams, "g");
+        onSave(newGrams / originalGrams);
       } else {
         onSave(numValue);
       }
@@ -924,8 +923,7 @@ function EditQuantityPopup({
       if (newGrams == null || originalGrams == null || originalGrams <= 0) {
         onSave(numValue);
       } else {
-        const scaleFactor = newGrams / originalGrams;
-        onSave(scaleFactor, numValue, selectedUnit);
+        onSave(newGrams / originalGrams);
       }
     }
     onClose();
@@ -1648,7 +1646,7 @@ export function NutritionReasoningPopup({
                         >
                           <Text style={styles.quantityText}>
                             {normalizeUnit(item.unit)
-                              ? `${formatQtyValue(item.qty)}${item.unit}`
+                              ? `${formatQtyValue(item.qty * (item.servings ?? 1))}${item.unit}`
                               : `×${
                                   Number.isInteger(item.servings ?? 1)
                                     ? (item.servings ?? 1)
@@ -1889,80 +1887,53 @@ export function NutritionReasoningPopup({
                   {/* Reasoning Section */}
                   {item.reasoning && (
                     <View style={styles.reasoningSection}>
-                      {/* Interpretation */}
+
+                      {/* Identified as */}
                       {item.reasoning.interpretation && (
-                        <View style={styles.reasoningRow}>
-                          <Ionicons
-                            name="bulb-outline"
-                            size={16}
-                            color="#666"
-                          />
+                        <View style={styles.sectionBlock}>
+                          <Text style={styles.sectionLabel}>Identified as</Text>
                           <Text style={styles.reasoningText}>
                             {item.reasoning.interpretation}
+                            {item.reasoning.portionNotes && item.reasoning.portionNotes !== 'N/A'
+                              ? ` \u2014 ${item.reasoning.portionNotes}`
+                              : ''}
                           </Text>
                         </View>
                       )}
 
                       {/* Assumptions */}
                       {item.reasoning.assumptions?.length > 0 && (
-                        <View style={styles.reasoningRow}>
-                          <Ionicons
-                            name="information-circle-outline"
-                            size={16}
-                            color="#666"
-                          />
-                          <View style={styles.assumptionsList}>
-                            {item.reasoning.assumptions.map((assumption, i) => (
-                              <Text key={i} style={styles.assumptionText}>
-                                {item.reasoning!.assumptions!.length > 1 ? `\u2022 ${assumption}` : assumption}
-                              </Text>
-                            ))}
-                          </View>
+                        <View style={styles.sectionBlock}>
+                          <Text style={styles.sectionLabel}>Assumptions</Text>
+                          {item.reasoning.assumptions.map((assumption, i) => (
+                            <Text key={i} style={styles.assumptionText}>
+                              {item.reasoning!.assumptions!.length > 1 ? `\u2022 ${assumption}` : assumption}
+                            </Text>
+                          ))}
                         </View>
                       )}
 
-                      {/* Portion Notes */}
-                      {item.reasoning.portionNotes && (
-                        <View style={styles.reasoningRow}>
-                          <Ionicons
-                            name="scale-outline"
-                            size={16}
-                            color="#666"
-                          />
-                          <Text style={styles.reasoningText}>
-                            {item.reasoning.portionNotes}
-                          </Text>
-                        </View>
-                      )}
-
-                      {/* Confidence Explanation */}
+                      {/* Confidence */}
                       {item.reasoning.confidenceExplanation && (
-                        <View style={styles.reasoningRow}>
-                          <Ionicons
-                            name="checkmark-circle-outline"
-                            size={16}
-                            color="#666"
-                          />
+                        <View style={styles.sectionBlock}>
+                          <Text style={styles.sectionLabel}>Confidence</Text>
                           <Text style={styles.reasoningText}>
                             {item.reasoning.confidenceExplanation}
                           </Text>
                         </View>
                       )}
 
-                      {/* Data Source */}
-                      {item.reasoning.dataSource && (
-                        <View style={styles.reasoningRow}>
-                          <Ionicons
-                            name="library-outline"
-                            size={16}
-                            color="#666"
-                          />
+                      {/* Source */}
+                      {item.reasoning.dataSource && item.reasoning.dataSource !== 'No source available' && (
+                        <View style={styles.sectionBlock}>
+                          <Text style={styles.sectionLabel}>Source</Text>
                           <ParsedText
                             text={item.reasoning.dataSource}
                             style={styles.sourceText}
                           />
                         </View>
                       )}
+
                     </View>
                   )}
 
@@ -2564,37 +2535,36 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     marginTop: 8,
   },
-  reasoningRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+  sectionBlock: {
     marginBottom: 12,
-    gap: 12,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#aaa',
+    marginBottom: 2,
   },
   reasoningText: {
     fontSize: 14,
-    color: "#4a4a4a",
-    flex: 1,
+    color: '#4a4a4a',
     lineHeight: 22,
-    fontFamily: "System",
-    fontWeight: "400",
-  },
-  assumptionsList: {
-    flex: 1,
+    fontFamily: 'System',
+    fontWeight: '400',
   },
   assumptionText: {
     fontSize: 14,
-    color: "#4a4a4a",
+    color: '#4a4a4a',
     marginBottom: 6,
     lineHeight: 22,
-    fontFamily: "System",
-    fontWeight: "400",
+    fontFamily: 'System',
+    fontWeight: '400',
   },
   sourceText: {
     fontSize: 14,
-    color: "#4a4a4a",
+    color: '#4a4a4a',
     flex: 1,
-    fontFamily: "System",
-    fontWeight: "400",
+    fontFamily: 'System',
+    fontWeight: '400',
     lineHeight: 22,
   },
   totalsSection: {

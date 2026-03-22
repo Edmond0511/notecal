@@ -1026,6 +1026,11 @@ export function DatabaseSearchModal({
                     { paddingBottom: keyboardHeight || insets.bottom + 16 },
                   ]}
                 >
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={{ flexGrow: 1 }}
+                >
                   {/* Product info */}
                   <View style={styles.productHeader}>
                     {state.result.brand && (
@@ -1235,7 +1240,7 @@ export function DatabaseSearchModal({
                   )}
 
                   {/* Add button */}
-                  <View style={{ flex: 1 }} />
+                  <View style={{ height: 24 }} />
                   <TouchableOpacity
                     style={styles.addButton}
                     onPress={handleAdd}
@@ -1250,6 +1255,7 @@ export function DatabaseSearchModal({
                       {detailAddLabel}
                     </Text>
                   </TouchableOpacity>
+                </ScrollView>
                 </Animated.View>
               )}
             </View>
@@ -1549,7 +1555,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
     color: Tokens.textSecondary,
-    textTransform: "uppercase",
+    textTransform: "capitalize",
     letterSpacing: 0.5,
     marginBottom: 2,
   },

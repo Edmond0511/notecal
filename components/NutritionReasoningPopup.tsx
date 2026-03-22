@@ -587,7 +587,7 @@ function SomethingOffPopup({
   );
 }
 
-function EditNutrientPopup({
+export function EditNutrientPopup({
   nutrientKey,
   currentValue,
   originalValue,

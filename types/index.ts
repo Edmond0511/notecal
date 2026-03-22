@@ -56,6 +56,27 @@ export interface BarcodeProduct {
   nutrimentsPer100g: Macros;
 }
 
+export interface ExtendedNutrients {
+  saturatedFat?: number;   // g
+  transFat?: number;       // g
+  cholesterol?: number;    // mg
+  calcium?: number;        // mg
+  iron?: number;           // mg
+  magnesium?: number;      // mg
+  phosphorus?: number;     // mg
+  zinc?: number;           // mg
+  vitaminA?: number;       // mcg RAE
+  vitaminC?: number;       // mg
+  vitaminD?: number;       // mcg
+  vitaminE?: number;       // mg
+  vitaminK?: number;       // mcg
+  vitaminB6?: number;      // mg
+  vitaminB12?: number;     // mcg
+  folate?: number;         // mcg
+  niacin?: number;         // mg
+  caffeine?: number;       // mg
+}
+
 export interface DatabaseSearchResult {
   fdcId?: number;
   offId?: string;
@@ -65,6 +86,7 @@ export interface DatabaseSearchResult {
   category?: string;
   dataType?: string; // FDC: 'Foundation' | 'SR Legacy' | 'Survey (FNDDS)' | 'Branded'
   macrosPer100g: Macros;
+  extendedNutrientsPer100g?: ExtendedNutrients;
   defaultServingG?: number;
   defaultServingLabel?: string;
   portions?: CommonPortion[];

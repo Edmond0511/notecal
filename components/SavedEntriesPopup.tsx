@@ -290,7 +290,7 @@ export function SavedEntriesPopup({
       <Ionicons
         name="search"
         size={18}
-        color={Tokens.accent}
+        color="#000"
         style={styles.searchIcon}
       />
       <TextInput
@@ -344,9 +344,6 @@ export function SavedEntriesPopup({
         </TouchableOpacity>
         <View style={styles.titleContainer}>
           <Text style={styles.title}>Saved Foods</Text>
-          <View style={styles.countBadge}>
-            <Text style={styles.countText}>{savedEntries.length}</Text>
-          </View>
         </View>
         <View style={styles.headerRightSpacer} />
       </View>
@@ -407,7 +404,7 @@ export function SavedEntriesPopup({
             style={styles.emptyContent}
           >
             <View style={styles.emptyIconContainer}>
-              <Ionicons name="search-outline" size={32} color="#999" />
+              <Ionicons name="search-outline" size={32} color="#1A6872" />
             </View>
             <Text style={styles.emptyTitle}>No results found</Text>
             <Text style={styles.emptyDescription}>

@@ -317,7 +317,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                   entering={FadeInDown.delay(200).duration(400)}
                   style={styles.section}
                 >
-                  <Text style={styles.sectionTitle}>App</Text>
+                  <Text style={styles.sectionTitle}>General</Text>
 
                   <View style={styles.menuCardShadow}>
                     <View style={styles.menuCard}>

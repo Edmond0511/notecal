@@ -56,6 +56,27 @@ const FDC_NUTRIENT_IDS = {
   potassium: 1092,
 } as const;
 
+const FDC_EXTENDED_NUTRIENT_IDS = {
+  saturatedFat: 1258,
+  transFat: 1257,
+  cholesterol: 1253,
+  calcium: 1087,
+  iron: 1089,
+  magnesium: 1090,
+  phosphorus: 1091,
+  zinc: 1095,
+  vitaminA: 1106,
+  vitaminC: 1162,
+  vitaminD: 1114,
+  vitaminE: 1109,
+  vitaminK: 1185,
+  vitaminB6: 1175,
+  vitaminB12: 1178,
+  folate: 1177,
+  niacin: 1167,
+  caffeine: 1057,
+} as const;
+
 // OFF non-food category prefixes
 const NON_FOOD_CATEGORY_PREFIXES = [
   "en:pet-food", "en:dog-food", "en:cat-food", "en:dog-treats", "en:cat-treats",
@@ -200,6 +221,19 @@ function fdcFoodToResult(food: any): DatabaseSearchResult | null {
     ...(potassium != null && { potassium: Math.round(potassium) }),
   };
 
+  // Extract extended nutrients (only include non-null values)
+  const extRaw: Record<string, number | undefined> = {};
+  for (const [key, id] of Object.entries(FDC_EXTENDED_NUTRIENT_IDS)) {
+    extRaw[key] = extractFdcNutrient(nutrients, id);
+  }
+  const extendedNutrientsPer100g: Record<string, number> = {};
+  for (const [key, val] of Object.entries(extRaw)) {
+    if (val != null) {
+      extendedNutrientsPer100g[key] = Math.round(val * 100) / 100;
+    }
+  }
+  const hasExtended = Object.keys(extendedNutrientsPer100g).length > 0;
+
   // Parse serving size from FDC if available
   let defaultServingG: number | undefined;
   let defaultServingLabel: string | undefined;
@@ -220,6 +254,7 @@ function fdcFoodToResult(food: any): DatabaseSearchResult | null {
     category: food.foodCategory || undefined,
     dataType: food.dataType || undefined,
     macrosPer100g,
+    ...(hasExtended && { extendedNutrientsPer100g }),
     defaultServingG,
     defaultServingLabel,
   };
@@ -235,7 +270,7 @@ async function searchFDC(
     query,
     pageSize: limit * 2, // fetch extra to account for filtering
     dataType: ["Foundation", "SR Legacy", "Survey (FNDDS)", "Branded"],
-    nutrients: Object.values(FDC_NUTRIENT_IDS),
+    nutrients: [...Object.values(FDC_NUTRIENT_IDS), ...Object.values(FDC_EXTENDED_NUTRIENT_IDS)],
   };
 
   const response = await fetch(url, {

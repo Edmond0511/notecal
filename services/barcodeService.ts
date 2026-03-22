@@ -125,6 +125,21 @@ export function scaleMacrosToServing(macrosPer100g: Macros, servingGrams: number
 }
 
 /**
+ * Scales per-100g extended nutrients to a given serving size.
+ */
+export function scaleExtendedNutrients(
+  per100g: Record<string, number>,
+  servingGrams: number,
+): Record<string, number> {
+  const factor = servingGrams / 100;
+  const result: Record<string, number> = {};
+  for (const [key, val] of Object.entries(per100g)) {
+    result[key] = Math.round(val * factor * 100) / 100;
+  }
+  return result;
+}
+
+/**
  * Parses the serving_size string from OFF into grams.
  * Examples: "30g", "30 g", "1 bar (40g)", "250ml"
  * Returns undefined if unparseable.

@@ -945,56 +945,28 @@ function EditQuantityPopup({
 
     setSelectedUnit("portion");
     setSelectedPortion(portion);
+    setInputValue("1");
+  };
 
-    if (curGrams != null && portion.grams > 0) {
-      setInputValue(formatQtyValue(curGrams / portion.grams));
-    } else {
-      setInputValue("1");
-    }
+  const UNIT_DEFAULTS: Partial<Record<QuantityUnit, number>> = {
+    servings: 1,
+    g: 100,
+    oz: 1,
+    lbs: 1,
   };
 
   const handleUnitSwitch = (newUnit: QuantityUnit) => {
     if (newUnit === selectedUnit && newUnit !== "portion") return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const currentNum = parseFloat(inputValue);
-    if (isNaN(currentNum) || currentNum <= 0) {
-      setSelectedUnit(newUnit);
-      if (newUnit !== "portion") setSelectedPortion(null);
-      return;
-    }
-
-    let convertedValue: number;
-
-    // Get current value in grams
-    const curGrams = getCurrentGrams(currentNum);
-
-    if (newUnit === "servings") {
-      if (curGrams != null && originalGrams != null && originalGrams > 0) {
-        convertedValue = curGrams / originalGrams;
-      } else {
-        convertedValue = 1;
-      }
-    } else if (newUnit === "portion") {
+    if (newUnit === "portion") {
       // Handled by handlePortionSelect
       return;
-    } else {
-      // Switching to g/oz/lbs
-      if (curGrams != null) {
-        convertedValue = fromGrams(curGrams, newUnit)!;
-      } else if (selectedUnit === "servings" && originalGrams != null) {
-        const gramsVal = currentNum * originalGrams;
-        convertedValue = fromGrams(gramsVal, newUnit)!;
-      } else {
-        setSelectedUnit(newUnit);
-        setSelectedPortion(null);
-        return;
-      }
     }
 
     setSelectedUnit(newUnit);
     setSelectedPortion(null);
-    setInputValue(formatQtyValue(convertedValue));
+    setInputValue(formatQtyValue(newUnit === "servings" ? currentServings : (UNIT_DEFAULTS[newUnit] ?? 1)));
   };
 
   const panGesture = Gesture.Pan()

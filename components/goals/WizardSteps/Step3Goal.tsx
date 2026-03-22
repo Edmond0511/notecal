@@ -49,7 +49,7 @@ export function Step3Goal({ selectedGoal, onSelect }: Step3GoalProps) {
               style={[
                 styles.optionCard,
                 isSelected && styles.optionCardSelected,
-                isSelected && { borderColor: color },
+                isSelected && { backgroundColor: `${color}20` },
               ]}
               onPress={() => handleSelect(goal)}
               activeOpacity={0.7}
@@ -121,8 +121,6 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#f8f8f8',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'transparent',
   },
   optionCardSelected: {
     backgroundColor: '#fff',

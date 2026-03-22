@@ -332,7 +332,7 @@ export function FoodPhotoModal({
                         styles.zoomButton,
                         zoom !== 0 && styles.zoomButtonActive,
                       ]}
-                      onPress={() => handleZoomToggle(0.05)}
+                      onPress={() => handleZoomToggle(0.1)}
                       activeOpacity={0.7}
                     >
                       <Text

@@ -80,8 +80,8 @@ export interface ExtendedNutrients {
 
 export interface DatabaseSearchResult {
   fdcId?: number;
-  offId?: string;
-  source: 'FDC' | 'OFF';
+  offId?: string; // kept for backward compat with locally-constructed results
+  source: 'FDC' | 'OFF'; // OFF kept for backward compat with barcode entries
   name: string;
   brand?: string;
   category?: string;

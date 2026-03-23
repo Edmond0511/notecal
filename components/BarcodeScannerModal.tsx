@@ -916,7 +916,7 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     fontWeight: "500",
     color: "#999",
-    textTransform: "uppercase",
+    textTransform: "capitalize",
     letterSpacing: 0.5,
     marginBottom: 4,
   },

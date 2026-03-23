@@ -832,7 +832,7 @@ OUTPUT FORMAT (JSON only, no markdown):
         "interpretation": "Identified grilled chicken breast from visual appearance — pale, lean meat with grill marks",
         "assumptions": ["Boneless skinless breast", "No added oil or sauce visible", "Grilled preparation based on char marks"],
         "portionNotes": "Estimated ~150g based on size relative to dinner plate",
-        "dataSource": "USDA FoodData Central (visual estimate)",
+        "dataSource": "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=chicken+breast)",
         "confidenceExplanation": "Medium confidence, visual identification with estimated portion size",
         "confidenceAnalysis": "This item was identified as grilled chicken breast based on visual characteristics. The portion was estimated at 150g using plate-size reference. Exact weight and preparation method introduce uncertainty."
       }
@@ -843,6 +843,13 @@ OUTPUT FORMAT (JSON only, no markdown):
 
 Always include fiber, sugar, sodium, potassium in the macros object. Use 0 if data is unavailable.
 For each item, include a "commonPortions" array with 3-5 context-appropriate portion options. Each has "label" (human-readable) and "grams" (gram equivalent).
+
+DATA SOURCE FORMAT:
+- dataSource: Format as a markdown link "[Name](url)" whenever you know a real URL. Rules:
+  1. For well-known branded items (McDonald's, Starbucks, KFC, etc.), link to their official nutrition page if you know the real URL.
+  2. For USDA generic foods, use the FDC food search URL: "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)" — replace FOOD_NAME with the URL-encoded food label.
+  3. NEVER output a bare/raw URL. Every URL must be wrapped in a markdown link [Name](url).
+  4. NEVER fabricate specific food ID numbers. Use the search URL format instead.
 
 Analyze the food in this photo:`;
 

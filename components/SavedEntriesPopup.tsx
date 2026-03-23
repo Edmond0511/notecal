@@ -217,7 +217,7 @@ export function SavedEntriesPopup({
     const cardContent = (
       <View style={styles.entryCardInner}>
         <View style={styles.entryContent}>
-          <Text style={styles.entryLabel} numberOfLines={2}>
+          <Text style={styles.entryLabel} numberOfLines={1}>
             {getDisplayLabel(item)}
           </Text>
           <View style={styles.macrosRow}>
@@ -263,6 +263,14 @@ export function SavedEntriesPopup({
             </View>
           </View>
         </View>
+        <TouchableOpacity
+          style={styles.quickAddButton}
+          onPress={() => handleSelectEntry(item)}
+          activeOpacity={0.6}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="add" size={22} color="#bbb" />
+        </TouchableOpacity>
       </View>
     );
 
@@ -272,14 +280,9 @@ export function SavedEntriesPopup({
           renderRightActions={() => renderRightActions(item.id)}
           overshootRight={false}
         >
-          <TouchableOpacity
-            onPress={() => handleSelectEntry(item)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.entryCard}>
-              {cardContent}
-            </View>
-          </TouchableOpacity>
+          <View style={styles.entryCard}>
+            {cardContent}
+          </View>
         </Swipeable>
       </Animated.View>
     );
@@ -596,14 +599,19 @@ const styles = StyleSheet.create({
   },
   entryCard: {
     borderRadius: 16,
-    marginBottom: 12,
+    marginBottom: 6,
     backgroundColor: Tokens.surfaceRaised,
-    ...Tokens.shadowLight,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
   },
   entryCardInner: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
+    gap: 10,
+  },
+  quickAddButton: {
+    padding: 2,
   },
   entryContent: {
     flex: 1,

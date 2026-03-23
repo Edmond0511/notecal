@@ -1455,7 +1455,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#999",
-    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   // Results list
@@ -1467,8 +1466,9 @@ const styles = StyleSheet.create({
     backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
-    ...Tokens.shadowLight,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
   },
   resultCardRow: {
     flexDirection: "row",

@@ -1119,9 +1119,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#999",
-    textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: 8,
     marginLeft: 4,
@@ -1371,9 +1370,8 @@ const styles = StyleSheet.create({
   },
   photosSectionLabel: {
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#999",
-    textTransform: "uppercase",
     letterSpacing: 0.8,
   },
   photoStrip: {

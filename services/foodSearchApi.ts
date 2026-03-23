@@ -9,15 +9,7 @@ export interface FoodSearchResponse {
 }
 
 export interface FoodSearchOptions {
-  sources?: ('FDC' | 'OFF')[];
   limit?: number;
-}
-
-/** Convert "ALL CAPS TEXT" to "All Caps Text" */
-function titleCase(str: string): string {
-  return str
-    .toLowerCase()
-    .replace(/(?:^|\s|[-/])\S/g, (ch) => ch.toUpperCase());
 }
 
 export class FoodSearchError extends Error {
@@ -51,9 +43,6 @@ export async function searchFoodDatabase(
       query: query.trim(),
     };
 
-    if (options.sources) {
-      requestBody.sources = options.sources;
-    }
     if (options.limit) {
       requestBody.limit = options.limit;
     }
@@ -95,14 +84,6 @@ export async function searchFoodDatabase(
     if (!Array.isArray(data.common) || !Array.isArray(data.branded)) {
       throw new FoodSearchError('Invalid response format: missing common/branded arrays');
     }
-
-    // Normalize uppercase names from database to title case
-    const normalizeName = (r: DatabaseSearchResult) => ({
-      ...r,
-      name: r.name === r.name.toUpperCase() ? titleCase(r.name) : r.name,
-    });
-    data.common = data.common.map(normalizeName);
-    data.branded = data.branded.map(normalizeName);
 
     return data;
   } catch (error: any) {

@@ -45,6 +45,7 @@ export interface FoodItem {
   reasoning?: NutritionReasoning;
   barcode?: string;
   commonPortions?: CommonPortion[];
+  extendedNutrientsPer100g?: ExtendedNutrients;
 }
 
 export interface BarcodeProduct {

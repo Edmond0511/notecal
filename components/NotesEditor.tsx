@@ -603,10 +603,10 @@ const IndicatorRow = React.memo<{
     const prevEntryStatusRef = useRef(entry.status);
     const contentOpacity = useRef(new RNAnimated.Value(1)).current;
 
-    // Calculate water amount from entry items
+    // Calculate water amount from pure water items only (sourceId === 'water')
     const waterAmount = useMemo(() => {
       return entry.items.reduce(
-        (sum, item) => sum + (item.macros.water ?? 0),
+        (sum, item) => sum + (item.sourceId === 'water' ? (item.macros.water ?? 0) : 0),
         0,
       );
     }, [entry.items]);

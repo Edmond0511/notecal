@@ -151,7 +151,7 @@ function getTimeBadgeStyle(date: Date): { background: string; text: string; icon
     return { background: "#FFF3E0", text: "#BF6C00", icon: "sunny" };
   } else {
     // Night — soft blue-gray
-    return { background: "#DCE0F4", text: "#3F51B5", icon: "moon" };
+    return { background: "#ECEEF8", text: "#5C6BC0", icon: "moon" };
   }
 }
 
@@ -1750,6 +1750,7 @@ export function NutritionReasoningPopup({
                     (enabledMicros.potassium &&
                       item.macros.potassium !== undefined) ||
                     (enabledMicros.water &&
+                      item.sourceId === 'water' &&
                       item.macros.water !== undefined)) && (
                     <View style={styles.microsRow}>
                       {enabledMicros.fiber &&
@@ -1821,6 +1822,7 @@ export function NutritionReasoningPopup({
                           />
                         )}
                       {enabledMicros.water &&
+                        item.sourceId === 'water' &&
                         item.macros.water !== undefined && (
                           <MicroItem
                             label="water"

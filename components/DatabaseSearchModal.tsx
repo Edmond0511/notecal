@@ -206,6 +206,7 @@ export function DatabaseSearchModal({
               defaultServingG: item.qty > 0 ? item.qty : 100,
               defaultServingLabel: item.qty > 0 ? `${item.qty}${item.unit}` : undefined,
               portions: item.commonPortions,
+              extendedNutrientsPer100g: item.extendedNutrientsPer100g,
             },
             updatedAt: new Date(saved.lastUsedAt),
           });
@@ -246,6 +247,7 @@ export function DatabaseSearchModal({
             defaultServingG: item.qty > 0 ? item.qty : 100,
             defaultServingLabel: item.qty > 0 ? `${item.qty}${item.unit}` : undefined,
             portions: item.commonPortions,
+            extendedNutrientsPer100g: item.extendedNutrientsPer100g,
           },
           updatedAt: new Date(entry.updatedAt),
         });

@@ -83,7 +83,7 @@ export function Step3Goal({ selectedGoal, onSelect }: Step3GoalProps) {
               {isSelected && (
                 <Ionicons
                   name="checkmark-circle"
-                  size={24}
+                  size={22}
                   color={color}
                   style={styles.checkIcon}
                 />
@@ -131,9 +131,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   iconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

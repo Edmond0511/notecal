@@ -30,6 +30,7 @@ import {
   Keyboard,
   LayoutAnimation,
   Modal,
+  Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -816,12 +817,11 @@ export function DatabaseSearchModal({
             </View>
 
             {/* Search bar - hidden in detail view */}
-            {state.type !== "detail" && <View style={styles.searchContainer}>
+            {state.type !== "detail" && <Pressable style={styles.searchContainer} onPress={() => searchInputRef.current?.focus()}>
               <View style={styles.searchShadowWrapper}>
                 {showGlass ? (
                   <LiquidGlassView
                     style={styles.searchGlass}
-                    interactive
                     effect="regular"
                     tintColor="rgba(250, 250, 247, 0.3)"
                   >
@@ -836,6 +836,7 @@ export function DatabaseSearchModal({
                         onChangeText={setSearchText}
                         autoCorrect={false}
                         autoCapitalize="none"
+                        autoFocus
                         returnKeyType="search"
                       />
                       {searchText.length > 0 && (
@@ -862,6 +863,7 @@ export function DatabaseSearchModal({
                         onChangeText={setSearchText}
                         autoCorrect={false}
                         autoCapitalize="none"
+                        autoFocus
                         returnKeyType="search"
                       />
                       {searchText.length > 0 && (
@@ -877,7 +879,7 @@ export function DatabaseSearchModal({
                   </View>
                 )}
               </View>
-            </View>}
+            </Pressable>}
 
             {/* Selection strip */}
             {selectedItems.length > 0 && state.type !== "detail" && (
@@ -1479,7 +1481,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 6,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#E5E5E5',
   },
   resultCardRow: {
@@ -1589,7 +1591,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: "#fff",
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: Tokens.border,
   },
   servingLabel: {
@@ -1675,7 +1677,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: "#fff",
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: Tokens.border,
     gap: 8,
   },
@@ -1748,7 +1750,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: "#eee",
   },
   extendedRow: {
@@ -1793,7 +1795,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: "#ddd",
     paddingLeft: 12,
     paddingRight: 6,

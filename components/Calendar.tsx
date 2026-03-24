@@ -38,7 +38,7 @@ const DOT_COLORS = {
   red: '#EF5350',
 } as const;
 
-const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
   "January",
   "February",
@@ -403,7 +403,7 @@ export function Calendar({
                 accessibilityRole="button"
                 accessibilityLabel="Go to selected date"
               >
-                <Text style={styles.wheelGoButtonText}>Go to date</Text>
+                <Text style={styles.wheelGoButtonText}>Confirm</Text>
               </TouchableOpacity>
             </View>
           ) : (

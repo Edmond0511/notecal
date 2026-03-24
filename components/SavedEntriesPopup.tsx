@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 6,
     backgroundColor: Tokens.surfaceRaised,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#E5E5E5',
   },
   entryCardInner: {

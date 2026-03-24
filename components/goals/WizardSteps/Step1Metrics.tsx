@@ -30,13 +30,52 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
   const toggleHeightUnits = (useImperial: boolean) => {
     Keyboard.dismiss();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    updateFormData({ heightUseImperial: useImperial });
+    if (useImperial) {
+      const cm = parseFloat(formData.heightCm) || 0;
+      if (cm > 0) {
+        const totalInches = cm / 2.54;
+        const feet = Math.floor(totalInches / 12);
+        const inches = Math.round(totalInches % 12);
+        updateFormData({
+          heightUseImperial: true,
+          heightFeet: feet.toString(),
+          heightInches: (inches === 12 ? 0 : inches).toString(),
+        });
+      } else {
+        updateFormData({ heightUseImperial: true });
+      }
+    } else {
+      const feet = parseFloat(formData.heightFeet) || 0;
+      const inches = parseFloat(formData.heightInches) || 0;
+      if (feet > 0 || inches > 0) {
+        const cm = Math.round((feet * 30.48 + inches * 2.54) * 10) / 10;
+        updateFormData({ heightUseImperial: false, heightCm: cm.toString() });
+      } else {
+        updateFormData({ heightUseImperial: false });
+      }
+    }
   };
 
   const toggleWeightUnits = (useImperial: boolean) => {
     Keyboard.dismiss();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    updateFormData({ weightUseImperial: useImperial });
+    if (useImperial) {
+      const kg = parseFloat(formData.weightKg) || 0;
+      if (kg > 0) {
+        const lbs = Math.round(kg * 2.20462 * 10) / 10;
+        updateFormData({ weightUseImperial: true, weightLbs: lbs.toString() });
+      } else {
+        updateFormData({ weightUseImperial: true });
+      }
+    } else {
+      const lbs = parseFloat(formData.weightLbs) || 0;
+      if (lbs > 0) {
+        const kg = Math.round(lbs * 0.453592 * 10) / 10;
+        updateFormData({ weightUseImperial: false, weightKg: kg.toString() });
+      } else {
+        updateFormData({ weightUseImperial: false });
+      }
+    }
   };
 
   const selectSex = (sex: Sex) => {

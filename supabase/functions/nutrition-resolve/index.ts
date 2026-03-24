@@ -402,6 +402,7 @@ FORMATTING RULES:
 - Convert all quantities to grams (g) for consistency.
 - Use standard portion sizes if no quantity is specified.
 - Return ONLY valid JSON. No markdown formatting, no explanations.
+- NEVER use em dashes (—) anywhere in your output. Use commas, periods, semicolons, or hyphens (-) instead.
 - Set confidence:
    - 0.95-1.0: Exact brand match or precise weight given.
    - 0.8-0.9: Standard USDA generic match.
@@ -444,10 +445,10 @@ REASONING GUIDELINES:
 - portionNotes: How you handled the quantity (e.g., "specified 150g", "assumed medium size")
 - dataSource: The database or source used. Format as a markdown link "[Name](url)" whenever you know a real URL. Rules:
   1. For well-known branded items (McDonald's, Starbucks, KFC, etc.), link to their official nutrition page if you know the real URL.
-  2. For USDA generic foods, use the FDC food search URL: "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)" — replace FOOD_NAME with the URL-encoded food label (e.g., "banana" → "https://fdc.nal.usda.gov/food-search?query=banana", "chicken breast" → "https://fdc.nal.usda.gov/food-search?query=chicken+breast"). Do NOT fabricate a specific food ID number.
+  2. For USDA generic foods, use the FDC food search URL: "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)" - replace FOOD_NAME with the URL-encoded food label (e.g., "banana" -> "https://fdc.nal.usda.gov/food-search?query=banana", "chicken breast" -> "https://fdc.nal.usda.gov/food-search?query=chicken+breast"). Do NOT fabricate a specific food ID number.
   3. NEVER output a bare/raw URL like "https://..." or "(https://...)". Every URL must be wrapped in a markdown link [Name](url).
   4. NEVER fabricate specific food ID numbers (e.g., do not guess FDC numeric IDs). Use the search URL format instead.
-  5. Do NOT add bracket annotations like [snapshot], [cached], [estimated], [from database] — keep it clean.
+  5. Do NOT add bracket annotations like [snapshot], [cached], [estimated], [from database] - keep it clean.
 - confidenceExplanation: One-line summary using "High/Medium/Low confidence" (never the numeric %) followed by a short reason (e.g., "High confidence, USDA generic match with specified weight" or "Medium confidence, portion assumed and preparation method unknown")
 - confidenceAnalysis: 2-4 sentence paragraph. When referencing a source, only make it a clickable markdown link if you included a verified URL in dataSource. Otherwise reference by plain text name. Mention whether values were cross-referenced across sources. Cover: (1) how the food was identified and what data source was used, (2) whether the portion was specified or assumed and how that affects accuracy, (3) specific uncertainties or factors that raised or lowered confidence (e.g., preparation method unknown, brand vs generic, weight estimated from "1 medium").
 
@@ -829,7 +830,7 @@ OUTPUT FORMAT (JSON only, no markdown):
       "macros": {"kcal": 248, "protein": 46, "fat": 5, "carbs": 0, "fiber": 0, "sugar": 0, "sodium": 350, "potassium": 420},
       "commonPortions": [{"label": "1 breast", "grams": 170}, {"label": "1 palm-size", "grams": 85}, {"label": "100g", "grams": 100}],
       "reasoning": {
-        "interpretation": "Identified grilled chicken breast from visual appearance — pale, lean meat with grill marks",
+        "interpretation": "Identified grilled chicken breast from visual appearance - pale, lean meat with grill marks",
         "assumptions": ["Boneless skinless breast", "No added oil or sauce visible", "Grilled preparation based on char marks"],
         "portionNotes": "Estimated ~150g based on size relative to dinner plate",
         "dataSource": "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=chicken+breast)",
@@ -847,9 +848,10 @@ For each item, include a "commonPortions" array with 3-5 context-appropriate por
 DATA SOURCE FORMAT:
 - dataSource: Format as a markdown link "[Name](url)" whenever you know a real URL. Rules:
   1. For well-known branded items (McDonald's, Starbucks, KFC, etc.), link to their official nutrition page if you know the real URL.
-  2. For USDA generic foods, use the FDC food search URL: "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)" — replace FOOD_NAME with the URL-encoded food label.
+  2. For USDA generic foods, use the FDC food search URL: "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)" - replace FOOD_NAME with the URL-encoded food label.
   3. NEVER output a bare/raw URL. Every URL must be wrapped in a markdown link [Name](url).
   4. NEVER fabricate specific food ID numbers. Use the search URL format instead.
+  5. NEVER use em dashes anywhere in your output. Use commas, periods, semicolons, or hyphens (-) instead.
 
 Analyze the food in this photo:`;
 
@@ -1112,7 +1114,7 @@ async function callCorrectionAI(
   3. If feedback says values are "too high" or "too low" without specifics, adjust by 15-25% in the indicated direction
   4. If feedback specifies a brand or variant, use that product's official nutrition data
   5. If feedback is about quantity mismatch (e.g., "that's per 100g"), scale all values proportionally
-  6. CRITICAL: If a portion size is provided above, ALL corrected macros MUST be calculated for that exact portion size. Do NOT default to per-100g or a "standard serving" — use the specified quantity. For example, if the portion is 240g, return macros for 240g of the food.
+  6. CRITICAL: If a portion size is provided above, ALL corrected macros MUST be calculated for that exact portion size. Do NOT default to per-100g or a "standard serving" - use the specified quantity. For example, if the portion is 240g, return macros for 240g of the food.
 
   HANDLING DESCRIPTIVE CLARIFICATIONS:
   - If feedback provides a descriptive clarification (e.g., "this is grilled salmon", "it's a large apple", "actually brown rice") without explicitly mentioning inaccuracy, treat this as a request to RE-IDENTIFY the entry
@@ -1170,8 +1172,9 @@ async function callCorrectionAI(
   - 0.8-0.9: Standard USDA generic match
   - 0.6-0.7: AI estimate or complex preparation without recipe                
                                                          
-  IMPORTANT:                                             
-  - Return ONLY valid JSON, no markdown formatting       
+  IMPORTANT:
+  - Return ONLY valid JSON, no markdown formatting
+  - NEVER use em dashes (—) anywhere in your output. Use commas, periods, semicolons, or hyphens (-) instead.       
   - All macro fields are required (use original value if 
   unchanged)                                             
   - Always verify calorie/macro consistency before       

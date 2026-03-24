@@ -2413,7 +2413,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   itemLabel: {
-    fontSize: 19,
+    fontSize: 20,
     fontFamily: "System",
     fontWeight: "600",
     color: "#1a1a1a",
@@ -2492,7 +2492,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   macroLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: "System",
     fontWeight: "500",
     textTransform: "capitalize",
@@ -2515,20 +2515,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionLabel: {
-    fontSize: 11,
+    fontSize: 13,
+    fontFamily: 'System',
     fontWeight: '600',
     color: '#aaa',
     marginBottom: 2,
   },
   reasoningText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#4a4a4a',
     lineHeight: 22,
     fontFamily: 'System',
     fontWeight: '400',
   },
   assumptionText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#4a4a4a',
     marginBottom: 6,
     lineHeight: 22,
@@ -2536,7 +2537,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   sourceText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#4a4a4a',
     flex: 1,
     fontFamily: 'System',
@@ -3032,7 +3033,7 @@ const styles = StyleSheet.create({
     minWidth: 64,
   },
   portionPillItemSelected: {
-    backgroundColor: "#1A6872",
+    backgroundColor: "#D6F0F2",
   },
   portionPillItemLabel: {
     fontSize: 13,
@@ -3040,16 +3041,16 @@ const styles = StyleSheet.create({
     color: "#444",
   },
   portionPillItemLabelSelected: {
-    color: "#ffffff",
+    color: "#1A6872",
   },
   portionPillItemGrams: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "400",
     color: "#999",
     marginTop: 1,
   },
   portionPillItemGramsSelected: {
-    color: "rgba(255,255,255,0.7)",
+    color: "#1A6872",
   },
   unitPillRow: {
     flexDirection: "row",
@@ -3065,16 +3066,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   unitPillSelected: {
-    backgroundColor: "#1A6872",
+    backgroundColor: "#D6F0F2",
   },
   unitPillText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "System",
     fontWeight: "600",
     color: "#666",
   },
   unitPillTextSelected: {
-    color: "#ffffff",
+    color: "#1A6872",
   },
   editQuantityInputContainer: {
     flexDirection: "row",

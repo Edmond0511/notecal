@@ -87,9 +87,6 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
   if (filteredEntries.length === 0) {
     return (
       <Animated.View entering={FadeIn.duration(300)} style={styles.emptyContainer}>
-        <View style={styles.emptyIconContainer}>
-          <Ionicons name="scale-outline" size={32} color="#bbb" />
-        </View>
         <Text style={styles.emptyText}>No weight data yet</Text>
         <Text style={styles.emptySubtext}>
           Log your first weight to see your progress

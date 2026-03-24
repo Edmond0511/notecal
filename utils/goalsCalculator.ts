@@ -239,7 +239,7 @@ export function feetInchesToCm(feet: number, inches: number): number {
 export function cmToFeetInches(cm: number): { feet: number; inches: number } {
   const totalInches = cm / 2.54;
   const feet = Math.floor(totalInches / 12);
-  const inches = Math.round(totalInches % 12);
+  const inches = Math.round((totalInches % 12) * 100) / 100;
   return { feet, inches: inches === 12 ? 0 : inches };
 }
 
@@ -247,14 +247,14 @@ export function cmToFeetInches(cm: number): { feet: number; inches: number } {
  * Convert weight from pounds to kilograms
  */
 export function lbsToKg(lbs: number): number {
-  return Math.round(lbs * 0.453592 * 1000) / 1000;
+  return Math.round(lbs * 0.453592 * 100) / 100;
 }
 
 /**
  * Convert weight from kilograms to pounds
  */
 export function kgToLbs(kg: number): number {
-  return Math.round(kg * 2.20462 * 10) / 10;
+  return Math.round(kg * 2.20462 * 100) / 100;
 }
 
 /**

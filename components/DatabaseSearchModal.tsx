@@ -157,6 +157,7 @@ export function DatabaseSearchModal({
   const [commonResults, setCommonResults] = useState<DatabaseSearchResult[]>([]);
   const [brandedResults, setBrandedResults] = useState<DatabaseSearchResult[]>([]);
   const [portions, setPortions] = useState<CommonPortion[]>([]);
+  const [selectedPortionIndex, setSelectedPortionIndex] = useState<number | null>(null);
   const [portionsLoading, setPortionsLoading] = useState(false);
   const [macroOverrides, setMacroOverrides] = useState<Partial<Record<"kcal" | "protein" | "fat" | "carbs", number>>>({});
   const [editMacroPopup, setEditMacroPopup] = useState<{
@@ -273,6 +274,7 @@ export function DatabaseSearchModal({
       setState({ type: "idle" });
       setSearchText("");
       setServingGrams("");
+      setSelectedPortionIndex(null);
       setCommonResults([]);
       setBrandedResults([]);
       setPortions([]);
@@ -345,6 +347,7 @@ export function DatabaseSearchModal({
     Keyboard.dismiss();
     const defaultServing = result.defaultServingG ?? 100;
     setServingGrams(defaultServing.toString());
+    setSelectedPortionIndex(null);
     setEditingSelectedId(null);
     setMacroOverrides({});
     setExtendedOpen(false);
@@ -428,6 +431,7 @@ export function DatabaseSearchModal({
       setState({ type: "idle" });
     }
     setServingGrams("");
+    setSelectedPortionIndex(null);
   }, [commonResults, brandedResults]);
 
   const handleAdd = useCallback(() => {
@@ -462,6 +466,7 @@ export function DatabaseSearchModal({
         setState({ type: "idle" });
       }
       setServingGrams("");
+      setSelectedPortionIndex(null);
     } else if (selectedItems.length > 0) {
       // Multi-select mode: add to selection, go back to results
       const id = `sel-${++selectionIdCounter.current}`;
@@ -476,6 +481,7 @@ export function DatabaseSearchModal({
         setState({ type: "idle" });
       }
       setServingGrams("");
+      setSelectedPortionIndex(null);
     } else {
       // Single-item quick flow: add immediately and close
       onAddEntries([{ result: resultWithPortions, servingGrams: grams }]);
@@ -516,6 +522,7 @@ export function DatabaseSearchModal({
       Keyboard.dismiss();
       setEditingSelectedId(selected.id);
       setServingGrams(selected.servingGrams.toString());
+      setSelectedPortionIndex(null);
       setPortions(selected.portions);
       setPortionsLoading(false);
       setState({ type: "detail", result: selected.result });
@@ -546,6 +553,7 @@ export function DatabaseSearchModal({
       const current = parseFloat(servingGrams) || 100;
       const next = Math.max(1, current + delta);
       setServingGrams(next.toString());
+      setSelectedPortionIndex(null);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
     [servingGrams],
@@ -1066,7 +1074,7 @@ export function DatabaseSearchModal({
                           contentContainerStyle={styles.portionScrollContent}
                         >
                           {portions.map((portion, i) => {
-                            const isSelected = servingGrams === portion.grams.toString();
+                            const isSelected = selectedPortionIndex === i;
                             return (
                               <TouchableOpacity
                                 key={`${portion.label}-${i}`}
@@ -1078,6 +1086,7 @@ export function DatabaseSearchModal({
                                   Haptics.impactAsync(
                                     Haptics.ImpactFeedbackStyle.Light,
                                   );
+                                  setSelectedPortionIndex(i);
                                   setServingGrams(portion.grams.toString());
                                 }}
                                 activeOpacity={0.7}
@@ -1117,7 +1126,10 @@ export function DatabaseSearchModal({
                         <TextInput
                           style={styles.servingInput}
                           value={servingGrams}
-                          onChangeText={setServingGrams}
+                          onChangeText={(text) => {
+                            setServingGrams(text);
+                            setSelectedPortionIndex(null);
+                          }}
                           keyboardType="numeric"
                           selectTextOnFocus
                           returnKeyType="done"

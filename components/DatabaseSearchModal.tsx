@@ -830,8 +830,8 @@ export function DatabaseSearchModal({
                       <TextInput
                         ref={searchInputRef}
                         style={styles.searchInput}
-                        placeholder="Search for food item..."
-                        placeholderTextColor="#8E8E93"
+                        placeholder="Search"
+                        placeholderTextColor="#636366"
                         value={searchText}
                         onChangeText={setSearchText}
                         autoCorrect={false}
@@ -857,8 +857,8 @@ export function DatabaseSearchModal({
                       <TextInput
                         ref={searchInputRef}
                         style={styles.searchInput}
-                        placeholder="Search for food item..."
-                        placeholderTextColor="#8E8E93"
+                        placeholder="Search"
+                        placeholderTextColor="#636366"
                         value={searchText}
                         onChangeText={setSearchText}
                         autoCorrect={false}
@@ -1345,9 +1345,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1384,7 +1384,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    height: 44,
+    paddingVertical: 14,
   },
   searchIcon: {
     marginRight: 8,
@@ -1393,7 +1393,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontFamily: "System",
-    fontWeight: "400",
+    fontWeight: "600",
     color: Tokens.textPrimary,
     padding: 0,
   },
@@ -1605,11 +1605,11 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   stepperButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 18,
+    borderRadius: 20,
   },
   servingInputWrapper: {
     flexDirection: "row",

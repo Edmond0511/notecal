@@ -334,9 +334,9 @@ const styles = StyleSheet.create({
     color: Tokens.textPrimary,
   },
   editButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },

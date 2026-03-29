@@ -571,9 +571,9 @@ const styles = StyleSheet.create({
     right: 16,
   },
   settingsGlass: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
   },

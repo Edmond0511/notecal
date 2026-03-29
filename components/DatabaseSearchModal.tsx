@@ -953,7 +953,7 @@ export function DatabaseSearchModal({
                     style={[styles.centeredMessage, { paddingBottom: keyboardHeight }]}
                   >
                     <View style={styles.idleIconContainer}>
-                      <Ionicons name="search-outline" size={32} color={TEAL} />
+                      <Ionicons name="search-outline" size={32} color="#000" />
                     </View>
                     <Text style={styles.idleTitle}>Search for item in database</Text>
                     <Text style={styles.idleDescription}>
@@ -1437,7 +1437,6 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: Tokens.accentTint,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,

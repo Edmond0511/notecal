@@ -899,10 +899,10 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: "600",
     color: "#999",
-    letterSpacing: 0.5,
+    textTransform: "capitalize",
   },
   resetButton: {
     flexDirection: "row",

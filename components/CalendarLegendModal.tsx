@@ -309,10 +309,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: "600",
     color: "#999",
-    letterSpacing: 0.5,
+    textTransform: "capitalize",
     marginBottom: 8,
     marginLeft: 4,
   },

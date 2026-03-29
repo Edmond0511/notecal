@@ -358,15 +358,15 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   rowSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#aaa",
     fontWeight: "400",
     marginTop: 2,
   },
   hint: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#999",
-    lineHeight: 20,
+    lineHeight: 22,
     marginLeft: 4,
   },
 });

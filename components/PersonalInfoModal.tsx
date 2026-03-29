@@ -287,12 +287,12 @@ export function PersonalInfoModal({
     const displayWeightUnit = isEditing ? weightUnit : preferredUnits;
 
     return (
-      <View key={field}>
+      <View key={field} style={[
+        styles.metricRowWrapper,
+        isLast && !isEditing && styles.metricRowWrapperLast,
+      ]}>
         <TouchableOpacity
-          style={[
-            styles.metricRow,
-            isLast && !isEditing && styles.metricRowLast,
-          ]}
+          style={styles.metricRow}
           onPress={() => handleTapField(field)}
           activeOpacity={0.6}
         >
@@ -355,7 +355,7 @@ export function PersonalInfoModal({
             <Ionicons
               name="pencil"
               size={12}
-              color={isEditing ? "#1A6872" : "#999"}
+              color="#999"
               style={styles.metricEditIcon}
             />
           </View>
@@ -618,8 +618,10 @@ export function PersonalInfoModal({
                 style={styles.section}
               >
                 <Text style={styles.sectionTitle}>Body Mass Index</Text>
-                <View style={styles.card}>
-                  <BmiNumberLine bmi={bmi} />
+                <View style={styles.cardShadow}>
+                  <View style={styles.bmiCard}>
+                    <BmiNumberLine bmi={bmi} />
+                  </View>
                 </View>
               </Animated.View>
             </KeyboardAwareScrollView>
@@ -728,6 +730,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginLeft: 4,
   },
+  cardShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
   card: {
     backgroundColor: "#ffffff",
     borderRadius: 16,
@@ -738,16 +747,23 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
+  bmiCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
+  },
+  metricRowWrapper: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#eee",
+  },
+  metricRowWrapperLast: {
+    borderBottomWidth: 0,
+  },
   metricRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#eee",
-  },
-  metricRowLast: {
-    borderBottomWidth: 0,
   },
   metricLabel: {
     fontSize: 15,
@@ -765,7 +781,7 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
   },
   metricValueEditing: {
-    color: "#1A6872",
+    color: "#1a1a1a",
   },
   metricUnit: {
     fontSize: 13,
@@ -788,7 +804,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   editInput: {
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#F3F4F6",
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -796,8 +812,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#1a1a1a",
     minWidth: 80,
-    borderWidth: 1,
-    borderColor: "#1A6872",
+    borderColor: "#E8E7E3",
   },
   editUnit: {
     fontSize: 14,
@@ -814,7 +829,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
   },
   sexPillActive: {
@@ -839,7 +854,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#F3F4F6",
   },
   unitPillActive: {
     backgroundColor: "#E0F2F1",

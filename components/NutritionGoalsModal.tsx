@@ -701,8 +701,9 @@ export function NutritionGoalsModal({
                     <Animated.View
                       entering={FadeIn.duration(200)}
                       exiting={FadeOut.duration(200)}
-                      style={styles.waterTip}
+                      style={styles.waterTipShadow}
                     >
+                    <View style={styles.waterTip}>
                       <Text style={styles.waterTipTitle}>Track Water Intake</Text>
                       <Text style={styles.waterTipText}>
                         Log water in your notes using any unit:
@@ -726,6 +727,7 @@ export function NutritionGoalsModal({
                           <Text style={styles.waterTipUnitText}>oz</Text>
                         </View>
                       </View>
+                    </View>
                     </Animated.View>
                   )}
                 </Animated.View>
@@ -984,7 +986,7 @@ const styles = StyleSheet.create({
   targetInputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0f8f8",
+    backgroundColor: "#F3F4F6",
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -1063,19 +1065,22 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: "#fff",
   },
-  waterTip: {
-    backgroundColor: "#EAF3FB",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+  waterTipShadow: {
     marginTop: 12,
-    borderWidth: 1,
-    borderColor: "rgba(126, 179, 224, 0.2)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 1,
+  },
+  waterTip: {
+    backgroundColor: "#EAF3FB",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(126, 179, 224, 0.2)",
+    overflow: "hidden",
   },
   waterTipTitle: {
     fontSize: 14,

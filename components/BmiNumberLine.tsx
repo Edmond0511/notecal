@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getBMICategory } from "@/utils/goalsCalculator";
+import { AnimatedDigits } from "./AnimatedDigits";
 
 const BAR_HEIGHT = 8;
 
@@ -54,7 +55,18 @@ export function BmiNumberLine({ bmi }: BmiNumberLineProps) {
       {/* Header: value + category + info */}
       <View style={styles.header}>
         <View style={styles.valueRow}>
-          <Text style={styles.bmiValue}>{bmi}</Text>
+          <View style={styles.bmiValueRow}>
+            <AnimatedDigits
+              value={Math.floor(bmi)}
+              style={styles.bmiValue}
+            />
+            <Text style={styles.bmiValue}>.</Text>
+            <AnimatedDigits
+              value={Math.round((bmi % 1) * 10)}
+              maxDigits={1}
+              style={styles.bmiValue}
+            />
+          </View>
           <View style={[styles.categoryPill, { backgroundColor: category.color + "14" }]}>
             <Text style={[styles.categoryLabel, { color: category.color }]}>
               {category.label}
@@ -167,11 +179,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
+  bmiValueRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+  },
   bmiValue: {
-    fontSize: 32,
+    fontSize: 22,
     fontWeight: "700",
     color: "#1a1a1a",
-    letterSpacing: -0.5,
   },
   categoryPill: {
     flexDirection: "row",

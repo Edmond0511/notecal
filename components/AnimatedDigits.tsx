@@ -133,15 +133,15 @@ export const AnimatedDigits = memo(function AnimatedDigits({
   // Scale font down if total width exceeds maxWidth
   let fontSize = baseFontSize;
   if (maxWidth) {
-    const totalWidth = chars.length * Math.ceil(baseFontSize * 0.56);
+    const totalWidth = chars.length * Math.ceil(baseFontSize * 0.62);
     if (totalWidth > maxWidth) {
       const scale = Math.max(maxWidth / totalWidth, minimumFontScale);
       fontSize = Math.floor(baseFontSize * scale);
     }
   }
 
-  const digitHeight = Math.ceil(fontSize * 1.3);
-  const charWidth = Math.ceil(fontSize * 0.56);
+  const digitHeight = Math.ceil(fontSize * 1.4);
+  const charWidth = Math.ceil(fontSize * 0.62);
 
   return (
     <View

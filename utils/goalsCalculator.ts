@@ -239,7 +239,7 @@ export function feetInchesToCm(feet: number, inches: number): number {
 export function cmToFeetInches(cm: number): { feet: number; inches: number } {
   const totalInches = cm / 2.54;
   const feet = Math.floor(totalInches / 12);
-  const inches = Math.round((totalInches % 12) * 100) / 100;
+  const inches = Math.round(totalInches % 12);
   return { feet, inches: inches === 12 ? 0 : inches };
 }
 

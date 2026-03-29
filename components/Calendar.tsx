@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   weekdayText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "600",
     color: Tokens.textSecondary,
     letterSpacing: 0.2,

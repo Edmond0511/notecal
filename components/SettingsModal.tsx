@@ -239,7 +239,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                     </LiquidGlassView>
                   ) : (
                     <View style={[styles.backButton, styles.backButtonFallback]}>
-                      <Ionicons name="close" size={20} color="#666" />
+                      <Ionicons name="close" size={20} color={Tokens.textSecondary} />
                     </View>
                   )}
                 </TouchableOpacity>
@@ -268,7 +268,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
                   {isLoading ? (
                     <View style={styles.loadingContainer}>
-                      <ActivityIndicator size="small" color="#666" />
+                      <ActivityIndicator size="small" color={Tokens.textSecondary} />
                     </View>
                   ) : user && (
                     <>
@@ -301,7 +301,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           <Ionicons
                             name="cloud-done-outline"
                             size={14}
-                            color="#999"
+                            color={Tokens.textSecondary}
                           />
                           <Text style={styles.syncStatusText}>
                             Last synced {formatSyncTime(lastSynced)}
@@ -338,14 +338,14 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         <Ionicons
                           name="person-outline"
                           size={20}
-                          color="#333"
+                          color={Tokens.textPrimary}
                           style={{ marginRight: 12 }}
                         />
                         <Text style={styles.menuItemText}>Personal Info</Text>
                         <Ionicons
                           name="chevron-forward"
                           size={20}
-                          color="#ccc"
+                          color={Tokens.textTertiary}
                         />
                       </TouchableOpacity>
 
@@ -364,7 +364,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         <Ionicons
                           name="nutrition-outline"
                           size={20}
-                          color="#333"
+                          color={Tokens.textPrimary}
                           style={{ marginRight: 12 }}
                         />
                         <Text style={styles.menuItemText}>
@@ -373,7 +373,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         <Ionicons
                           name="chevron-forward"
                           size={20}
-                          color="#ccc"
+                          color={Tokens.textTertiary}
                         />
                       </TouchableOpacity>
 
@@ -392,14 +392,14 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         <Ionicons
                           name="flag-outline"
                           size={20}
-                          color="#333"
+                          color={Tokens.textPrimary}
                           style={{ marginRight: 12 }}
                         />
                         <Text style={styles.menuItemText}>Goals Setup</Text>
                         <Ionicons
                           name="chevron-forward"
                           size={20}
-                          color="#ccc"
+                          color={Tokens.textTertiary}
                         />
                       </TouchableOpacity>
 
@@ -418,14 +418,14 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         <Ionicons
                           name="scale-outline"
                           size={20}
-                          color="#333"
+                          color={Tokens.textPrimary}
                           style={{ marginRight: 12 }}
                         />
                         <Text style={styles.menuItemText}>Weight Tracking</Text>
                         <Ionicons
                           name="chevron-forward"
                           size={20}
-                          color="#ccc"
+                          color={Tokens.textTertiary}
                         />
                       </TouchableOpacity>
 
@@ -444,14 +444,14 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         <Ionicons
                           name="calendar-outline"
                           size={20}
-                          color="#333"
+                          color={Tokens.textPrimary}
                           style={{ marginRight: 12 }}
                         />
                         <Text style={styles.menuItemText}>Calendar Legend</Text>
                         <Ionicons
                           name="chevron-forward"
                           size={20}
-                          color="#ccc"
+                          color={Tokens.textTertiary}
                         />
                       </TouchableOpacity>
 
@@ -470,14 +470,14 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         <Ionicons
                           name="notifications-outline"
                           size={20}
-                          color="#333"
+                          color={Tokens.textPrimary}
                           style={{ marginRight: 12 }}
                         />
                         <Text style={styles.menuItemText}>Notifications</Text>
                         <Ionicons
                           name="chevron-forward"
                           size={20}
-                          color="#ccc"
+                          color={Tokens.textTertiary}
                         />
                       </TouchableOpacity>
 
@@ -508,7 +508,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         <Ionicons
                           name="list-outline"
                           size={20}
-                          color="#333"
+                          color={Tokens.textPrimary}
                           style={{ marginRight: 12 }}
                         />
                         <Text style={styles.menuItemText}>Entry Mode</Text>
@@ -532,7 +532,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         <Ionicons
                           name="return-down-back-outline"
                           size={20}
-                          color="#333"
+                          color={Tokens.textPrimary}
                           style={{ marginRight: 12 }}
                         />
                         <Text style={styles.menuItemText}>Submit on Enter</Text>
@@ -557,7 +557,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         <Ionicons
                           name="information-circle-outline"
                           size={20}
-                          color="#333"
+                          color={Tokens.textPrimary}
                           style={{ marginRight: 12 }}
                         />
                         <Text style={styles.menuItemText}>Version</Text>
@@ -579,7 +579,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                       activeOpacity={0.7}
                     >
                       {isSigningOut ? (
-                        <ActivityIndicator size="small" color="#666" />
+                        <ActivityIndicator size="small" color={Tokens.textSecondary} />
                       ) : (
                         <Text style={styles.signOutText}>Sign Out</Text>
                       )}
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -661,7 +661,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 12,
     paddingBottom: 8,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#ddd",
+    backgroundColor: Tokens.border,
   },
   header: {
     flexDirection: "row",
@@ -677,12 +677,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#FCFCFB",
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -695,8 +695,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontFamily: "System",
-    fontWeight: "700",
-    color: "#1a1a1a",
+    fontWeight: "600",
+    color: Tokens.textPrimary,
     textAlign: "center",
     letterSpacing: -0.3,
   },
@@ -710,26 +710,24 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#999",
+    fontSize: 15,
+    fontWeight: "500",
+    color: Tokens.textPrimary,
     textTransform: "capitalize",
-    marginBottom: 8,
-    marginLeft: 4,
+    marginBottom: 6,
+    marginLeft: 0,
   },
   loadingContainer: {
     padding: 24,
     alignItems: "center",
   },
   accountCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
+    ...Tokens.shadowLight,
   },
   accountInfo: {
     flexDirection: "row",
@@ -760,40 +758,36 @@ const styles = StyleSheet.create({
   accountEmail: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     marginBottom: 2,
   },
   accountProvider: {
     fontSize: 13,
-    color: "#666",
+    color: Tokens.textSecondary,
   },
   signOutButton: {
     alignItems: "center",
     paddingVertical: 14,
-    backgroundColor: "#ffffff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
+    ...Tokens.shadowLight,
   },
   signOutText: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#DC2626",
+    color: Tokens.error,
   },
   menuCardShadow: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    ...Tokens.shadowLight,
   },
   menuCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
   },
   menuItem: {
     flexDirection: "row",
@@ -802,18 +796,19 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     flex: 1,
-    fontSize: 16,
-    color: "#1a1a1a",
+    fontSize: 14,
+    color: Tokens.textPrimary,
     fontWeight: "500",
+    letterSpacing: -0.2,
   },
   menuItemValue: {
-    fontSize: 15,
-    color: "#999",
-    fontWeight: "600",
+    fontSize: 14,
+    color: Tokens.textSecondary,
+    fontWeight: "500",
   },
   menuDivider: {
     height: 1,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: Tokens.border,
     marginLeft: 45,
     marginRight: 20,
   },
@@ -826,6 +821,6 @@ const styles = StyleSheet.create({
   },
   syncStatusText: {
     fontSize: 12,
-    color: "#999",
+    color: Tokens.textSecondary,
   },
 });

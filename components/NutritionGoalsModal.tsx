@@ -689,6 +689,7 @@ export function NutritionGoalsModal({
                               value={enabled}
                               onValueChange={() => toggleNutrient(nutrient.key)}
                               trackColor={{ true: "#34C759" }}
+                              style={{ transform: [{ scale: 0.85 }] }}
                             />
                           </View>
                         );
@@ -834,7 +835,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -842,7 +843,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 12,
     paddingBottom: 8,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -850,7 +851,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#ddd",
+    backgroundColor: Tokens.border,
   },
   header: {
     flexDirection: "row",
@@ -858,12 +859,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -874,9 +875,9 @@ const styles = StyleSheet.create({
     width: 36,
   },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     textAlign: "center",
     letterSpacing: -0.3,
   },
@@ -901,10 +902,12 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#999",
+    fontSize: 15,
+    fontWeight: "500",
+    color: Tokens.textPrimary,
     textTransform: "capitalize",
+    marginBottom: 6,
+    marginLeft: 0,
   },
   resetButton: {
     flexDirection: "row",
@@ -923,20 +926,18 @@ const styles = StyleSheet.create({
   },
   sectionSubtitle: {
     fontSize: 13,
-    color: "#aaa",
+    color: Tokens.textTertiary,
     marginBottom: 12,
     marginLeft: 4,
   },
   goalsCardShadow: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    ...Tokens.shadowLight,
   },
   goalsCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
     paddingVertical: 4,
     overflow: "hidden",
   },
@@ -947,9 +948,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: Tokens.border,
     minHeight: 52,
-    backgroundColor: "#ffffff",
+    backgroundColor: Tokens.surfaceRaised,
   },
   targetRowLast: {
     borderBottomWidth: 0,
@@ -960,9 +961,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   targetLabel: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#333",
+    fontSize: 14,
+    fontWeight: "400",
+    color: Tokens.textPrimary,
+    letterSpacing: -0.2,
   },
   targetValueContainer: {
     flexDirection: "row",
@@ -970,14 +972,14 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   targetValue: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
+    fontSize: 14,
+    fontWeight: "400",
+    color: Tokens.textPrimary,
   },
   targetUnit: {
     fontSize: 14,
-    fontWeight: "500",
-    color: "#888",
+    fontWeight: "400",
+    color: Tokens.textSecondary,
   },
   targetEditIcon: {
     marginLeft: 4,
@@ -993,9 +995,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   targetInput: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
-    color: "#333",
+    color: Tokens.textPrimary,
     textAlign: "right",
     minWidth: 60,
     padding: 0,
@@ -1003,18 +1005,16 @@ const styles = StyleSheet.create({
   targetInputUnit: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#333",
+    color: Tokens.textPrimary,
   },
   toggleCardShadow: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    ...Tokens.shadowLight,
   },
   toggleCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
     overflow: "hidden",
   },
   toggleRow: {
@@ -1024,7 +1024,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: Tokens.border,
   },
   toggleRowLast: {
     borderBottomWidth: 0,
@@ -1035,21 +1035,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   toggleLabel: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#333",
+    fontSize: 14,
+    fontWeight: "400",
+    color: Tokens.textPrimary,
   },
   toggleUnit: {
     fontSize: 13,
-    color: "#999",
+    color: Tokens.textSecondary,
   },
   bottomActions: {
     flexDirection: "row",
     paddingHorizontal: 16,
     paddingTop: 16,
-    backgroundColor: "#f8f8f8",
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
+    backgroundColor: "#FCFCFB",
   },
   saveButton: {
     flex: 1,
@@ -1067,11 +1065,7 @@ const styles = StyleSheet.create({
   },
   waterTipShadow: {
     marginTop: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    ...Tokens.shadowLight,
   },
   waterTip: {
     backgroundColor: "#EAF3FB",

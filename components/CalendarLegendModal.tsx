@@ -192,8 +192,13 @@ export function CalendarLegendModal({
 
                 <View style={styles.card}>
                   {LEGEND_ITEMS.map((item, index) => (
-                    <React.Fragment key={index}>
-                      {index > 0 && <View style={styles.divider} />}
+                    <View
+                      key={index}
+                      style={[
+                        styles.rowWrapper,
+                        index === LEGEND_ITEMS.length - 1 && styles.rowWrapperLast,
+                      ]}
+                    >
                       <View style={styles.row}>
                         {item.type === "filled" ? (
                           <View
@@ -217,7 +222,7 @@ export function CalendarLegendModal({
                           </Text>
                         </View>
                       </View>
-                    </React.Fragment>
+                    </View>
                   ))}
                 </View>
               </Animated.View>
@@ -253,7 +258,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -261,7 +266,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 12,
     paddingBottom: 8,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -269,7 +274,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#ddd",
+    backgroundColor: Tokens.border,
   },
   header: {
     flexDirection: "row",
@@ -277,12 +282,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -293,9 +298,9 @@ const styles = StyleSheet.create({
     width: 36,
   },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     textAlign: "center",
     letterSpacing: -0.3,
   },
@@ -309,31 +314,32 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#999",
+    fontSize: 15,
+    fontWeight: "500",
+    color: Tokens.textPrimary,
     textTransform: "capitalize",
-    marginBottom: 8,
-    marginLeft: 4,
+    marginBottom: 6,
+    marginLeft: 0,
   },
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
+    overflow: "hidden",
+    ...Tokens.shadowLight,
+  },
+  rowWrapper: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Tokens.border,
+  },
+  rowWrapperLast: {
+    borderBottomWidth: 0,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#f0f0f0",
-    marginLeft: 38,
   },
   dot: {
     width: 10,
@@ -353,19 +359,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowTitle: {
-    fontSize: 16,
-    color: "#1a1a1a",
-    fontWeight: "500",
+    fontSize: 14,
+    color: Tokens.textPrimary,
+    fontWeight: "400",
+    letterSpacing: -0.2,
   },
   rowSubtitle: {
     fontSize: 14,
-    color: "#aaa",
+    color: Tokens.textSecondary,
     fontWeight: "400",
     marginTop: 2,
   },
   hint: {
     fontSize: 15,
-    color: "#999",
+    color: Tokens.textSecondary,
     lineHeight: 22,
     marginLeft: 4,
   },

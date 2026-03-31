@@ -1,3 +1,4 @@
+import { Tokens } from "@/constants/theme";
 import { CarbPreference, ProteinPreference } from "@/types";
 import * as Haptics from "expo-haptics";
 import React from "react";
@@ -168,7 +169,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   card: {
-    backgroundColor: "#f8f8f8",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -203,9 +203,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 16,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.07)",
   },
   optionButtonSelected: {
     backgroundColor: "#E0F2F1",
+    borderColor: "transparent",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,

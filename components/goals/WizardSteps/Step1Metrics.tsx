@@ -1,3 +1,4 @@
+import { Tokens } from "@/constants/theme";
 import { Sex } from "@/types";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { faMars, faVenus } from "@fortawesome/free-solid-svg-icons";
@@ -306,7 +307,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   card: {
-    backgroundColor: "#f8f8f8",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -387,12 +387,14 @@ const styles = StyleSheet.create({
     flex: 1,
     maxWidth: 120,
     height: 48,
-    backgroundColor: "#fff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     paddingHorizontal: 16,
     fontSize: 18,
     fontWeight: "500",
     color: "#333",
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.07)",
   },
   inputSmall: {
     maxWidth: 80,

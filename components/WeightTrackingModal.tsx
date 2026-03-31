@@ -512,7 +512,7 @@ export function WeightTrackingModal({
               }
               keyboardType="decimal-pad"
               placeholder="0.0"
-              placeholderTextColor="#ccc"
+              placeholderTextColor={Tokens.textTertiary}
               textAlign="center"
             />
             <Text style={styles.heroUnitLabel}>{unitLabel}</Text>
@@ -568,7 +568,7 @@ export function WeightTrackingModal({
                 onPress={onAddPhoto}
                 activeOpacity={0.7}
               >
-                <Ionicons name="camera-outline" size={22} color="#999" />
+                <Ionicons name="camera-outline" size={22} color={Tokens.textTertiary} />
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -594,7 +594,7 @@ export function WeightTrackingModal({
             <Ionicons
               name="checkmark"
               size={18}
-              color={saveEnabled ? "#fff" : "#aaa"}
+              color={saveEnabled ? "#fff" : Tokens.textTertiary}
               style={{ marginRight: 6 }}
             />
             <Text
@@ -655,7 +655,7 @@ export function WeightTrackingModal({
                       </LiquidGlassView>
                     ) : (
                       <View style={[styles.backButton, styles.backButtonFallback]}>
-                        <Ionicons name="chevron-back" size={20} color="#666" />
+                        <Ionicons name="chevron-back" size={20} color={Tokens.textSecondary} />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -696,7 +696,7 @@ export function WeightTrackingModal({
                   </LiquidGlassView>
                 ) : (
                   <View style={[styles.headerBackButton, styles.headerBackButtonFallback]}>
-                    <Ionicons name="chevron-back" size={20} color="#666" />
+                    <Ionicons name="chevron-back" size={20} color={Tokens.textSecondary} />
                   </View>
                 )}
               </TouchableOpacity>
@@ -841,7 +841,7 @@ export function WeightTrackingModal({
                               <Ionicons
                                 name="chevron-forward"
                                 size={18}
-                                color="#ccc"
+                                color={Tokens.textTertiary}
                               />
                             </View>
                           </TouchableOpacity>
@@ -919,7 +919,7 @@ export function WeightTrackingModal({
                       </LiquidGlassView>
                     ) : (
                       <View style={[styles.backButton, styles.backButtonFallback]}>
-                        <Ionicons name="chevron-back" size={20} color="#666" />
+                        <Ionicons name="chevron-back" size={20} color={Tokens.textSecondary} />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -992,7 +992,7 @@ export function WeightTrackingModal({
                       </LiquidGlassView>
                     ) : (
                       <View style={[styles.backButton, styles.backButtonFallback]}>
-                        <Ionicons name="chevron-back" size={20} color="#666" />
+                        <Ionicons name="chevron-back" size={20} color={Tokens.textSecondary} />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -1062,7 +1062,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
@@ -1070,7 +1070,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 10,
     paddingBottom: 4,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
@@ -1078,7 +1078,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: "#ddd",
+    backgroundColor: Tokens.border,
   },
   header: {
     flexDirection: "row",
@@ -1086,12 +1086,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
   },
   headerBackButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1104,7 +1104,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     letterSpacing: -0.3,
   },
   content: {
@@ -1118,25 +1118,24 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#999",
+    fontSize: 15,
+    fontWeight: "500",
+    color: Tokens.textPrimary,
     textTransform: "capitalize",
-    marginBottom: 8,
-    marginLeft: 4,
+    marginBottom: 6,
+    marginLeft: 0,
   },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
+    backgroundColor: Tokens.surfaceRaised,
+    borderRadius: 16,
     padding: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
+    ...Tokens.shadowLight,
   },
   rangeToggle: {
     flexDirection: "row",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#FCFCFB",
     borderRadius: 9,
     padding: 2,
     marginBottom: 12,
@@ -1148,17 +1147,13 @@ const styles = StyleSheet.create({
     borderRadius: 7,
   },
   rangeButtonActive: {
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: Tokens.surfaceRaised,
+    ...Tokens.shadowLight,
   },
   rangeButtonText: {
     fontSize: 12,
     fontWeight: "500",
-    color: "#999",
+    color: Tokens.textTertiary,
   },
   rangeButtonTextActive: {
     color: "#1A6872",
@@ -1167,34 +1162,33 @@ const styles = StyleSheet.create({
   entryCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 14,
+    backgroundColor: Tokens.surfaceRaised,
+    borderRadius: 16,
     paddingHorizontal: 14,
     height: 62,
     marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
+    ...Tokens.shadowLight,
   },
   entryContent: {
     flex: 1,
   },
   entryLabel: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#1a1a1a",
+    fontSize: 14,
+    fontWeight: "400",
+    color: Tokens.textPrimary,
     letterSpacing: -0.2,
     marginBottom: 2,
   },
   entryDelta: {
     fontSize: 13,
     fontWeight: "400",
-    color: "#999",
+    color: Tokens.textTertiary,
   },
   entryDate: {
     fontSize: 13,
-    color: "#999",
+    color: Tokens.textTertiary,
   },
   historyPhotoGroup: {
     position: "relative",
@@ -1204,7 +1198,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 8,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: Tokens.border,
   },
   historyPhotoBadge: {
     position: "absolute",
@@ -1237,7 +1231,7 @@ const styles = StyleSheet.create({
   },
   // Footer
   footer: {
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
     paddingHorizontal: 16,
     paddingTop: 14,
   },
@@ -1266,7 +1260,7 @@ const styles = StyleSheet.create({
   },
   popupOverlayContainer: {
     flex: 1,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -1283,9 +1277,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1295,7 +1289,7 @@ const styles = StyleSheet.create({
   popupOverlayTitle: {
     fontSize: 17,
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     textAlign: "center",
     letterSpacing: -0.3,
   },
@@ -1320,7 +1314,7 @@ const styles = StyleSheet.create({
   heroWeightInput: {
     fontSize: 56,
     fontWeight: "700",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     padding: 0,
     minWidth: 120,
     letterSpacing: -1,
@@ -1328,7 +1322,7 @@ const styles = StyleSheet.create({
   heroUnitLabel: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#999",
+    color: Tokens.textTertiary,
     textTransform: "uppercase",
     letterSpacing: 1.5,
     marginTop: 2,
@@ -1337,7 +1331,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: "#ccc",
+    backgroundColor: Tokens.border,
     marginTop: 10,
   },
   // Date tap label
@@ -1350,14 +1344,14 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: 24,
     borderRadius: 20,
-    backgroundColor: "#fff",
+    backgroundColor: Tokens.surfaceRaised,
     borderWidth: 1,
-    borderColor: "#E8E8E8",
+    borderColor: Tokens.border,
   },
   dateTapText: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#666",
+    color: Tokens.textSecondary,
   },
   // Photos section
   photosSection: {},
@@ -1371,8 +1365,8 @@ const styles = StyleSheet.create({
   photosSectionLabel: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#999",
-    letterSpacing: 0.8,
+    color: Tokens.textPrimary,
+    letterSpacing: -0.2,
   },
   photoStrip: {
     flexDirection: "row",
@@ -1387,7 +1381,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 12,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: Tokens.border,
   },
   photoThumbRemove: {
     position: "absolute",
@@ -1398,9 +1392,9 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 12,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#FCFCFB",
     borderWidth: 1.5,
-    borderColor: "#ddd",
+    borderColor: Tokens.border,
     borderStyle: "dashed",
     alignItems: "center",
     justifyContent: "center",
@@ -1409,7 +1403,7 @@ const styles = StyleSheet.create({
   saveButtonContainer: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
   },
   saveButton: {
     flexDirection: "row",
@@ -1424,7 +1418,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   saveButtonDisabled: {
-    backgroundColor: "#E5E5E5",
+    backgroundColor: Tokens.border,
     shadowOpacity: 0,
   },
   saveButtonText: {
@@ -1433,7 +1427,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   saveButtonTextDisabled: {
-    color: "#aaa",
+    color: Tokens.textTertiary,
   },
   // Full-screen image preview
   previewOverlay: {

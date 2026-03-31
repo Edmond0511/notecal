@@ -454,7 +454,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
                   </LiquidGlassView>
                 ) : (
                   <View style={[styles.headerBackButton, styles.headerBackButtonFallback]}>
-                    <Ionicons name="chevron-back" size={20} color="#666" />
+                    <Ionicons name="chevron-back" size={20} color={Tokens.textSecondary} />
                   </View>
                 )}
               </TouchableOpacity>
@@ -512,7 +512,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
                   style={styles.backButton}
                   onPress={goToPreviousStep}
                 >
-                  <Ionicons name="arrow-back" size={20} color="#666" />
+                  <Ionicons name="arrow-back" size={20} color={Tokens.textSecondary} />
                   <Text style={styles.backButtonText}>Back</Text>
                 </TouchableOpacity>
               ) : (
@@ -539,7 +539,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
                   <Ionicons
                     name="arrow-forward"
                     size={20}
-                    color={canProceed() ? '#fff' : '#999'}
+                    color={canProceed() ? '#fff' : Tokens.textTertiary}
                   />
                 </TouchableOpacity>
               ) : (
@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#FCFCFB',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     paddingBottom: 8,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#FCFCFB',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#ddd',
+    backgroundColor: Tokens.border,
   },
   header: {
     flexDirection: 'row',
@@ -596,12 +596,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#FCFCFB',
   },
   headerBackButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -615,15 +615,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "600",
-    color: '#1a1a1a',
+    color: Tokens.textPrimary,
     textAlign: 'center',
     letterSpacing: -0.3,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: '#888',
+    color: Tokens.textSecondary,
     marginTop: 2,
   },
   progressContainer: {
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: Tokens.border,
   },
   progressDotActive: {
     backgroundColor: '#1A6872',
@@ -671,7 +671,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#666',
+    color: Tokens.textSecondary,
     marginLeft: 4,
   },
   nextButton: {
@@ -684,7 +684,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   nextButtonDisabled: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: Tokens.border,
   },
   nextButtonText: {
     fontSize: 16,
@@ -692,7 +692,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   nextButtonTextDisabled: {
-    color: '#999',
+    color: Tokens.textTertiary,
   },
   saveButton: {
     flexDirection: 'row',

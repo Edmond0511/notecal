@@ -1,3 +1,4 @@
+import { Tokens } from "@/constants/theme";
 import { UserGoals } from "@/types";
 import {
   getActivityLevelDescription,
@@ -607,7 +608,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   otherNutrientsCard: {
-    backgroundColor: "#f8f8f8",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -641,7 +641,6 @@ const styles = StyleSheet.create({
     color: "#888",
   },
   summaryCard: {
-    backgroundColor: "#f8f8f8",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -665,7 +664,6 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   weightTargetCard: {
-    backgroundColor: "#f8f8f8",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,

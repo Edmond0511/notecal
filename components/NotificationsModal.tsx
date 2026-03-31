@@ -181,12 +181,14 @@ function ReminderRow({
             value={reminder.enabled}
             onValueChange={() => onToggleReminder(reminder.id)}
             trackColor={{ false: "#E8E7E3", true: "#34C759" }}
+            style={{ transform: [{ scale: 0.85 }] }}
           />
         ) : (
           <Switch
             value={reminder.enabled}
             onValueChange={() => onToggleReminder(reminder.id)}
             trackColor={{ false: "#E8E7E3", true: "#34C759" }}
+            style={{ transform: [{ scale: 0.85 }] }}
           />
         )}
       </View>
@@ -696,6 +698,7 @@ export function NotificationsModal({
                           value={notificationsEnabled}
                           onValueChange={handleMasterToggle}
                           trackColor={{ false: "#E8E7E3", true: "#34C759" }}
+                          style={{ transform: [{ scale: 0.85 }] }}
                         />
                       </View>
                     </View>
@@ -712,8 +715,13 @@ export function NotificationsModal({
                     <View style={styles.cardShadow}>
                       <View style={styles.card}>
                         {mealReminders.map((reminder, index) => (
-                          <React.Fragment key={reminder.id}>
-                            {index > 0 && <View style={styles.divider} />}
+                          <View
+                            key={reminder.id}
+                            style={[
+                              styles.rowWrapper,
+                              index === mealReminders.length - 1 && styles.rowWrapperLast,
+                            ]}
+                          >
                             <ReminderRow
                               reminder={reminder}
                               isDefault={!!reminder.isDefault}
@@ -735,7 +743,7 @@ export function NotificationsModal({
                               onToggleReminder={handleToggleReminder}
                               onDelete={handleDeleteReminder}
                             />
-                          </React.Fragment>
+                          </View>
                         ))}
                       </View>
                     </View>
@@ -777,7 +785,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
   },
@@ -785,7 +793,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 12,
     paddingBottom: 8,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
   },
@@ -793,7 +801,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#ddd",
+    backgroundColor: Tokens.border,
   },
   header: {
     flexDirection: "row",
@@ -801,12 +809,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FCFCFB",
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -822,7 +830,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     color: Tokens.textPrimary,
     textAlign: "center",
     letterSpacing: -0.3,
@@ -837,12 +845,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Tokens.textSecondary,
+    fontSize: 15,
+    fontWeight: "500",
+    color: Tokens.textPrimary,
     textTransform: "capitalize",
-    marginBottom: 8,
-    marginLeft: 4,
+    marginBottom: 6,
+    marginLeft: 0,
   },
   cardShadow: {
     ...Tokens.shadowLight,
@@ -851,6 +859,8 @@ const styles = StyleSheet.create({
     backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
   },
   row: {
     flexDirection: "row",
@@ -859,15 +869,17 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   rowLabel: {
-    fontSize: 16,
-    fontWeight: "500",
+    fontSize: 14,
+    fontWeight: "400",
     color: Tokens.textPrimary,
+    letterSpacing: -0.2,
   },
-  divider: {
-    height: 1,
-    backgroundColor: "#f0f0f0",
-    marginLeft: 16,
-    marginRight: 16,
+  rowWrapper: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Tokens.border,
+  },
+  rowWrapperLast: {
+    borderBottomWidth: 0,
   },
   reminderRow: {
     flexDirection: "row",
@@ -884,7 +896,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: SWIPE_ACTION_WIDTH,
-    backgroundColor: "#F87171",
+    backgroundColor: Tokens.error,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -899,9 +911,10 @@ const styles = StyleSheet.create({
   },
   reminderName: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: "500",
+    fontSize: 14,
+    fontWeight: "400",
     color: Tokens.textPrimary,
+    letterSpacing: -0.2,
   },
   timePill: {
     backgroundColor: "rgba(120, 120, 128, 0.12)",
@@ -911,8 +924,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   timePillText: {
-    fontSize: 15,
-    fontWeight: "500",
+    fontSize: 14,
+    fontWeight: "400",
     color: Tokens.textPrimary,
   },
   timePickerContainer: {
@@ -921,7 +934,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   timePickerWrapper: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 24,
     overflow: "hidden",
   },
@@ -942,7 +955,7 @@ const styles = StyleSheet.create({
   popupGestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FCFCFB",
   },
   popupBackdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -953,7 +966,7 @@ const styles = StyleSheet.create({
   },
   popupContainer: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
   },
@@ -961,7 +974,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 12,
     paddingBottom: 8,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
   },
@@ -969,7 +982,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#ddd",
+    backgroundColor: Tokens.border,
   },
   popupHeader: {
     flexDirection: "row",
@@ -981,7 +994,7 @@ const styles = StyleSheet.create({
   popupTitle: {
     fontSize: 17,
     fontFamily: "System",
-    fontWeight: "700",
+    fontWeight: "600",
     color: Tokens.textPrimary,
     textAlign: "center",
     letterSpacing: -0.3,
@@ -997,7 +1010,7 @@ const styles = StyleSheet.create({
   },
   popupDivider: {
     height: 1,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: Tokens.border,
   },
   popupTimePicker: {
     height: 150,

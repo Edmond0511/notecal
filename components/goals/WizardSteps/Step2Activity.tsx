@@ -1,3 +1,4 @@
+import { Tokens } from "@/constants/theme";
 import { ActivityLevel } from "@/types";
 import { getActivityLevelDescription } from "@/utils/goalsCalculator";
 import { Ionicons } from "@expo/vector-icons";
@@ -119,7 +120,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    backgroundColor: "#f8f8f8",
     borderRadius: 16,
   },
   optionCardSelected: {

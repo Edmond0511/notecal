@@ -1,3 +1,4 @@
+import { Tokens } from "@/constants/theme";
 import {
   calculateGoalAdjustment,
   kgToLbs,
@@ -301,9 +302,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     height: 48,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 12,
     paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.07)",
   },
   readOnlyValue: {
     fontSize: 18,
@@ -318,10 +321,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     height: 48,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 12,
     paddingHorizontal: 16,
     gap: 4,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.07)",
   },
   targetTextInput: {
     flex: 1,
@@ -342,11 +347,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     height: 48,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 12,
     paddingHorizontal: 16,
     gap: 4,
     flex: 1,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.07)",
   },
   timelineTextInput: {
     flex: 1,

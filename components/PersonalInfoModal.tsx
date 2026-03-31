@@ -355,7 +355,7 @@ export function PersonalInfoModal({
             <Ionicons
               name="pencil"
               size={12}
-              color="#999"
+              color={Tokens.textTertiary}
               style={styles.metricEditIcon}
             />
           </View>
@@ -372,7 +372,7 @@ export function PersonalInfoModal({
               autoFocus
               selectTextOnFocus
               placeholder="18-100"
-              placeholderTextColor="#ccc"
+              placeholderTextColor={Tokens.textTertiary}
             />
             <Text style={styles.editUnit}>years</Text>
           </View>
@@ -440,7 +440,7 @@ export function PersonalInfoModal({
                     autoFocus
                     selectTextOnFocus
                     placeholder="5"
-                    placeholderTextColor="#ccc"
+                    placeholderTextColor={Tokens.textTertiary}
                   />
                   <Text style={styles.editUnit}>ft</Text>
                   <TextInput
@@ -457,7 +457,7 @@ export function PersonalInfoModal({
                     keyboardType="number-pad"
                     selectTextOnFocus
                     placeholder="10"
-                    placeholderTextColor="#ccc"
+                    placeholderTextColor={Tokens.textTertiary}
                   />
                   <Text style={styles.editUnit}>in</Text>
                 </>
@@ -479,7 +479,7 @@ export function PersonalInfoModal({
                     autoFocus
                     selectTextOnFocus
                     placeholder="170"
-                    placeholderTextColor="#ccc"
+                    placeholderTextColor={Tokens.textTertiary}
                   />
                   <Text style={styles.editUnit}>cm</Text>
                 </>
@@ -505,7 +505,7 @@ export function PersonalInfoModal({
                     autoFocus
                     selectTextOnFocus
                     placeholder="150"
-                    placeholderTextColor="#ccc"
+                    placeholderTextColor={Tokens.textTertiary}
                   />
                   <Text style={styles.editUnit}>lbs</Text>
                 </>
@@ -523,7 +523,7 @@ export function PersonalInfoModal({
                     autoFocus
                     selectTextOnFocus
                     placeholder="70"
-                    placeholderTextColor="#ccc"
+                    placeholderTextColor={Tokens.textTertiary}
                   />
                   <Text style={styles.editUnit}>kg</Text>
                 </>
@@ -577,7 +577,7 @@ export function PersonalInfoModal({
                   </LiquidGlassView>
                 ) : (
                   <View style={[styles.backButton, styles.backButtonFallback]}>
-                    <Ionicons name="chevron-back" size={20} color="#666" />
+                    <Ionicons name="chevron-back" size={20} color={Tokens.textSecondary} />
                   </View>
                 )}
               </TouchableOpacity>
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 12,
     paddingBottom: 8,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#ddd",
+    backgroundColor: Tokens.border,
   },
   header: {
     flexDirection: "row",
@@ -691,12 +691,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -707,9 +707,9 @@ const styles = StyleSheet.create({
     width: 36,
   },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     textAlign: "center",
     letterSpacing: -0.3,
   },
@@ -723,38 +723,33 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#999",
+    fontSize: 15,
+    fontWeight: "500",
+    color: Tokens.textPrimary,
     textTransform: "capitalize",
-    marginBottom: 8,
-    marginLeft: 4,
+    marginBottom: 6,
+    marginLeft: 0,
   },
   cardShadow: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    ...Tokens.shadowLight,
   },
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
+    ...Tokens.shadowLight,
   },
   bmiCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     padding: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
   },
   metricRowWrapper: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#eee",
+    borderBottomColor: Tokens.border,
   },
   metricRowWrapperLast: {
     borderBottomWidth: 0,
@@ -763,12 +758,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
+    padding: 16,
   },
   metricLabel: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#666",
+    fontSize: 14,
+    fontWeight: "400",
+    color: Tokens.textPrimary,
+    letterSpacing: -0.2,
   },
   metricValueContainer: {
     flexDirection: "row",
@@ -776,17 +772,17 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   metricValue: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1a1a1a",
+    fontSize: 14,
+    fontWeight: "400",
+    color: Tokens.textPrimary,
   },
   metricValueEditing: {
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
   },
   metricUnit: {
     fontSize: 13,
     fontWeight: "400",
-    color: "#999",
+    color: Tokens.textTertiary,
   },
   metricEditIcon: {
     marginLeft: 4,
@@ -800,7 +796,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingHorizontal: 16,
     gap: 8,
   },
   editInput: {
@@ -810,20 +806,20 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     minWidth: 80,
     borderColor: "#E8E7E3",
   },
   editUnit: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#999",
+    color: Tokens.textTertiary,
   },
   sexToggleRow: {
     flexDirection: "row",
     gap: 10,
     paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingHorizontal: 16,
   },
   sexPill: {
     flex: 1,
@@ -838,7 +834,7 @@ const styles = StyleSheet.create({
   sexPillText: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#666",
+    color: Tokens.textSecondary,
   },
   sexPillTextActive: {
     color: "#fff",
@@ -846,7 +842,7 @@ const styles = StyleSheet.create({
   unitToggleRow: {
     flexDirection: "row",
     gap: 6,
-    paddingHorizontal: 4,
+    paddingHorizontal: 16,
     paddingTop: 6,
     paddingBottom: 2,
   },
@@ -862,7 +858,7 @@ const styles = StyleSheet.create({
   unitPillText: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#999",
+    color: Tokens.textTertiary,
   },
   unitPillTextActive: {
     color: "#1A6872",
@@ -875,9 +871,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 16,
     paddingTop: 12,
-    backgroundColor: "#f8f8f8",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#e0e0e0",
+    backgroundColor: "#FCFCFB",
   },
   saveButton: {
     backgroundColor: "#1A6872",

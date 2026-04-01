@@ -23,6 +23,7 @@ import * as Haptics from "expo-haptics";
 import React, { useCallback, useRef, useState } from "react";
 import {
   Dimensions,
+  Image,
   Keyboard,
   LayoutAnimation,
   Linking,
@@ -155,8 +156,38 @@ function getTimeBadgeStyle(date: Date): { background: string; text: string; icon
   }
 }
 
+function getDomainFromUrl(url: string): string {
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+function getFaviconUrl(url: string): string {
+  const domain = getDomainFromUrl(url);
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+}
+
+function shortenDomain(domain: string): string {
+  // Show concise domain labels
+  if (domain.includes("fdc.nal.usda.gov")) return "USDA FDC";
+  if (domain.includes("usda.gov")) return "USDA";
+  if (domain.includes("mcdonalds.com")) return "McDonald's";
+  if (domain.includes("starbucks.com")) return "Starbucks";
+  if (domain.includes("openfoodfacts.org")) return "Open Food Facts";
+  if (domain.includes("food-guide.canada.ca")) return "CNF";
+  // Default: use first meaningful part of domain
+  const parts = domain.split(".");
+  if (parts.length >= 2) {
+    return parts[parts.length - 2].charAt(0).toUpperCase() + parts[parts.length - 2].slice(1);
+  }
+  return domain;
+}
+
 // Parse both markdown [text](url) and HTML <a href="url">text</a> links
-function ParsedText({ text, style }: { text: string; style: any }) {
+function ParsedText({ text, style, pillLinks }: { text: string; style: any; pillLinks?: boolean }) {
   if (!text) return <Text style={style}></Text>;
 
   // Support both markdown and HTML style links
@@ -233,6 +264,53 @@ function ParsedText({ text, style }: { text: string; style: any }) {
   // If no links found, just return the text
   if (parts.length === 0) {
     return <Text style={style}>{text}</Text>;
+  }
+
+  // Pill link mode: render links as favicon pill buttons
+  if (pillLinks) {
+    const textParts = parts.filter((p) => p.type === "text");
+    const linkParts = parts.filter((p) => p.type === "link");
+
+    return (
+      <View>
+        {textParts.some((p) => p.content.trim()) && (
+          <Text style={style}>
+            {textParts.map((part, i) => (
+              <Text key={i}>{part.content}</Text>
+            ))}
+          </Text>
+        )}
+        <View style={styles.sourcePillRow}>
+          {linkParts.map((part, index) => {
+            const domain = part.url ? getDomainFromUrl(part.url) : "";
+            const label = part.url ? shortenDomain(domain) : part.content;
+            return (
+              <TouchableOpacity
+                key={index}
+                style={styles.sourcePill}
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (part.url) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    Linking.openURL(part.url);
+                  }
+                }}
+              >
+                {part.url && (
+                  <Image
+                    source={{ uri: getFaviconUrl(part.url) }}
+                    style={styles.sourceFavicon}
+                  />
+                )}
+                <Text style={styles.sourcePillText} numberOfLines={1}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+    );
   }
 
   return (
@@ -1906,6 +1984,7 @@ export function NutritionReasoningPopup({
                           <ParsedText
                             text={item.reasoning.dataSource}
                             style={styles.sourceText}
+                            pillLinks
                           />
                         </View>
                       )}
@@ -2543,6 +2622,33 @@ const styles = StyleSheet.create({
     fontFamily: 'System',
     fontWeight: '400',
     lineHeight: 22,
+  },
+  sourcePillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 6,
+  },
+  sourcePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 100,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    gap: 6,
+  },
+  sourceFavicon: {
+    width: 14,
+    height: 14,
+    borderRadius: 3,
+  },
+  sourcePillText: {
+    fontSize: 12,
+    fontFamily: 'System',
+    fontWeight: '500',
+    color: '#555',
+    maxWidth: 140,
   },
   totalsSection: {
     marginTop: 4,

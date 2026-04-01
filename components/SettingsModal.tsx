@@ -12,6 +12,7 @@ import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   Image,
   Modal,
@@ -94,6 +95,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
 
   const handleClose = () => {
@@ -194,6 +196,55 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsSigningOut(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      "Delete Account?",
+      "This will permanently delete your account and all associated data. This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Are you sure?",
+              "All your food entries, saved entries, weight data, goals, and nutrition history will be permanently deleted.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Yes, Delete Everything",
+                  style: "destructive",
+                  onPress: performAccountDeletion,
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
+  };
+
+  const performAccountDeletion = async () => {
+    setIsDeletingAccount(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    try {
+      const { error } = await supabase.functions.invoke("account-delete");
+      if (error) throw error;
+      // Sign out locally — triggers AuthContext SIGNED_OUT handler
+      // which runs clearUserData(), stops sync services, clears queues
+      await supabase.auth.signOut();
+      setUser(null);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onClose();
+    } catch (error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert("Error", "Failed to delete account. Please try again.");
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
@@ -517,9 +568,32 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                   </View>
                 </Animated.View>
 
-                {/* Legal Section */}
+                {/* About Section */}
                 <Animated.View
                   entering={FadeInDown.delay(300).duration(400)}
+                  style={styles.section}
+                >
+                  <Text style={styles.sectionTitle}>About</Text>
+
+                  <View style={styles.menuCardShadow}>
+                    <View style={styles.menuCard}>
+                      <View style={styles.menuItem}>
+                        <Ionicons
+                          name="information-circle-outline"
+                          size={20}
+                          color={Tokens.textPrimary}
+                          style={{ marginRight: 12 }}
+                        />
+                        <Text style={styles.menuItemText}>Version</Text>
+                        <Text style={styles.menuItemValue}>1.0.0</Text>
+                      </View>
+                    </View>
+                  </View>
+                </Animated.View>
+
+                {/* Legal Section */}
+                <Animated.View
+                  entering={FadeInDown.delay(400).duration(400)}
                   style={styles.section}
                 >
                   <Text style={styles.sectionTitle}>Legal</Text>
@@ -579,29 +653,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                   </View>
                 </Animated.View>
 
-                {/* About Section */}
-                <Animated.View
-                  entering={FadeInDown.delay(400).duration(400)}
-                  style={styles.section}
-                >
-                  <Text style={styles.sectionTitle}>About</Text>
-
-                  <View style={styles.menuCardShadow}>
-                    <View style={styles.menuCard}>
-                      <View style={styles.menuItem}>
-                        <Ionicons
-                          name="information-circle-outline"
-                          size={20}
-                          color={Tokens.textPrimary}
-                          style={{ marginRight: 12 }}
-                        />
-                        <Text style={styles.menuItemText}>Version</Text>
-                        <Text style={styles.menuItemValue}>2.0.0</Text>
-                      </View>
-                    </View>
-                  </View>
-                </Animated.View>
-
                 {user && (
                   <Animated.View
                     entering={FadeInDown.delay(600).duration(400)}
@@ -610,13 +661,28 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                     <TouchableOpacity
                       style={styles.signOutButton}
                       onPress={handleSignOut}
-                      disabled={isSigningOut}
+                      disabled={isSigningOut || isDeletingAccount}
                       activeOpacity={0.7}
                     >
                       {isSigningOut ? (
                         <ActivityIndicator size="small" color={Tokens.textSecondary} />
                       ) : (
                         <Text style={styles.signOutText}>Sign Out</Text>
+                      )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.deleteAccountButton}
+                      onPress={handleDeleteAccount}
+                      disabled={isDeletingAccount || isSigningOut}
+                      activeOpacity={0.7}
+                    >
+                      {isDeletingAccount ? (
+                        <ActivityIndicator size="small" color={Tokens.error} />
+                      ) : (
+                        <Text style={styles.deleteAccountText}>
+                          Delete Account
+                        </Text>
                       )}
                     </TouchableOpacity>
                   </Animated.View>
@@ -809,17 +875,34 @@ const styles = StyleSheet.create({
   },
   signOutButton: {
     alignItems: "center",
-    paddingVertical: 14,
+    padding: 16,
     backgroundColor: Tokens.surfaceRaised,
-    borderRadius: 16,
+    borderRadius: 99,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(0, 0, 0, 0.07)",
     ...Tokens.shadowLight,
   },
   signOutText: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "500",
+    color: Tokens.textPrimary,
+    letterSpacing: -0.2,
+  },
+  deleteAccountButton: {
+    alignItems: "center",
+    padding: 16,
+    marginTop: 12,
+    backgroundColor: Tokens.surfaceRaised,
+    borderRadius: 99,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
+    ...Tokens.shadowLight,
+  },
+  deleteAccountText: {
+    fontSize: 14,
+    fontWeight: "500",
     color: Tokens.error,
+    letterSpacing: -0.2,
   },
   menuCardShadow: {
     ...Tokens.shadowLight,

@@ -773,7 +773,7 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     fontSize: 14,
-    fontWeight: "400",
+    fontWeight: "600",
     color: Tokens.textPrimary,
   },
   metricValueEditing: {
@@ -853,7 +853,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
   },
   unitPillActive: {
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#1A6872",
   },
   unitPillText: {
     fontSize: 13,
@@ -861,7 +861,7 @@ const styles = StyleSheet.create({
     color: Tokens.textTertiary,
   },
   unitPillTextActive: {
-    color: "#1A6872",
+    color: "#fff",
   },
   // Save button
   saveButtonContainer: {

@@ -180,14 +180,14 @@ function ReminderRow({
           <Switch
             value={reminder.enabled}
             onValueChange={() => onToggleReminder(reminder.id)}
-            trackColor={{ false: "#E8E7E3", true: "#34C759" }}
+            trackColor={{ false: "#E8E7E3", true: Tokens.accent }}
             style={{ transform: [{ scale: 0.85 }] }}
           />
         ) : (
           <Switch
             value={reminder.enabled}
             onValueChange={() => onToggleReminder(reminder.id)}
-            trackColor={{ false: "#E8E7E3", true: "#34C759" }}
+            trackColor={{ false: "#E8E7E3", true: Tokens.accent }}
             style={{ transform: [{ scale: 0.85 }] }}
           />
         )}
@@ -697,7 +697,7 @@ export function NotificationsModal({
                         <Switch
                           value={notificationsEnabled}
                           onValueChange={handleMasterToggle}
-                          trackColor={{ false: "#E8E7E3", true: "#34C759" }}
+                          trackColor={{ false: "#E8E7E3", true: Tokens.accent }}
                           style={{ transform: [{ scale: 0.85 }] }}
                         />
                       </View>
@@ -896,7 +896,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: SWIPE_ACTION_WIDTH,
-    backgroundColor: Tokens.error,
+    backgroundColor: "#F87171",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -925,7 +925,7 @@ const styles = StyleSheet.create({
   },
   timePillText: {
     fontSize: 14,
-    fontWeight: "400",
+    fontWeight: "600",
     color: Tokens.textPrimary,
   },
   timePickerContainer: {

@@ -8,6 +8,7 @@ import {
 } from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -40,10 +41,16 @@ import { GoalsWizard } from "./goals/GoalsWizard";
 import { NotificationsModal } from "./NotificationsModal";
 import { NutritionGoalsModal } from "./NutritionGoalsModal";
 import { PersonalInfoModal } from "./PersonalInfoModal";
+import { PreferencesModal } from "./PreferencesModal";
 import { WeightTrackingModal } from "./WeightTrackingModal";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
+
+const LEGAL_URLS = {
+  terms: "https://notecal.app/terms",
+  privacy: "https://notecal.app/privacy",
+};
 
 function formatSyncTime(isoString: string): string {
   const date = new Date(isoString);
@@ -82,9 +89,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [showCalendarLegend, setShowCalendarLegend] = useState(false);
   const [showPersonalInfo, setShowPersonalInfo] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
   const goals = useAppStore((s) => s.goals);
-  const entryMode = useAppStore((s) => s.entryMode ?? 'dash');
-  const enterOnlyMode = useAppStore((s) => s.enterOnlyMode ?? false);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -358,18 +364,16 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           Haptics.impactAsync(
                             Haptics.ImpactFeedbackStyle.Light,
                           );
-                          setShowNutritionGoals(true);
+                          setShowGoalsWizard(true);
                         }}
                       >
                         <Ionicons
-                          name="nutrition-outline"
+                          name="flag-outline"
                           size={20}
                           color={Tokens.textPrimary}
                           style={{ marginRight: 12 }}
                         />
-                        <Text style={styles.menuItemText}>
-                          Nutrition Targets
-                        </Text>
+                        <Text style={styles.menuItemText}>Goals Setup</Text>
                         <Ionicons
                           name="chevron-forward"
                           size={20}
@@ -386,16 +390,18 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           Haptics.impactAsync(
                             Haptics.ImpactFeedbackStyle.Light,
                           );
-                          setShowGoalsWizard(true);
+                          setShowNutritionGoals(true);
                         }}
                       >
                         <Ionicons
-                          name="flag-outline"
+                          name="nutrition-outline"
                           size={20}
                           color={Tokens.textPrimary}
                           style={{ marginRight: 12 }}
                         />
-                        <Text style={styles.menuItemText}>Goals Setup</Text>
+                        <Text style={styles.menuItemText}>
+                          Nutrition Targets
+                        </Text>
                         <Ionicons
                           name="chevron-forward"
                           size={20}
@@ -438,32 +444,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           Haptics.impactAsync(
                             Haptics.ImpactFeedbackStyle.Light,
                           );
-                          setShowCalendarLegend(true);
-                        }}
-                      >
-                        <Ionicons
-                          name="calendar-outline"
-                          size={20}
-                          color={Tokens.textPrimary}
-                          style={{ marginRight: 12 }}
-                        />
-                        <Text style={styles.menuItemText}>Calendar Legend</Text>
-                        <Ionicons
-                          name="chevron-forward"
-                          size={20}
-                          color={Tokens.textTertiary}
-                        />
-                      </TouchableOpacity>
-
-                      <View style={styles.menuDivider} />
-
-                      <TouchableOpacity
-                        style={styles.menuItem}
-                        activeOpacity={0.7}
-                        onPress={() => {
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light,
-                          );
                           setShowNotifications(true);
                         }}
                       >
@@ -481,19 +461,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                         />
                       </TouchableOpacity>
 
-                    </View>
-                  </View>
-                </Animated.View>
+                      <View style={styles.menuDivider} />
 
-                {/* Entry Section */}
-                <Animated.View
-                  entering={FadeInDown.delay(300).duration(400)}
-                  style={styles.section}
-                >
-                  <Text style={styles.sectionTitle}>Entry</Text>
-
-                  <View style={styles.menuCardShadow}>
-                    <View style={styles.menuCard}>
                       <TouchableOpacity
                         style={styles.menuItem}
                         activeOpacity={0.7}
@@ -501,20 +470,21 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           Haptics.impactAsync(
                             Haptics.ImpactFeedbackStyle.Light,
                           );
-                          const next = entryMode === 'dash' ? 'freeform' : 'dash';
-                          useAppStore.getState().setEntryMode(next);
+                          setShowPreferences(true);
                         }}
                       >
                         <Ionicons
-                          name="list-outline"
+                          name="options-outline"
                           size={20}
                           color={Tokens.textPrimary}
                           style={{ marginRight: 12 }}
                         />
-                        <Text style={styles.menuItemText}>Entry Mode</Text>
-                        <Text style={styles.menuItemValue}>
-                          {entryMode === 'freeform' ? 'Freeform' : 'Dash'}
-                        </Text>
+                        <Text style={styles.menuItemText}>Preferences</Text>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color={Tokens.textTertiary}
+                        />
                       </TouchableOpacity>
 
                       <View style={styles.menuDivider} />
@@ -526,19 +496,84 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           Haptics.impactAsync(
                             Haptics.ImpactFeedbackStyle.Light,
                           );
-                          useAppStore.getState().setEnterOnlyMode(!enterOnlyMode);
+                          setShowCalendarLegend(true);
                         }}
                       >
                         <Ionicons
-                          name="return-down-back-outline"
+                          name="calendar-outline"
                           size={20}
                           color={Tokens.textPrimary}
                           style={{ marginRight: 12 }}
                         />
-                        <Text style={styles.menuItemText}>Submit on Enter</Text>
-                        <Text style={styles.menuItemValue}>
-                          {enterOnlyMode ? 'On' : 'Off'}
-                        </Text>
+                        <Text style={styles.menuItemText}>Calendar Legend</Text>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color={Tokens.textTertiary}
+                        />
+                      </TouchableOpacity>
+
+                    </View>
+                  </View>
+                </Animated.View>
+
+                {/* Legal Section */}
+                <Animated.View
+                  entering={FadeInDown.delay(300).duration(400)}
+                  style={styles.section}
+                >
+                  <Text style={styles.sectionTitle}>Legal</Text>
+
+                  <View style={styles.menuCardShadow}>
+                    <View style={styles.menuCard}>
+                      <TouchableOpacity
+                        style={styles.menuItem}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
+                          WebBrowser.openBrowserAsync(LEGAL_URLS.terms);
+                        }}
+                      >
+                        <Ionicons
+                          name="document-text-outline"
+                          size={20}
+                          color={Tokens.textPrimary}
+                          style={{ marginRight: 12 }}
+                        />
+                        <Text style={styles.menuItemText}>Terms of Service</Text>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color={Tokens.textTertiary}
+                        />
+                      </TouchableOpacity>
+
+                      <View style={styles.menuDivider} />
+
+                      <TouchableOpacity
+                        style={styles.menuItem}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
+                          WebBrowser.openBrowserAsync(LEGAL_URLS.privacy);
+                        }}
+                      >
+                        <Ionicons
+                          name="shield-checkmark-outline"
+                          size={20}
+                          color={Tokens.textPrimary}
+                          style={{ marginRight: 12 }}
+                        />
+                        <Text style={styles.menuItemText}>Privacy Policy</Text>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color={Tokens.textTertiary}
+                        />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -569,7 +604,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
                 {user && (
                   <Animated.View
-                    entering={FadeInDown.delay(500).duration(400)}
+                    entering={FadeInDown.delay(600).duration(400)}
                     style={styles.section}
                   >
                     <TouchableOpacity
@@ -632,6 +667,13 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           <NotificationsModal
             visible={showNotifications}
             onClose={() => setShowNotifications(false)}
+          />
+        )}
+
+        {showPreferences && (
+          <PreferencesModal
+            visible={showPreferences}
+            onClose={() => setShowPreferences(false)}
           />
         )}
       </Modal>
@@ -804,7 +846,7 @@ const styles = StyleSheet.create({
   menuItemValue: {
     fontSize: 14,
     color: Tokens.textSecondary,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   menuDivider: {
     height: 1,

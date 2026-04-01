@@ -688,7 +688,7 @@ export function NutritionGoalsModal({
                             <Switch
                               value={enabled}
                               onValueChange={() => toggleNutrient(nutrient.key)}
-                              trackColor={{ true: "#34C759" }}
+                              trackColor={{ true: Tokens.accent }}
                               style={{ transform: [{ scale: 0.85 }] }}
                             />
                           </View>
@@ -897,8 +897,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
-    marginLeft: 4,
+    marginBottom: 0,
+    marginLeft: 0,
     marginRight: 4,
   },
   sectionTitle: {
@@ -973,7 +973,7 @@ const styles = StyleSheet.create({
   },
   targetValue: {
     fontSize: 14,
-    fontWeight: "400",
+    fontWeight: "600",
     color: Tokens.textPrimary,
   },
   targetUnit: {
@@ -1072,8 +1072,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(126, 179, 224, 0.2)",
     overflow: "hidden",
   },
   waterTipTitle: {
@@ -1109,8 +1107,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingVertical: 4,
     paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: "rgba(126, 179, 224, 0.25)",
   },
   waterTipUnitText: {
     fontSize: 12,

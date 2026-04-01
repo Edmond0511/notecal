@@ -106,8 +106,6 @@ export function StepWeightTarget({
     };
   }, [targetWeightKg, timelineWeeks, currentWeightKg, formData.goalType]);
 
-  const goalColor = isLosing ? "#FB8C00" : "#1E88E5";
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Weight Target</Text>
@@ -130,7 +128,7 @@ export function StepWeightTarget({
           </View>
 
           <View style={styles.arrowContainer}>
-            <Ionicons name="arrow-forward" size={14} color="#ccc" />
+            <Ionicons name="arrow-forward" size={14} color={Tokens.textTertiary} />
           </View>
 
           {/* Target weight (editable) */}
@@ -162,7 +160,7 @@ export function StepWeightTarget({
                       ? "180"
                       : "80"
                 }
-                placeholderTextColor="#bbb"
+                placeholderTextColor={Tokens.textTertiary}
                 maxLength={5}
               />
               <Text style={styles.targetUnit}>{weightUnit}</Text>
@@ -188,7 +186,7 @@ export function StepWeightTarget({
                 }
                 keyboardType="number-pad"
                 placeholder="3"
-                placeholderTextColor="#bbb"
+                placeholderTextColor={Tokens.textTertiary}
                 maxLength={2}
               />
               <Text style={styles.timelineUnit}>months</Text>
@@ -202,33 +200,40 @@ export function StepWeightTarget({
         </View>
       </View>
 
-      {/* Calculated summary — matches Step5Review's weightTargetCard pattern */}
+      {/* Calculated summary */}
       {calcInfo && !calcInfo.wrongDirection && (
-        <View style={styles.card}>
+        <View style={styles.planCard}>
           <Text style={styles.cardLabel}>Your Plan</Text>
 
           <View style={styles.planRow}>
             <View style={styles.planItem}>
               <Text style={styles.planLabel}>Weekly rate</Text>
               <Text style={styles.planValue}>{calcInfo.weeklyDisplay}</Text>
+              <Text style={styles.planDirection}>
+                per week
+              </Text>
             </View>
-            <Ionicons name="arrow-forward" size={16} color="#ccc" />
+
+            <View style={styles.planDivider} />
+
             <View style={styles.planItem}>
               <Text style={styles.planLabel}>Daily adjustment</Text>
-              <Text style={[styles.planValue, { color: goalColor }]}>
+              <Text style={[styles.planValue, styles.planValueAccent]}>
                 {calcInfo.dailyAdjustment > 0 ? "+" : ""}
-                {calcInfo.dailyAdjustment} cal
+                {calcInfo.dailyAdjustment}
+              </Text>
+              <Text style={styles.planDirection}>
+                cal/day
               </Text>
             </View>
           </View>
-
         </View>
       )}
 
       {/* Wrong direction warning */}
       {calcInfo?.wrongDirection && (
         <View style={styles.warningBox}>
-          <Ionicons name="alert-circle" size={18} color="#C62828" />
+          <Ionicons name="alert-circle" size={18} color={Tokens.error} />
           <Text style={styles.warningText}>
             {isLosing
               ? "Target weight should be less than your current weight for a weight loss goal."
@@ -240,7 +245,7 @@ export function StepWeightTarget({
       {/* Extreme daily adjustment warning */}
       {calcInfo && !calcInfo.wrongDirection && calcInfo.extremeAdjustment && (
         <View style={styles.warningBox}>
-          <Ionicons name="warning" size={18} color="#C62828" />
+          <Ionicons name="warning" size={18} color={Tokens.error} />
           <Text style={styles.warningText}>
             This is an aggressive daily
             {calcInfo.dailyAdjustment < 0 ? " deficit" : " surplus"}. Consider
@@ -259,12 +264,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: "600",
-    color: "#333",
+    color: Tokens.textPrimary,
     marginBottom: 8,
+    letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 14,
-    color: "#666",
+    color: Tokens.textSecondary,
     marginBottom: 24,
     lineHeight: 20,
   },
@@ -273,11 +279,18 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
   },
+  planCard: {
+    backgroundColor: Tokens.accentTint,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
   cardLabel: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#333",
+    color: Tokens.textPrimary,
     marginBottom: 12,
+    letterSpacing: -0.2,
   },
   weightRow: {
     flexDirection: "row",
@@ -294,7 +307,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#666",
+    color: Tokens.textSecondary,
     marginBottom: 8,
   },
   readOnlyInput: {
@@ -302,43 +315,39 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     height: 48,
-    backgroundColor: Tokens.surfaceRaised,
+    backgroundColor: "#F3F4F6",
     borderRadius: 12,
     paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.07)",
   },
   readOnlyValue: {
     fontSize: 18,
     fontWeight: "500",
-    color: "#999",
+    color: Tokens.textTertiary,
   },
   readOnlyUnit: {
     fontSize: 14,
-    color: "#999",
+    color: Tokens.textTertiary,
   },
   targetInput: {
     flexDirection: "row",
     alignItems: "center",
     height: 48,
-    backgroundColor: Tokens.surfaceRaised,
+    backgroundColor: "#F3F4F6",
     borderRadius: 12,
     paddingHorizontal: 16,
     gap: 4,
-    borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.07)",
   },
   targetTextInput: {
     flex: 1,
     fontSize: 18,
     fontWeight: "500",
-    color: "#333",
+    color: Tokens.textPrimary,
     height: 48,
     padding: 0,
   },
   targetUnit: {
     fontSize: 14,
-    color: "#999",
+    color: Tokens.textTertiary,
   },
   timelineRow: {
     flexDirection: "row",
@@ -347,54 +356,67 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     height: 48,
-    backgroundColor: Tokens.surfaceRaised,
+    backgroundColor: "#F3F4F6",
     borderRadius: 12,
     paddingHorizontal: 16,
     gap: 4,
     flex: 1,
-    borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.07)",
   },
   timelineTextInput: {
     flex: 1,
     fontSize: 18,
     fontWeight: "500",
-    color: "#333",
+    color: Tokens.textPrimary,
     height: 48,
     padding: 0,
   },
   timelineUnit: {
     fontSize: 14,
-    color: "#999",
+    color: Tokens.textTertiary,
   },
   helperText: {
     fontSize: 12,
-    color: "#888",
+    color: Tokens.textSecondary,
     marginTop: 8,
   },
   planRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 16,
+    gap: 20,
   },
   planItem: {
+    flex: 1,
     alignItems: "center",
+  },
+  planDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: "rgba(26, 104, 114, 0.15)",
   },
   planLabel: {
     fontSize: 12,
-    color: "#888",
+    color: Tokens.textSecondary,
     marginBottom: 4,
   },
   planValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "700",
-    color: "#333",
+    color: Tokens.textPrimary,
+    letterSpacing: -0.3,
+  },
+  planValueAccent: {
+    color: Tokens.accent,
+  },
+  planDirection: {
+    fontSize: 11,
+    color: Tokens.textSecondary,
+    marginTop: 2,
   },
   warningBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFEBEE",
+    backgroundColor: Tokens.errorTint,
     padding: 14,
     borderRadius: 16,
     gap: 10,
@@ -403,7 +425,7 @@ const styles = StyleSheet.create({
   warningText: {
     flex: 1,
     fontSize: 13,
-    color: "#C62828",
+    color: Tokens.error,
     lineHeight: 18,
   },
 });

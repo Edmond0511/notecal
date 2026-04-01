@@ -1111,7 +1111,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 4,
   },
   section: {
@@ -1363,9 +1363,9 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   photosSectionLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: Tokens.textPrimary,
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#6B6B6B",
     letterSpacing: -0.2,
   },
   photoStrip: {

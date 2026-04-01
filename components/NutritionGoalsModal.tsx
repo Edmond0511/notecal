@@ -904,7 +904,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: "500",
-    color: Tokens.textPrimary,
+    color: "#6B6B6B",
     textTransform: "capitalize",
     marginBottom: 6,
     marginLeft: 0,

@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: "500",
-    color: Tokens.textPrimary,
+    color: "#6B6B6B",
     textTransform: "capitalize",
     marginBottom: 6,
     marginLeft: 0,
@@ -326,7 +326,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(0, 0, 0, 0.07)",
-    overflow: "hidden",
     ...Tokens.shadowLight,
   },
   rowWrapper: {

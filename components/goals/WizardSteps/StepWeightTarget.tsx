@@ -85,10 +85,11 @@ export function StepWeightTarget({
       year: "numeric",
     });
 
-    // Weekly rate display
-    const weeklyDisplay = useImperial
-      ? `${weeklyChangeLbs.toFixed(1)} lbs`
-      : `${Math.abs(weeklyChangeKg).toFixed(1)} kg`;
+    // Weekly rate display (split into number + unit for styling)
+    const weeklyDisplayNum = useImperial
+      ? weeklyChangeLbs.toFixed(1)
+      : Math.abs(weeklyChangeKg).toFixed(1);
+    const weeklyDisplayUnit = useImperial ? " lbs" : " kg";
 
     // Extreme adjustment: beyond the old clamp bounds
     const extremeAdjustment = dailyAdjustment < -1000 || dailyAdjustment > 500;
@@ -96,7 +97,8 @@ export function StepWeightTarget({
     return {
       weeklyChangeKg: Math.abs(weeklyChangeKg),
       weeklyChangeLbs,
-      weeklyDisplay,
+      weeklyDisplayNum,
+      weeklyDisplayUnit,
       dailyAdjustment,
       targetDate: dateStr,
       wrongDirection,
@@ -203,29 +205,21 @@ export function StepWeightTarget({
       {/* Calculated summary */}
       {calcInfo && !calcInfo.wrongDirection && (
         <View style={styles.planCard}>
-          <Text style={styles.cardLabel}>Your Plan</Text>
+          <View style={styles.planRow}>
+            <Text style={styles.planLabel}>Weekly rate</Text>
+            <Text style={styles.planValue}>
+              {calcInfo.weeklyDisplayNum}
+              <Text style={styles.planUnit}>{calcInfo.weeklyDisplayUnit}/week</Text>
+            </Text>
+          </View>
 
           <View style={styles.planRow}>
-            <View style={styles.planItem}>
-              <Text style={styles.planLabel}>Weekly rate</Text>
-              <Text style={styles.planValue}>{calcInfo.weeklyDisplay}</Text>
-              <Text style={styles.planDirection}>
-                per week
-              </Text>
-            </View>
-
-            <View style={styles.planDivider} />
-
-            <View style={styles.planItem}>
-              <Text style={styles.planLabel}>Daily adjustment</Text>
-              <Text style={[styles.planValue, styles.planValueAccent]}>
-                {calcInfo.dailyAdjustment > 0 ? "+" : ""}
-                {calcInfo.dailyAdjustment}
-              </Text>
-              <Text style={styles.planDirection}>
-                cal/day
-              </Text>
-            </View>
+            <Text style={styles.planLabel}>Daily adjustment</Text>
+            <Text style={styles.planValue}>
+              {calcInfo.dailyAdjustment > 0 ? "+" : ""}
+              {calcInfo.dailyAdjustment}
+              <Text style={styles.planUnit}> cal</Text>
+            </Text>
           </View>
         </View>
       )}
@@ -262,7 +256,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   title: {
-    fontSize: 20,
+    fontSize: Tokens.fontSize.title,
     fontWeight: "600",
     color: Tokens.textPrimary,
     marginBottom: 8,
@@ -280,14 +274,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   planCard: {
-    backgroundColor: Tokens.accentTint,
-    borderRadius: 16,
-    padding: 16,
     marginBottom: 16,
+    paddingHorizontal: 16,
+    gap: 10,
   },
   cardLabel: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 15,
+    fontWeight: "600",
     color: Tokens.textPrimary,
     marginBottom: 12,
     letterSpacing: -0.2,
@@ -375,43 +368,30 @@ const styles = StyleSheet.create({
     color: Tokens.textTertiary,
   },
   helperText: {
-    fontSize: 12,
+    fontSize: Tokens.fontSize.sm,
     color: Tokens.textSecondary,
     marginTop: 8,
   },
   planRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 20,
-  },
-  planItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  planDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: "rgba(26, 104, 114, 0.15)",
+    justifyContent: "space-between",
   },
   planLabel: {
-    fontSize: 12,
-    color: Tokens.textSecondary,
-    marginBottom: 4,
+    fontSize: 14,
+    fontWeight: "500",
+    color: Tokens.textPrimary,
+    letterSpacing: -0.2,
   },
   planValue: {
-    fontSize: 20,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "600",
     color: Tokens.textPrimary,
-    letterSpacing: -0.3,
   },
-  planValueAccent: {
-    color: Tokens.accent,
-  },
-  planDirection: {
-    fontSize: 11,
-    color: Tokens.textSecondary,
-    marginTop: 2,
+  planUnit: {
+    fontSize: 13,
+    fontWeight: "400",
+    color: Tokens.textTertiary,
   },
   warningBox: {
     flexDirection: "row",

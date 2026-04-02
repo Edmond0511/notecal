@@ -202,7 +202,25 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
         const hasTarget = formData.weightUseImperial
           ? !!formData.targetWeightLbs
           : !!formData.targetWeightKg;
-        return hasTarget && !!formData.timelineMonths;
+        if (!hasTarget || !formData.timelineMonths) return false;
+
+        // Compute weights in kg
+        const currentKg = formData.weightUseImperial
+          ? (parseFloat(formData.weightLbs) || 0) * 0.453592
+          : parseFloat(formData.weightKg) || 0;
+        const targetKg = formData.weightUseImperial
+          ? (parseFloat(formData.targetWeightLbs) || 0) * 0.453592
+          : parseFloat(formData.targetWeightKg) || 0;
+        const weeks = (parseInt(formData.timelineMonths, 10) || 0) * (52 / 12);
+
+        if (!currentKg || !targetKg || weeks <= 0) return false;
+
+        // Wrong direction — block proceeding
+        const isLosing = formData.goalType === 'lose';
+        const isGaining = formData.goalType === 'gain';
+        if ((isLosing && targetKg >= currentKg) || (isGaining && targetKg <= currentKg)) return false;
+
+        return true;
       }
       case 'macros':
         return true; // Optional step

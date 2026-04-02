@@ -9,7 +9,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
   faArrowRight,
-  faArrowTrendUp,
   faBolt,
   faCubesStacked,
   faDroplet,
@@ -30,7 +29,6 @@ import { WizardFormData } from "../GoalsWizard";
 const icons = {
   fire: faFireFlameCurved as IconProp,
   arrowRight: faArrowRight as IconProp,
-  arrowTrendUp: faArrowTrendUp as IconProp,
   drumstickBite: faDrumstickBite as IconProp,
   droplet: faDroplet as IconProp,
   wheatAwn: faWheatAwn as IconProp,
@@ -67,28 +65,28 @@ const OTHER_NUTRIENTS = [
     key: "fiber" as const,
     label: "Fiber",
     unit: "g",
-    color: "#C4B097",
+    color: "#B08C5A",
     icon: icons.seedling,
   },
   {
     key: "sugar" as const,
     label: "Sugar",
     unit: "g",
-    color: "#D4899E",
+    color: "#D4687E",
     icon: icons.cubesStacked,
   },
   {
     key: "sodium" as const,
     label: "Sodium",
     unit: "mg",
-    color: "#8BACC8",
+    color: "#6898BE",
     icon: icons.tint,
   },
   {
     key: "potassium" as const,
     label: "Potassium",
     unit: "mg",
-    color: "#9BB893",
+    color: "#72A868",
     icon: icons.bolt,
   },
 ];
@@ -136,7 +134,6 @@ function CalorieExplanationPopup({
 export function Step5Review({
   goals,
   formData,
-  existingGoals,
 }: Step5ReviewProps) {
   const [activeExplanation, setActiveExplanation] = useState<
     "bmr" | "tdee" | null
@@ -163,64 +160,6 @@ export function Step5Review({
   const activityInfo = getActivityLevelDescription(goals.activityLevel);
   const goalInfo = getGoalTypeDescription(goals.goalType);
 
-  // Check for manual modifications
-  const manualTargets = existingGoals?.manualTargets;
-  const modifications: Array<{
-    label: string;
-    calculated: number;
-    manual: number;
-    unit: string;
-  }> = [];
-
-  if (manualTargets) {
-    if (
-      manualTargets.kcal !== undefined &&
-      manualTargets.kcal !== goals.targetKcal
-    ) {
-      modifications.push({
-        label: "Calories",
-        calculated: goals.targetKcal,
-        manual: manualTargets.kcal,
-        unit: "cal",
-      });
-    }
-    if (
-      manualTargets.protein !== undefined &&
-      manualTargets.protein !== goals.targetProtein
-    ) {
-      modifications.push({
-        label: "Protein",
-        calculated: goals.targetProtein,
-        manual: manualTargets.protein,
-        unit: "g",
-      });
-    }
-    if (
-      manualTargets.fat !== undefined &&
-      manualTargets.fat !== goals.targetFat
-    ) {
-      modifications.push({
-        label: "Fat",
-        calculated: goals.targetFat,
-        manual: manualTargets.fat,
-        unit: "g",
-      });
-    }
-    if (
-      manualTargets.carbs !== undefined &&
-      manualTargets.carbs !== goals.targetCarbs
-    ) {
-      modifications.push({
-        label: "Carbs",
-        calculated: goals.targetCarbs,
-        manual: manualTargets.carbs,
-        unit: "g",
-      });
-    }
-  }
-
-  const hasModifications = modifications.length > 0;
-
   // Format height display
   const heightDisplay = formData.heightUseImperial
     ? `${formData.heightFeet}'${formData.heightInches}"`
@@ -243,60 +182,11 @@ export function Step5Review({
         Here's your daily nutrition plan based on your inputs
       </Text>
 
-      {/* Previous custom targets notice - informs user these will be replaced */}
-      {hasModifications && (
-        <View style={styles.modificationNotice}>
-          <View style={styles.modificationHeader}>
-            <Text style={styles.modificationTitle}>
-              Custom targets will update
-            </Text>
-          </View>
-          {modifications.map((mod, index) => {
-            const iconConfig = {
-              Calories: { icon: icons.fire, color: "#FF6B35" },
-              Protein: { icon: icons.drumstickBite, color: "#4A90D9" },
-              Fat: { icon: icons.droplet, color: "#F5A623" },
-              Carbs: { icon: icons.wheatAwn, color: "#9B6B9E" },
-            }[mod.label] || { icon: icons.fire, color: "#666" };
-
-            return (
-              <View
-                key={mod.label}
-                style={[
-                  styles.modificationItem,
-                  index < modifications.length - 1 &&
-                    styles.modificationItemBorder,
-                ]}
-              >
-                <View style={styles.modificationLabelRow}>
-                  <FontAwesomeIcon
-                    icon={iconConfig.icon}
-                    size={14}
-                    color={iconConfig.color}
-                  />
-                  <Text style={styles.modificationLabel}>{mod.label}</Text>
-                </View>
-                <View style={styles.modificationValuesRow}>
-                  <Text style={styles.oldValue}>{mod.manual}</Text>
-                  <Ionicons
-                    name="arrow-forward"
-                    size={12}
-                    color="#ccc"
-                    style={styles.modificationArrowIcon}
-                  />
-                  <Text style={styles.newValue}>{mod.calculated}</Text>
-                  <Text style={styles.modificationUnit}>{mod.unit}</Text>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      )}
 
       {/* Main calorie target */}
       <View style={styles.mainTargetCard}>
         <View style={styles.mainTargetHeader}>
-          <FontAwesomeIcon icon={icons.fire} size={28} color="#FF6B35" />
+          <FontAwesomeIcon icon={icons.fire} size={28} color={Tokens.macroKcal} />
           <Text style={styles.mainTargetValue}>{goals.targetKcal}</Text>
           <Text style={styles.mainTargetUnit}>cal/day</Text>
         </View>
@@ -312,13 +202,13 @@ export function Step5Review({
               <Ionicons
                 name="information-circle-outline"
                 size={12}
-                color="#aaa"
+                color="#FF8A65"
                 style={styles.breakdownInfoIcon}
               />
             </TouchableOpacity>
             <Text style={styles.breakdownValue}>{goals.bmr}</Text>
           </View>
-          <FontAwesomeIcon icon={icons.arrowRight} size={14} color="#ccc" />
+          <FontAwesomeIcon icon={icons.arrowRight} size={14} color={Tokens.macroKcal} />
           <View style={styles.breakdownItem}>
             <TouchableOpacity
               style={styles.breakdownLabelRow}
@@ -330,18 +220,16 @@ export function Step5Review({
               <Ionicons
                 name="information-circle-outline"
                 size={12}
-                color="#aaa"
+                color="#FF8A65"
                 style={styles.breakdownInfoIcon}
               />
             </TouchableOpacity>
             <Text style={styles.breakdownValue}>{goals.tdee}</Text>
           </View>
-          <FontAwesomeIcon icon={icons.arrowRight} size={14} color="#ccc" />
+          <FontAwesomeIcon icon={icons.arrowRight} size={14} color={Tokens.macroKcal} />
           <View style={styles.breakdownItem}>
             <Text style={styles.breakdownLabel}>Target</Text>
-            <Text
-              style={[styles.breakdownValue, styles.breakdownValueHighlight]}
-            >
+            <Text style={styles.breakdownValue}>
               {goals.targetKcal}
             </Text>
           </View>
@@ -355,20 +243,20 @@ export function Step5Review({
             <FontAwesomeIcon
               icon={icons.drumstickBite}
               size={20}
-              color="#4A90D9"
+              color={Tokens.macroProtein}
             />
-            <Text style={styles.macroValue}>{goals.targetProtein}g</Text>
-            <Text style={styles.macroLabel}>Protein</Text>
+            <Text style={[styles.macroValue, { color: Tokens.macroProtein }]}>{goals.targetProtein}g</Text>
+            <Text style={[styles.macroLabel, { color: "#7AB3E8" }]}>Protein</Text>
           </View>
           <View style={[styles.macroItem, { backgroundColor: "#FFF8E7" }]}>
-            <FontAwesomeIcon icon={icons.droplet} size={20} color="#F5A623" />
-            <Text style={styles.macroValue}>{goals.targetFat}g</Text>
-            <Text style={styles.macroLabel}>Fat</Text>
+            <FontAwesomeIcon icon={icons.droplet} size={20} color={Tokens.macroFat} />
+            <Text style={[styles.macroValue, { color: Tokens.macroFat }]}>{goals.targetFat}g</Text>
+            <Text style={[styles.macroLabel, { color: "#F7BE5E" }]}>Fat</Text>
           </View>
           <View style={[styles.macroItem, { backgroundColor: "#F3E5F5" }]}>
-            <FontAwesomeIcon icon={icons.wheatAwn} size={20} color="#9B6B9E" />
-            <Text style={styles.macroValue}>{goals.targetCarbs}g</Text>
-            <Text style={styles.macroLabel}>Carbs</Text>
+            <FontAwesomeIcon icon={icons.wheatAwn} size={20} color={Tokens.macroCarbs} />
+            <Text style={[styles.macroValue, { color: Tokens.macroCarbs }]}>{goals.targetCarbs}g</Text>
+            <Text style={[styles.macroLabel, { color: "#B68FB9" }]}>Carbs</Text>
           </View>
         </View>
       </View>
@@ -376,7 +264,7 @@ export function Step5Review({
       {/* Other nutrients (if any enabled) */}
       {enabledOtherNutrients.length > 0 && (
         <View style={styles.otherNutrientsCard}>
-          <Text style={styles.cardTitle}>Other Nutrients</Text>
+          <Text style={styles.sectionTitle}>Other Nutrients</Text>
           <View style={styles.otherNutrientsGrid}>
             {enabledOtherNutrients.map((nutrient) => {
               const value = goals.manualTargets?.[nutrient.key];
@@ -406,7 +294,7 @@ export function Step5Review({
 
       {/* Summary of inputs */}
       <View style={styles.summaryCard}>
-        <Text style={styles.cardTitle}>Your Profile</Text>
+        <Text style={styles.sectionTitle}>Your Profile</Text>
         <View style={styles.summaryGrid}>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>Sex</Text>
@@ -448,25 +336,19 @@ export function Step5Review({
           const targetDisplay = useImperial
             ? `${Math.round(kgToLbs(goals.targetWeightKg))} lbs`
             : `${goals.targetWeightKg} kg`;
-          const isLosing = goals.goalType === "lose";
 
           return (
             <View style={styles.weightTargetCard}>
-              <Text style={styles.cardTitle}>Weight Target</Text>
+              <Text style={styles.sectionTitle}>Weight Target</Text>
               <View style={styles.weightTargetRow}>
                 <View style={styles.weightTargetItem}>
                   <Text style={styles.weightTargetLabel}>Current</Text>
                   <Text style={styles.weightTargetValue}>{currentDisplay}</Text>
                 </View>
-                <Ionicons name="arrow-forward" size={16} color="#ccc" />
+                <Ionicons name="arrow-forward" size={16} color={Tokens.textTertiary} />
                 <View style={styles.weightTargetItem}>
                   <Text style={styles.weightTargetLabel}>Target</Text>
-                  <Text
-                    style={[
-                      styles.weightTargetValue,
-                      { color: isLosing ? "#FB8C00" : "#1E88E5" },
-                    ]}
-                  >
+                  <Text style={styles.weightTargetValue}>
                     {targetDisplay}
                   </Text>
                 </View>
@@ -475,22 +357,6 @@ export function Step5Review({
           );
         })()}
 
-      {/* Goal expectation */}
-      <View style={styles.expectationBox}>
-        <FontAwesomeIcon icon={icons.arrowTrendUp} size={20} color="#1A6872" />
-        <Text style={styles.expectationText}>
-          {goals.targetWeightKg != null && goals.timelineWeeks != null
-            ? (() => {
-                const diffKg = Math.abs(goals.weightKg - goals.targetWeightKg);
-                const diffDisplay = formData.weightUseImperial
-                  ? `${kgToLbs(diffKg)} lbs`
-                  : `${Math.round(diffKg * 10) / 10} kg`;
-                const months = Math.round(goals.timelineWeeks! / (52 / 12));
-                return `${goals.goalType === "lose" ? "Lose" : "Gain"} ${diffDisplay} in ${months} ${months === 1 ? "month" : "months"}`;
-              })()
-            : `Expected: ${goalInfo.weeklyChange}`}
-        </Text>
-      </View>
 
       {/* BMR/TDEE explanation popup */}
       <CalorieExplanationPopup
@@ -507,20 +373,21 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   title: {
-    fontSize: 20,
+    fontSize: Tokens.fontSize.title,
     fontWeight: "600",
-    color: "#333",
+    color: Tokens.textPrimary,
     marginBottom: 8,
+    letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 14,
-    color: "#666",
-    marginBottom: 20,
+    color: Tokens.textSecondary,
+    marginBottom: 24,
     lineHeight: 20,
   },
   errorText: {
     fontSize: 14,
-    color: "#C62828",
+    color: Tokens.error,
     textAlign: "center",
     padding: 20,
   },
@@ -530,18 +397,20 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 16,
     alignItems: "center",
+    ...Tokens.shadowLight,
   },
   mainTargetHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: 12,
     marginBottom: 16,
   },
   mainTargetValue: {
     fontSize: 48,
     fontWeight: "700",
-    color: "#FF6B35",
+    color: Tokens.macroKcal,
+    letterSpacing: -1,
   },
   mainTargetUnit: {
     fontSize: 16,
@@ -551,23 +420,23 @@ const styles = StyleSheet.create({
   calculationBreakdown: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
+    gap: 12,
   },
   breakdownItem: {
     alignItems: "center",
+    minWidth: 52,
   },
   breakdownLabel: {
     fontSize: 11,
-    color: "#888",
+    color: "#FF8A65",
     marginBottom: 2,
+    letterSpacing: 0.3,
   },
   breakdownValue: {
     fontSize: 14,
-    fontWeight: "500",
-    color: "#666",
-  },
-  breakdownValueHighlight: {
-    color: "#FF6B35",
+    fontWeight: "600",
+    color: "#FF8A65",
   },
   breakdownLabelRow: {
     flexDirection: "row",
@@ -580,11 +449,12 @@ const styles = StyleSheet.create({
   macrosCard: {
     marginBottom: 16,
   },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#333",
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: Tokens.textPrimary,
     marginBottom: 12,
+    letterSpacing: -0.2,
   },
   macrosGrid: {
     flexDirection: "row",
@@ -592,24 +462,25 @@ const styles = StyleSheet.create({
   },
   macroItem: {
     flex: 1,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 16,
+    padding: 14,
     alignItems: "center",
+    ...Tokens.shadowLight,
   },
   macroValue: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#333",
-    marginTop: 6,
+    color: Tokens.textPrimary,
+    marginTop: 8,
+    letterSpacing: -0.3,
   },
   macroLabel: {
-    fontSize: 12,
-    color: "#666",
+    fontSize: Tokens.fontSize.sm,
+    fontWeight: "500",
+    color: Tokens.textSecondary,
     marginTop: 2,
   },
   otherNutrientsCard: {
-    borderRadius: 16,
-    padding: 16,
     marginBottom: 16,
   },
   otherNutrientsGrid: {
@@ -618,31 +489,34 @@ const styles = StyleSheet.create({
   otherNutrientItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: Tokens.surfaceRaised,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     gap: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
   },
   otherNutrientLabel: {
     flex: 1,
     fontSize: 14,
     fontWeight: "500",
-    color: "#333",
+    color: Tokens.textPrimary,
+    letterSpacing: -0.2,
   },
   otherNutrientValue: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1A6872",
+    color: Tokens.accent,
   },
   otherNutrientUnit: {
-    fontSize: 12,
+    fontSize: Tokens.fontSize.sm,
     fontWeight: "500",
-    color: "#888",
+    color: Tokens.textSecondary,
   },
   summaryCard: {
-    borderRadius: 16,
-    padding: 16,
+    paddingHorizontal: 16,
+    marginTop: 8,
     marginBottom: 16,
   },
   summaryGrid: {
@@ -654,18 +528,18 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   summaryLabel: {
-    fontSize: 12,
-    color: "#888",
+    fontSize: Tokens.fontSize.sm,
+    color: Tokens.textSecondary,
     marginBottom: 2,
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#333",
+    color: Tokens.textPrimary,
+    letterSpacing: -0.2,
   },
   weightTargetCard: {
-    borderRadius: 16,
-    padding: 16,
+    paddingHorizontal: 16,
     marginBottom: 16,
   },
   weightTargetRow: {
@@ -673,102 +547,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 16,
-    marginBottom: 12,
   },
   weightTargetItem: {
     alignItems: "center",
   },
   weightTargetLabel: {
-    fontSize: 12,
-    color: "#888",
+    fontSize: Tokens.fontSize.sm,
+    color: Tokens.textSecondary,
     marginBottom: 4,
   },
   weightTargetValue: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#333",
-  },
-  expectationBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#E0F2F1",
-    padding: 12,
-    borderRadius: 12,
-    gap: 8,
-  },
-  expectationText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#1A6872",
-  },
-  modificationNotice: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  modificationHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 14,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  modificationTitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#333",
-    letterSpacing: -0.2,
-  },
-  modificationItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-  modificationItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#f5f5f5",
-  },
-  modificationLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  modificationLabel: {
-    fontSize: 14,
-    fontWeight: "400",
-    color: "#666",
-  },
-  modificationValuesRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  oldValue: {
-    fontSize: 14,
-    color: "#aaa",
-    textDecorationLine: "line-through",
-  },
-  modificationArrowIcon: {
-    marginHorizontal: 6,
-  },
-  newValue: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#333",
-  },
-  modificationUnit: {
-    fontSize: 12,
-    color: "#999",
-    marginLeft: 2,
+    color: Tokens.textPrimary,
+    letterSpacing: -0.3,
   },
   explanationPopupOverlay: {
     flex: 1,
@@ -781,35 +573,32 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
   explanationPopup: {
-    backgroundColor: "#fff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     padding: 20,
     marginHorizontal: 20,
     maxWidth: 320,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    ...Tokens.shadowMedium,
   },
   explanationTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1C1C1E",
+    color: Tokens.textPrimary,
     marginBottom: 12,
+    letterSpacing: -0.3,
   },
   explanationDescription: {
     fontSize: 14,
-    color: "#555",
+    color: Tokens.textSecondary,
     lineHeight: 20,
     marginBottom: 12,
   },
   explanationFormula: {
     fontSize: 13,
-    color: "#8E8E93",
+    color: Tokens.textTertiary,
     fontStyle: "italic",
   },
 });

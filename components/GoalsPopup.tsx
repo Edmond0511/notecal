@@ -329,9 +329,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   progressTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "600",
     color: Tokens.textPrimary,
+    letterSpacing: -0.3,
   },
   editButton: {
     width: 40,

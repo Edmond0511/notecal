@@ -30,24 +30,28 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const COLORS = {
   calories: {
     primary: "#FF6B35",
+    light: "#FF8A65",
     secondary: "#FFE5D9",
     track: "#FFD4C4",
     gradient: ["#FF8C5A", "#FF6B35"],
   },
   protein: {
     primary: "#4A90D9",
+    light: "#7AB3E8",
     secondary: "#E3F2FD",
     track: "#C5DCFA",
     gradient: ["#64B5F6", "#4A90D9"],
   },
   fat: {
     primary: "#F5A623",
+    light: "#F7BE5E",
     secondary: "#FFF8E7",
     track: "#FFE8B8",
     gradient: ["#FFD54F", "#F5A623"],
   },
   carbs: {
     primary: "#9B6B9E",
+    light: "#B68FB9",
     secondary: "#F3E5F5",
     track: "#E1C4E4",
     gradient: ["#BA68C8", "#9B6B9E"],
@@ -208,23 +212,22 @@ const CalorieRing = React.memo(function CalorieRing({ current, target }: Calorie
         </View>
 
         <View style={styles.calorieInfo}>
-          <View style={styles.calorieTargetRow}>
-            <Text style={styles.calorieTargetLabel}>of</Text>
-            <Text style={styles.calorieTargetValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{truncateNumber(target, 5)}</Text>
-            <Text style={styles.calorieTargetLabel}>daily goal</Text>
-          </View>
+          <Text style={styles.calorieTargetText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+            <Text style={styles.calorieConsumed}>{truncateNumber(current, 5)}</Text>
+            <Text style={styles.calorieDivider}> / </Text>
+            <Text style={styles.calorieTotal}>{truncateNumber(target, 5)}</Text>
+            <Text style={styles.calorieUnit2}> cal</Text>
+          </Text>
 
-          <View style={styles.calorieRemainingContainer}>
-            {isOver ? (
-              <Text style={styles.calorieOverText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                {truncateNumber(current - target, 5)} over target
-              </Text>
-            ) : (
-              <Text style={styles.calorieRemainingText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                {truncateNumber(remaining, 5)} remaining
-              </Text>
-            )}
-          </View>
+          {isOver ? (
+            <Text style={styles.calorieOverText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+              {truncateNumber(current - target, 5)} over
+            </Text>
+          ) : (
+            <Text style={styles.calorieRemainingText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+              {truncateNumber(remaining, 5)} remaining
+            </Text>
+          )}
         </View>
       </View>
     </Animated.View>
@@ -235,7 +238,7 @@ interface MacroCardProps {
   label: string;
   current: number;
   target: number;
-  color: { primary: string; secondary: string; track: string };
+  color: { primary: string; light: string; secondary: string; track: string };
   delay: number;
   unit?: string;
   icon: IconProp;
@@ -288,17 +291,17 @@ const MacroCard = React.memo(function MacroCard({ label, current, target, color,
           <Text style={[styles.macroValue, { color: color.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
             {truncateNumber(current, 4)}
           </Text>
-          <Text style={[styles.macroUnit, { color: color.primary }]}>{unit}</Text>
+          <Text style={[styles.macroUnit, { color: color.light }]}>{unit}</Text>
         </View>
       </View>
 
-      <Text style={styles.macroLabel}>{label}</Text>
+      <Text style={[styles.macroLabel, { color: color.primary }]}>{label}</Text>
 
       <View style={styles.macroTargetContainer}>
         <Text style={[styles.macroProgressText, isOver && styles.macroOverText]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-          <Text style={styles.macroConsumed}>{truncateNumber(current, 4)}{unit}</Text>
-          <Text style={styles.macroDivider}> / </Text>
-          <Text style={styles.macroTotal}>{truncateNumber(target, 4)}{unit}</Text>
+          <Text style={[styles.macroConsumed, { color: color.primary }]}>{truncateNumber(current, 4)}<Text style={styles.macroProgressUnit}>{unit}</Text></Text>
+          <Text style={[styles.macroDivider, { color: color.light }]}> / </Text>
+          <Text style={[styles.macroTotal, { color: color.light }]}>{truncateNumber(target, 4)}<Text style={styles.macroProgressUnit}>{unit}</Text></Text>
         </Text>
       </View>
     </Animated.View>
@@ -537,44 +540,47 @@ const styles = StyleSheet.create({
   },
   calorieUnit: {
     fontSize: 12,
-    color: COLORS.calories.primary,
+    color: COLORS.calories.light,
     fontWeight: "500",
     marginTop: -2,
-    opacity: 0.7,
   },
   calorieInfo: {
     flex: 1,
     marginLeft: 16,
-    alignItems: "flex-start",
+    justifyContent: "center",
   },
-  calorieTargetRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    flexWrap: "wrap",
-    marginBottom: 8,
+  calorieTargetText: {
+    fontSize: 18,
+    letterSpacing: -0.3,
+    marginBottom: 6,
   },
-  calorieTargetLabel: {
-    fontSize: 14,
-    color: Tokens.textSecondary,
-    marginHorizontal: 4,
-  },
-  calorieTargetValue: {
-    fontSize: 22,
+  calorieConsumed: {
     fontWeight: "700",
-    color: Tokens.textPrimary,
+    color: COLORS.calories.primary,
   },
-  calorieRemainingContainer: {
-    marginBottom: 12,
+  calorieDivider: {
+    color: COLORS.calories.light,
+  },
+  calorieTotal: {
+    fontWeight: "700",
+    color: COLORS.calories.light,
+  },
+  calorieUnit2: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: COLORS.calories.light,
   },
   calorieRemainingText: {
-    fontSize: 14,
-    color: Tokens.textSecondary,
+    fontSize: 13,
+    color: COLORS.calories.light,
     fontWeight: "500",
+    letterSpacing: -0.2,
   },
   calorieOverText: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#EF5350",
     fontWeight: "500",
+    letterSpacing: -0.2,
   },
 
   // Macro Card Styles
@@ -613,36 +619,39 @@ const styles = StyleSheet.create({
   macroValue: {
     fontSize: 18,
     fontWeight: "700",
+    letterSpacing: -0.3,
   },
   macroUnit: {
     fontSize: 11,
-    fontWeight: "500",
+    fontWeight: "600",
     marginTop: -2,
-    opacity: 0.7,
   },
   macroLabel: {
     fontSize: 12,
     color: Tokens.textSecondary,
-    fontWeight: "500",
+    fontWeight: "600",
+    letterSpacing: -0.2,
     marginBottom: 4,
   },
   macroTargetContainer: {
     marginBottom: 8,
   },
   macroProgressText: {
-    fontSize: 11,
-    color: Tokens.textSecondary,
+    fontSize: 12,
+    letterSpacing: -0.3,
   },
   macroConsumed: {
-    fontWeight: "500",
+    fontWeight: "600",
     color: Tokens.textPrimary,
   },
-  macroDivider: {
-    color: Tokens.textTertiary,
-  },
+  macroDivider: {},
   macroTotal: {
-    fontWeight: "500",
+    fontWeight: "600",
     color: Tokens.textSecondary,
+  },
+  macroProgressUnit: {
+    fontSize: 10,
+    fontWeight: "500",
   },
   macroOverText: {
     color: "#EF5350",

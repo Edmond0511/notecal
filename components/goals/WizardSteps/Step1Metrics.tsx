@@ -104,18 +104,12 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
             onPress={() => selectSex("male")}
             activeOpacity={0.7}
           >
-            <View
-              style={[
-                styles.sexIconContainer,
-                formData.sex === "male" && styles.sexIconContainerActive,
-              ]}
-            >
-              <FontAwesomeIcon
-                icon={icons.mars}
-                size={20}
-                color={formData.sex === "male" ? "#fff" : "#1A6872"}
-              />
-            </View>
+            <FontAwesomeIcon
+              icon={icons.mars}
+              size={20}
+              color={formData.sex === "male" ? "#1A6872" : "#333"}
+              style={styles.sexIcon}
+            />
             <Text
               style={[
                 styles.sexOptionText,
@@ -133,18 +127,12 @@ export function Step1Metrics({ formData, updateFormData }: Step1MetricsProps) {
             onPress={() => selectSex("female")}
             activeOpacity={0.7}
           >
-            <View
-              style={[
-                styles.sexIconContainer,
-                formData.sex === "female" && styles.sexIconContainerActive,
-              ]}
-            >
-              <FontAwesomeIcon
-                icon={icons.venus}
-                size={20}
-                color={formData.sex === "female" ? "#fff" : "#1A6872"}
-              />
-            </View>
+            <FontAwesomeIcon
+              icon={icons.venus}
+              size={20}
+              color={formData.sex === "female" ? "#1A6872" : "#333"}
+              style={styles.sexIcon}
+            />
             <Text
               style={[
                 styles.sexOptionText,
@@ -345,9 +333,9 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
+    padding: 18,
     borderRadius: 16,
-    backgroundColor: "#fff",
+    backgroundColor: "#F5F5F5",
   },
   sexOptionActive: {
     backgroundColor: "#E0F2F1",
@@ -357,17 +345,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  sexIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#E0F2F1",
-    justifyContent: "center",
-    alignItems: "center",
+  sexIcon: {
     marginRight: 12,
-  },
-  sexIconContainerActive: {
-    backgroundColor: "#1A6872",
   },
   sexOptionText: {
     flex: 1,

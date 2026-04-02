@@ -56,18 +56,12 @@ export function Step2Activity({
               onPress={() => handleSelect(level)}
               activeOpacity={0.7}
             >
-              <View
-                style={[
-                  styles.iconContainer,
-                  isSelected && styles.iconContainerSelected,
-                ]}
-              >
-                <Ionicons
-                  name={activityIcons[level]}
-                  size={24}
-                  color={isSelected ? "#fff" : "#1A6872"}
-                />
-              </View>
+              <Ionicons
+                name={activityIcons[level]}
+                size={24}
+                color={isSelected ? "#1A6872" : "#000"}
+                style={styles.icon}
+              />
               <View style={styles.textContainer}>
                 <Text
                   style={[
@@ -130,17 +124,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#E0F2F1",
-    justifyContent: "center",
-    alignItems: "center",
+  icon: {
     marginRight: 12,
-  },
-  iconContainerSelected: {
-    backgroundColor: "#1A6872",
   },
   textContainer: {
     flex: 1,

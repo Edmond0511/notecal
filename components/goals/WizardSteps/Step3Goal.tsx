@@ -50,29 +50,21 @@ export function Step3Goal({ selectedGoal, onSelect }: Step3GoalProps) {
               style={[
                 styles.optionCard,
                 isSelected && styles.optionCardSelected,
-                isSelected && { backgroundColor: `${color}20` },
               ]}
               onPress={() => handleSelect(goal)}
               activeOpacity={0.7}
             >
-              <View
-                style={[
-                  styles.iconContainer,
-                  { backgroundColor: `${color}20` },
-                  isSelected && { backgroundColor: color },
-                ]}
-              >
-                <Ionicons
-                  name={goalIcons[goal]}
-                  size={24}
-                  color={isSelected ? '#fff' : color}
-                />
-              </View>
+              <Ionicons
+                name={goalIcons[goal]}
+                size={24}
+                color={isSelected ? '#1A6872' : '#333'}
+                style={styles.icon}
+              />
               <View style={styles.textContainer}>
                 <Text
                   style={[
                     styles.optionTitle,
-                    isSelected && { color },
+                    isSelected && styles.optionTitleSelected,
                   ]}
                 >
                   {title}
@@ -85,7 +77,7 @@ export function Step3Goal({ selectedGoal, onSelect }: Step3GoalProps) {
                 <Ionicons
                   name="checkmark-circle"
                   size={22}
-                  color={color}
+                  color="#1A6872"
                   style={styles.checkIcon}
                 />
               )}
@@ -123,19 +115,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   optionCardSelected: {
-    backgroundColor: '#fff',
+    backgroundColor: '#E0F2F1',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+  icon: {
     marginRight: 12,
   },
   textContainer: {
@@ -146,6 +133,9 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: '#333',
     marginBottom: 2,
+  },
+  optionTitleSelected: {
+    color: '#1A6872',
   },
   optionDescription: {
     fontSize: 13,

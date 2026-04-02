@@ -783,6 +783,7 @@ export function WeightTrackingModal({
                       <Animated.View
                         key={entry.id}
                         entering={FadeInDown.delay(index * 30).duration(250)}
+                        style={styles.entryCardWrapper}
                       >
                         <Swipeable
                           ref={(ref) => {
@@ -1159,6 +1160,11 @@ const styles = StyleSheet.create({
     color: "#1A6872",
   },
   // History entries
+  entryCardWrapper: {
+    marginBottom: 8,
+    borderRadius: 16,
+    ...Tokens.shadowLight,
+  },
   entryCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -1166,10 +1172,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 14,
     height: 62,
-    marginBottom: 8,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(0, 0, 0, 0.07)",
-    ...Tokens.shadowLight,
   },
   entryContent: {
     flex: 1,

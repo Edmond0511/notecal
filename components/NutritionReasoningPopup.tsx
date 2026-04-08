@@ -1948,7 +1948,7 @@ export function NutritionReasoningPopup({
                           <Text style={styles.reasoningText}>
                             {item.reasoning.interpretation}
                             {item.reasoning.portionNotes && item.reasoning.portionNotes !== 'N/A'
-                              ? ` \u2014 ${item.reasoning.portionNotes}`
+                              ? ` ${item.reasoning.portionNotes}`
                               : ''}
                           </Text>
                         </View>
@@ -2471,15 +2471,13 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   itemCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
+    ...Tokens.shadowLight,
   },
   itemHeader: {
     marginBottom: 16,
@@ -2655,15 +2653,13 @@ const styles = StyleSheet.create({
   },
   totalsSection: {
     marginTop: 4,
-    backgroundColor: "#ffffff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     padding: 0,
     marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
+    ...Tokens.shadowLight,
   },
   totalsHeaderRow: {
     flexDirection: "row",

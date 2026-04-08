@@ -394,7 +394,6 @@ function ConfidencePopup({
                 styles.popupConfidenceIndicator,
                 {
                   backgroundColor: colors.background,
-                  borderColor: colors.border,
                 },
               ]}
             >
@@ -2304,7 +2303,7 @@ function MacroItem({
         <View style={styles.macroValueEditable}>
           <Text style={styles.macroValue}>
             {Math.round(value)}
-            {unit}
+            <Text style={styles.macroValueUnit}>{unit}</Text>
           </Text>
         </View>
         <Text style={styles.macroLabel}>{label}</Text>
@@ -2346,7 +2345,7 @@ function MicroItem({
         <View style={styles.macroValueEditable}>
           <Text style={styles.macroValue}>
             {displayValue}
-            {unit}
+            <Text style={styles.macroValueUnit}>{unit}</Text>
           </Text>
         </View>
         <Text style={styles.macroLabel}>{label}</Text>
@@ -2567,6 +2566,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#333",
   },
+  macroValueUnit: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
   macroValueEditable: {
     marginBottom: 2,
   },
@@ -2756,7 +2759,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
-    borderWidth: 1.5,
   },
   popupConfidenceValue: {
     fontSize: 15,

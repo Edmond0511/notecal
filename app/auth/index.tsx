@@ -1,8 +1,10 @@
+import { Tokens } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { useFonts, IBMPlexSans_700Bold } from "@expo-google-fonts/ibm-plex-sans";
 import { Ionicons } from "@expo/vector-icons";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
 import {
@@ -20,12 +22,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 WebBrowser.maybeCompleteAuthSession();
 
 export default function AuthScreen() {
+  const router = useRouter();
   const [fontsLoaded] = useFonts({
     IBMPlexSans_700Bold,
   });
   const [isLoading, setIsLoading] = useState<"google" | "apple" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
+
+  const handleEmailPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push("/auth/email");
+  };
 
   useEffect(() => {
     if (Platform.OS === "ios") {
@@ -163,6 +171,8 @@ export default function AuthScreen() {
             onPress={handleGoogleSignIn}
             disabled={isLoading !== null}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
           >
             {isLoading === "google" ? (
               <ActivityIndicator size="small" color="#666" />
@@ -181,6 +191,8 @@ export default function AuthScreen() {
               onPress={handleAppleSignIn}
               disabled={isLoading !== null}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Apple"
             >
               {isLoading === "apple" ? (
                 <ActivityIndicator size="small" color="#ffffff" />
@@ -192,6 +204,27 @@ export default function AuthScreen() {
               )}
             </TouchableOpacity>
           )}
+
+          {/* OR Divider */}
+          <View style={styles.dividerRow} accessible={false}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Email Sign In */}
+          <TouchableOpacity
+            style={styles.authButton}
+            onPress={handleEmailPress}
+            disabled={isLoading !== null}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with email"
+            accessibilityHint="Opens email and password sign in"
+          >
+            <Ionicons name="mail-outline" size={20} color={Tokens.textPrimary} />
+            <Text style={styles.authButtonText}>Continue with email</Text>
+          </TouchableOpacity>
         </Animated.View>
 
         {/* Error Message */}
@@ -238,12 +271,29 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 20,
   },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Tokens.border,
+  },
+  dividerText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: Tokens.textSecondary,
+    marginHorizontal: 14,
+    letterSpacing: 0.5,
+  },
   authButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#ffffff",
-    borderWidth: 1.5,
+    borderWidth: 0.5,
     borderColor: "#e5e5e5",
     borderRadius: 30,
     paddingVertical: 16,

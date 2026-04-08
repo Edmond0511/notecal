@@ -47,10 +47,21 @@ eas.json
 .vscode/
 .idea/
 
-# Claude Code
+# Claude Code / AI tooling
 /.claude
+.claude/
+.superpowers/
+.full-review/
+.planning/
 CLAUDE.md
+GEMINI.md
+AGENTS.md
 .mcp.json
+
+# Markdown / docs (never push)
+*.md
+!README.md
+docs/
 
 # Supabase
 /supabase

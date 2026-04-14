@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { CommonPortion, DatabaseSearchResult } from '@/types';
+import { DatabaseSearchResult, FatSecretServing } from '@/types';
 
 export interface FoodSearchResponse {
   common: DatabaseSearchResult[];
@@ -74,13 +74,6 @@ export async function searchFoodDatabase(
       throw new FoodSearchError('No data returned from food search');
     }
 
-    // Backward-compat: handle old flat `results` format
-    if ((data as any).results && !data.common) {
-      const results = (data as any).results as DatabaseSearchResult[];
-      data.common = results.filter((r) => r.source === 'FDC' && r.dataType && r.dataType !== 'Branded');
-      data.branded = results.filter((r) => r.source !== 'FDC' || !r.dataType || r.dataType === 'Branded');
-    }
-
     if (!Array.isArray(data.common) || !Array.isArray(data.branded)) {
       throw new FoodSearchError('Invalid response format: missing common/branded arrays');
     }
@@ -91,7 +84,7 @@ export async function searchFoodDatabase(
       throw error;
     }
 
-    if (error.message?.includes('rate limit')) {
+    if (error.message?.includes('rate limit') || error.message?.includes('Rate limit')) {
       throw new FoodSearchRateLimitError('Rate limit exceeded. Please try again later.');
     }
 
@@ -103,20 +96,23 @@ export async function searchFoodDatabase(
   }
 }
 
-export async function fetchFoodPortions(fdcId: number): Promise<CommonPortion[]> {
+/**
+ * Fetch full food detail (servings) by FatSecret food_id.
+ */
+export async function fetchFoodDetail(foodId: string): Promise<FatSecretServing[]> {
   try {
-    const { data, error } = await supabase.functions.invoke<{ portions: CommonPortion[] }>('food-search', {
-      body: { mode: 'detail', fdcId },
+    const { data, error } = await supabase.functions.invoke<{ servings: FatSecretServing[]; foodId: string; name: string }>('food-search', {
+      body: { mode: 'detail', foodId },
     });
 
-    if (error || !data?.portions) {
+    if (error || !data?.servings) {
       if (__DEV__) {
-        console.log('[foodSearchApi] Portions fetch failed:', error?.message ?? 'no data');
+        console.log('[foodSearchApi] Detail fetch failed:', error?.message ?? 'no data');
       }
       return [];
     }
 
-    return data.portions;
+    return data.servings;
   } catch {
     return [];
   }

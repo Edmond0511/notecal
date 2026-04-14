@@ -292,9 +292,9 @@ export default function HomeScreen() {
   }, []);
 
   const handleBarcodeProductAdd = useCallback(
-    (product: BarcodeProduct, servingGrams: number) => {
+    (product: BarcodeProduct, selectedServingId?: string) => {
       const state = useAppStore.getState();
-      const newEntry = state.addBarcodeEntry(product, servingGrams);
+      const newEntry = state.addBarcodeEntry(product, selectedServingId);
       setPendingInsertion({ date: state.currentDate, text: newEntry.rawText });
       setShowBarcodeScanner(false);
     },

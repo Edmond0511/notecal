@@ -220,7 +220,7 @@ export function FoodPhotoModal({
               <View style={styles.permissionContainer}>
                 <View style={styles.permissionContent}>
                   <View style={styles.permissionIconCircle}>
-                    <Ionicons name="camera-outline" size={48} color={TEAL} />
+                    <Ionicons name="camera-outline" size={48} color="#000" />
                   </View>
                   <Text style={styles.permissionTitle}>Camera Access</Text>
                   <Text style={styles.permissionDescription}>
@@ -411,7 +411,6 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: "#E0F2F1",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 24,

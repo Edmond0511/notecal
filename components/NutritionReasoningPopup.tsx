@@ -1,6 +1,6 @@
 import { Tokens } from "@/constants/theme";
 import { useAppStore } from "@/store/app-store";
-import { CommonPortion, Entry, Macros } from "@/types";
+import { CommonPortion, Entry, FatSecretServing, Macros } from "@/types";
 import {
   isLiquidGlassSupported,
   LiquidGlassView,
@@ -941,6 +941,9 @@ function EditQuantityPopup({
   commonPortions,
   onSave,
   onClose,
+  fsServings,
+  selectedServingId,
+  onSelectServing,
 }: {
   currentServings: number;
   itemQty: number;
@@ -948,7 +951,80 @@ function EditQuantityPopup({
   commonPortions?: CommonPortion[];
   onSave: (servings: number, qty?: number, unit?: string) => void;
   onClose: () => void;
+  fsServings?: FatSecretServing[];
+  selectedServingId?: string;
+  onSelectServing?: (servingId: string) => void;
 }) {
+  // FatSecret items: show a serving picker instead of the unit-based quantity picker
+  if (fsServings?.length && onSelectServing) {
+    return (
+      <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}
+          activeOpacity={1}
+          onPress={onClose}
+        >
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+            <View style={{
+              backgroundColor: "#f8f8f8",
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              padding: 20,
+              paddingBottom: 40,
+            }}>
+              <Text style={{ fontSize: 17, fontWeight: "600", color: "#1a1a1a", marginBottom: 16, textAlign: "center" }}>
+                Select Serving
+              </Text>
+              <ScrollView style={{ maxHeight: 350 }} showsVerticalScrollIndicator={false}>
+                {fsServings.map((serving) => {
+                  const isActive = serving.servingId === selectedServingId;
+                  return (
+                    <TouchableOpacity
+                      key={serving.servingId}
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        backgroundColor: isActive ? "#F0F9FA" : "#fff",
+                        borderRadius: 10,
+                        padding: 14,
+                        marginBottom: 6,
+                        borderWidth: 1.5,
+                        borderColor: isActive ? "#1A6872" : "transparent",
+                      }}
+                      onPress={() => {
+                        onSelectServing(serving.servingId);
+                        onClose();
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={{
+                        fontSize: 15,
+                        fontWeight: isActive ? "600" : "400",
+                        color: isActive ? "#1A6872" : "#333",
+                        flex: 1,
+                      }}>
+                        {serving.description}
+                      </Text>
+                      <Text style={{
+                        fontSize: 13,
+                        fontWeight: "500",
+                        color: isActive ? "#1A6872" : "#999",
+                        marginLeft: 8,
+                      }}>
+                        {serving.macros.kcal} cal
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+    );
+  }
+
   const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
@@ -1272,6 +1348,8 @@ export function NutritionReasoningPopup({
     itemQty: number;
     itemUnit: string;
     commonPortions?: CommonPortion[];
+    fsServings?: FatSecretServing[];
+    fsSelectedServingId?: string;
   } | null>(null);
 
   // Get goals to check which micronutrients are enabled
@@ -1514,6 +1592,8 @@ export function NutritionReasoningPopup({
       unit: string,
       kcal: number,
       itemCommonPortions?: CommonPortion[],
+      itemFsServings?: FatSecretServing[],
+      itemFsSelectedServingId?: string,
     ) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setEditQuantityPopup({
@@ -1522,6 +1602,8 @@ export function NutritionReasoningPopup({
         itemQty: qty,
         itemUnit: unit,
         commonPortions: itemCommonPortions,
+        fsServings: itemFsServings,
+        fsSelectedServingId: itemFsSelectedServingId,
       });
     },
     [],
@@ -1691,12 +1773,16 @@ export function NutritionReasoningPopup({
                               item.unit,
                               item.macros.kcal,
                               item.commonPortions,
+                              item.fsServings,
+                              item.fsSelectedServingId,
                             )
                           }
                           activeOpacity={0.6}
                         >
-                          <Text style={styles.quantityText}>
-                            {normalizeUnit(item.unit)
+                          <Text style={styles.quantityText} numberOfLines={1}>
+                            {item.source === 'FS' && item.fsServings?.length
+                              ? (item.fsServings.find(s => s.servingId === item.fsSelectedServingId)?.description ?? item.unit)
+                              : normalizeUnit(item.unit)
                               ? `${formatQtyValue(item.qty * (item.servings ?? 1))}${item.unit}`
                               : `×${
                                   Number.isInteger(item.servings ?? 1)
@@ -1991,7 +2077,8 @@ export function NutritionReasoningPopup({
                     </View>
                   )}
 
-                  {/* Something Off Button - at the bottom of card */}
+                  {/* Something Off Button - at the bottom of card (hidden for FatSecret items) */}
+                  {item.source !== 'FS' && (
                   <TouchableOpacity
                     style={styles.somethingOffButton}
                     onPress={() => {
@@ -2013,6 +2100,7 @@ export function NutritionReasoningPopup({
                       Something Off?
                     </Text>
                   </TouchableOpacity>
+                  )}
                 </Animated.View>
               ))}
 
@@ -2267,6 +2355,13 @@ export function NutritionReasoningPopup({
             commonPortions={editQuantityPopup.commonPortions}
             onSave={handleSaveQuantity}
             onClose={() => setEditQuantityPopup(null)}
+            fsServings={editQuantityPopup.fsServings}
+            selectedServingId={editQuantityPopup.fsSelectedServingId}
+            onSelectServing={(servingId) => {
+              if (displayEntry && editQuantityPopup.itemId) {
+                useAppStore.getState().setFoodItemServing(displayEntry.id, editQuantityPopup.itemId, servingId);
+              }
+            }}
           />
         )}
       </GestureHandlerRootView>
@@ -2691,8 +2786,6 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
   },
   totalsDropdown: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#f0f0f0",
     paddingBottom: 8,
     paddingHorizontal: 20,
   },
@@ -2702,8 +2795,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
     minHeight: 36,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#f0f0f0",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#f0f0f0",
   },
   totalsNutrientRowLast: {
     borderBottomWidth: 0,

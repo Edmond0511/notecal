@@ -19,6 +19,14 @@ export interface Macros {
   water?: number;
 }
 
+export interface FatSecretServing {
+  servingId: string;
+  description: string;
+  metricAmount?: number;
+  metricUnit?: 'g' | 'ml' | 'oz';
+  macros: Macros;
+}
+
 export interface CommonPortion {
   label: string; // e.g. "1 cup", "1 medium", "1 tbsp"
   grams: number; // gram equivalent
@@ -33,7 +41,7 @@ export interface FoodItem {
   qty: number;
   unit: string;
   servings?: number; // Multiplier for the portion (1 = as entered, 2 = double, etc.)
-  source: 'FDC' | 'CNF' | 'OFF' | 'fallback' | 'local';
+  source: 'FDC' | 'CNF' | 'OFF' | 'FS' | 'fallback' | 'local';
   sourceId: string;
   macros: Macros;
   originalMacros?: Macros; // Original AI-calculated values for revert
@@ -46,15 +54,18 @@ export interface FoodItem {
   barcode?: string;
   commonPortions?: CommonPortion[];
   extendedNutrientsPer100g?: ExtendedNutrients;
+  // FatSecret-specific fields (only when source === 'FS')
+  fsServings?: FatSecretServing[];
+  fsSelectedServingId?: string;
 }
 
 export interface BarcodeProduct {
   barcode: string;
+  foodId: string;
   name: string;
   brand?: string;
-  servingSizeG?: number;
   imageUrl?: string;
-  nutrimentsPer100g: Macros;
+  servings: FatSecretServing[];
 }
 
 export interface ExtendedNutrients {
@@ -79,18 +90,23 @@ export interface ExtendedNutrients {
 }
 
 export interface DatabaseSearchResult {
+  foodId?: string;
   fdcId?: number;
   offId?: string; // kept for backward compat with locally-constructed results
-  source: 'FDC' | 'OFF'; // OFF kept for backward compat with barcode entries
+  source: 'FDC' | 'OFF' | 'FS';
   name: string;
   brand?: string;
   category?: string;
   dataType?: string; // FDC: 'Foundation' | 'SR Legacy' | 'Survey (FNDDS)' | 'Branded'
-  macrosPer100g: Macros;
+  macrosPer100g?: Macros;
   extendedNutrientsPer100g?: ExtendedNutrients;
   defaultServingG?: number;
   defaultServingLabel?: string;
   portions?: CommonPortion[];
+  fsServings?: FatSecretServing[];
+  // FatSecret search results include default serving info for display
+  defaultServingMacros?: Macros;
+  defaultServingDescription?: string;
 }
 
 export interface Entry {
@@ -270,7 +286,7 @@ export interface AppState {
   saveEntry: (entry: Entry) => void;
   deleteSavedEntry: (id: string) => void;
   useSavedEntry: (savedEntry: SavedEntry) => Entry;
-  addBarcodeEntry: (product: BarcodeProduct, servingGrams: number) => Entry;
+  addBarcodeEntry: (product: BarcodeProduct, selectedServingId?: string) => Entry;
   addDatabaseSearchEntry: (result: DatabaseSearchResult, servingGrams: number, idSuffix?: number) => Entry;
   addPhotoEntry: (items: FoodItem[], totals: Macros) => Entry;
   createSavedEntry: (rawText: string) => Promise<{ success: boolean; error?: string }>;
@@ -286,6 +302,7 @@ export interface AppState {
     newQty?: number,
     newUnit?: string,
   ) => void;
+  setFoodItemServing: (entryId: string, itemId: string, servingId: string) => void;
   // Correction action
   correctEntryItem: (entryId: string, itemId: string, feedback: string) => Promise<void>;
   // Weight tracking actions

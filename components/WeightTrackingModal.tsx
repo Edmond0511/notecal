@@ -1137,7 +1137,7 @@ const styles = StyleSheet.create({
   rangeToggle: {
     flexDirection: "row",
     backgroundColor: "#FCFCFB",
-    borderRadius: 9,
+    borderRadius: 999,
     padding: 2,
     marginBottom: 12,
   },
@@ -1145,7 +1145,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 6,
     alignItems: "center",
-    borderRadius: 7,
+    borderRadius: 999,
   },
   rangeButtonActive: {
     backgroundColor: Tokens.surfaceRaised,

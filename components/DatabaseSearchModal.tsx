@@ -1,14 +1,14 @@
 import { AnimatedDigits } from "@/components/AnimatedDigits";
 import { EditNutrientPopup } from "@/components/NutritionReasoningPopup";
 import { Tokens } from "@/constants/theme";
-import { scaleExtendedNutrients, scaleMacrosToServing } from "@/services/barcodeService";
+// barcodeService imports removed — FS items use native servings
 import {
-  fetchFoodPortions,
+  fetchFoodDetail,
   FoodSearchError,
   searchFoodDatabase,
 } from "@/services/foodSearchApi";
 import { useAppStore } from "@/store/app-store";
-import { CommonPortion, DatabaseSearchResult, Macros } from "@/types";
+import { CommonPortion, DatabaseSearchResult, FatSecretServing, Macros } from "@/types";
 import {
   isLiquidGlassSupported,
   LiquidGlassView,
@@ -135,6 +135,8 @@ interface SelectedItem {
   result: DatabaseSearchResult;
   servingGrams: number;
   portions: CommonPortion[];
+  fsServings: FatSecretServing[];
+  selectedServingId?: string;
 }
 
 interface DatabaseSearchModalProps {
@@ -355,17 +357,24 @@ export function DatabaseSearchModal({
     setState({ type: "detail", result });
 
     // Use cached portions if available, otherwise fetch from API
-    if (result.portions?.length) {
+    if (result.source === "FS" && result.foodId) {
+      if (result.fsServings?.length) {
+        setPortions([]);
+        setPortionsLoading(false);
+      } else {
+        setPortionsLoading(true);
+        fetchFoodDetail(result.foodId)
+          .then((servings) => {
+            result.fsServings = servings;
+          })
+          .finally(() => setPortionsLoading(false));
+      }
+    } else if (result.portions?.length) {
       setPortions(result.portions);
       setPortionsLoading(false);
     } else {
       setPortions([]);
-      if (result.source === "FDC" && result.fdcId) {
-        setPortionsLoading(true);
-        fetchFoodPortions(result.fdcId)
-          .then((p) => setPortions(p))
-          .finally(() => setPortionsLoading(false));
-      }
+      setPortionsLoading(false);
     }
   }, []);
 
@@ -378,9 +387,11 @@ export function DatabaseSearchModal({
       const existing = selectedItems.find(
         (item) =>
           item.result.source === result.source &&
-          (result.fdcId
-            ? item.result.fdcId === result.fdcId
-            : item.result.offId === result.offId),
+          (result.foodId
+            ? item.result.foodId === result.foodId
+            : result.fdcId
+              ? item.result.fdcId === result.fdcId
+              : item.result.offId === result.offId),
       );
       if (existing) {
         setSelectedItems((prev) => prev.filter((item) => item.id !== existing.id));
@@ -391,15 +402,15 @@ export function DatabaseSearchModal({
       const id = `sel-${++selectionIdCounter.current}`;
       setSelectedItems((prev) => [
         ...prev,
-        { id, result, servingGrams: defaultServing, portions: [] },
+        { id, result, servingGrams: defaultServing, portions: [], fsServings: [] },
       ]);
 
-      // Fetch portions in the background for this item
-      if (result.source === "FDC" && result.fdcId) {
-        fetchFoodPortions(result.fdcId).then((p) => {
+      // Fetch servings in the background for FS items
+      if (result.source === "FS" && result.foodId && !result.fsServings?.length) {
+        fetchFoodDetail(result.foodId).then((servings) => {
           setSelectedItems((prev) =>
             prev.map((item) =>
-              item.id === id ? { ...item, portions: p } : item,
+              item.id === id ? { ...item, fsServings: servings } : item,
             ),
           );
         });
@@ -414,9 +425,11 @@ export function DatabaseSearchModal({
       return selectedItems.some(
         (item) =>
           item.result.source === result.source &&
-          (result.fdcId
-            ? item.result.fdcId === result.fdcId
-            : item.result.offId === result.offId),
+          (result.foodId
+            ? item.result.foodId === result.foodId
+            : result.fdcId
+              ? item.result.fdcId === result.fdcId
+              : item.result.offId === result.offId),
       );
     },
     [selectedItems],
@@ -473,7 +486,7 @@ export function DatabaseSearchModal({
       const id = `sel-${++selectionIdCounter.current}`;
       setSelectedItems((prev) => [
         ...prev,
-        { id, result: resultWithPortions, servingGrams: grams, portions },
+        { id, result: resultWithPortions, servingGrams: grams, portions, fsServings: resultWithPortions.fsServings ?? [] },
       ]);
       const allAfterAdd = [...commonResults, ...brandedResults];
       if (allAfterAdd.length > 0) {
@@ -528,15 +541,17 @@ export function DatabaseSearchModal({
       setPortionsLoading(false);
       setState({ type: "detail", result: selected.result });
 
-      // Re-fetch portions if we don't have them
+      // Re-fetch servings if we don't have them for FS items
       if (
-        selected.portions.length === 0 &&
-        selected.result.source === "FDC" &&
-        selected.result.fdcId
+        selected.result.source === "FS" &&
+        selected.result.foodId &&
+        !selected.result.fsServings?.length
       ) {
         setPortionsLoading(true);
-        fetchFoodPortions(selected.result.fdcId)
-          .then((p) => setPortions(p))
+        fetchFoodDetail(selected.result.foodId)
+          .then((servings) => {
+            selected.result.fsServings = servings;
+          })
           .finally(() => setPortionsLoading(false));
       }
     },
@@ -594,36 +609,46 @@ export function DatabaseSearchModal({
   }));
 
   // Compute scaled macros for detail view
-  const previewMacrosBase: Macros | null =
-    state.type === "detail"
-      ? scaleMacrosToServing(
-          state.result.macrosPer100g,
-          parseFloat(servingGrams) || 100,
-        )
-      : null;
+  const previewMacrosBase: Macros | null = useMemo(() => {
+    if (state.type !== "detail" || !state.result.macrosPer100g) return null;
+    const grams = parseFloat(servingGrams) || 100;
+    const m = state.result.macrosPer100g;
+    const scale = grams / 100;
+    return {
+      kcal: Math.round(m.kcal * scale),
+      protein: Math.round(m.protein * scale * 10) / 10,
+      fat: Math.round(m.fat * scale * 10) / 10,
+      carbs: Math.round(m.carbs * scale * 10) / 10,
+      ...(m.fiber != null && { fiber: Math.round(m.fiber * scale * 10) / 10 }),
+      ...(m.sugar != null && { sugar: Math.round(m.sugar * scale * 10) / 10 }),
+      ...(m.sodium != null && { sodium: Math.round(m.sodium * scale) }),
+      ...(m.potassium != null && { potassium: Math.round(m.potassium * scale) }),
+    };
+  }, [state, servingGrams]);
 
   const previewMacros: Macros | null = previewMacrosBase
     ? { ...previewMacrosBase, ...macroOverrides }
     : null;
 
   // Compute extended nutrients for detail view
-  const previewExtended: Record<string, number> | null =
-    state.type === "detail" && state.result.extendedNutrientsPer100g
-      ? scaleExtendedNutrients(
-          state.result.extendedNutrientsPer100g as Record<string, number>,
-          parseFloat(servingGrams) || 100,
-        )
-      : null;
+  const previewExtended: Record<string, number> | null = useMemo(() => {
+    if (state.type !== "detail" || !state.result.extendedNutrientsPer100g) return null;
+    const grams = parseFloat(servingGrams) || 100;
+    const scale = grams / 100;
+    const ext = state.result.extendedNutrientsPer100g as Record<string, number>;
+    const scaled: Record<string, number> = {};
+    for (const [key, val] of Object.entries(ext)) {
+      if (val != null) scaled[key] = val * scale;
+    }
+    return Object.keys(scaled).length > 0 ? scaled : null;
+  }, [state, servingGrams]);
 
   const [extendedOpen, setExtendedOpen] = useState(false);
 
   // Compute selection totals
   const selectionTotalCal = selectedItems.reduce((sum, item) => {
-    const scaled = scaleMacrosToServing(
-      item.result.macrosPer100g,
-      item.servingGrams,
-    );
-    return sum + Math.round(scaled.kcal);
+    const kcal = Math.round((item.result.macrosPer100g?.kcal ?? 0) * item.servingGrams / 100);
+    return sum + kcal;
   }, 0);
 
   const renderResultCard = useCallback(
@@ -631,7 +656,7 @@ export function DatabaseSearchModal({
       const selected = isResultSelected(result);
       return (
         <Animated.View
-          key={`${result.source}-${result.fdcId ?? result.offId ?? index}`}
+          key={`${result.source}-${result.foodId ?? result.fdcId ?? result.offId ?? index}`}
           entering={FadeInDown.delay(index * 30).duration(200)}
         >
           <TouchableOpacity
@@ -658,10 +683,14 @@ export function DatabaseSearchModal({
                 <View style={styles.resultMacroRow}>
                   {(() => {
                     const servG = result.defaultServingG ?? 100;
-                    const scaled = scaleMacrosToServing(
-                      result.macrosPer100g,
-                      servG,
-                    );
+                    const scale = servG / 100;
+                    const m = result.macrosPer100g ?? { kcal: 0, protein: 0, fat: 0, carbs: 0 };
+                    const scaled = {
+                      kcal: Math.round(m.kcal * scale),
+                      protein: Math.round(m.protein * scale),
+                      fat: Math.round(m.fat * scale),
+                      carbs: Math.round(m.carbs * scale),
+                    };
                     const suffix = result.defaultServingLabel
                       ? result.defaultServingLabel
                       : `${Math.round(servG)}g`;
@@ -1025,6 +1054,9 @@ export function DatabaseSearchModal({
                         renderResultCard(result, commonResults.length + index),
                       )}
                     </>
+                  )}
+                  {(commonResults.length > 0 || brandedResults.length > 0) && (
+                    <Text style={styles.attribution}>Powered by FatSecret</Text>
                   )}
                 </KeyboardAwareScrollView>
               )}
@@ -1809,5 +1841,14 @@ const styles = StyleSheet.create({
   },
   selectionChipRemove: {
     padding: 2,
+  },
+  attribution: {
+    fontSize: 11,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: "#bbb",
+    textAlign: "center",
+    marginTop: 12,
+    marginBottom: 8,
   },
 });

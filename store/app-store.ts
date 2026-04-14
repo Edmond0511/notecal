@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStateStorage } from '@/lib/mmkv';
-import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, EntryMode, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct, DatabaseSearchResult, PendingInsertion, MealReminder } from '@/types';
+import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, EntryMode, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct, DatabaseSearchResult, PendingInsertion, MealReminder, FatSecretServing } from '@/types';
 import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
-import { barcodeProductToFoodItem, scaleMacrosToServing } from '@/services/barcodeService';
+import { barcodeProductToFoodItem } from '@/services/barcodeService';
 import { nutritionQueue } from '@/services/nutritionQueue';
 import { photoSyncService } from '@/services/photoSyncService';
 import { supabase } from '@/lib/supabase';
@@ -579,12 +579,12 @@ export const useAppStore = create<AppState>()(
     return newEntry;
   },
 
-  addBarcodeEntry: (product: BarcodeProduct, servingGrams: number): Entry => {
+  addBarcodeEntry: (product: BarcodeProduct, selectedServingId?: string): Entry => {
     const entryId = Date.now().toString();
     const currentDate = get().currentDate;
     const isFreeform = get().entryMode === 'freeform';
 
-    const item = barcodeProductToFoodItem(product, entryId, servingGrams);
+    const item = barcodeProductToFoodItem(product, entryId, selectedServingId);
     const rawText = isFreeform
       ? product.name
       : `— ${product.name}`;
@@ -612,49 +612,95 @@ export const useAppStore = create<AppState>()(
     const currentDate = get().currentDate;
     const isFreeform = get().entryMode === 'freeform';
 
-    const macros = scaleMacrosToServing(result.macrosPer100g, servingGrams);
     const rawText = isFreeform
       ? result.name
       : `— ${result.name}`;
 
-    const sourceId = result.source === 'FDC'
-      ? String(result.fdcId ?? '')
-      : result.offId ?? '';
+    let item: import('@/types').FoodItem;
 
-    const citations = result.source === 'FDC'
-      ? [{ provider: 'USDA FoodData Central', url: `https://fdc.nal.usda.gov/fdc-app.html#/food-details/${result.fdcId}/nutrients` }]
-      : [{ provider: 'Open Food Facts', url: `https://world.openfoodfacts.org/product/${result.offId}` }];
-
-    const item: import('@/types').FoodItem = {
-      id: `${entryId}-dbsearch-0`,
-      entryId,
-      label: result.name,
-      brand: result.brand,
-      qty: servingGrams,
-      unit: 'g',
-      source: result.source,
-      sourceId,
-      macros,
-      confidence: 0.95,
-      citations,
-      reasoning: {
-        interpretation: `Database search: ${result.name}`,
-        assumptions: [
-          `Nutrition data from ${result.source === 'FDC' ? 'USDA FoodData Central' : 'Open Food Facts'} database`,
-          `Serving size: ${servingGrams}g`,
-          `Values scaled from per-100g data`,
+    if (result.source === 'FS' && result.fsServings?.length) {
+      // FatSecret path: use native servings
+      const defaultServing = result.fsServings.find(s => s.metricUnit === 'g') ?? result.fsServings[0];
+      item = {
+        id: `${entryId}-dbsearch-0`,
+        entryId,
+        label: result.name,
+        brand: result.brand,
+        qty: defaultServing.metricAmount ?? 0,
+        unit: defaultServing.metricUnit ?? 'serving',
+        source: 'FS',
+        sourceId: result.foodId ?? '',
+        macros: { ...defaultServing.macros },
+        originalMacros: { ...defaultServing.macros },
+        confidence: 0.95,
+        citations: [
+          { provider: 'FatSecret', url: `https://www.fatsecret.com/calories-nutrition/search?q=${encodeURIComponent(result.name)}` },
         ],
-        dataSource: result.source === 'FDC' ? 'USDA FoodData Central (FDC)' : 'Open Food Facts (OFF)',
-      },
-      ...(result.portions?.length ? { commonPortions: result.portions } : {}),
-      ...(result.extendedNutrientsPer100g ? { extendedNutrientsPer100g: result.extendedNutrientsPer100g } : {}),
-    };
+        reasoning: {
+          interpretation: `Database search: ${result.name}`,
+          assumptions: [
+            'Nutrition data from FatSecret database',
+            `Serving: ${defaultServing.description}`,
+          ],
+          dataSource: 'FatSecret',
+        },
+        fsServings: result.fsServings,
+        fsSelectedServingId: defaultServing.servingId,
+      };
+    } else {
+      // Legacy FDC/OFF path (for recently-logged items from old data)
+      const macros = result.macrosPer100g
+        ? {
+            kcal: Math.round(result.macrosPer100g.kcal * servingGrams / 100),
+            protein: Math.round(result.macrosPer100g.protein * servingGrams / 100 * 10) / 10,
+            fat: Math.round(result.macrosPer100g.fat * servingGrams / 100 * 10) / 10,
+            carbs: Math.round(result.macrosPer100g.carbs * servingGrams / 100 * 10) / 10,
+            ...(result.macrosPer100g.fiber != null && { fiber: Math.round(result.macrosPer100g.fiber * servingGrams / 100 * 10) / 10 }),
+            ...(result.macrosPer100g.sugar != null && { sugar: Math.round(result.macrosPer100g.sugar * servingGrams / 100 * 10) / 10 }),
+            ...(result.macrosPer100g.sodium != null && { sodium: Math.round(result.macrosPer100g.sodium * servingGrams / 100) }),
+            ...(result.macrosPer100g.potassium != null && { potassium: Math.round(result.macrosPer100g.potassium * servingGrams / 100) }),
+          }
+        : { kcal: 0, protein: 0, fat: 0, carbs: 0 };
+
+      const sourceId = result.source === 'FDC'
+        ? String(result.fdcId ?? '')
+        : result.offId ?? '';
+
+      const citations = result.source === 'FDC'
+        ? [{ provider: 'USDA FoodData Central', url: `https://fdc.nal.usda.gov/fdc-app.html#/food-details/${result.fdcId}/nutrients` }]
+        : [{ provider: 'Open Food Facts', url: `https://world.openfoodfacts.org/product/${result.offId}` }];
+
+      item = {
+        id: `${entryId}-dbsearch-0`,
+        entryId,
+        label: result.name,
+        brand: result.brand,
+        qty: servingGrams,
+        unit: 'g',
+        source: result.source,
+        sourceId,
+        macros,
+        confidence: 0.95,
+        citations,
+        reasoning: {
+          interpretation: `Database search: ${result.name}`,
+          assumptions: [
+            `Nutrition data from ${result.source === 'FDC' ? 'USDA FoodData Central' : 'Open Food Facts'} database`,
+            `Serving size: ${servingGrams}g`,
+            `Values scaled from per-100g data`,
+          ],
+          dataSource: result.source === 'FDC' ? 'USDA FoodData Central (FDC)' : 'Open Food Facts (OFF)',
+        },
+        ...(result.portions?.length ? { commonPortions: result.portions } : {}),
+        ...(result.extendedNutrientsPer100g ? { extendedNutrientsPer100g: result.extendedNutrientsPer100g } : {}),
+      };
+    }
 
     const newEntry: Entry = {
       id: entryId,
       date: currentDate,
       rawText,
-      inlineKcal: macros.kcal,
+      inlineKcal: item.macros.kcal,
       status: 'ok',
       items: [item],
       createdAt: new Date(),
@@ -947,6 +993,34 @@ export const useAppStore = create<AppState>()(
           items: updatedItems,
           inlineKcal: newInlineKcal,
           updatedAt: new Date(),
+        };
+      }),
+    }));
+  },
+
+  setFoodItemServing: (entryId: string, itemId: string, servingId: string) => {
+    set((state) => ({
+      entries: state.entries.map((entry) => {
+        if (entry.id !== entryId) return entry;
+        const updatedItems = entry.items.map((item) => {
+          if (item.id !== itemId || !item.fsServings) return item;
+          const serving = item.fsServings.find((s) => s.servingId === servingId);
+          if (!serving) return item;
+          return {
+            ...item,
+            macros: { ...serving.macros },
+            originalMacros: { ...serving.macros },
+            qty: serving.metricAmount ?? 0,
+            unit: serving.metricUnit ?? 'serving',
+            fsSelectedServingId: servingId,
+          };
+        });
+        const newInlineKcal = updatedItems.reduce((sum, item) => sum + item.macros.kcal, 0);
+        return {
+          ...entry,
+          updatedAt: new Date(),
+          items: updatedItems,
+          inlineKcal: newInlineKcal,
         };
       }),
     }));

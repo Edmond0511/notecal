@@ -1,11 +1,9 @@
 import {
   BarcodeLookupError,
-  BarcodeNonFoodError,
   BarcodeNotFoundError,
   lookupBarcode,
-  scaleMacrosToServing,
 } from "@/services/barcodeService";
-import { BarcodeProduct, Macros } from "@/types";
+import { BarcodeProduct, FatSecretServing, Macros } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -23,6 +21,7 @@ import {
   Keyboard,
   LayoutAnimation,
   Modal,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -89,13 +88,12 @@ type ScannerState =
   | { type: "loading"; barcode: string }
   | { type: "found"; product: BarcodeProduct }
   | { type: "not_found"; barcode: string }
-  | { type: "non_food" }
   | { type: "error"; message: string };
 
 interface BarcodeScannerModalProps {
   visible: boolean;
   onClose: () => void;
-  onAddProduct: (product: BarcodeProduct, servingGrams: number) => void;
+  onAddProduct: (product: BarcodeProduct, selectedServingId?: string) => void;
   onAddManualEntry: (text: string) => void;
 }
 
@@ -114,7 +112,7 @@ export function BarcodeScannerModal({
   const usePerms = cameraAvailable ? useCameraPermissions : useStubPermissions;
   const [permission, requestPermission] = usePerms();
   const [state, setState] = useState<ScannerState>({ type: "scanning" });
-  const [servingGrams, setServingGrams] = useState("");
+  const [selectedServingId, setSelectedServingId] = useState<string | null>(null);
   const [manualText, setManualText] = useState("");
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scanLockRef = useRef(false);
@@ -124,7 +122,7 @@ export function BarcodeScannerModal({
   useEffect(() => {
     if (visible) {
       setState({ type: "scanning" });
-      setServingGrams("");
+      setSelectedServingId(null);
       setManualText("");
       scanLockRef.current = false;
       translateY.value = 0;
@@ -156,8 +154,12 @@ export function BarcodeScannerModal({
   // Set default serving size when product is found
   useEffect(() => {
     if (state.type === "found") {
-      const defaultServing = state.product.servingSizeG ?? 100;
-      setServingGrams(defaultServing.toString());
+      const defaultServing =
+        state.product.servings.find((s) => s.metricUnit === "g") ??
+        state.product.servings[0];
+      if (defaultServing) {
+        setSelectedServingId(defaultServing.servingId);
+      }
     }
   }, [state.type === "found" ? (state as any).product : null]);
 
@@ -175,8 +177,6 @@ export function BarcodeScannerModal({
     } catch (err) {
       if (err instanceof BarcodeNotFoundError) {
         setState({ type: "not_found", barcode });
-      } else if (err instanceof BarcodeNonFoodError) {
-        setState({ type: "non_food" });
       } else if (err instanceof BarcodeLookupError) {
         setState({ type: "error", message: err.message });
       } else {
@@ -187,10 +187,9 @@ export function BarcodeScannerModal({
 
   const handleAdd = useCallback(() => {
     if (state.type !== "found") return;
-    const grams = parseFloat(servingGrams) || 100;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onAddProduct(state.product, grams);
-  }, [state, servingGrams, onAddProduct]);
+    onAddProduct(state.product, selectedServingId ?? undefined);
+  }, [state, selectedServingId, onAddProduct]);
 
   const handleManualSubmit = useCallback(() => {
     const text = manualText.trim();
@@ -203,7 +202,7 @@ export function BarcodeScannerModal({
   const handleScanAgain = useCallback(() => {
     scanLockRef.current = false;
     setState({ type: "scanning" });
-    setServingGrams("");
+    setSelectedServingId(null);
     setManualText("");
   }, []);
 
@@ -244,24 +243,12 @@ export function BarcodeScannerModal({
     ),
   }));
 
-  const handleServingStep = useCallback(
-    (delta: number) => {
-      const current = parseFloat(servingGrams) || 100;
-      const next = Math.max(1, current + delta);
-      setServingGrams(next.toString());
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    },
-    [servingGrams],
-  );
-
-  // Compute scaled macros for preview
-  const previewMacros: Macros | null =
-    state.type === "found"
-      ? scaleMacrosToServing(
-          state.product.nutrimentsPer100g,
-          parseFloat(servingGrams) || 100,
-        )
+  const selectedServing: FatSecretServing | null =
+    state.type === "found" && selectedServingId
+      ? state.product.servings.find((s) => s.servingId === selectedServingId) ?? null
       : null;
+
+  const previewMacros: Macros | null = selectedServing ? selectedServing.macros : null;
 
   // Not yet loaded
   if (!permission) {
@@ -474,36 +461,50 @@ export function BarcodeScannerModal({
                       </Text>
                     </View>
 
-                    {/* Serving stepper */}
+                    {/* Serving picker */}
                     <View style={styles.servingCard}>
                       <Text style={styles.servingLabel}>Serving</Text>
-                      <View style={styles.stepperContainer}>
-                        <TouchableOpacity
-                          style={styles.stepperButton}
-                          onPress={() => handleServingStep(-10)}
-                          activeOpacity={0.6}
-                        >
-                          <Ionicons name="remove" size={18} color="#666" />
-                        </TouchableOpacity>
-                        <View style={styles.servingInputWrapper}>
-                          <TextInput
-                            style={styles.servingInput}
-                            value={servingGrams}
-                            onChangeText={setServingGrams}
-                            keyboardType="numeric"
-                            selectTextOnFocus
-                          />
-                          <Text style={styles.servingUnit}>g</Text>
-                        </View>
-                        <TouchableOpacity
-                          style={styles.stepperButton}
-                          onPress={() => handleServingStep(10)}
-                          activeOpacity={0.6}
-                        >
-                          <Ionicons name="add" size={18} color="#666" />
-                        </TouchableOpacity>
-                      </View>
                     </View>
+                    <ScrollView
+                      horizontal={false}
+                      style={{ maxHeight: 140, marginBottom: 16 }}
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {state.product.servings.map((serving) => {
+                        const isSelected = serving.servingId === selectedServingId;
+                        return (
+                          <TouchableOpacity
+                            key={serving.servingId}
+                            style={[
+                              styles.servingOption,
+                              isSelected && styles.servingOptionSelected,
+                            ]}
+                            onPress={() => {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                              setSelectedServingId(serving.servingId);
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <Text
+                              style={[
+                                styles.servingOptionText,
+                                isSelected && styles.servingOptionTextSelected,
+                              ]}
+                            >
+                              {serving.description}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.servingOptionKcal,
+                                isSelected && styles.servingOptionKcalSelected,
+                              ]}
+                            >
+                              {serving.macros.kcal} cal
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
 
                     {/* Macro columns */}
                     <View style={styles.macrosCard}>
@@ -575,6 +576,9 @@ export function BarcodeScannerModal({
                         <Text style={styles.addButtonText}>Add</Text>
                       </TouchableOpacity>
                     </View>
+                    <Text style={styles.attribution}>
+                      Powered by FatSecret
+                    </Text>
                   </Animated.View>
                 )}
 
@@ -623,34 +627,6 @@ export function BarcodeScannerModal({
                         />
                       </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      style={styles.scanAgainButtonAlt}
-                      onPress={handleScanAgain}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="scan-outline" size={16} color="#666" />
-                      <Text style={styles.scanAgainText}>Scan Again</Text>
-                    </TouchableOpacity>
-                  </Animated.View>
-                )}
-
-                {/* Non-food state */}
-                {state.type === "non_food" && (
-                  <Animated.View
-                    entering={FadeInDown.duration(300)}
-                    style={[
-                      styles.bottomCard,
-                      { paddingBottom: insets.bottom + 16 },
-                    ]}
-                  >
-                    <View style={styles.notFoundHeader}>
-                      <Ionicons name="ban-outline" size={24} color="#F87171" />
-                      <Text style={styles.notFoundTitle}>Not a food item</Text>
-                    </View>
-                    <Text style={styles.notFoundDescription}>
-                      This product doesn't appear to be a food or drink. Only
-                      food items can be tracked.
-                    </Text>
                     <TouchableOpacity
                       style={styles.scanAgainButtonAlt}
                       onPress={handleScanAgain}
@@ -1101,5 +1077,49 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 12,
+  },
+  servingOption: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 6,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+  },
+  servingOptionSelected: {
+    borderColor: TEAL,
+    backgroundColor: "#F0F9FA",
+  },
+  servingOptionText: {
+    fontSize: 15,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: "#333",
+    flex: 1,
+  },
+  servingOptionTextSelected: {
+    fontWeight: "600",
+    color: TEAL,
+  },
+  servingOptionKcal: {
+    fontSize: 13,
+    fontFamily: "System",
+    fontWeight: "500",
+    color: "#999",
+    marginLeft: 8,
+  },
+  servingOptionKcalSelected: {
+    color: TEAL,
+  },
+  attribution: {
+    fontSize: 11,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: "#bbb",
+    textAlign: "center",
+    marginTop: 8,
   },
 });

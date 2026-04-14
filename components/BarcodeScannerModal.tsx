@@ -20,6 +20,7 @@ import {
   Dimensions,
   Keyboard,
   LayoutAnimation,
+  Linking,
   Modal,
   ScrollView,
   StatusBar,
@@ -576,8 +577,11 @@ export function BarcodeScannerModal({
                         <Text style={styles.addButtonText}>Add</Text>
                       </TouchableOpacity>
                     </View>
-                    <Text style={styles.attribution}>
-                      Powered by FatSecret
+                    <Text
+                      style={styles.attribution}
+                      onPress={() => Linking.openURL("https://platform.fatsecret.com")}
+                    >
+                      Powered by FatSecret Platform API
                     </Text>
                   </Animated.View>
                 )}

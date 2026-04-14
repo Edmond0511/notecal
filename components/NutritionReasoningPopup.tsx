@@ -955,75 +955,15 @@ function EditQuantityPopup({
   selectedServingId?: string;
   onSelectServing?: (servingId: string) => void;
 }) {
-  // FatSecret items: show a serving picker instead of the unit-based quantity picker
-  if (fsServings?.length && onSelectServing) {
-    return (
-      <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-        <TouchableOpacity
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}
-          activeOpacity={1}
-          onPress={onClose}
-        >
-          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
-            <View style={{
-              backgroundColor: "#f8f8f8",
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              padding: 20,
-              paddingBottom: 40,
-            }}>
-              <Text style={{ fontSize: 17, fontWeight: "600", color: "#1a1a1a", marginBottom: 16, textAlign: "center" }}>
-                Select Serving
-              </Text>
-              <ScrollView style={{ maxHeight: 350 }} showsVerticalScrollIndicator={false}>
-                {fsServings.map((serving) => {
-                  const isActive = serving.servingId === selectedServingId;
-                  return (
-                    <TouchableOpacity
-                      key={serving.servingId}
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        backgroundColor: isActive ? "#F0F9FA" : "#fff",
-                        borderRadius: 10,
-                        padding: 14,
-                        marginBottom: 6,
-                        borderWidth: 1.5,
-                        borderColor: isActive ? "#1A6872" : "transparent",
-                      }}
-                      onPress={() => {
-                        onSelectServing(serving.servingId);
-                        onClose();
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={{
-                        fontSize: 15,
-                        fontWeight: isActive ? "600" : "400",
-                        color: isActive ? "#1A6872" : "#333",
-                        flex: 1,
-                      }}>
-                        {serving.description}
-                      </Text>
-                      <Text style={{
-                        fontSize: 13,
-                        fontWeight: "500",
-                        color: isActive ? "#1A6872" : "#999",
-                        marginLeft: 8,
-                      }}>
-                        {serving.macros.kcal} cal
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-    );
-  }
+  // Convert FS servings to CommonPortion format for the existing portion picker
+  const fsPortions: CommonPortion[] | undefined = fsServings?.length
+    ? fsServings
+        .filter((s) => s.metricAmount != null && s.metricAmount > 0)
+        .map((s) => ({ label: s.description, grams: Math.round(s.metricAmount!) }))
+    : undefined;
+
+  // Merge FS portions with any existing commonPortions
+  const effectivePortions = fsPortions ?? commonPortions;
 
   const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
@@ -1223,14 +1163,14 @@ function EditQuantityPopup({
             </View>
 
             {/* Food-specific portion pills (Row 1) */}
-            {commonPortions && commonPortions.length > 0 && (
+            {effectivePortions && effectivePortions.length > 0 && (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={styles.portionPillScrollRow}
                 contentContainerStyle={styles.portionPillScrollContent}
               >
-                {commonPortions.map((portion, i) => {
+                {effectivePortions.map((portion, i) => {
                   const isActive =
                     selectedUnit === "portion" &&
                     selectedPortion?.label === portion.label;
@@ -1780,9 +1720,7 @@ export function NutritionReasoningPopup({
                           activeOpacity={0.6}
                         >
                           <Text style={styles.quantityText} numberOfLines={1}>
-                            {item.source === 'FS' && item.fsServings?.length
-                              ? (item.fsServings.find(s => s.servingId === item.fsSelectedServingId)?.description ?? item.unit)
-                              : normalizeUnit(item.unit)
+                            {normalizeUnit(item.unit)
                               ? `${formatQtyValue(item.qty * (item.servings ?? 1))}${item.unit}`
                               : `×${
                                   Number.isInteger(item.servings ?? 1)
@@ -2006,22 +1944,29 @@ export function NutritionReasoningPopup({
                   )}
 
                   {/* Revert All - shows when any macro has been edited */}
-                  {item.originalMacros && (
-                    <TouchableOpacity
-                      style={styles.revertAllRow}
-                      onPress={() => handleRevertAllMacros(item.id)}
-                      activeOpacity={0.6}
-                    >
-                      <Ionicons
-                        name="refresh-outline"
-                        size={14}
-                        color="#8B5CF6"
-                      />
-                      <Text style={styles.revertAllText}>
-                        Revert to calculated
-                      </Text>
-                    </TouchableOpacity>
-                  )}
+                  {item.originalMacros && (() => {
+                    // Only show revert if macros differ from original
+                    const m = item.macros;
+                    const o = item.originalMacros!;
+                    const hasEdits = m.kcal !== o.kcal || m.protein !== o.protein || m.fat !== o.fat || m.carbs !== o.carbs;
+                    if (!hasEdits) return null;
+                    return (
+                      <TouchableOpacity
+                        style={styles.revertAllRow}
+                        onPress={() => handleRevertAllMacros(item.id)}
+                        activeOpacity={0.6}
+                      >
+                        <Ionicons
+                          name="refresh-outline"
+                          size={14}
+                          color="#8B5CF6"
+                        />
+                        <Text style={styles.revertAllText}>
+                          Revert to calculated
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })()}
 
                   {/* Reasoning Section */}
                   {item.reasoning && (
@@ -2073,6 +2018,7 @@ export function NutritionReasoningPopup({
                           />
                         </View>
                       )}
+
 
                     </View>
                   )}

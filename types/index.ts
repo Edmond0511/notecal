@@ -25,6 +25,7 @@ export interface FatSecretServing {
   metricAmount?: number;
   metricUnit?: 'g' | 'ml' | 'oz';
   macros: Macros;
+  extendedNutrients?: Record<string, number>;
 }
 
 export interface CommonPortion {

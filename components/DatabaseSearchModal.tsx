@@ -29,6 +29,7 @@ import {
   Dimensions,
   Keyboard,
   LayoutAnimation,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -82,6 +83,8 @@ const MACRO_ICONS = {
 
 const EXTENDED_NUTRIENT_LABELS: Record<string, string> = {
   saturatedFat: "Saturated Fat",
+  polyunsaturatedFat: "Polyunsaturated Fat",
+  monounsaturatedFat: "Monounsaturated Fat",
   transFat: "Trans Fat",
   cholesterol: "Cholesterol",
   calcium: "Calcium",
@@ -103,6 +106,8 @@ const EXTENDED_NUTRIENT_LABELS: Record<string, string> = {
 
 const EXTENDED_NUTRIENT_UNITS: Record<string, string> = {
   saturatedFat: "g",
+  polyunsaturatedFat: "g",
+  monounsaturatedFat: "g",
   transFat: "g",
   cholesterol: "mg",
   calcium: "mg",
@@ -162,6 +167,7 @@ export function DatabaseSearchModal({
   const [portions, setPortions] = useState<CommonPortion[]>([]);
   const [selectedPortionIndex, setSelectedPortionIndex] = useState<number | null>(null);
   const [portionsLoading, setPortionsLoading] = useState(false);
+  const [selectedFsServingId, setSelectedFsServingId] = useState<string | null>(null);
   const [macroOverrides, setMacroOverrides] = useState<Partial<Record<"kcal" | "protein" | "fat" | "carbs", number>>>({});
   const [editMacroPopup, setEditMacroPopup] = useState<{
     nutrientKey: "kcal" | "protein" | "fat" | "carbs";
@@ -348,12 +354,20 @@ export function DatabaseSearchModal({
   const handleSelectResult = useCallback((result: DatabaseSearchResult) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Keyboard.dismiss();
-    const defaultServing = result.defaultServingG ?? 100;
-    setServingGrams(defaultServing.toString());
     setSelectedPortionIndex(null);
     setEditingSelectedId(null);
     setMacroOverrides({});
     setExtendedOpen(false);
+    // Set default serving size + FS serving selection
+    if (result.source === "FS" && result.fsServings?.length) {
+      const defaultFs = result.fsServings.find(s => s.metricUnit === 'g') ?? result.fsServings[0];
+      setSelectedFsServingId(defaultFs.servingId);
+      setServingGrams(defaultFs.metricAmount ? Math.round(defaultFs.metricAmount).toString() : '100');
+    } else {
+      setSelectedFsServingId(null);
+      const defaultServing = result.defaultServingG ?? 100;
+      setServingGrams(defaultServing.toString());
+    }
     setState({ type: "detail", result });
 
     // Use cached portions if available, otherwise fetch from API
@@ -446,6 +460,7 @@ export function DatabaseSearchModal({
     }
     setServingGrams("");
     setSelectedPortionIndex(null);
+    setSelectedFsServingId(null);
   }, [commonResults, brandedResults]);
 
   const handleAdd = useCallback(() => {
@@ -453,9 +468,19 @@ export function DatabaseSearchModal({
     const grams = parseFloat(servingGrams) || 100;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    // Attach fetched portions to the result
-    const resultWithPortions =
-      portions.length > 0 ? { ...state.result, portions } : state.result;
+    // Attach fetched portions/servings to the result
+    let resultWithPortions = portions.length > 0 ? { ...state.result, portions } : { ...state.result };
+    // For FS items, attach the selected serving so the store picks it up
+    if (resultWithPortions.source === 'FS' && selectedFsServingId && resultWithPortions.fsServings?.length) {
+      const selectedServing = resultWithPortions.fsServings.find(s => s.servingId === selectedFsServingId);
+      if (selectedServing) {
+        // Reorder so the selected serving is first — store picks first gram or first overall
+        resultWithPortions = {
+          ...resultWithPortions,
+          fsServings: [selectedServing, ...resultWithPortions.fsServings.filter(s => s.servingId !== selectedFsServingId)],
+        };
+      }
+    }
 
     if (editingSelectedId) {
       // Update existing selected item
@@ -610,9 +635,37 @@ export function DatabaseSearchModal({
 
   // Compute scaled macros for detail view
   const previewMacrosBase: Macros | null = useMemo(() => {
-    if (state.type !== "detail" || !state.result.macrosPer100g) return null;
+    if (state.type !== "detail") return null;
+    const result = state.result;
+
+    // FS items: scale macros based on gram stepper relative to reference serving
+    if (result.source === 'FS' && result.fsServings?.length) {
+      // Find reference serving (selected pill, or 100g, or first with grams)
+      const ref = selectedFsServingId
+        ? result.fsServings.find(s => s.servingId === selectedFsServingId)
+        : result.fsServings.find(s => s.metricUnit === 'g') ?? result.fsServings[0];
+      if (!ref || !ref.metricAmount || ref.metricAmount <= 0) {
+        return ref ? { ...ref.macros } : null;
+      }
+      const grams = parseFloat(servingGrams) || ref.metricAmount;
+      const scale = grams / ref.metricAmount;
+      const m = ref.macros;
+      return {
+        kcal: Math.round(m.kcal * scale),
+        protein: Math.round(m.protein * scale * 10) / 10,
+        fat: Math.round(m.fat * scale * 10) / 10,
+        carbs: Math.round(m.carbs * scale * 10) / 10,
+        ...(m.fiber != null && { fiber: Math.round(m.fiber * scale * 10) / 10 }),
+        ...(m.sugar != null && { sugar: Math.round(m.sugar * scale * 10) / 10 }),
+        ...(m.sodium != null && { sodium: Math.round(m.sodium * scale) }),
+        ...(m.potassium != null && { potassium: Math.round(m.potassium * scale) }),
+      };
+    }
+
+    // Legacy FDC/OFF: scale from per-100g
+    if (!result.macrosPer100g) return null;
     const grams = parseFloat(servingGrams) || 100;
-    const m = state.result.macrosPer100g;
+    const m = result.macrosPer100g;
     const scale = grams / 100;
     return {
       kcal: Math.round(m.kcal * scale),
@@ -624,7 +677,7 @@ export function DatabaseSearchModal({
       ...(m.sodium != null && { sodium: Math.round(m.sodium * scale) }),
       ...(m.potassium != null && { potassium: Math.round(m.potassium * scale) }),
     };
-  }, [state, servingGrams]);
+  }, [state, servingGrams, selectedFsServingId]);
 
   const previewMacros: Macros | null = previewMacrosBase
     ? { ...previewMacrosBase, ...macroOverrides }
@@ -632,21 +685,46 @@ export function DatabaseSearchModal({
 
   // Compute extended nutrients for detail view
   const previewExtended: Record<string, number> | null = useMemo(() => {
-    if (state.type !== "detail" || !state.result.extendedNutrientsPer100g) return null;
+    if (state.type !== "detail") return null;
+    const result = state.result;
+
+    // FS items: scale extended nutrients from the selected serving
+    if (result.source === 'FS' && result.fsServings?.length) {
+      const ref = selectedFsServingId
+        ? result.fsServings.find(s => s.servingId === selectedFsServingId)
+        : result.fsServings.find(s => s.metricUnit === 'g') ?? result.fsServings[0];
+      if (!ref?.extendedNutrients || !ref.metricAmount || ref.metricAmount <= 0) {
+        return ref?.extendedNutrients ?? null;
+      }
+      const grams = parseFloat(servingGrams) || ref.metricAmount;
+      const scale = grams / ref.metricAmount;
+      const scaled: Record<string, number> = {};
+      for (const [key, val] of Object.entries(ref.extendedNutrients)) {
+        if (val != null) scaled[key] = Math.round(val * scale * 100) / 100;
+      }
+      return Object.keys(scaled).length > 0 ? scaled : null;
+    }
+
+    // Legacy FDC/OFF: scale from per-100g
+    if (!result.extendedNutrientsPer100g) return null;
     const grams = parseFloat(servingGrams) || 100;
     const scale = grams / 100;
-    const ext = state.result.extendedNutrientsPer100g as Record<string, number>;
+    const ext = result.extendedNutrientsPer100g as Record<string, number>;
     const scaled: Record<string, number> = {};
     for (const [key, val] of Object.entries(ext)) {
       if (val != null) scaled[key] = val * scale;
     }
     return Object.keys(scaled).length > 0 ? scaled : null;
-  }, [state, servingGrams]);
+  }, [state, servingGrams, selectedFsServingId]);
 
   const [extendedOpen, setExtendedOpen] = useState(false);
 
   // Compute selection totals
   const selectionTotalCal = selectedItems.reduce((sum, item) => {
+    if (item.result.source === 'FS') {
+      // Use default serving macros for FS items
+      return sum + (item.result.defaultServingMacros?.kcal ?? item.result.fsServings?.[0]?.macros.kcal ?? 0);
+    }
     const kcal = Math.round((item.result.macrosPer100g?.kcal ?? 0) * item.servingGrams / 100);
     return sum + kcal;
   }, 0);
@@ -682,18 +760,35 @@ export function DatabaseSearchModal({
                 </View>
                 <View style={styles.resultMacroRow}>
                   {(() => {
-                    const servG = result.defaultServingG ?? 100;
-                    const scale = servG / 100;
-                    const m = result.macrosPer100g ?? { kcal: 0, protein: 0, fat: 0, carbs: 0 };
-                    const scaled = {
-                      kcal: Math.round(m.kcal * scale),
-                      protein: Math.round(m.protein * scale),
-                      fat: Math.round(m.fat * scale),
-                      carbs: Math.round(m.carbs * scale),
-                    };
-                    const suffix = result.defaultServingLabel
-                      ? result.defaultServingLabel
-                      : `${Math.round(servG)}g`;
+                    // FS results: use defaultServingMacros or first serving's macros
+                    // Legacy FDC/OFF: scale macrosPer100g
+                    let scaled: { kcal: number; protein: number; fat: number; carbs: number };
+                    let suffix: string;
+                    if (result.source === 'FS') {
+                      const fsDefault = result.defaultServingMacros
+                        ?? result.fsServings?.[0]?.macros
+                        ?? { kcal: 0, protein: 0, fat: 0, carbs: 0 };
+                      scaled = {
+                        kcal: Math.round(fsDefault.kcal),
+                        protein: Math.round(fsDefault.protein),
+                        fat: Math.round(fsDefault.fat),
+                        carbs: Math.round(fsDefault.carbs),
+                      };
+                      suffix = '';
+                    } else {
+                      const servG = result.defaultServingG ?? 100;
+                      const scale = servG / 100;
+                      const m = result.macrosPer100g ?? { kcal: 0, protein: 0, fat: 0, carbs: 0 };
+                      scaled = {
+                        kcal: Math.round(m.kcal * scale),
+                        protein: Math.round(m.protein * scale),
+                        fat: Math.round(m.fat * scale),
+                        carbs: Math.round(m.carbs * scale),
+                      };
+                      suffix = result.defaultServingLabel
+                        ? result.defaultServingLabel
+                        : `${Math.round(servG)}g`;
+                    }
                     return (
                       <>
                         <View style={styles.macroItem}>
@@ -1056,7 +1151,12 @@ export function DatabaseSearchModal({
                     </>
                   )}
                   {(commonResults.length > 0 || brandedResults.length > 0) && (
-                    <Text style={styles.attribution}>Powered by FatSecret</Text>
+                    <Text
+                      style={styles.attribution}
+                      onPress={() => Linking.openURL("https://platform.fatsecret.com")}
+                    >
+                      Powered by FatSecret Platform API
+                    </Text>
                   )}
                 </KeyboardAwareScrollView>
               )}
@@ -1089,39 +1189,36 @@ export function DatabaseSearchModal({
                     </Text>
                   </View>
 
-                  {/* Portion quick-select pills */}
-                  {(portions.length > 0 || portionsLoading) && (
-                    <Animated.View
-                      entering={FadeIn.duration(200)}
-                      style={styles.portionRow}
-                    >
-                      {portionsLoading ? (
-                        <ActivityIndicator
-                          size="small"
-                          color={TEAL}
-                          style={{ marginVertical: 4 }}
-                        />
-                      ) : (
+                  {/* FS items: serving pills + gram stepper (same layout as legacy) */}
+                  {state.result.source === 'FS' && state.result.fsServings?.length ? (
+                    <>
+                      {/* Horizontal serving pills */}
+                      <Animated.View
+                        entering={FadeIn.duration(200)}
+                        style={styles.portionRow}
+                      >
                         <ScrollView
                           horizontal
                           showsHorizontalScrollIndicator={false}
                           contentContainerStyle={styles.portionScrollContent}
                         >
-                          {portions.map((portion, i) => {
-                            const isSelected = selectedPortionIndex === i;
+                          {state.result.fsServings
+                            .filter((s) => s.metricAmount != null && s.metricAmount > 0)
+                            .map((serving) => {
+                            const isSelected = serving.servingId === selectedFsServingId;
                             return (
                               <TouchableOpacity
-                                key={`${portion.label}-${i}`}
+                                key={serving.servingId}
                                 style={[
                                   styles.portionPill,
                                   isSelected && styles.portionPillSelected,
                                 ]}
                                 onPress={() => {
-                                  Haptics.impactAsync(
-                                    Haptics.ImpactFeedbackStyle.Light,
-                                  );
-                                  setSelectedPortionIndex(i);
-                                  setServingGrams(portion.grams.toString());
+                                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                  setSelectedFsServingId(serving.servingId);
+                                  if (serving.metricAmount) {
+                                    setServingGrams(Math.round(serving.metricAmount).toString());
+                                  }
                                 }}
                                 activeOpacity={0.7}
                               >
@@ -1129,56 +1226,149 @@ export function DatabaseSearchModal({
                                   styles.portionPillLabel,
                                   isSelected && styles.portionPillLabelSelected,
                                 ]}>
-                                  {portion.label}
+                                  {serving.description}
                                 </Text>
                                 <Text style={[
                                   styles.portionPillGrams,
                                   isSelected && styles.portionPillGramsSelected,
                                 ]}>
-                                  {portion.grams}g
+                                  {serving.metricAmount ? `${Math.round(serving.metricAmount)}g` : ''}
                                 </Text>
                               </TouchableOpacity>
                             );
                           })}
                         </ScrollView>
-                      )}
-                    </Animated.View>
-                  )}
+                      </Animated.View>
 
-                  {/* Serving stepper */}
-                  <View style={styles.servingCard}>
-                    <Text style={styles.servingLabel}>Serving</Text>
-                    <View style={styles.stepperContainer}>
-                      <TouchableOpacity
-                        style={styles.stepperButton}
-                        onPress={() => handleServingStep(-10)}
-                        activeOpacity={0.6}
-                      >
-                        <Ionicons name="remove" size={18} color="#999" />
-                      </TouchableOpacity>
-                      <View style={styles.servingInputWrapper}>
-                        <TextInput
-                          style={styles.servingInput}
-                          value={servingGrams}
-                          onChangeText={(text) => {
-                            setServingGrams(text);
-                            setSelectedPortionIndex(null);
-                          }}
-                          keyboardType="numeric"
-                          selectTextOnFocus
-                          returnKeyType="done"
-                        />
-                        <Text style={styles.servingUnit}>g</Text>
+                      {/* Gram stepper — same as legacy, editable */}
+                      <View style={styles.servingCard}>
+                        <Text style={styles.servingLabel}>Serving</Text>
+                        <View style={styles.stepperContainer}>
+                          <TouchableOpacity
+                            style={styles.stepperButton}
+                            onPress={() => handleServingStep(-10)}
+                            activeOpacity={0.6}
+                          >
+                            <Ionicons name="remove" size={18} color="#999" />
+                          </TouchableOpacity>
+                          <View style={styles.servingInputWrapper}>
+                            <TextInput
+                              style={styles.servingInput}
+                              value={servingGrams}
+                              onChangeText={(text) => {
+                                setServingGrams(text);
+                                setSelectedFsServingId(null);
+                              }}
+                              keyboardType="numeric"
+                              selectTextOnFocus
+                              returnKeyType="done"
+                            />
+                            <Text style={styles.servingUnit}>g</Text>
+                          </View>
+                          <TouchableOpacity
+                            style={styles.stepperButton}
+                            onPress={() => handleServingStep(10)}
+                            activeOpacity={0.6}
+                          >
+                            <Ionicons name="add" size={18} color="#999" />
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                      <TouchableOpacity
-                        style={styles.stepperButton}
-                        onPress={() => handleServingStep(10)}
-                        activeOpacity={0.6}
-                      >
-                        <Ionicons name="add" size={18} color="#999" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+                    </>
+                  ) : (
+                    <>
+                      {/* Legacy: Portion quick-select pills */}
+                      {(portions.length > 0 || portionsLoading) && (
+                        <Animated.View
+                          entering={FadeIn.duration(200)}
+                          style={styles.portionRow}
+                        >
+                          {portionsLoading ? (
+                            <ActivityIndicator
+                              size="small"
+                              color={TEAL}
+                              style={{ marginVertical: 4 }}
+                            />
+                          ) : (
+                            <ScrollView
+                              horizontal
+                              showsHorizontalScrollIndicator={false}
+                              contentContainerStyle={styles.portionScrollContent}
+                            >
+                              {portions.map((portion, i) => {
+                                const isSelected = selectedPortionIndex === i;
+                                return (
+                                  <TouchableOpacity
+                                    key={`${portion.label}-${i}`}
+                                    style={[
+                                      styles.portionPill,
+                                      isSelected && styles.portionPillSelected,
+                                    ]}
+                                    onPress={() => {
+                                      Haptics.impactAsync(
+                                        Haptics.ImpactFeedbackStyle.Light,
+                                      );
+                                      setSelectedPortionIndex(i);
+                                      setServingGrams(portion.grams.toString());
+                                    }}
+                                    activeOpacity={0.7}
+                                  >
+                                    <Text style={[
+                                      styles.portionPillLabel,
+                                      isSelected && styles.portionPillLabelSelected,
+                                    ]}>
+                                      {portion.label}
+                                    </Text>
+                                    <Text style={[
+                                      styles.portionPillGrams,
+                                      isSelected && styles.portionPillGramsSelected,
+                                    ]}>
+                                      {portion.grams}g
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </ScrollView>
+                          )}
+                        </Animated.View>
+                      )}
+
+                      {/* Legacy: Serving stepper */}
+                      <View style={styles.servingCard}>
+                        <Text style={styles.servingLabel}>Serving</Text>
+                        <View style={styles.stepperContainer}>
+                          <TouchableOpacity
+                            style={styles.stepperButton}
+                            onPress={() => handleServingStep(-10)}
+                            activeOpacity={0.6}
+                          >
+                            <Ionicons name="remove" size={18} color="#999" />
+                          </TouchableOpacity>
+                          <View style={styles.servingInputWrapper}>
+                            <TextInput
+                              style={styles.servingInput}
+                              value={servingGrams}
+                              onChangeText={(text) => {
+                                setServingGrams(text);
+                                setSelectedPortionIndex(null);
+                              }}
+                              keyboardType="numeric"
+                              selectTextOnFocus
+                              returnKeyType="done"
+                            />
+                            <Text style={styles.servingUnit}>g</Text>
+                          </View>
+                          <TouchableOpacity
+                            style={styles.stepperButton}
+                            onPress={() => handleServingStep(10)}
+                            activeOpacity={0.6}
+                          >
+                            <Ionicons name="add" size={18} color="#999" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </>
+                  )}
 
                   {/* Macros */}
                   <View style={styles.macrosCard}>
@@ -1686,6 +1876,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: Tokens.textPrimary,
+    letterSpacing: -0.2,
   },
   portionPillLabelSelected: {
     color: TEAL,
@@ -1695,6 +1886,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: Tokens.textSecondary,
     marginTop: 2,
+    letterSpacing: -0.2,
   },
   portionPillGramsSelected: {
     color: TEAL,

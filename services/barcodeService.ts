@@ -86,12 +86,9 @@ export function barcodeProductToFoodItem(
       },
     ],
     reasoning: {
-      interpretation: `Scanned barcode ${product.barcode}${product.brand ? ` (${product.brand})` : ''}`,
-      assumptions: [
-        'Nutrition data from FatSecret database',
-        `Serving: ${serving.description}`,
-      ],
-      dataSource: 'FatSecret',
+      interpretation: `Scanned barcode ${product.barcode}${product.brand ? ` (${product.brand})` : ''}\n• Nutrition data from FatSecret database\n• Serving: ${serving.description}`,
+      assumptions: [],
+      dataSource: '[Powered by FatSecret Platform API](https://platform.fatsecret.com)',
     },
     barcode: product.barcode,
     fsServings: servings,

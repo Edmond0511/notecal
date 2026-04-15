@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#ddd",
+    backgroundColor: Tokens.border,
   },
   header: {
     flexDirection: "row",
@@ -557,13 +557,14 @@ const styles = StyleSheet.create({
   },
   searchShadowWrapper: {
     borderRadius: 22,
+    ...Tokens.shadowLight,
   },
   searchGlass: {
     borderRadius: 22,
     overflow: "hidden",
   },
   searchGlassFallback: {
-    backgroundColor: Tokens.surfaceRaised,
+    backgroundColor: "#EBEBEB",
   },
   searchInputWrapper: {
     flexDirection: "row",

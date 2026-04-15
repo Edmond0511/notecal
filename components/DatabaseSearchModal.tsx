@@ -7,6 +7,7 @@ import {
   FoodSearchError,
   searchFoodDatabase,
 } from "@/services/foodSearchApi";
+import { mmkv } from "@/lib/mmkv";
 import { useAppStore } from "@/store/app-store";
 import {
   CommonPortion,
@@ -202,7 +203,19 @@ export function DatabaseSearchModal({
   const entries = useAppStore((s) => s.entries);
   const savedEntries = useAppStore((s) => s.savedEntries);
 
-  // Recently logged: show most recent items when search bar is empty
+  const RECENTLY_LOGGED_CLEARED_KEY = "recently-logged-cleared-at";
+  const [recentlyClearedAt, setRecentlyClearedAt] = useState<number>(
+    () => mmkv.getNumber(RECENTLY_LOGGED_CLEARED_KEY) ?? 0,
+  );
+
+  const handleClearRecentlyLogged = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const now = Date.now();
+    mmkv.set(RECENTLY_LOGGED_CLEARED_KEY, now);
+    setRecentlyClearedAt(now);
+  }, []);
+
+  // Recently logged: show most recent database-search items when search bar is empty
   const recentlyLoggedResults = useMemo((): DatabaseSearchResult[] => {
     if (searchText.trim().length > 0) return [];
 
@@ -211,35 +224,79 @@ export function DatabaseSearchModal({
       { result: DatabaseSearchResult; updatedAt: Date }
     >();
 
-    // Saved entries first (higher priority) — only items from the food database
-    for (const saved of savedEntries) {
-      for (const item of saved.items) {
-        const isFdc = item.source === "FDC" && !isNaN(Number(item.sourceId));
-        if (!isFdc) continue;
+    const isDbSearchItem = (item: { id: string }) =>
+      item.id.includes("dbsearch");
+
+    // Entries only — most recent first, only items added via database search
+    const sortedEntries = [...entries]
+      .filter((e) => e.status === "ok")
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
+
+    for (const entry of sortedEntries) {
+      const entryTime = new Date(entry.updatedAt).getTime();
+      if (entryTime <= recentlyClearedAt) continue;
+
+      for (const item of entry.items) {
+        if (!isDbSearchItem(item)) continue;
         const key = item.label.toLowerCase();
-        if (!seen.has(key)) {
+        if (seen.has(key)) continue;
+
+        if (item.source === "FS") {
+          // FatSecret items: reconstruct from fsServings if available
+          seen.set(key, {
+            result: {
+              source: "FS",
+              foodId: item.sourceId,
+              name: item.label,
+              brand: item.brand,
+              macrosPer100g: item.macros,
+              defaultServingG: item.qty > 0 ? item.qty : 100,
+              defaultServingLabel:
+                item.qty > 0 ? `${item.qty}${item.unit}` : undefined,
+              fsServings: item.fsServings,
+              defaultServingMacros: item.macros,
+              extendedNutrientsPer100g: item.extendedNutrientsPer100g,
+            },
+            updatedAt: new Date(entry.updatedAt),
+          });
+        } else {
+          // Legacy FDC/OFF items
+          const isFdc =
+            item.source === "FDC" && !isNaN(Number(item.sourceId));
           const macrosPer100g: Macros =
             item.qty > 0
               ? {
                   kcal: Math.round((item.macros.kcal / item.qty) * 100),
                   protein:
-                    Math.round((item.macros.protein / item.qty) * 100 * 10) /
+                    Math.round(
+                      (item.macros.protein / item.qty) * 100 * 10,
+                    ) / 10,
+                  fat:
+                    Math.round((item.macros.fat / item.qty) * 100 * 10) /
                     10,
-                  fat: Math.round((item.macros.fat / item.qty) * 100 * 10) / 10,
                   carbs:
-                    Math.round((item.macros.carbs / item.qty) * 100 * 10) / 10,
+                    Math.round(
+                      (item.macros.carbs / item.qty) * 100 * 10,
+                    ) / 10,
                   ...(item.macros.fiber != null && {
                     fiber:
-                      Math.round((item.macros.fiber / item.qty) * 100 * 10) /
-                      10,
+                      Math.round(
+                        (item.macros.fiber / item.qty) * 100 * 10,
+                      ) / 10,
                   }),
                   ...(item.macros.sugar != null && {
                     sugar:
-                      Math.round((item.macros.sugar / item.qty) * 100 * 10) /
-                      10,
+                      Math.round(
+                        (item.macros.sugar / item.qty) * 100 * 10,
+                      ) / 10,
                   }),
                   ...(item.macros.sodium != null && {
-                    sodium: Math.round((item.macros.sodium / item.qty) * 100),
+                    sodium: Math.round(
+                      (item.macros.sodium / item.qty) * 100,
+                    ),
                   }),
                   ...(item.macros.potassium != null && {
                     potassium: Math.round(
@@ -263,70 +320,9 @@ export function DatabaseSearchModal({
               portions: item.commonPortions,
               extendedNutrientsPer100g: item.extendedNutrientsPer100g,
             },
-            updatedAt: new Date(saved.lastUsedAt),
+            updatedAt: new Date(entry.updatedAt),
           });
         }
-      }
-    }
-
-    // Then entries (most recent first)
-    const sortedEntries = [...entries]
-      .filter((e) => e.status === "ok")
-      .sort(
-        (a, b) =>
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-      );
-
-    for (const entry of sortedEntries) {
-      for (const item of entry.items) {
-        const isFdc = item.source === "FDC" && !isNaN(Number(item.sourceId));
-        if (!isFdc) continue;
-        const key = item.label.toLowerCase();
-        if (seen.has(key)) continue;
-        const macrosPer100g: Macros =
-          item.qty > 0
-            ? {
-                kcal: Math.round((item.macros.kcal / item.qty) * 100),
-                protein:
-                  Math.round((item.macros.protein / item.qty) * 100 * 10) / 10,
-                fat: Math.round((item.macros.fat / item.qty) * 100 * 10) / 10,
-                carbs:
-                  Math.round((item.macros.carbs / item.qty) * 100 * 10) / 10,
-                ...(item.macros.fiber != null && {
-                  fiber:
-                    Math.round((item.macros.fiber / item.qty) * 100 * 10) / 10,
-                }),
-                ...(item.macros.sugar != null && {
-                  sugar:
-                    Math.round((item.macros.sugar / item.qty) * 100 * 10) / 10,
-                }),
-                ...(item.macros.sodium != null && {
-                  sodium: Math.round((item.macros.sodium / item.qty) * 100),
-                }),
-                ...(item.macros.potassium != null && {
-                  potassium: Math.round(
-                    (item.macros.potassium / item.qty) * 100,
-                  ),
-                }),
-              }
-            : item.macros;
-        seen.set(key, {
-          result: {
-            source: isFdc ? "FDC" : "OFF",
-            ...(isFdc
-              ? { fdcId: Number(item.sourceId) }
-              : { offId: `local-${key}` }),
-            name: item.label,
-            brand: item.brand,
-            macrosPer100g,
-            defaultServingG: item.qty > 0 ? item.qty : 100,
-            defaultServingLabel:
-              item.qty > 0 ? `${item.qty}${item.unit}` : undefined,
-            portions: item.commonPortions,
-            extendedNutrientsPer100g: item.extendedNutrientsPer100g,
-          },
-          updatedAt: new Date(entry.updatedAt),
-        });
       }
     }
 
@@ -334,7 +330,7 @@ export function DatabaseSearchModal({
       .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
       .slice(0, 5)
       .map((v) => v.result);
-  }, [searchText, entries, savedEntries]);
+  }, [searchText, entries, recentlyClearedAt]);
 
   // Multi-select state
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
@@ -1277,6 +1273,13 @@ export function DatabaseSearchModal({
                         <Text style={styles.sectionHeaderText}>
                           Recently Logged
                         </Text>
+                        <TouchableOpacity
+                          onPress={handleClearRecentlyLogged}
+                          activeOpacity={0.6}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Text style={styles.sectionHeaderClear}>Clear</Text>
+                        </TouchableOpacity>
                       </View>
                       {recentlyLoggedResults.map((result, index) =>
                         renderResultCard(result, index),
@@ -1845,7 +1848,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#FCFCFB",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: "hidden",
@@ -1861,7 +1864,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#ddd",
+    backgroundColor: Tokens.border,
   },
   // Header
   header: {
@@ -1899,13 +1902,14 @@ const styles = StyleSheet.create({
   },
   searchShadowWrapper: {
     borderRadius: 22,
+    ...Tokens.shadowLight,
   },
   searchGlass: {
     borderRadius: 22,
     overflow: "hidden",
   },
   searchGlassFallback: {
-    backgroundColor: Tokens.surfaceRaised,
+    backgroundColor: "#EBEBEB",
   },
   searchInputWrapper: {
     flexDirection: "row",
@@ -1987,6 +1991,9 @@ const styles = StyleSheet.create({
   },
   // Section headers
   sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 4,
     paddingTop: 16,
     paddingBottom: 8,
@@ -1996,6 +2003,11 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#6B6B6B",
     textTransform: "capitalize",
+  },
+  sectionHeaderClear: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#bbb",
   },
   // Results list
   resultsList: {

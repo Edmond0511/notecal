@@ -1151,21 +1151,24 @@ async function callCorrectionAI(
     },
     "correctedLabel": "<updated label if food description needs clarification, otherwise same as original>",
     "confidence": <number between 0 and 1>,
-    "explanation": "<2-3 sentences explaining what was changed and why>",
+    "explanation": "<1 sentence: what changed>",
     "reasoning": {
-      "interpretation": "<how the feedback was interpreted - e.g., 'This entry was re-identified as grilled salmon based on the clarification provided'>",
-      "assumptions": ["<list of assumptions made>"],
-      "portionNotes": "<any notes about portion/quantity adjustments>",
-      "dataSource": "Markdown link '[Name](url)' to the source if you know a real URL. For USDA generic foods use the search URL format: '[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)' with the URL-encoded food name. For branded items use their official nutrition page. NEVER output a bare URL or fabricate specific food ID numbers. Plain text if no real URL is known.",
-      "confidenceExplanation": "One-line summary using High/Medium/Low confidence (never the numeric %) followed by a short reason",
-      "confidenceAnalysis": "2-4 sentence paragraph. Only use clickable markdown links for sources where you included a verified URL in dataSource. Otherwise reference by plain text name. Mention whether values were cross-referenced."
+      "interpretation": "<1 sentence: what was corrected - e.g., 'Corrected from medium to large size'>",
+      "assumptions": ["<short assumptions, max 2-3 items>"],
+      "portionNotes": "<brief portion note if relevant, otherwise omit>",
+      "dataSource": "Markdown link '[Name](url)' to the source if you know a real URL. For USDA generic foods use '[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)'. Plain text if no real URL is known.",
+      "confidenceExplanation": "One-line: High/Medium/Low confidence + short reason",
+      "confidenceAnalysis": "1-2 sentences max. What source was used and main uncertainty."
     }
   }
 
-  CONFIDENCE EXPLANATION GUIDELINES:
-  - confidenceExplanation: One-line summary using "High/Medium/Low confidence" (never the numeric %) followed by a short reason (e.g., "High confidence, exact branded product with officially published nutrition data" or "Medium confidence, portion assumed and preparation method unknown")
-  - confidenceAnalysis: 2-4 sentence paragraph. When referencing a source, only make it a clickable markdown link if you included a verified URL in dataSource. Otherwise reference by plain text name. Mention whether values were cross-referenced. Cover: (1) how the food was identified and what data source was used, (2) whether the portion was specified or assumed and how that affects accuracy, (3) specific uncertainties or factors that raised or lowered confidence.
-  - Cross-Reference: Cross-reference nutritional values against at least two sources when possible. Verify: kcal ≈ (protein × 4) + (carbs × 4) + (fat × 9). Flag discrepancies in the reasoning.
+  REASONING BREVITY:
+  - Keep all reasoning fields SHORT. Match the length of a normal (non-correction) entry.
+  - interpretation: 1 sentence max
+  - assumptions: 2-3 short bullet points max
+  - confidenceExplanation: 1 short line
+  - confidenceAnalysis: 1-2 sentences max
+  - Verify: kcal ≈ (protein × 4) + (carbs × 4) + (fat × 9).
 
   CONFIDENCE NUMERIC VALUES (based on data quality, not feedback clarity):
   - 0.95-1.0: Exact brand match or precise weight given

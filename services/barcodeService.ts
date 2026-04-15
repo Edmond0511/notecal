@@ -33,10 +33,21 @@ export async function lookupBarcode(barcode: string): Promise<BarcodeProduct> {
   }
 
   if (error) {
-    if ((error as any).status === 404 || data?.error === 'not_found') {
+    // FunctionsHttpError stores the raw Response in .context
+    const response = (error as any).context;
+    const status = response?.status;
+    if (status === 404) {
       throw new BarcodeNotFoundError(barcode);
     }
-    throw new BarcodeLookupError(error.message || 'Failed to look up barcode');
+    // Try to parse the response body for more detail
+    let body: any;
+    try {
+      body = typeof response?.json === 'function' ? await response.json() : null;
+    } catch {}
+    if (body?.error === 'not_found') {
+      throw new BarcodeNotFoundError(barcode);
+    }
+    throw new BarcodeLookupError(body?.error || error.message || 'Failed to look up barcode');
   }
 
   if (!data || !data.servings?.length) {

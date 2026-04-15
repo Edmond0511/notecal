@@ -142,7 +142,8 @@ export const AnimatedDigits = memo(function AnimatedDigits({
 
   const digitHeight = Math.ceil(fontSize * 1.4);
   
-  const charWidth = Math.ceil(fontSize * 0.62);
+  const letterSpacing = (style?.letterSpacing as number) ?? 0;
+  const charWidth = Math.ceil(fontSize * 0.62) + letterSpacing;
 
   return (
     <View

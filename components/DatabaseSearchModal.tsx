@@ -8,7 +8,12 @@ import {
   searchFoodDatabase,
 } from "@/services/foodSearchApi";
 import { useAppStore } from "@/store/app-store";
-import { CommonPortion, DatabaseSearchResult, FatSecretServing, Macros } from "@/types";
+import {
+  CommonPortion,
+  DatabaseSearchResult,
+  FatSecretServing,
+  Macros,
+} from "@/types";
 import {
   isLiquidGlassSupported,
   LiquidGlassView,
@@ -23,7 +28,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -162,13 +173,23 @@ export function DatabaseSearchModal({
   const [searchText, setSearchText] = useState("");
   const [servingGrams, setServingGrams] = useState("");
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [commonResults, setCommonResults] = useState<DatabaseSearchResult[]>([]);
-  const [brandedResults, setBrandedResults] = useState<DatabaseSearchResult[]>([]);
+  const [commonResults, setCommonResults] = useState<DatabaseSearchResult[]>(
+    [],
+  );
+  const [brandedResults, setBrandedResults] = useState<DatabaseSearchResult[]>(
+    [],
+  );
   const [portions, setPortions] = useState<CommonPortion[]>([]);
-  const [selectedPortionIndex, setSelectedPortionIndex] = useState<number | null>(null);
+  const [selectedPortionIndex, setSelectedPortionIndex] = useState<
+    number | null
+  >(null);
   const [portionsLoading, setPortionsLoading] = useState(false);
-  const [selectedFsServingId, setSelectedFsServingId] = useState<string | null>(null);
-  const [macroOverrides, setMacroOverrides] = useState<Partial<Record<"kcal" | "protein" | "fat" | "carbs", number>>>({});
+  const [selectedFsServingId, setSelectedFsServingId] = useState<string | null>(
+    null,
+  );
+  const [macroOverrides, setMacroOverrides] = useState<
+    Partial<Record<"kcal" | "protein" | "fat" | "carbs", number>>
+  >({});
   const [editMacroPopup, setEditMacroPopup] = useState<{
     nutrientKey: "kcal" | "protein" | "fat" | "carbs";
     currentValue: number;
@@ -185,36 +206,60 @@ export function DatabaseSearchModal({
   const recentlyLoggedResults = useMemo((): DatabaseSearchResult[] => {
     if (searchText.trim().length > 0) return [];
 
-    const seen = new Map<string, { result: DatabaseSearchResult; updatedAt: Date }>();
+    const seen = new Map<
+      string,
+      { result: DatabaseSearchResult; updatedAt: Date }
+    >();
 
-    // Saved entries first (higher priority)
+    // Saved entries first (higher priority) — only items from the food database
     for (const saved of savedEntries) {
       for (const item of saved.items) {
+        const isFdc = item.source === "FDC" && !isNaN(Number(item.sourceId));
+        if (!isFdc) continue;
         const key = item.label.toLowerCase();
         if (!seen.has(key)) {
           const macrosPer100g: Macros =
             item.qty > 0
               ? {
                   kcal: Math.round((item.macros.kcal / item.qty) * 100),
-                  protein: Math.round((item.macros.protein / item.qty) * 100 * 10) / 10,
+                  protein:
+                    Math.round((item.macros.protein / item.qty) * 100 * 10) /
+                    10,
                   fat: Math.round((item.macros.fat / item.qty) * 100 * 10) / 10,
-                  carbs: Math.round((item.macros.carbs / item.qty) * 100 * 10) / 10,
-                  ...(item.macros.fiber != null && { fiber: Math.round((item.macros.fiber / item.qty) * 100 * 10) / 10 }),
-                  ...(item.macros.sugar != null && { sugar: Math.round((item.macros.sugar / item.qty) * 100 * 10) / 10 }),
-                  ...(item.macros.sodium != null && { sodium: Math.round((item.macros.sodium / item.qty) * 100) }),
-                  ...(item.macros.potassium != null && { potassium: Math.round((item.macros.potassium / item.qty) * 100) }),
+                  carbs:
+                    Math.round((item.macros.carbs / item.qty) * 100 * 10) / 10,
+                  ...(item.macros.fiber != null && {
+                    fiber:
+                      Math.round((item.macros.fiber / item.qty) * 100 * 10) /
+                      10,
+                  }),
+                  ...(item.macros.sugar != null && {
+                    sugar:
+                      Math.round((item.macros.sugar / item.qty) * 100 * 10) /
+                      10,
+                  }),
+                  ...(item.macros.sodium != null && {
+                    sodium: Math.round((item.macros.sodium / item.qty) * 100),
+                  }),
+                  ...(item.macros.potassium != null && {
+                    potassium: Math.round(
+                      (item.macros.potassium / item.qty) * 100,
+                    ),
+                  }),
                 }
               : item.macros;
-          const isFdc = item.source === "FDC" && !isNaN(Number(item.sourceId));
           seen.set(key, {
             result: {
               source: isFdc ? "FDC" : "OFF",
-              ...(isFdc ? { fdcId: Number(item.sourceId) } : { offId: `local-${key}` }),
+              ...(isFdc
+                ? { fdcId: Number(item.sourceId) }
+                : { offId: `local-${key}` }),
               name: item.label,
               brand: item.brand,
               macrosPer100g,
               defaultServingG: item.qty > 0 ? item.qty : 100,
-              defaultServingLabel: item.qty > 0 ? `${item.qty}${item.unit}` : undefined,
+              defaultServingLabel:
+                item.qty > 0 ? `${item.qty}${item.unit}` : undefined,
               portions: item.commonPortions,
               extendedNutrientsPer100g: item.extendedNutrientsPer100g,
             },
@@ -227,35 +272,56 @@ export function DatabaseSearchModal({
     // Then entries (most recent first)
     const sortedEntries = [...entries]
       .filter((e) => e.status === "ok")
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
 
     for (const entry of sortedEntries) {
       for (const item of entry.items) {
+        const isFdc = item.source === "FDC" && !isNaN(Number(item.sourceId));
+        if (!isFdc) continue;
         const key = item.label.toLowerCase();
         if (seen.has(key)) continue;
         const macrosPer100g: Macros =
           item.qty > 0
             ? {
                 kcal: Math.round((item.macros.kcal / item.qty) * 100),
-                protein: Math.round((item.macros.protein / item.qty) * 100 * 10) / 10,
+                protein:
+                  Math.round((item.macros.protein / item.qty) * 100 * 10) / 10,
                 fat: Math.round((item.macros.fat / item.qty) * 100 * 10) / 10,
-                carbs: Math.round((item.macros.carbs / item.qty) * 100 * 10) / 10,
-                ...(item.macros.fiber != null && { fiber: Math.round((item.macros.fiber / item.qty) * 100 * 10) / 10 }),
-                ...(item.macros.sugar != null && { sugar: Math.round((item.macros.sugar / item.qty) * 100 * 10) / 10 }),
-                ...(item.macros.sodium != null && { sodium: Math.round((item.macros.sodium / item.qty) * 100) }),
-                ...(item.macros.potassium != null && { potassium: Math.round((item.macros.potassium / item.qty) * 100) }),
+                carbs:
+                  Math.round((item.macros.carbs / item.qty) * 100 * 10) / 10,
+                ...(item.macros.fiber != null && {
+                  fiber:
+                    Math.round((item.macros.fiber / item.qty) * 100 * 10) / 10,
+                }),
+                ...(item.macros.sugar != null && {
+                  sugar:
+                    Math.round((item.macros.sugar / item.qty) * 100 * 10) / 10,
+                }),
+                ...(item.macros.sodium != null && {
+                  sodium: Math.round((item.macros.sodium / item.qty) * 100),
+                }),
+                ...(item.macros.potassium != null && {
+                  potassium: Math.round(
+                    (item.macros.potassium / item.qty) * 100,
+                  ),
+                }),
               }
             : item.macros;
-        const isFdc = item.source === "FDC" && !isNaN(Number(item.sourceId));
         seen.set(key, {
           result: {
             source: isFdc ? "FDC" : "OFF",
-            ...(isFdc ? { fdcId: Number(item.sourceId) } : { offId: `local-${key}` }),
+            ...(isFdc
+              ? { fdcId: Number(item.sourceId) }
+              : { offId: `local-${key}` }),
             name: item.label,
             brand: item.brand,
             macrosPer100g,
             defaultServingG: item.qty > 0 ? item.qty : 100,
-            defaultServingLabel: item.qty > 0 ? `${item.qty}${item.unit}` : undefined,
+            defaultServingLabel:
+              item.qty > 0 ? `${item.qty}${item.unit}` : undefined,
             portions: item.commonPortions,
             extendedNutrientsPer100g: item.extendedNutrientsPer100g,
           },
@@ -337,7 +403,10 @@ export function DatabaseSearchModal({
         if (response.common.length === 0 && response.branded.length === 0) {
           setState({ type: "empty" });
         } else {
-          setState({ type: "results", results: [...response.common, ...response.branded] });
+          setState({
+            type: "results",
+            results: [...response.common, ...response.branded],
+          });
         }
       } catch (err) {
         const message =
@@ -360,9 +429,15 @@ export function DatabaseSearchModal({
     setExtendedOpen(false);
     // Set default serving size + FS serving selection
     if (result.source === "FS" && result.fsServings?.length) {
-      const defaultFs = result.fsServings.find(s => s.metricUnit === 'g') ?? result.fsServings[0];
+      const defaultFs =
+        result.fsServings.find((s) => s.metricUnit === "g") ??
+        result.fsServings[0];
       setSelectedFsServingId(defaultFs.servingId);
-      setServingGrams(defaultFs.metricAmount ? Math.round(defaultFs.metricAmount).toString() : '100');
+      setServingGrams(
+        defaultFs.metricAmount
+          ? Math.round(defaultFs.metricAmount).toString()
+          : "100",
+      );
     } else {
       setSelectedFsServingId(null);
       const defaultServing = result.defaultServingG ?? 100;
@@ -408,7 +483,9 @@ export function DatabaseSearchModal({
               : item.result.offId === result.offId),
       );
       if (existing) {
-        setSelectedItems((prev) => prev.filter((item) => item.id !== existing.id));
+        setSelectedItems((prev) =>
+          prev.filter((item) => item.id !== existing.id),
+        );
         return;
       }
 
@@ -416,11 +493,21 @@ export function DatabaseSearchModal({
       const id = `sel-${++selectionIdCounter.current}`;
       setSelectedItems((prev) => [
         ...prev,
-        { id, result, servingGrams: defaultServing, portions: [], fsServings: [] },
+        {
+          id,
+          result,
+          servingGrams: defaultServing,
+          portions: [],
+          fsServings: [],
+        },
       ]);
 
       // Fetch servings in the background for FS items
-      if (result.source === "FS" && result.foodId && !result.fsServings?.length) {
+      if (
+        result.source === "FS" &&
+        result.foodId &&
+        !result.fsServings?.length
+      ) {
         fetchFoodDetail(result.foodId).then((servings) => {
           setSelectedItems((prev) =>
             prev.map((item) =>
@@ -469,15 +556,27 @@ export function DatabaseSearchModal({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     // Attach fetched portions/servings to the result
-    let resultWithPortions = portions.length > 0 ? { ...state.result, portions } : { ...state.result };
+    let resultWithPortions =
+      portions.length > 0 ? { ...state.result, portions } : { ...state.result };
     // For FS items, attach the selected serving so the store picks it up
-    if (resultWithPortions.source === 'FS' && selectedFsServingId && resultWithPortions.fsServings?.length) {
-      const selectedServing = resultWithPortions.fsServings.find(s => s.servingId === selectedFsServingId);
+    if (
+      resultWithPortions.source === "FS" &&
+      selectedFsServingId &&
+      resultWithPortions.fsServings?.length
+    ) {
+      const selectedServing = resultWithPortions.fsServings.find(
+        (s) => s.servingId === selectedFsServingId,
+      );
       if (selectedServing) {
         // Reorder so the selected serving is first — store picks first gram or first overall
         resultWithPortions = {
           ...resultWithPortions,
-          fsServings: [selectedServing, ...resultWithPortions.fsServings.filter(s => s.servingId !== selectedFsServingId)],
+          fsServings: [
+            selectedServing,
+            ...resultWithPortions.fsServings.filter(
+              (s) => s.servingId !== selectedFsServingId,
+            ),
+          ],
         };
       }
     }
@@ -511,7 +610,13 @@ export function DatabaseSearchModal({
       const id = `sel-${++selectionIdCounter.current}`;
       setSelectedItems((prev) => [
         ...prev,
-        { id, result: resultWithPortions, servingGrams: grams, portions, fsServings: resultWithPortions.fsServings ?? [] },
+        {
+          id,
+          result: resultWithPortions,
+          servingGrams: grams,
+          portions,
+          fsServings: resultWithPortions.fsServings ?? [],
+        },
       ]);
       const allAfterAdd = [...commonResults, ...brandedResults];
       if (allAfterAdd.length > 0) {
@@ -555,33 +660,30 @@ export function DatabaseSearchModal({
   }, []);
 
   // Tap chip to edit in detail view
-  const handleEditSelected = useCallback(
-    (selected: SelectedItem) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      Keyboard.dismiss();
-      setEditingSelectedId(selected.id);
-      setServingGrams(selected.servingGrams.toString());
-      setSelectedPortionIndex(null);
-      setPortions(selected.portions);
-      setPortionsLoading(false);
-      setState({ type: "detail", result: selected.result });
+  const handleEditSelected = useCallback((selected: SelectedItem) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Keyboard.dismiss();
+    setEditingSelectedId(selected.id);
+    setServingGrams(selected.servingGrams.toString());
+    setSelectedPortionIndex(null);
+    setPortions(selected.portions);
+    setPortionsLoading(false);
+    setState({ type: "detail", result: selected.result });
 
-      // Re-fetch servings if we don't have them for FS items
-      if (
-        selected.result.source === "FS" &&
-        selected.result.foodId &&
-        !selected.result.fsServings?.length
-      ) {
-        setPortionsLoading(true);
-        fetchFoodDetail(selected.result.foodId)
-          .then((servings) => {
-            selected.result.fsServings = servings;
-          })
-          .finally(() => setPortionsLoading(false));
-      }
-    },
-    [],
-  );
+    // Re-fetch servings if we don't have them for FS items
+    if (
+      selected.result.source === "FS" &&
+      selected.result.foodId &&
+      !selected.result.fsServings?.length
+    ) {
+      setPortionsLoading(true);
+      fetchFoodDetail(selected.result.foodId)
+        .then((servings) => {
+          selected.result.fsServings = servings;
+        })
+        .finally(() => setPortionsLoading(false));
+    }
+  }, []);
 
   const handleClose = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -639,11 +741,12 @@ export function DatabaseSearchModal({
     const result = state.result;
 
     // FS items: scale macros based on gram stepper relative to reference serving
-    if (result.source === 'FS' && result.fsServings?.length) {
+    if (result.source === "FS" && result.fsServings?.length) {
       // Find reference serving (selected pill, or 100g, or first with grams)
       const ref = selectedFsServingId
-        ? result.fsServings.find(s => s.servingId === selectedFsServingId)
-        : result.fsServings.find(s => s.metricUnit === 'g') ?? result.fsServings[0];
+        ? result.fsServings.find((s) => s.servingId === selectedFsServingId)
+        : (result.fsServings.find((s) => s.metricUnit === "g") ??
+          result.fsServings[0]);
       if (!ref || !ref.metricAmount || ref.metricAmount <= 0) {
         return ref ? { ...ref.macros } : null;
       }
@@ -655,10 +758,16 @@ export function DatabaseSearchModal({
         protein: Math.round(m.protein * scale * 10) / 10,
         fat: Math.round(m.fat * scale * 10) / 10,
         carbs: Math.round(m.carbs * scale * 10) / 10,
-        ...(m.fiber != null && { fiber: Math.round(m.fiber * scale * 10) / 10 }),
-        ...(m.sugar != null && { sugar: Math.round(m.sugar * scale * 10) / 10 }),
+        ...(m.fiber != null && {
+          fiber: Math.round(m.fiber * scale * 10) / 10,
+        }),
+        ...(m.sugar != null && {
+          sugar: Math.round(m.sugar * scale * 10) / 10,
+        }),
         ...(m.sodium != null && { sodium: Math.round(m.sodium * scale) }),
-        ...(m.potassium != null && { potassium: Math.round(m.potassium * scale) }),
+        ...(m.potassium != null && {
+          potassium: Math.round(m.potassium * scale),
+        }),
       };
     }
 
@@ -675,7 +784,9 @@ export function DatabaseSearchModal({
       ...(m.fiber != null && { fiber: Math.round(m.fiber * scale * 10) / 10 }),
       ...(m.sugar != null && { sugar: Math.round(m.sugar * scale * 10) / 10 }),
       ...(m.sodium != null && { sodium: Math.round(m.sodium * scale) }),
-      ...(m.potassium != null && { potassium: Math.round(m.potassium * scale) }),
+      ...(m.potassium != null && {
+        potassium: Math.round(m.potassium * scale),
+      }),
     };
   }, [state, servingGrams, selectedFsServingId]);
 
@@ -689,11 +800,16 @@ export function DatabaseSearchModal({
     const result = state.result;
 
     // FS items: scale extended nutrients from the selected serving
-    if (result.source === 'FS' && result.fsServings?.length) {
+    if (result.source === "FS" && result.fsServings?.length) {
       const ref = selectedFsServingId
-        ? result.fsServings.find(s => s.servingId === selectedFsServingId)
-        : result.fsServings.find(s => s.metricUnit === 'g') ?? result.fsServings[0];
-      if (!ref?.extendedNutrients || !ref.metricAmount || ref.metricAmount <= 0) {
+        ? result.fsServings.find((s) => s.servingId === selectedFsServingId)
+        : (result.fsServings.find((s) => s.metricUnit === "g") ??
+          result.fsServings[0]);
+      if (
+        !ref?.extendedNutrients ||
+        !ref.metricAmount ||
+        ref.metricAmount <= 0
+      ) {
         return ref?.extendedNutrients ?? null;
       }
       const grams = parseFloat(servingGrams) || ref.metricAmount;
@@ -721,11 +837,18 @@ export function DatabaseSearchModal({
 
   // Compute selection totals
   const selectionTotalCal = selectedItems.reduce((sum, item) => {
-    if (item.result.source === 'FS') {
+    if (item.result.source === "FS") {
       // Use default serving macros for FS items
-      return sum + (item.result.defaultServingMacros?.kcal ?? item.result.fsServings?.[0]?.macros.kcal ?? 0);
+      return (
+        sum +
+        (item.result.defaultServingMacros?.kcal ??
+          item.result.fsServings?.[0]?.macros.kcal ??
+          0)
+      );
     }
-    const kcal = Math.round((item.result.macrosPer100g?.kcal ?? 0) * item.servingGrams / 100);
+    const kcal = Math.round(
+      ((item.result.macrosPer100g?.kcal ?? 0) * item.servingGrams) / 100,
+    );
     return sum + kcal;
   }, 0);
 
@@ -750,7 +873,8 @@ export function DatabaseSearchModal({
                       {result.name}
                       {result.brand && (
                         <Text style={styles.resultBrand}>
-                          {" · "}{result.brand
+                          {" · "}
+                          {result.brand
                             .toLowerCase()
                             .replace(/\b\w/g, (c) => c.toUpperCase())}
                         </Text>
@@ -762,23 +886,37 @@ export function DatabaseSearchModal({
                   {(() => {
                     // FS results: use defaultServingMacros or first serving's macros
                     // Legacy FDC/OFF: scale macrosPer100g
-                    let scaled: { kcal: number; protein: number; fat: number; carbs: number };
+                    let scaled: {
+                      kcal: number;
+                      protein: number;
+                      fat: number;
+                      carbs: number;
+                    };
                     let suffix: string;
-                    if (result.source === 'FS') {
-                      const fsDefault = result.defaultServingMacros
-                        ?? result.fsServings?.[0]?.macros
-                        ?? { kcal: 0, protein: 0, fat: 0, carbs: 0 };
+                    if (result.source === "FS") {
+                      const fsDefault = result.defaultServingMacros ??
+                        result.fsServings?.[0]?.macros ?? {
+                          kcal: 0,
+                          protein: 0,
+                          fat: 0,
+                          carbs: 0,
+                        };
                       scaled = {
                         kcal: Math.round(fsDefault.kcal),
                         protein: Math.round(fsDefault.protein),
                         fat: Math.round(fsDefault.fat),
                         carbs: Math.round(fsDefault.carbs),
                       };
-                      suffix = '';
+                      suffix = "";
                     } else {
                       const servG = result.defaultServingG ?? 100;
                       const scale = servG / 100;
-                      const m = result.macrosPer100g ?? { kcal: 0, protein: 0, fat: 0, carbs: 0 };
+                      const m = result.macrosPer100g ?? {
+                        kcal: 0,
+                        protein: 0,
+                        fat: 0,
+                        carbs: 0,
+                      };
                       scaled = {
                         kcal: Math.round(m.kcal * scale),
                         protein: Math.round(m.protein * scale),
@@ -875,185 +1013,344 @@ export function DatabaseSearchModal({
       onRequestClose={onClose}
     >
       <KeyboardProvider>
-      <GestureHandlerRootView style={styles.gestureRoot}>
-        <StatusBar barStyle="dark-content" />
-        <Animated.View style={[styles.backdrop, backdropStyle]}>
-          <TouchableOpacity
-            style={styles.backdropPressable}
-            onPress={handleClose}
-            activeOpacity={1}
-          />
-        </Animated.View>
-        <GestureDetector gesture={panGesture}>
-          <Animated.View
-            style={[styles.container, { marginTop: insets.top }, animatedStyle]}
-          >
-            {/* Drag indicator */}
-            <View style={styles.dragIndicatorContainer}>
-              <View style={styles.dragIndicator} />
-            </View>
+        <GestureHandlerRootView style={styles.gestureRoot}>
+          <StatusBar barStyle="dark-content" />
+          <Animated.View style={[styles.backdrop, backdropStyle]}>
+            <TouchableOpacity
+              style={styles.backdropPressable}
+              onPress={handleClose}
+              activeOpacity={1}
+            />
+          </Animated.View>
+          <GestureDetector gesture={panGesture}>
+            <Animated.View
+              style={[
+                styles.container,
+                { marginTop: insets.top },
+                animatedStyle,
+              ]}
+            >
+              {/* Drag indicator */}
+              <View style={styles.dragIndicatorContainer}>
+                <View style={styles.dragIndicator} />
+              </View>
 
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity
-                onPress={state.type === "detail" ? handleBackToResults : handleClose}
-                activeOpacity={0.7}
-              >
-                {showGlass ? (
-                  <LiquidGlassView
-                    style={styles.backButton}
-                    interactive
-                    effect="regular"
-                    tintColor="rgba(250, 250, 247, 0.3)"
-                  >
-                    <Ionicons name={state.type === "detail" ? "chevron-back" : "close"} size={20} color={Tokens.textPrimary} />
-                  </LiquidGlassView>
-                ) : (
-                  <View style={[styles.backButton, styles.backButtonFallback]}>
-                    <Ionicons name={state.type === "detail" ? "chevron-back" : "close"} size={20} color="#666" />
-                  </View>
-                )}
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Search Foods</Text>
-              {selectedItems.length > 0 && state.type !== "detail" ? (
+              {/* Header */}
+              <View style={styles.header}>
                 <TouchableOpacity
-                  onPress={handleSubmitSelection}
-                  activeOpacity={0.8}
+                  onPress={
+                    state.type === "detail" ? handleBackToResults : handleClose
+                  }
+                  activeOpacity={0.7}
                 >
                   {showGlass ? (
                     <LiquidGlassView
-                      style={[styles.backButton, { backgroundColor: Tokens.accent }]}
+                      style={styles.backButton}
                       interactive
                       effect="regular"
-                      tintColor={Tokens.tintColor}
+                      tintColor="rgba(250, 250, 247, 0.3)"
                     >
-                      <Ionicons name="checkmark-sharp" size={20} color={Tokens.accent} />
+                      <Ionicons
+                        name={
+                          state.type === "detail" ? "chevron-back" : "close"
+                        }
+                        size={20}
+                        color={Tokens.textPrimary}
+                      />
                     </LiquidGlassView>
                   ) : (
-                    <View style={[styles.backButton, { backgroundColor: Tokens.accent }]}>
-                      <Ionicons name="checkmark-sharp" size={20} color={Tokens.accent} />
+                    <View
+                      style={[styles.backButton, styles.backButtonFallback]}
+                    >
+                      <Ionicons
+                        name={
+                          state.type === "detail" ? "chevron-back" : "close"
+                        }
+                        size={20}
+                        color="#666"
+                      />
                     </View>
                   )}
                 </TouchableOpacity>
-              ) : (
-                <View style={styles.headerRightSpacer} />
-              )}
-            </View>
-
-            {/* Search bar - hidden in detail view */}
-            {state.type !== "detail" && <Pressable style={styles.searchContainer} onPress={() => searchInputRef.current?.focus()}>
-              <View style={styles.searchShadowWrapper}>
-                {showGlass ? (
-                  <LiquidGlassView
-                    style={styles.searchGlass}
-                    effect="regular"
-                    tintColor="rgba(250, 250, 247, 0.3)"
+                <Text style={styles.headerTitle}>Search Foods</Text>
+                {selectedItems.length > 0 && state.type !== "detail" ? (
+                  <TouchableOpacity
+                    onPress={handleSubmitSelection}
+                    activeOpacity={0.8}
                   >
-                    <View style={styles.searchInputWrapper}>
-                      <Ionicons name="search" size={18} color="#000" style={styles.searchIcon} />
-                      <TextInput
-                        ref={searchInputRef}
-                        style={styles.searchInput}
-                        placeholder="Search"
-                        placeholderTextColor="#636366"
-                        value={searchText}
-                        onChangeText={setSearchText}
-                        autoCorrect={false}
-                        autoCapitalize="none"
-                        autoFocus
-                        returnKeyType="search"
-                      />
-                      {searchText.length > 0 && (
-                        <TouchableOpacity
-                          onPress={() => setSearchText("")}
-                          style={styles.clearButton}
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                          <Ionicons name="close-circle" size={18} color="#C7C7CC" />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </LiquidGlassView>
+                    {showGlass ? (
+                      <LiquidGlassView
+                        style={[
+                          styles.backButton,
+                          { backgroundColor: Tokens.accent },
+                        ]}
+                        interactive
+                        effect="regular"
+                        tintColor={Tokens.tintColor}
+                      >
+                        <Ionicons
+                          name="checkmark-sharp"
+                          size={20}
+                          color={Tokens.accent}
+                        />
+                      </LiquidGlassView>
+                    ) : (
+                      <View
+                        style={[
+                          styles.backButton,
+                          { backgroundColor: Tokens.accent },
+                        ]}
+                      >
+                        <Ionicons
+                          name="checkmark-sharp"
+                          size={20}
+                          color={Tokens.accent}
+                        />
+                      </View>
+                    )}
+                  </TouchableOpacity>
                 ) : (
-                  <View style={[styles.searchGlass, styles.searchGlassFallback]}>
-                    <View style={styles.searchInputWrapper}>
-                      <Ionicons name="search" size={18} color="#000" style={styles.searchIcon} />
-                      <TextInput
-                        ref={searchInputRef}
-                        style={styles.searchInput}
-                        placeholder="Search"
-                        placeholderTextColor="#636366"
-                        value={searchText}
-                        onChangeText={setSearchText}
-                        autoCorrect={false}
-                        autoCapitalize="none"
-                        autoFocus
-                        returnKeyType="search"
-                      />
-                      {searchText.length > 0 && (
-                        <TouchableOpacity
-                          onPress={() => setSearchText("")}
-                          style={styles.clearButton}
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                          <Ionicons name="close-circle" size={18} color="#C7C7CC" />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
+                  <View style={styles.headerRightSpacer} />
                 )}
               </View>
-            </Pressable>}
 
-            {/* Selection strip */}
-            {selectedItems.length > 0 && state.type !== "detail" && (
-              <Animated.View
-                entering={FadeInDown.duration(200)}
-                exiting={FadeOutUp.duration(150)}
-                style={styles.selectionStrip}
-              >
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.selectionChipsContainer}
-                  style={styles.selectionChipsScroll}
+              {/* Search bar - hidden in detail view */}
+              {state.type !== "detail" && (
+                <Pressable
+                  style={styles.searchContainer}
+                  onPress={() => searchInputRef.current?.focus()}
                 >
-                  {selectedItems.map((item) => (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={styles.selectionChip}
-                      onPress={() => handleEditSelected(item)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={styles.selectionChipName}
-                        numberOfLines={1}
+                  <View style={styles.searchShadowWrapper}>
+                    {showGlass ? (
+                      <LiquidGlassView
+                        style={styles.searchGlass}
+                        effect="regular"
+                        tintColor="rgba(250, 250, 247, 0.3)"
                       >
-                        {item.result.name}
-                      </Text>
-                      <TouchableOpacity
-                        style={styles.selectionChipRemove}
-                        onPress={() => handleRemoveSelected(item.id)}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        <View style={styles.searchInputWrapper}>
+                          <Ionicons
+                            name="search"
+                            size={18}
+                            color="#000"
+                            style={styles.searchIcon}
+                          />
+                          <TextInput
+                            ref={searchInputRef}
+                            style={styles.searchInput}
+                            placeholder="Search"
+                            placeholderTextColor="#636366"
+                            value={searchText}
+                            onChangeText={setSearchText}
+                            autoCorrect={false}
+                            autoCapitalize="none"
+                            autoFocus
+                            returnKeyType="search"
+                          />
+                          {searchText.length > 0 && (
+                            <TouchableOpacity
+                              onPress={() => setSearchText("")}
+                              style={styles.clearButton}
+                              hitSlop={{
+                                top: 10,
+                                bottom: 10,
+                                left: 10,
+                                right: 10,
+                              }}
+                            >
+                              <Ionicons
+                                name="close-circle"
+                                size={18}
+                                color="#C7C7CC"
+                              />
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      </LiquidGlassView>
+                    ) : (
+                      <View
+                        style={[styles.searchGlass, styles.searchGlassFallback]}
                       >
-                        <Ionicons name="close" size={14} color="#999" />
-                      </TouchableOpacity>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-                <Text style={styles.selectionStripSummary}>
-                  {selectedItems.length}{" "}
-                  {selectedItems.length === 1 ? "item" : "items"} ·{" "}
-                  {selectionTotalCal} cal
-                </Text>
-              </Animated.View>
-            )}
+                        <View style={styles.searchInputWrapper}>
+                          <Ionicons
+                            name="search"
+                            size={18}
+                            color="#000"
+                            style={styles.searchIcon}
+                          />
+                          <TextInput
+                            ref={searchInputRef}
+                            style={styles.searchInput}
+                            placeholder="Search"
+                            placeholderTextColor="#636366"
+                            value={searchText}
+                            onChangeText={setSearchText}
+                            autoCorrect={false}
+                            autoCapitalize="none"
+                            autoFocus
+                            returnKeyType="search"
+                          />
+                          {searchText.length > 0 && (
+                            <TouchableOpacity
+                              onPress={() => setSearchText("")}
+                              style={styles.clearButton}
+                              hitSlop={{
+                                top: 10,
+                                bottom: 10,
+                                left: 10,
+                                right: 10,
+                              }}
+                            >
+                              <Ionicons
+                                name="close-circle"
+                                size={18}
+                                color="#C7C7CC"
+                              />
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                </Pressable>
+              )}
 
-            {/* Content area */}
-            <View style={styles.contentArea}>
-              {/* Idle state */}
-              {state.type === "idle" && (
-                recentlyLoggedResults.length > 0 ? (
+              {/* Selection strip */}
+              {selectedItems.length > 0 && state.type !== "detail" && (
+                <Animated.View
+                  entering={FadeInDown.duration(200)}
+                  exiting={FadeOutUp.duration(150)}
+                  style={styles.selectionStrip}
+                >
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.selectionChipsContainer}
+                    style={styles.selectionChipsScroll}
+                  >
+                    {selectedItems.map((item) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={styles.selectionChip}
+                        onPress={() => handleEditSelected(item)}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={styles.selectionChipName}
+                          numberOfLines={1}
+                        >
+                          {item.result.name}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.selectionChipRemove}
+                          onPress={() => handleRemoveSelected(item.id)}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        >
+                          <Ionicons name="close" size={14} color="#999" />
+                        </TouchableOpacity>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <Text style={styles.selectionStripSummary}>
+                    {selectedItems.length}{" "}
+                    {selectedItems.length === 1 ? "item" : "items"} ·{" "}
+                    {selectionTotalCal} cal
+                  </Text>
+                </Animated.View>
+              )}
+
+              {/* Content area */}
+              <View style={styles.contentArea}>
+                {/* Idle state */}
+                {state.type === "idle" &&
+                  (recentlyLoggedResults.length > 0 ? (
+                    <KeyboardAwareScrollView
+                      style={styles.resultsList}
+                      contentContainerStyle={{
+                        paddingBottom: insets.bottom + 16,
+                      }}
+                      keyboardShouldPersistTaps="handled"
+                      keyboardDismissMode="interactive"
+                      showsVerticalScrollIndicator={false}
+                      bounces={true}
+                    >
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionHeaderText}>
+                          Recently Logged
+                        </Text>
+                      </View>
+                      {recentlyLoggedResults.map((result, index) =>
+                        renderResultCard(result, index),
+                      )}
+                    </KeyboardAwareScrollView>
+                  ) : (
+                    <Animated.View
+                      entering={FadeInDown.delay(100).duration(300)}
+                      style={[
+                        styles.centeredMessage,
+                        { paddingBottom: keyboardHeight },
+                      ]}
+                    >
+                      <Text style={styles.idleTitle}>
+                        Search for item in database
+                      </Text>
+                      <Text style={styles.idleDescription}>
+                        Type a food name to search the nutrition database
+                      </Text>
+                    </Animated.View>
+                  ))}
+
+                {/* Searching state */}
+                {state.type === "searching" && (
+                  <View
+                    style={[
+                      styles.centeredMessage,
+                      { paddingBottom: keyboardHeight },
+                    ]}
+                  >
+                    <ActivityIndicator size="large" color="#666" />
+                    <Text style={styles.centeredMessageText}>Searching...</Text>
+                  </View>
+                )}
+
+                {/* Empty state */}
+                {state.type === "empty" && (
+                  <View
+                    style={[
+                      styles.centeredMessage,
+                      { paddingBottom: keyboardHeight },
+                    ]}
+                  >
+                    <Ionicons name="search-outline" size={48} color="#ddd" />
+                    <Text style={styles.centeredMessageText}>
+                      No results found
+                    </Text>
+                    <Text style={styles.centeredMessageSubtext}>
+                      Try a different search term
+                    </Text>
+                  </View>
+                )}
+
+                {/* Error state */}
+                {state.type === "error" && (
+                  <View
+                    style={[
+                      styles.centeredMessage,
+                      { paddingBottom: keyboardHeight },
+                    ]}
+                  >
+                    <Ionicons
+                      name="warning-outline"
+                      size={48}
+                      color="#F5A623"
+                    />
+                    <Text style={styles.centeredMessageText}>
+                      {state.message}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Results list */}
+                {state.type === "results" && (
                   <KeyboardAwareScrollView
                     style={styles.resultsList}
                     contentContainerStyle={{
@@ -1064,442 +1361,447 @@ export function DatabaseSearchModal({
                     showsVerticalScrollIndicator={false}
                     bounces={true}
                   >
-                    <View style={styles.sectionHeader}>
-                      <Text style={styles.sectionHeaderText}>Recently Logged</Text>
-                    </View>
-                    {recentlyLoggedResults.map((result, index) =>
-                      renderResultCard(result, index),
+                    {commonResults.length > 0 && (
+                      <>
+                        <View style={styles.sectionHeader}>
+                          <Text style={styles.sectionHeaderText}>
+                            Common Foods
+                          </Text>
+                        </View>
+                        {commonResults.map((result, index) =>
+                          renderResultCard(result, index),
+                        )}
+                      </>
                     )}
-                  </KeyboardAwareScrollView>
-                ) : (
-                  <Animated.View
-                    entering={FadeInDown.delay(100).duration(300)}
-                    style={[styles.centeredMessage, { paddingBottom: keyboardHeight }]}
-                  >
-                    <View style={styles.idleIconContainer}>
-                      <Ionicons name="search-outline" size={32} color="#000" />
-                    </View>
-                    <Text style={styles.idleTitle}>Search for item in database</Text>
-                    <Text style={styles.idleDescription}>
-                      Type a food name to search the nutrition database
-                    </Text>
-                  </Animated.View>
-                )
-              )}
-
-              {/* Searching state */}
-              {state.type === "searching" && (
-                <View style={[styles.centeredMessage, { paddingBottom: keyboardHeight }]}>
-                  <ActivityIndicator size="large" color="#666" />
-                  <Text style={styles.centeredMessageText}>Searching...</Text>
-                </View>
-              )}
-
-              {/* Empty state */}
-              {state.type === "empty" && (
-                <View style={[styles.centeredMessage, { paddingBottom: keyboardHeight }]}>
-                  <Ionicons name="search-outline" size={48} color="#ddd" />
-                  <Text style={styles.centeredMessageText}>
-                    No results found
-                  </Text>
-                  <Text style={styles.centeredMessageSubtext}>
-                    Try a different search term
-                  </Text>
-                </View>
-              )}
-
-              {/* Error state */}
-              {state.type === "error" && (
-                <View style={[styles.centeredMessage, { paddingBottom: keyboardHeight }]}>
-                  <Ionicons name="warning-outline" size={48} color="#F5A623" />
-                  <Text style={styles.centeredMessageText}>
-                    {state.message}
-                  </Text>
-                </View>
-              )}
-
-              {/* Results list */}
-              {state.type === "results" && (
-                <KeyboardAwareScrollView
-                  style={styles.resultsList}
-                  contentContainerStyle={{
-                    paddingBottom: insets.bottom + 16,
-                  }}
-                  keyboardShouldPersistTaps="handled"
-                  keyboardDismissMode="interactive"
-                  showsVerticalScrollIndicator={false}
-                  bounces={true}
-                >
-                  {commonResults.length > 0 && (
-                    <>
-                      <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionHeaderText}>Common Foods</Text>
-                      </View>
-                      {commonResults.map((result, index) =>
-                        renderResultCard(result, index),
-                      )}
-                    </>
-                  )}
-                  {brandedResults.length > 0 && (
-                    <>
-                      <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionHeaderText}>Branded</Text>
-                      </View>
-                      {brandedResults.map((result, index) =>
-                        renderResultCard(result, commonResults.length + index),
-                      )}
-                    </>
-                  )}
-                  {(commonResults.length > 0 || brandedResults.length > 0) && (
-                    <Text
-                      style={styles.attribution}
-                      onPress={() => Linking.openURL("https://platform.fatsecret.com")}
-                    >
-                      Powered by FatSecret Platform API
-                    </Text>
-                  )}
-                </KeyboardAwareScrollView>
-              )}
-
-              {/* Detail view */}
-              {state.type === "detail" && previewMacros && (
-                <Animated.View
-                  entering={FadeInDown.duration(300)}
-                  style={[
-                    styles.detailContainer,
-                    { paddingBottom: keyboardHeight || insets.bottom + 16 },
-                  ]}
-                >
-                <ScrollView
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                  contentContainerStyle={{ flexGrow: 1 }}
-                >
-                  {/* Product info */}
-                  <View style={styles.productHeader}>
-                    {state.result.brand && (
-                      <Text style={styles.productBrand}>
-                        {state.result.brand
-                          .toLowerCase()
-                          .replace(/\b\w/g, (c) => c.toUpperCase())}
+                    {brandedResults.length > 0 && (
+                      <>
+                        <View style={styles.sectionHeader}>
+                          <Text style={styles.sectionHeaderText}>Branded</Text>
+                        </View>
+                        {brandedResults.map((result, index) =>
+                          renderResultCard(
+                            result,
+                            commonResults.length + index,
+                          ),
+                        )}
+                      </>
+                    )}
+                    {(commonResults.length > 0 ||
+                      brandedResults.length > 0) && (
+                      <Text
+                        style={styles.attribution}
+                        onPress={() =>
+                          Linking.openURL("https://platform.fatsecret.com")
+                        }
+                      >
+                        Powered by FatSecret Platform API
                       </Text>
                     )}
-                    <Text style={styles.productName} numberOfLines={2}>
-                      {state.result.name}
-                    </Text>
-                  </View>
+                  </KeyboardAwareScrollView>
+                )}
 
-                  {/* FS items: serving pills + gram stepper (same layout as legacy) */}
-                  {state.result.source === 'FS' && state.result.fsServings?.length ? (
-                    <>
-                      {/* Horizontal serving pills */}
-                      <Animated.View
-                        entering={FadeIn.duration(200)}
-                        style={styles.portionRow}
-                      >
-                        <ScrollView
-                          horizontal
-                          showsHorizontalScrollIndicator={false}
-                          contentContainerStyle={styles.portionScrollContent}
-                        >
-                          {state.result.fsServings
-                            .filter((s) => s.metricAmount != null && s.metricAmount > 0)
-                            .map((serving) => {
-                            const isSelected = serving.servingId === selectedFsServingId;
-                            return (
-                              <TouchableOpacity
-                                key={serving.servingId}
-                                style={[
-                                  styles.portionPill,
-                                  isSelected && styles.portionPillSelected,
-                                ]}
-                                onPress={() => {
-                                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                  setSelectedFsServingId(serving.servingId);
-                                  if (serving.metricAmount) {
-                                    setServingGrams(Math.round(serving.metricAmount).toString());
-                                  }
-                                }}
-                                activeOpacity={0.7}
-                              >
-                                <Text style={[
-                                  styles.portionPillLabel,
-                                  isSelected && styles.portionPillLabelSelected,
-                                ]}>
-                                  {serving.description}
-                                </Text>
-                                <Text style={[
-                                  styles.portionPillGrams,
-                                  isSelected && styles.portionPillGramsSelected,
-                                ]}>
-                                  {serving.metricAmount ? `${Math.round(serving.metricAmount)}g` : ''}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </ScrollView>
-                      </Animated.View>
-
-                      {/* Gram stepper — same as legacy, editable */}
-                      <View style={styles.servingCard}>
-                        <Text style={styles.servingLabel}>Serving</Text>
-                        <View style={styles.stepperContainer}>
-                          <TouchableOpacity
-                            style={styles.stepperButton}
-                            onPress={() => handleServingStep(-10)}
-                            activeOpacity={0.6}
-                          >
-                            <Ionicons name="remove" size={18} color="#999" />
-                          </TouchableOpacity>
-                          <View style={styles.servingInputWrapper}>
-                            <TextInput
-                              style={styles.servingInput}
-                              value={servingGrams}
-                              onChangeText={(text) => {
-                                setServingGrams(text);
-                                setSelectedFsServingId(null);
-                              }}
-                              keyboardType="numeric"
-                              selectTextOnFocus
-                              returnKeyType="done"
-                            />
-                            <Text style={styles.servingUnit}>g</Text>
-                          </View>
-                          <TouchableOpacity
-                            style={styles.stepperButton}
-                            onPress={() => handleServingStep(10)}
-                            activeOpacity={0.6}
-                          >
-                            <Ionicons name="add" size={18} color="#999" />
-                          </TouchableOpacity>
-                        </View>
+                {/* Detail view */}
+                {state.type === "detail" && previewMacros && (
+                  <Animated.View
+                    entering={FadeInDown.duration(300)}
+                    style={[
+                      styles.detailContainer,
+                      { paddingBottom: keyboardHeight || insets.bottom + 16 },
+                    ]}
+                  >
+                    <ScrollView
+                      showsVerticalScrollIndicator={false}
+                      keyboardShouldPersistTaps="handled"
+                      contentContainerStyle={{ flexGrow: 1 }}
+                    >
+                      {/* Product info */}
+                      <View style={styles.productHeader}>
+                        {state.result.brand && (
+                          <Text style={styles.productBrand}>
+                            {state.result.brand
+                              .toLowerCase()
+                              .replace(/\b\w/g, (c) => c.toUpperCase())}
+                          </Text>
+                        )}
+                        <Text style={styles.productName} numberOfLines={2}>
+                          {state.result.name}
+                        </Text>
                       </View>
-                    </>
-                  ) : (
-                    <>
-                      {/* Legacy: Portion quick-select pills */}
-                      {(portions.length > 0 || portionsLoading) && (
-                        <Animated.View
-                          entering={FadeIn.duration(200)}
-                          style={styles.portionRow}
-                        >
-                          {portionsLoading ? (
-                            <ActivityIndicator
-                              size="small"
-                              color={TEAL}
-                              style={{ marginVertical: 4 }}
-                            />
-                          ) : (
+
+                      {/* FS items: serving pills + gram stepper (same layout as legacy) */}
+                      {state.result.source === "FS" &&
+                      state.result.fsServings?.length ? (
+                        <>
+                          {/* Horizontal serving pills */}
+                          <Animated.View
+                            entering={FadeIn.duration(200)}
+                            style={styles.portionRow}
+                          >
                             <ScrollView
                               horizontal
                               showsHorizontalScrollIndicator={false}
-                              contentContainerStyle={styles.portionScrollContent}
+                              contentContainerStyle={
+                                styles.portionScrollContent
+                              }
                             >
-                              {portions.map((portion, i) => {
-                                const isSelected = selectedPortionIndex === i;
-                                return (
-                                  <TouchableOpacity
-                                    key={`${portion.label}-${i}`}
-                                    style={[
-                                      styles.portionPill,
-                                      isSelected && styles.portionPillSelected,
-                                    ]}
-                                    onPress={() => {
-                                      Haptics.impactAsync(
-                                        Haptics.ImpactFeedbackStyle.Light,
-                                      );
-                                      setSelectedPortionIndex(i);
-                                      setServingGrams(portion.grams.toString());
-                                    }}
-                                    activeOpacity={0.7}
-                                  >
-                                    <Text style={[
-                                      styles.portionPillLabel,
-                                      isSelected && styles.portionPillLabelSelected,
-                                    ]}>
-                                      {portion.label}
-                                    </Text>
-                                    <Text style={[
-                                      styles.portionPillGrams,
-                                      isSelected && styles.portionPillGramsSelected,
-                                    ]}>
-                                      {portion.grams}g
-                                    </Text>
-                                  </TouchableOpacity>
-                                );
-                              })}
+                              {state.result.fsServings
+                                .filter(
+                                  (s) =>
+                                    s.metricAmount != null &&
+                                    s.metricAmount > 0,
+                                )
+                                .map((serving) => {
+                                  const isSelected =
+                                    serving.servingId === selectedFsServingId;
+                                  return (
+                                    <TouchableOpacity
+                                      key={serving.servingId}
+                                      style={[
+                                        styles.portionPill,
+                                        isSelected &&
+                                          styles.portionPillSelected,
+                                      ]}
+                                      onPress={() => {
+                                        Haptics.impactAsync(
+                                          Haptics.ImpactFeedbackStyle.Light,
+                                        );
+                                        setSelectedFsServingId(
+                                          serving.servingId,
+                                        );
+                                        if (serving.metricAmount) {
+                                          setServingGrams(
+                                            Math.round(
+                                              serving.metricAmount,
+                                            ).toString(),
+                                          );
+                                        }
+                                      }}
+                                      activeOpacity={0.7}
+                                    >
+                                      <Text
+                                        style={[
+                                          styles.portionPillLabel,
+                                          isSelected &&
+                                            styles.portionPillLabelSelected,
+                                        ]}
+                                      >
+                                        {serving.description}
+                                      </Text>
+                                      <Text
+                                        style={[
+                                          styles.portionPillGrams,
+                                          isSelected &&
+                                            styles.portionPillGramsSelected,
+                                        ]}
+                                      >
+                                        {serving.metricAmount
+                                          ? `${Math.round(serving.metricAmount)}g`
+                                          : ""}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  );
+                                })}
                             </ScrollView>
-                          )}
-                        </Animated.View>
-                      )}
+                          </Animated.View>
 
-                      {/* Legacy: Serving stepper */}
-                      <View style={styles.servingCard}>
-                        <Text style={styles.servingLabel}>Serving</Text>
-                        <View style={styles.stepperContainer}>
-                          <TouchableOpacity
-                            style={styles.stepperButton}
-                            onPress={() => handleServingStep(-10)}
-                            activeOpacity={0.6}
-                          >
-                            <Ionicons name="remove" size={18} color="#999" />
-                          </TouchableOpacity>
-                          <View style={styles.servingInputWrapper}>
-                            <TextInput
-                              style={styles.servingInput}
-                              value={servingGrams}
-                              onChangeText={(text) => {
-                                setServingGrams(text);
-                                setSelectedPortionIndex(null);
-                              }}
-                              keyboardType="numeric"
-                              selectTextOnFocus
-                              returnKeyType="done"
-                            />
-                            <Text style={styles.servingUnit}>g</Text>
-                          </View>
-                          <TouchableOpacity
-                            style={styles.stepperButton}
-                            onPress={() => handleServingStep(10)}
-                            activeOpacity={0.6}
-                          >
-                            <Ionicons name="add" size={18} color="#999" />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    </>
-                  )}
-
-                  {/* Macros */}
-                  <View style={styles.macrosCard}>
-                    {[
-                      {
-                        key: "calories" as const,
-                        value: previewMacros.kcal,
-                        unit: "",
-                        label: "calories",
-                      },
-                      {
-                        key: "protein" as const,
-                        value: previewMacros.protein,
-                        unit: "g",
-                        label: "protein",
-                      },
-                      {
-                        key: "fat" as const,
-                        value: previewMacros.fat,
-                        unit: "g",
-                        label: "fat",
-                      },
-                      {
-                        key: "carbs" as const,
-                        value: previewMacros.carbs,
-                        unit: "g",
-                        label: "carbs",
-                      },
-                    ].map((macro, i) => (
-                      <Animated.View
-                        key={macro.key}
-                        entering={FadeInDown.delay(i * 60).duration(250)}
-                        style={styles.macroPill}
-                      >
-                        <TouchableOpacity
-                          style={styles.macroPillTouchable}
-                          activeOpacity={0.6}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setEditMacroPopup({
-                              nutrientKey: macro.key === "calories" ? "kcal" : macro.key,
-                              currentValue: macro.value,
-                            });
-                          }}
-                        >
-                          <View style={styles.macroIconContainer}>
-                            <FontAwesomeIcon
-                              icon={MACRO_ICONS[macro.key]}
-                              size={12}
-                              color={MACRO_COLORS[macro.key].primary}
-                            />
-                          </View>
-                          <View style={styles.macroPillValueRow}>
-                            <AnimatedDigits
-                              value={macro.value}
-                              style={styles.macroPillValue}
-                            />
-                            {macro.unit ? (
-                              <Text style={styles.macroPillValue}>{macro.unit}</Text>
-                            ) : null}
-                          </View>
-                          <Text style={styles.macroPillLabel}>{macro.label}</Text>
-                        </TouchableOpacity>
-                      </Animated.View>
-                    ))}
-                  </View>
-
-                  {/* Extended nutrients dropdown */}
-                  {previewExtended && Object.keys(previewExtended).length > 0 && (
-                    <View style={styles.extendedSection}>
-                      <TouchableOpacity
-                        style={styles.extendedToggle}
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          setExtendedOpen((prev) => !prev);
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.extendedToggleText}>
-                          Additional Nutrition Facts
-                        </Text>
-                        <Ionicons
-                          name={extendedOpen ? "chevron-up" : "chevron-down"}
-                          size={16}
-                          color="#999"
-                        />
-                      </TouchableOpacity>
-                      {extendedOpen && (
-                        <Animated.View
-                          entering={FadeInDown.duration(200)}
-                          style={styles.extendedList}
-                        >
-                          {Object.entries(previewExtended).map(([key, val]) => (
-                            <View key={key} style={styles.extendedRow}>
-                              <Text style={styles.extendedLabel}>
-                                {EXTENDED_NUTRIENT_LABELS[key] ?? key}
-                              </Text>
-                              <Text style={styles.extendedValue}>
-                                {val < 1 ? val.toFixed(2) : Math.round(val * 10) / 10}
-                                {EXTENDED_NUTRIENT_UNITS[key] ?? ""}
-                              </Text>
+                          {/* Gram stepper — same as legacy, editable */}
+                          <View style={styles.servingCard}>
+                            <Text style={styles.servingLabel}>Serving</Text>
+                            <View style={styles.stepperContainer}>
+                              <TouchableOpacity
+                                style={styles.stepperButton}
+                                onPress={() => handleServingStep(-10)}
+                                activeOpacity={0.6}
+                              >
+                                <Ionicons
+                                  name="remove"
+                                  size={18}
+                                  color="#999"
+                                />
+                              </TouchableOpacity>
+                              <View style={styles.servingInputWrapper}>
+                                <TextInput
+                                  style={styles.servingInput}
+                                  value={servingGrams}
+                                  onChangeText={(text) => {
+                                    setServingGrams(text);
+                                    setSelectedFsServingId(null);
+                                  }}
+                                  keyboardType="numeric"
+                                  selectTextOnFocus
+                                  returnKeyType="done"
+                                />
+                                <Text style={styles.servingUnit}>g</Text>
+                              </View>
+                              <TouchableOpacity
+                                style={styles.stepperButton}
+                                onPress={() => handleServingStep(10)}
+                                activeOpacity={0.6}
+                              >
+                                <Ionicons name="add" size={18} color="#999" />
+                              </TouchableOpacity>
                             </View>
-                          ))}
-                        </Animated.View>
-                      )}
-                    </View>
-                  )}
+                          </View>
+                        </>
+                      ) : (
+                        <>
+                          {/* Legacy: Portion quick-select pills */}
+                          {(portions.length > 0 || portionsLoading) && (
+                            <Animated.View
+                              entering={FadeIn.duration(200)}
+                              style={styles.portionRow}
+                            >
+                              {portionsLoading ? (
+                                <ActivityIndicator
+                                  size="small"
+                                  color={TEAL}
+                                  style={{ marginVertical: 4 }}
+                                />
+                              ) : (
+                                <ScrollView
+                                  horizontal
+                                  showsHorizontalScrollIndicator={false}
+                                  contentContainerStyle={
+                                    styles.portionScrollContent
+                                  }
+                                >
+                                  {portions.map((portion, i) => {
+                                    const isSelected =
+                                      selectedPortionIndex === i;
+                                    return (
+                                      <TouchableOpacity
+                                        key={`${portion.label}-${i}`}
+                                        style={[
+                                          styles.portionPill,
+                                          isSelected &&
+                                            styles.portionPillSelected,
+                                        ]}
+                                        onPress={() => {
+                                          Haptics.impactAsync(
+                                            Haptics.ImpactFeedbackStyle.Light,
+                                          );
+                                          setSelectedPortionIndex(i);
+                                          setServingGrams(
+                                            portion.grams.toString(),
+                                          );
+                                        }}
+                                        activeOpacity={0.7}
+                                      >
+                                        <Text
+                                          style={[
+                                            styles.portionPillLabel,
+                                            isSelected &&
+                                              styles.portionPillLabelSelected,
+                                          ]}
+                                        >
+                                          {portion.label}
+                                        </Text>
+                                        <Text
+                                          style={[
+                                            styles.portionPillGrams,
+                                            isSelected &&
+                                              styles.portionPillGramsSelected,
+                                          ]}
+                                        >
+                                          {portion.grams}g
+                                        </Text>
+                                      </TouchableOpacity>
+                                    );
+                                  })}
+                                </ScrollView>
+                              )}
+                            </Animated.View>
+                          )}
 
-                  {/* Add button */}
-                  <View style={{ height: 24 }} />
-                  <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={handleAdd}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons
-                      name={editingSelectedId ? "checkmark" : "add"}
-                      size={20}
-                      color="#fff"
-                    />
-                    <Text style={styles.addButtonText}>
-                      {detailAddLabel}
-                    </Text>
-                  </TouchableOpacity>
-                </ScrollView>
-                </Animated.View>
-              )}
-            </View>
-          </Animated.View>
-        </GestureDetector>
-      </GestureHandlerRootView>
+                          {/* Legacy: Serving stepper */}
+                          <View style={styles.servingCard}>
+                            <Text style={styles.servingLabel}>Serving</Text>
+                            <View style={styles.stepperContainer}>
+                              <TouchableOpacity
+                                style={styles.stepperButton}
+                                onPress={() => handleServingStep(-10)}
+                                activeOpacity={0.6}
+                              >
+                                <Ionicons
+                                  name="remove"
+                                  size={18}
+                                  color="#999"
+                                />
+                              </TouchableOpacity>
+                              <View style={styles.servingInputWrapper}>
+                                <TextInput
+                                  style={styles.servingInput}
+                                  value={servingGrams}
+                                  onChangeText={(text) => {
+                                    setServingGrams(text);
+                                    setSelectedPortionIndex(null);
+                                  }}
+                                  keyboardType="numeric"
+                                  selectTextOnFocus
+                                  returnKeyType="done"
+                                />
+                                <Text style={styles.servingUnit}>g</Text>
+                              </View>
+                              <TouchableOpacity
+                                style={styles.stepperButton}
+                                onPress={() => handleServingStep(10)}
+                                activeOpacity={0.6}
+                              >
+                                <Ionicons name="add" size={18} color="#999" />
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        </>
+                      )}
+
+                      {/* Macros */}
+                      <View style={styles.macrosCard}>
+                        {[
+                          {
+                            key: "calories" as const,
+                            value: previewMacros.kcal,
+                            unit: "",
+                            label: "calories",
+                          },
+                          {
+                            key: "protein" as const,
+                            value: previewMacros.protein,
+                            unit: "g",
+                            label: "protein",
+                          },
+                          {
+                            key: "fat" as const,
+                            value: previewMacros.fat,
+                            unit: "g",
+                            label: "fat",
+                          },
+                          {
+                            key: "carbs" as const,
+                            value: previewMacros.carbs,
+                            unit: "g",
+                            label: "carbs",
+                          },
+                        ].map((macro, i) => (
+                          <Animated.View
+                            key={macro.key}
+                            entering={FadeInDown.delay(i * 60).duration(250)}
+                            style={styles.macroPill}
+                          >
+                            <TouchableOpacity
+                              style={styles.macroPillTouchable}
+                              activeOpacity={0.6}
+                              onPress={() => {
+                                Haptics.impactAsync(
+                                  Haptics.ImpactFeedbackStyle.Light,
+                                );
+                                setEditMacroPopup({
+                                  nutrientKey:
+                                    macro.key === "calories"
+                                      ? "kcal"
+                                      : macro.key,
+                                  currentValue: macro.value,
+                                });
+                              }}
+                            >
+                              <View style={styles.macroIconContainer}>
+                                <FontAwesomeIcon
+                                  icon={MACRO_ICONS[macro.key]}
+                                  size={12}
+                                  color={MACRO_COLORS[macro.key].primary}
+                                />
+                              </View>
+                              <View style={styles.macroPillValueRow}>
+                                <AnimatedDigits
+                                  value={macro.value}
+                                  style={styles.macroPillValue}
+                                />
+                                {macro.unit ? (
+                                  <Text style={styles.macroPillValue}>
+                                    {macro.unit}
+                                  </Text>
+                                ) : null}
+                              </View>
+                              <Text style={styles.macroPillLabel}>
+                                {macro.label}
+                              </Text>
+                            </TouchableOpacity>
+                          </Animated.View>
+                        ))}
+                      </View>
+
+                      {/* Extended nutrients dropdown */}
+                      {previewExtended &&
+                        Object.keys(previewExtended).length > 0 && (
+                          <View style={styles.extendedSection}>
+                            <TouchableOpacity
+                              style={styles.extendedToggle}
+                              onPress={() => {
+                                Haptics.impactAsync(
+                                  Haptics.ImpactFeedbackStyle.Light,
+                                );
+                                setExtendedOpen((prev) => !prev);
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.extendedToggleText}>
+                                Additional Nutrition Facts
+                              </Text>
+                              <Ionicons
+                                name={
+                                  extendedOpen ? "chevron-up" : "chevron-down"
+                                }
+                                size={16}
+                                color="#999"
+                              />
+                            </TouchableOpacity>
+                            {extendedOpen && (
+                              <Animated.View
+                                entering={FadeInDown.duration(200)}
+                                style={styles.extendedList}
+                              >
+                                {Object.entries(previewExtended).map(
+                                  ([key, val]) => (
+                                    <View key={key} style={styles.extendedRow}>
+                                      <Text style={styles.extendedLabel}>
+                                        {EXTENDED_NUTRIENT_LABELS[key] ?? key}
+                                      </Text>
+                                      <Text style={styles.extendedValue}>
+                                        {val < 1
+                                          ? val.toFixed(2)
+                                          : Math.round(val * 10) / 10}
+                                        {EXTENDED_NUTRIENT_UNITS[key] ?? ""}
+                                      </Text>
+                                    </View>
+                                  ),
+                                )}
+                              </Animated.View>
+                            )}
+                          </View>
+                        )}
+
+                      {/* Add button */}
+                      <View style={{ height: 24 }} />
+                      <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={handleAdd}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons
+                          name={editingSelectedId ? "checkmark" : "add"}
+                          size={20}
+                          color="#fff"
+                        />
+                        <Text style={styles.addButtonText}>
+                          {detailAddLabel}
+                        </Text>
+                      </TouchableOpacity>
+                    </ScrollView>
+                  </Animated.View>
+                )}
+              </View>
+            </Animated.View>
+          </GestureDetector>
+        </GestureHandlerRootView>
       </KeyboardProvider>
 
       {/* Edit macro popup */}
@@ -1508,7 +1810,10 @@ export function DatabaseSearchModal({
           nutrientKey={editMacroPopup.nutrientKey}
           currentValue={editMacroPopup.currentValue}
           onSave={(value) => {
-            setMacroOverrides((prev) => ({ ...prev, [editMacroPopup.nutrientKey]: value }));
+            setMacroOverrides((prev) => ({
+              ...prev,
+              [editMacroPopup.nutrientKey]: value,
+            }));
             setEditMacroPopup(null);
           }}
           onRevert={() => {
@@ -1687,10 +1992,10 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   sectionHeaderText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#999",
-    letterSpacing: 0.5,
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#6B6B6B",
+    textTransform: "capitalize",
   },
   // Results list
   resultsList: {
@@ -1703,7 +2008,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 6,
     borderWidth: 0.5,
-    borderColor: '#E5E5E5',
+    borderColor: "#E5E5E5",
   },
   resultCardRow: {
     flexDirection: "row",
@@ -1793,7 +2098,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: Tokens.textSecondary,
     textTransform: "capitalize",
-    letterSpacing: 0.5,
+    letterSpacing: -0.2,
     marginBottom: 2,
   },
   servingHint: {
@@ -1819,6 +2124,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "500",
     color: Tokens.textPrimary,
+    letterSpacing: -0.3,
   },
   stepperContainer: {
     flexDirection: "row",
@@ -1841,6 +2147,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: Tokens.textPrimary,
+    letterSpacing: -0.3,
     minWidth: 44,
     textAlign: "right",
     padding: 0,
@@ -1849,7 +2156,7 @@ const styles = StyleSheet.create({
   servingUnit: {
     fontSize: 14,
     fontWeight: "400",
-    color: Tokens.textSecondary,
+    color: Tokens.textPrimary,
     marginLeft: 2,
   },
   // Portion quick-select
@@ -1923,15 +2230,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: "System",
     fontWeight: "700",
-    color: "#333",
+    color: Tokens.textPrimary,
+    letterSpacing: -1,
   },
   macroPillLabel: {
     fontSize: 10,
     fontFamily: "System",
     fontWeight: "500",
     textTransform: "capitalize",
-    letterSpacing: 0.3,
-    color: "#888",
+    letterSpacing: -0.2,
+    color: Tokens.textSecondary,
   },
   // Action row
   actionRow: {

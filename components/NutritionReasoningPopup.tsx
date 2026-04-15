@@ -177,6 +177,7 @@ function shortenDomain(domain: string): string {
   if (domain.includes("mcdonalds.com")) return "McDonald's";
   if (domain.includes("starbucks.com")) return "Starbucks";
   if (domain.includes("openfoodfacts.org")) return "Open Food Facts";
+  if (domain.includes("fatsecret.com")) return "Powered by FatSecret Platform API";
   if (domain.includes("food-guide.canada.ca")) return "CNF";
   // Default: use first meaningful part of domain
   const parts = domain.split(".");
@@ -610,7 +611,7 @@ function SomethingOffPopup({
               value={feedback}
               onChangeText={setFeedback}
               placeholder="Describe what's wrong..."
-              placeholderTextColor="#999"
+              placeholderTextColor={Tokens.textTertiary}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -618,15 +619,10 @@ function SomethingOffPopup({
               editable={!isLoading}
             />
 
-            {/* Hint */}
-            <Text style={styles.somethingOffHint}>
-              E.g., "Calories seem too high", "This is grilled, not fried"
-            </Text>
-
             {/* Action buttons */}
             <View style={styles.somethingOffActions}>
               <TouchableOpacity
-                style={styles.somethingOffCancelButton}
+                style={{ flex: 1, alignItems: "center" }}
                 onPress={handleClose}
                 activeOpacity={0.7}
                 disabled={isLoading}
@@ -2023,8 +2019,7 @@ export function NutritionReasoningPopup({
                     </View>
                   )}
 
-                  {/* Something Off Button - at the bottom of card (hidden for FatSecret items) */}
-                  {item.source !== 'FS' && (
+                  {/* Something Off Button - at the bottom of card */}
                   <TouchableOpacity
                     style={styles.somethingOffButton}
                     onPress={() => {
@@ -2046,7 +2041,6 @@ export function NutritionReasoningPopup({
                       Something Off?
                     </Text>
                   </TouchableOpacity>
-                  )}
                 </Animated.View>
               ))}
 
@@ -2690,7 +2684,6 @@ const styles = StyleSheet.create({
     fontFamily: 'System',
     fontWeight: '500',
     color: '#555',
-    maxWidth: 140,
   },
   totalsSection: {
     marginTop: 4,
@@ -3018,10 +3011,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   somethingOffTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: "System",
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     textAlign: "center",
     letterSpacing: -0.3,
   },
@@ -3031,16 +3024,14 @@ const styles = StyleSheet.create({
   somethingOffItemRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: 14,
+    backgroundColor: Tokens.surfaceRaised,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 16,
     gap: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0, 0, 0, 0.07)",
+    ...Tokens.shadowLight,
   },
   somethingOffIconContainer: {
     width: 36,
@@ -3055,13 +3046,13 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontFamily: "System",
     fontWeight: "500",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
     lineHeight: 22,
   },
   somethingOffInput: {
     height: 120,
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
+    borderWidth: 0.5,
+    borderColor: Tokens.border,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingTop: 14,
@@ -3069,44 +3060,40 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "System",
     fontWeight: "400",
-    color: "#1a1a1a",
-    backgroundColor: "#ffffff",
+    color: Tokens.textPrimary,
+    backgroundColor: Tokens.surfaceRaised,
     marginBottom: 8,
   },
   somethingOffHint: {
     fontSize: 13,
     fontFamily: "System",
     fontWeight: "400",
-    color: "#888",
+    color: Tokens.textSecondary,
     marginBottom: 24,
     lineHeight: 18,
     paddingHorizontal: 4,
   },
   somethingOffActions: {
     flexDirection: "row",
-    gap: 12,
-  },
-  somethingOffCancelButton: {
-    flex: 1,
-    height: 52,
-    borderRadius: 999,
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#EBEBEB",
+    gap: 16,
+    marginTop: 16,
   },
   somethingOffCancelText: {
     fontSize: 16,
     fontFamily: "System",
-    fontWeight: "400",
-    color: "#666",
+    fontWeight: "500",
+    color: Tokens.textSecondary,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
   somethingOffSubmitButton: {
     flex: 1,
-    height: 52,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1A6872",
+    backgroundColor: Tokens.accent,
+    paddingVertical: 14,
   },
   somethingOffSubmitButtonDisabled: {
     backgroundColor: "#A8D5DA",

@@ -52,6 +52,8 @@ interface CommonPortion {
 
 interface FoodItem {
   label: string;
+  brand?: string;
+  source?: 'brand' | 'USDA' | 'ai-estimate';
   qty: number;
   unit: string;
   confidence: number;
@@ -75,6 +77,8 @@ interface ApiResponse {
 interface CorrectionResponse {
   correctedMacros: Macros;
   correctedLabel?: string;
+  correctedQty?: number;
+  correctedUnit?: string;
   explanation: string;
   confidence?: number;
   reasoning?: NutritionReasoning;
@@ -413,6 +417,8 @@ OUTPUT FORMAT:
   "items": [
     {
       "label": "McDonald's Big Mac",
+      "brand": "McDonald's",
+      "source": "brand",
       "qty": 215,
       "unit": "g",
       "confidence": 0.99,
@@ -431,6 +437,13 @@ OUTPUT FORMAT:
   "totals": {"kcal": 590, "protein": 25, "fat": 34, "carbs": 46, "fiber": 3, "sugar": 9, "sodium": 1010, "potassium": 420}
 }
 
+BRAND AND SOURCE FIELDS:
+- "brand": If the item is from a specific brand or restaurant chain, include the brand name (e.g., "McDonald's", "Firehouse Subs", "Kind"). Omit for generic/unbranded foods.
+- "source": Categorize where the nutrition data came from:
+  - "brand" - macros came from a specific brand's or restaurant's published nutrition data
+  - "USDA" - macros came from USDA FoodData Central or similar generic food databases
+  - "ai-estimate" - macros were estimated by AI without a strong database match
+
 ADDITIONAL NUTRIENTS:
 - fiber: Dietary fiber in grams (g)
 - sugar: Total sugars in grams (g)
@@ -443,10 +456,14 @@ REASONING GUIDELINES:
 - interpretation: How you identified/interpreted this food item
 - assumptions: List any assumptions made (e.g., "raw weight", "boneless", "standard portion")
 - portionNotes: How you handled the quantity (e.g., "specified 150g", "assumed medium size")
-- dataSource: The database or source used. Format as a markdown link "[Name](url)" whenever you know a real URL. Rules:
-  1. For well-known branded items (McDonald's, Starbucks, KFC, etc.), link to their official nutrition page if you know the real URL.
-  2. For USDA generic foods, use the FDC food search URL: "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)" - replace FOOD_NAME with the URL-encoded food label (e.g., "banana" -> "https://fdc.nal.usda.gov/food-search?query=banana", "chicken breast" -> "https://fdc.nal.usda.gov/food-search?query=chicken+breast"). Do NOT fabricate a specific food ID number.
-  3. NEVER output a bare/raw URL like "https://..." or "(https://...)". Every URL must be wrapped in a markdown link [Name](url).
+- dataSource: Identify where you sourced the nutritional data. This MUST match how you actually calculated the macros:
+  1. BRANDED ITEMS (restaurant chains, packaged products, specific brands): If you identified the item as a branded product and used brand-specific nutrition data, you MUST cite the BRAND (parent company) as the source - NOT USDA. ALWAYS use markdown link format:
+     a. Identify the BRAND/MANUFACTURER (not the product or flavor). E.g., "Superkid ice cream" is made by "Kawartha Dairy", so cite "Kawartha Dairy".
+     b. Link to the brand's official homepage: "[Brand Name](https://www.brandname.com)". For well-known brands, use their real domain (e.g., "[Kawartha Dairy](https://www.kawarthadairy.com)", "[McDonald's](https://www.mcdonalds.com)").
+     c. NEVER use google.com, wikipedia.org, or any search engine as the URL. NEVER link to a product/flavor URL that doesn't exist - link to the brand's homepage instead.
+     If brand-specific nutrition data is NOT available, it is fine to fall back to USDA or other credible databases and cite them instead.
+  2. GENERIC/UNBRANDED ITEMS or BRANDED FALLBACK: Use the FDC food search URL: "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)" - replace FOOD_NAME with the URL-encoded food label (e.g., "banana" -> "https://fdc.nal.usda.gov/food-search?query=banana", "chicken breast" -> "https://fdc.nal.usda.gov/food-search?query=chicken+breast"). Do NOT fabricate a specific food ID number.
+  3. NEVER output a bare/raw URL like "https://..." or "(https://...)". URLs must be wrapped in a markdown link [Name](url).
   4. NEVER fabricate specific food ID numbers (e.g., do not guess FDC numeric IDs). Use the search URL format instead.
   5. Do NOT add bracket annotations like [snapshot], [cached], [estimated], [from database] - keep it clean.
 - confidenceExplanation: One-line summary using "High/Medium/Low confidence" (never the numeric %) followed by a short reason (e.g., "High confidence, USDA generic match with specified weight" or "Medium confidence, portion assumed and preparation method unknown")
@@ -809,7 +826,7 @@ VISUAL ESTIMATION RULES:
 1. Identify every distinct food item visible in the photo
 2. Estimate portion sizes using visual cues: plate size (standard dinner plate ~26cm), utensils, hands, common container sizes
 3. Convert all estimated quantities to grams (g)
-4. Use USDA FoodData Central nutrition data for calculations
+4. Use USDA FoodData Central nutrition data for generic foods. For branded/restaurant items visible in the photo, use brand-specific nutrition data
 5. For ambiguous items, use the most common interpretation
 6. Set confidence between 0.5-0.8 for photo-based estimates (lower than text due to visual estimation uncertainty)
 
@@ -845,11 +862,19 @@ OUTPUT FORMAT (JSON only, no markdown):
 Always include fiber, sugar, sodium, potassium in the macros object. Use 0 if data is unavailable.
 For each item, include a "commonPortions" array with 3-5 context-appropriate portion options. Each has "label" (human-readable) and "grams" (gram equivalent).
 
+BRAND AND SOURCE FIELDS:
+- "brand": If the item is from a specific brand or restaurant chain, include the brand name. Omit for generic/unbranded foods.
+- "source": "brand" if macros came from brand-specific data, "USDA" if from generic food databases, "ai-estimate" if estimated.
+
 DATA SOURCE FORMAT:
-- dataSource: Format as a markdown link "[Name](url)" whenever you know a real URL. Rules:
-  1. For well-known branded items (McDonald's, Starbucks, KFC, etc.), link to their official nutrition page if you know the real URL.
-  2. For USDA generic foods, use the FDC food search URL: "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)" - replace FOOD_NAME with the URL-encoded food label.
-  3. NEVER output a bare/raw URL. Every URL must be wrapped in a markdown link [Name](url).
+- dataSource: Identify where you sourced the nutritional data. This MUST match how you actually calculated the macros:
+  1. BRANDED ITEMS (restaurant chains, packaged products, specific brands): If you identified the item as a branded product and used brand-specific nutrition data, you MUST cite the BRAND (parent company) as the source - NOT USDA. ALWAYS use markdown link format:
+     a. Identify the BRAND/MANUFACTURER (not the product or flavor). E.g., "Superkid ice cream" is made by "Kawartha Dairy", so cite "Kawartha Dairy".
+     b. Link to the brand's official homepage: "[Brand Name](https://www.brandname.com)". For well-known brands, use their real domain.
+     c. NEVER use google.com, wikipedia.org, or any search engine as the URL.
+     If brand-specific nutrition data is NOT available, fall back to USDA or other credible databases and cite them instead.
+  2. GENERIC/UNBRANDED ITEMS or BRANDED FALLBACK: Use the FDC food search URL: "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)" - replace FOOD_NAME with the URL-encoded food label.
+  3. NEVER output a bare/raw URL. URLs must be wrapped in a markdown link [Name](url).
   4. NEVER fabricate specific food ID numbers. Use the search URL format instead.
   5. NEVER use em dashes anywhere in your output. Use commas, periods, semicolons, or hyphens (-) instead.
 
@@ -1150,13 +1175,15 @@ async function callCorrectionAI(
       "potassium": <number>
     },
     "correctedLabel": "<updated label if food description needs clarification, otherwise same as original>",
+    "correctedQty": <number - updated portion weight in grams if the correction changes the portion size, otherwise same as original>,
+    "correctedUnit": "g",
     "confidence": <number between 0 and 1>,
     "explanation": "<1 sentence: what changed>",
     "reasoning": {
       "interpretation": "<1 sentence: what was corrected - e.g., 'Corrected from medium to large size'>",
       "assumptions": ["<short assumptions, max 2-3 items>"],
       "portionNotes": "<brief portion note if relevant, otherwise omit>",
-      "dataSource": "Markdown link '[Name](url)' to the source if you know a real URL. For USDA generic foods use '[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)'. Plain text if no real URL is known.",
+      "dataSource": "For branded items, cite the BRAND/MANUFACTURER (not product name) and link to their official homepage: '[Brand Name](https://www.brandname.com)'. If brand data unavailable, fall back to USDA. NEVER use google.com or search engines. For generic foods use '[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)'.",
       "confidenceExplanation": "One-line: High/Medium/Low confidence + short reason",
       "confidenceAnalysis": "1-2 sentences max. What source was used and main uncertainty."
     }
@@ -1285,6 +1312,8 @@ JSON:`;
     const result: CorrectionResponse = {
       correctedMacros,
       correctedLabel: correctionData.correctedLabel || null,
+      correctedQty: typeof correctionData.correctedQty === 'number' ? correctionData.correctedQty : undefined,
+      correctedUnit: correctionData.correctedUnit || undefined,
       explanation:
         correctionData.explanation ||
         "Nutrition values have been adjusted based on the provided feedback.",

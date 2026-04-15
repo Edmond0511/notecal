@@ -42,7 +42,7 @@ export interface FoodItem {
   qty: number;
   unit: string;
   servings?: number; // Multiplier for the portion (1 = as entered, 2 = double, etc.)
-  source: 'FDC' | 'CNF' | 'OFF' | 'FS' | 'fallback' | 'local';
+  source: 'FDC' | 'CNF' | 'OFF' | 'FS' | 'fallback' | 'local' | 'ai' | 'brand';
   sourceId: string;
   macros: Macros;
   originalMacros?: Macros; // Original AI-calculated values for revert

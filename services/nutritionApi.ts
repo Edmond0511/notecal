@@ -467,6 +467,8 @@ function createFallbackResponse(foodText: string): NutritionResolveResponse {
 export interface CorrectionResponse {
   correctedMacros: Macros;
   correctedLabel?: string;
+  correctedQty?: number;
+  correctedUnit?: string;
   explanation: string;
   confidence?: number;
   reasoning?: NutritionReasoning;

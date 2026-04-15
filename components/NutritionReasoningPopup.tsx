@@ -363,7 +363,7 @@ function ConfidencePopup({
 
   const getDefaultExplanation = () => {
     if (confidence >= 0.8) {
-      return "This food item was matched with high certainty using reliable nutrition databases (USDA FDC, CNF, or Open Food Facts).";
+      return "This food item was matched with high certainty using reliable nutrition databases.";
     } else if (confidence >= 0.5) {
       return "This estimate is based on similar foods or general nutritional data. The portion size or specific variety may affect accuracy.";
     } else {
@@ -597,62 +597,96 @@ function SomethingOffPopup({
 
           {/* Content */}
           <View style={styles.somethingOffContent}>
-            {/* Item Label */}
-            <View style={styles.somethingOffItemRow}>
-              <Text style={styles.somethingOffItemLabel} numberOfLines={3}>
-                {item.label}
-              </Text>
-            </View>
-
-            {/* Input */}
+            {/* Feedback Section */}
+            <Text style={styles.sectionLabel}>what's wrong?</Text>
             <TextInput
               ref={inputRef}
               style={styles.somethingOffInput}
               value={feedback}
               onChangeText={setFeedback}
-              placeholder="Describe what's wrong..."
+              placeholder="Describe the issue..."
               placeholderTextColor={Tokens.textTertiary}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
               autoFocus
               editable={!isLoading}
+              accessibilityLabel="Feedback input"
+              accessibilityHint="Describe what's wrong with the nutrition data"
             />
 
-            {/* Action buttons */}
-            <View style={styles.somethingOffActions}>
-              <TouchableOpacity
-                style={{ flex: 1, alignItems: "center" }}
-                onPress={handleClose}
-                activeOpacity={0.7}
-                disabled={isLoading}
-              >
-                <Text
+            {/* Quick-fix chips */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.chipRow}
+              contentContainerStyle={styles.chipRowContent}
+            >
+              {["Wrong portion", "Wrong food", "Too many calories", "Too few calories"].map((chip) => (
+                <TouchableOpacity
+                  key={chip}
                   style={[
-                    styles.somethingOffCancelText,
-                    isLoading && { color: "#bbb" },
+                    styles.chip,
+                    feedback === chip && styles.chipSelected,
                   ]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setFeedback(feedback === chip ? "" : chip);
+                  }}
+                  disabled={isLoading}
+                  accessibilityRole="button"
+                  accessibilityLabel={chip}
+                  accessibilityState={{ selected: feedback === chip }}
                 >
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+                  <Text
+                    style={[
+                      styles.chipText,
+                      feedback === chip && styles.chipTextSelected,
+                    ]}
+                  >
+                    {chip}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Actions */}
+            <TouchableOpacity
+              style={[
+                styles.somethingOffSubmitButton,
+                (!feedback.trim() || isLoading) &&
+                  styles.somethingOffSubmitButtonDisabled,
+              ]}
+              onPress={handleSubmit}
+              activeOpacity={0.7}
+              disabled={!feedback.trim() || isLoading}
+              accessibilityRole="button"
+              accessibilityLabel={isLoading ? "Updating nutrition data" : "Submit feedback"}
+            >
+              {isLoading ? (
+                <Text style={styles.somethingOffSubmitText}>Updating...</Text>
+              ) : (
+                <Text style={styles.somethingOffSubmitText}>Submit</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleClose}
+              activeOpacity={0.7}
+              disabled={isLoading}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+            >
+              <Text
                 style={[
-                  styles.somethingOffSubmitButton,
-                  (!feedback.trim() || isLoading) &&
-                    styles.somethingOffSubmitButtonDisabled,
+                  styles.somethingOffCancelText,
+                  isLoading && { color: "#bbb" },
                 ]}
-                onPress={handleSubmit}
-                activeOpacity={0.7}
-                disabled={!feedback.trim() || isLoading}
               >
-                {isLoading ? (
-                  <Text style={styles.somethingOffSubmitText}>Updating...</Text>
-                ) : (
-                  <Text style={styles.somethingOffSubmitText}>Submit</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+                Cancel
+              </Text>
+            </TouchableOpacity>
           </View>
         </Animated.View>
       </GestureDetector>
@@ -2633,7 +2667,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'System',
     fontWeight: '600',
-    color: '#aaa',
+    color: '#6B6B6B',
     marginBottom: 2,
   },
   reasoningText: {
@@ -3019,27 +3053,25 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   somethingOffContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+    paddingTop: 4,
+  },
+  sectionLabel: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#6B6B6B",
+    textTransform: "capitalize",
+    marginBottom: 6,
+    marginLeft: 0,
   },
   somethingOffItemRow: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: Tokens.surfaceRaised,
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 16,
-    marginBottom: 16,
-    gap: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(0, 0, 0, 0.07)",
+    marginBottom: 20,
     ...Tokens.shadowLight,
-  },
-  somethingOffIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: "#FEF3C7",
-    alignItems: "center",
-    justifyContent: "center",
   },
   somethingOffItemLabel: {
     flex: 1,
@@ -3051,8 +3083,6 @@ const styles = StyleSheet.create({
   },
   somethingOffInput: {
     height: 120,
-    borderWidth: 0.5,
-    borderColor: Tokens.border,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingTop: 14,
@@ -3062,38 +3092,39 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: Tokens.textPrimary,
     backgroundColor: Tokens.surfaceRaised,
-    marginBottom: 8,
+    marginBottom: 12,
+    ...Tokens.shadowLight,
   },
-  somethingOffHint: {
-    fontSize: 13,
-    fontFamily: "System",
-    fontWeight: "400",
-    color: Tokens.textSecondary,
+  chipRow: {
     marginBottom: 24,
-    lineHeight: 18,
-    paddingHorizontal: 4,
   },
-  somethingOffActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    marginTop: 16,
+  chipRowContent: {
+    gap: 8,
   },
-  somethingOffCancelText: {
-    fontSize: 16,
+  chip: {
+    backgroundColor: Tokens.surface,
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  chipSelected: {
+    backgroundColor: Tokens.accentTint,
+  },
+  chipText: {
+    fontSize: 14,
     fontFamily: "System",
     fontWeight: "500",
     color: Tokens.textSecondary,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+  },
+  chipTextSelected: {
+    color: Tokens.accent,
   },
   somethingOffSubmitButton: {
-    flex: 1,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: Tokens.accent,
-    paddingVertical: 14,
+    height: 50,
   },
   somethingOffSubmitButtonDisabled: {
     backgroundColor: "#A8D5DA",
@@ -3103,6 +3134,18 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     fontWeight: "600",
     color: "#ffffff",
+  },
+  cancelButton: {
+    alignItems: "center",
+    marginTop: 8,
+  },
+  somethingOffCancelText: {
+    fontSize: 16,
+    fontFamily: "System",
+    fontWeight: "500",
+    color: Tokens.textSecondary,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
   // Edit Quantity Popup styles
   editQuantityRoot: {

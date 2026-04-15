@@ -54,6 +54,8 @@ function assignItemIds(items: any[], entryId: string): any[] {
     ...item,
     id: item.id || `${entryId}-item-${index}-${Date.now()}`,
     entryId: entryId,
+    source: item.source === 'brand' ? 'brand' : item.source === 'USDA' ? 'FDC' : item.source || 'ai',
+    sourceId: item.sourceId || '',
   }));
 }
 
@@ -1209,6 +1211,9 @@ export const useAppStore = create<AppState>()(
               ...i,
               // Update label if corrected
               label: result.correctedLabel || i.label,
+              // Update qty/unit if corrected
+              qty: result.correctedQty ?? i.qty,
+              unit: result.correctedUnit ?? i.unit,
               // Update macros with corrected values
               macros: result.correctedMacros,
               // Clear originalMacros - AI-corrected values become the new "truth"
@@ -1217,9 +1222,13 @@ export const useAppStore = create<AppState>()(
               // Update confidence if provided
               confidence: result.confidence ?? i.confidence,
               // Update reasoning with new reasoning or fallback to explanation
-              reasoning: result.reasoning || {
-                ...i.reasoning,
-                interpretation: result.explanation,
+              // Always preserve original dataSource — correction mode shouldn't change it
+              reasoning: {
+                ...(result.reasoning || {
+                  ...i.reasoning,
+                  interpretation: result.explanation,
+                }),
+                dataSource: i.reasoning?.dataSource,
               },
             };
           });

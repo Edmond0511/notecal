@@ -2586,7 +2586,7 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     fontWeight: "700",
     color: Tokens.textPrimary,
-    letterSpacing: -1,
+    letterSpacing: -0.3,
   },
   macroPillLabel: {
     fontSize: 10,

@@ -8,23 +8,13 @@ import {
   LiquidGlassView,
 } from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
-import { IconProp } from "@fortawesome/fontawesome-svg-core";
-import {
-  faDroplet,
-  faDrumstickBite,
-  faFireFlameCurved,
-  faWheatAwn,
-} from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { MenuView } from "@react-native-menu/menu";
 import {
-  ActionSheetIOS,
-  Alert,
   Dimensions,
   Keyboard,
   Modal,
-  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -48,6 +38,7 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Circle } from "react-native-svg";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
@@ -57,13 +48,6 @@ const MACRO_COLORS = {
   protein: "#4A90D9",
   fat: "#F5A623",
   carbs: "#9B6B9E",
-};
-
-const MACRO_ICONS: Record<string, IconProp> = {
-  calories: faFireFlameCurved as IconProp,
-  protein: faDrumstickBite as IconProp,
-  fat: faDroplet as IconProp,
-  carbs: faWheatAwn as IconProp,
 };
 
 interface MealBuilderModalProps {
@@ -233,27 +217,14 @@ export function MealBuilderModal({
     setItems((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
-  const handleAddIngredients = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ["Scan Barcode", "Search Database", "Cancel"],
-          cancelButtonIndex: 2,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 0) setShowBarcodeScanner(true);
-          else if (buttonIndex === 1) setShowSearch(true);
-        },
-      );
-    } else {
-      Alert.alert("Add Ingredients", undefined, [
-        { text: "Scan Barcode", onPress: () => setShowBarcodeScanner(true) },
-        { text: "Search Database", onPress: () => setShowSearch(true) },
-        { text: "Cancel", style: "cancel" },
-      ]);
-    }
-  }, []);
+  const handleMenuAction = useCallback(
+    ({ nativeEvent }: { nativeEvent: { event: string } }) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (nativeEvent.event === "scan") setShowBarcodeScanner(true);
+      else if (nativeEvent.event === "search") setShowSearch(true);
+    },
+    [],
+  );
 
   const handleClose = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -386,28 +357,80 @@ export function MealBuilderModal({
                   returnKeyType="done"
                 />
 
-                <View style={styles.totalsRow}>
-                  {[
-                    { key: "calories", value: totalMacros.kcal, unit: "" },
-                    { key: "protein", value: totalMacros.protein, unit: "g" },
-                    { key: "fat", value: totalMacros.fat, unit: "g" },
-                    { key: "carbs", value: totalMacros.carbs, unit: "g" },
-                  ].map((macro) => (
-                    <View key={macro.key} style={styles.totalItem}>
-                      <FontAwesomeIcon
-                        icon={MACRO_ICONS[macro.key]}
-                        size={11}
-                        color={
-                          MACRO_COLORS[macro.key as keyof typeof MACRO_COLORS]
-                        }
-                      />
-                      <Text style={styles.totalValue}>
-                        {Math.round(macro.value)}
-                        {macro.unit}
-                      </Text>
+                {(() => {
+                  const RING_SIZE = 88;
+                  const STROKE = 7;
+                  const R = (RING_SIZE - STROKE) / 2;
+                  const CIRC = 2 * Math.PI * R;
+                  const proteinKcal = totalMacros.protein * 4;
+                  const carbsKcal = totalMacros.carbs * 4;
+                  const fatKcal = totalMacros.fat * 9;
+                  const total = proteinKcal + carbsKcal + fatKcal;
+                  const pPct = total > 0 ? proteinKcal / total : 0;
+                  const cPct = total > 0 ? carbsKcal / total : 0;
+                  const fPct = total > 0 ? fatKcal / total : 0;
+                  // segments: protein, carbs, fat
+                  const segments = [
+                    { pct: fPct, color: MACRO_COLORS.fat, offset: 0 },
+                    { pct: cPct, color: MACRO_COLORS.carbs, offset: fPct },
+                    { pct: pPct, color: MACRO_COLORS.protein, offset: fPct + cPct },
+                  ];
+                  const macroRows = [
+                    { label: "Fat", pct: fPct, value: totalMacros.fat, color: MACRO_COLORS.fat },
+                    { label: "Carbs", pct: cPct, value: totalMacros.carbs, color: MACRO_COLORS.carbs },
+                    { label: "Protein", pct: pPct, value: totalMacros.protein, color: MACRO_COLORS.protein },
+                  ];
+                  return (
+                    <View style={styles.donutContainer}>
+                      <View style={styles.donutRingWrapper}>
+                        <Svg width={RING_SIZE} height={RING_SIZE}>
+                          <Circle
+                            cx={RING_SIZE / 2}
+                            cy={RING_SIZE / 2}
+                            r={R}
+                            stroke={Tokens.border}
+                            strokeWidth={STROKE}
+                            fill="none"
+                          />
+                          {total > 0 && segments.map((seg, i) => (
+                            <Circle
+                              key={i}
+                              cx={RING_SIZE / 2}
+                              cy={RING_SIZE / 2}
+                              r={R}
+                              stroke={seg.color}
+                              strokeWidth={STROKE}
+                              fill="none"
+                              strokeDasharray={`${seg.pct * CIRC} ${CIRC}`}
+                              strokeDashoffset={-seg.offset * CIRC}
+                              strokeLinecap="round"
+                              transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
+                            />
+                          ))}
+                        </Svg>
+                        <View style={styles.donutCenter}>
+                          <Text style={styles.donutKcalValue}>{Math.round(totalMacros.kcal)}</Text>
+                          <Text style={styles.donutKcalLabel}>kcal</Text>
+                        </View>
+                      </View>
+                      <View style={styles.donutMacroList}>
+                        {macroRows.map((row) => (
+                          <View key={row.label} style={styles.donutMacroRow}>
+                            <Text style={[styles.donutMacroLabel, { color: row.color }]}>
+                              {row.label}
+                            </Text>
+                            <Text style={styles.donutMacroPct}>
+                              {total > 0 ? Math.round(row.pct * 100) : 0}%
+                            </Text>
+                            <Text style={styles.donutMacroGrams}>
+                              {Math.round(row.value)}g
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
                     </View>
-                  ))}
-                </View>
+                  );
+                })()}
 
                 <Text style={styles.sectionLabel}>Ingredients</Text>
 
@@ -443,14 +466,28 @@ export function MealBuilderModal({
                   </Animated.View>
                 ))}
 
-                <TouchableOpacity
-                  style={styles.addItemButton}
-                  onPress={handleAddIngredients}
-                  activeOpacity={0.7}
+                <MenuView
+                  onPressAction={handleMenuAction}
+                  actions={[
+                    {
+                      id: "scan",
+                      title: "Scan barcode",
+                      image: "barcode.viewfinder",
+                      imageColor: "#000000",
+                    },
+                    {
+                      id: "search",
+                      title: "Search food",
+                      image: "magnifyingglass",
+                      imageColor: "#000000",
+                    },
+                  ]}
                 >
-                  <Ionicons name="add" size={20} color="#6B6B6B" />
-                  <Text style={styles.addItemText}>Add Ingredients</Text>
-                </TouchableOpacity>
+                  <View style={styles.addItemButton}>
+                    <Ionicons name="add" size={20} color={Tokens.textSecondary} />
+                    <Text style={styles.addItemText}>Add Ingredients</Text>
+                  </View>
+                </MenuView>
               </ScrollView>
             </Animated.View>
           </GestureDetector>
@@ -529,20 +566,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   nameInput: {
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: "System",
     fontWeight: "500",
     color: Tokens.textPrimary,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
     padding: 0,
+    paddingBottom: 14,
     marginBottom: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Tokens.border,
   },
   sectionLabel: {
     fontSize: 15,
     fontWeight: "500",
     color: "#6B6B6B",
     textTransform: "capitalize",
-    marginBottom: 6,
+    marginBottom: 10,
     marginLeft: 0,
   },
   itemCard: {
@@ -598,33 +638,72 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "#6B6B6B",
+    borderColor: Tokens.border,
     borderStyle: "dashed",
-    marginTop: 8,
+    marginTop: 4,
   },
   addItemText: {
     fontSize: 15,
-    fontWeight: "600",
-    color: "#6B6B6B",
+    fontWeight: "500",
+    color: Tokens.textSecondary,
   },
-  totalsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 20,
-  },
-  totalItem: {
+  donutContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    marginBottom: 24,
+    gap: 20,
   },
-  totalValue: {
-    fontSize: 15,
-    fontFamily: "System",
+  donutRingWrapper: {
+    width: 88,
+    height: 88,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  donutCenter: {
+    position: "absolute",
+    alignItems: "center",
+  },
+  donutKcalValue: {
+    fontSize: 20,
     fontWeight: "700",
     color: Tokens.textPrimary,
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
+  },
+  donutKcalLabel: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: Tokens.textSecondary,
+    marginTop: -2,
+  },
+  donutMacroList: {
+    flex: 1,
+    gap: 8,
+  },
+  donutMacroRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  donutMacroLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    width: 60,
+    letterSpacing: -0.2,
+  },
+  donutMacroPct: {
+    fontSize: 13,
+    fontWeight: "400",
+    color: Tokens.textSecondary,
+    width: 36,
+  },
+  donutMacroGrams: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Tokens.textPrimary,
+    textAlign: "right",
+    flex: 1,
+    letterSpacing: -0.2,
   },
 });

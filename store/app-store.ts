@@ -923,7 +923,7 @@ export const useAppStore = create<AppState>()(
           confidence: 0.95,
           citations,
           reasoning: {
-            interpretation: `Custom meal "${meal.name}": ${item.label}\n• Nutrition data from ${dbName}${servingDesc}`,
+            interpretation: `${item.label}\n• Nutrition data from ${dbName}${servingDesc}`,
             assumptions: [],
             dataSource,
           },

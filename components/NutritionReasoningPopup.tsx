@@ -2040,7 +2040,9 @@ export function NutritionReasoningPopup({
                       {/* Source */}
                       {item.reasoning.dataSource && item.reasoning.dataSource !== 'No source available' && (
                         <View style={styles.sectionBlock}>
-                          <Text style={styles.sectionLabel}>Source</Text>
+                          {item.source !== 'FS' && (
+                            <Text style={styles.sectionLabel}>Source</Text>
+                          )}
                           <ParsedText
                             text={item.reasoning.dataSource}
                             style={styles.sourceText}

@@ -145,6 +145,7 @@ interface BarcodeScannerModalProps {
   onClose: () => void;
   onAddProduct: (product: BarcodeProduct, selectedServingId?: string) => void;
   onAddManualEntry: (text: string) => void;
+  onSnapPhoto?: (uri: string) => void;
 }
 
 // Stub hook when expo-camera is not available
@@ -157,6 +158,7 @@ export function BarcodeScannerModal({
   onClose,
   onAddProduct,
   onAddManualEntry,
+  onSnapPhoto,
 }: BarcodeScannerModalProps) {
   const insets = useSafeAreaInsets();
   const usePerms = cameraAvailable ? useCameraPermissions : useStubPermissions;
@@ -175,6 +177,7 @@ export function BarcodeScannerModal({
   } | null>(null);
   const [extendedOpen, setExtendedOpen] = useState(false);
   const [torchEnabled, setTorchEnabled] = useState(false);
+  const cameraRef = useRef<any>(null);
   const scanLockRef = useRef(false);
   const translateY = useSharedValue(0);
 
@@ -296,6 +299,19 @@ export function BarcodeScannerModal({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
   }, [onClose]);
+
+  const handleSnapPhoto = useCallback(async () => {
+    if (!cameraRef.current || !onSnapPhoto) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
+      if (photo?.uri) {
+        onSnapPhoto(photo.uri);
+      }
+    } catch {
+      // Camera may not be ready
+    }
+  }, [onSnapPhoto]);
 
   const panGesture = Gesture.Pan()
     .activeOffsetY(10)
@@ -462,6 +478,7 @@ export function BarcodeScannerModal({
               // Camera view
               <>
                 <CameraView
+                  ref={cameraRef}
                   style={StyleSheet.absoluteFill}
                   facing="back"
                   enableTorch={torchEnabled}
@@ -569,6 +586,21 @@ export function BarcodeScannerModal({
                       </Text>
                     </View>
                   </Animated.View>
+                )}
+
+                {/* Snap photo button */}
+                {state.type === "scanning" && onSnapPhoto && (
+                  <View style={styles.shutterContainer}>
+                    <TouchableOpacity
+                      style={styles.shutterButton}
+                      onPress={handleSnapPhoto}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.shutterInner}>
+                        <Ionicons name="camera" size={28} color="#fff" />
+                      </View>
+                    </TouchableOpacity>
+                  </View>
                 )}
 
                 {/* Loading state */}
@@ -1130,6 +1162,31 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  shutterContainer: {
+    position: "absolute",
+    bottom: 40,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  shutterButton: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 3,
+    borderColor: "#fff",
+  },
+  shutterInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
   },

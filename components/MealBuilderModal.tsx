@@ -120,6 +120,7 @@ export function MealBuilderModal({
   const [name, setName] = useState("");
   const [items, setItems] = useState<CustomMealItem[]>([]);
   const [showSearch, setShowSearch] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const translateY = useSharedValue(0);
 
   useEffect(() => {
@@ -194,9 +195,64 @@ export function MealBuilderModal({
     [],
   );
 
+  const handleBarcodeProduct = useCallback(
+    (product: BarcodeProduct, selectedServingId?: string) => {
+      const serving = selectedServingId
+        ? product.servings.find((s) => s.servingId === selectedServingId)
+        : product.servings[0];
+      if (!serving) return;
+
+      const macros: Macros = {
+        kcal: Math.round(serving.macros.kcal),
+        protein: Math.round(serving.macros.protein * 10) / 10,
+        fat: Math.round(serving.macros.fat * 10) / 10,
+        carbs: Math.round(serving.macros.carbs * 10) / 10,
+      };
+
+      const newItem: CustomMealItem = {
+        id: `meal-item-${Date.now()}`,
+        label: product.name,
+        brand: product.brand,
+        source: "FS",
+        sourceId: product.foodId,
+        servingGrams: serving.metricAmount ?? 100,
+        servingLabel: serving.description,
+        macros,
+        fsServings: product.servings,
+        fsSelectedServingId: serving.servingId,
+      };
+
+      setItems((prev) => [...prev, newItem]);
+      setShowBarcodeScanner(false);
+    },
+    [],
+  );
+
   const handleRemoveItem = useCallback((id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setItems((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
+  const handleAddIngredients = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ["Scan Barcode", "Search Database", "Cancel"],
+          cancelButtonIndex: 2,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 0) setShowBarcodeScanner(true);
+          else if (buttonIndex === 1) setShowSearch(true);
+        },
+      );
+    } else {
+      Alert.alert("Add Ingredients", undefined, [
+        { text: "Scan Barcode", onPress: () => setShowBarcodeScanner(true) },
+        { text: "Search Database", onPress: () => setShowSearch(true) },
+        { text: "Cancel", style: "cancel" },
+      ]);
+    }
   }, []);
 
   const handleClose = useCallback(() => {
@@ -240,7 +296,7 @@ export function MealBuilderModal({
   return (
     <>
       <Modal
-        visible={visible && !showSearch}
+        visible={visible && !showSearch && !showBarcodeScanner}
         animationType="fade"
         transparent
         onRequestClose={onClose}
@@ -316,23 +372,44 @@ export function MealBuilderModal({
 
               <ScrollView
                 style={styles.content}
-                contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+                contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
               >
-                <View style={styles.nameInputContainer}>
-                  <TextInput
-                    style={styles.nameInput}
-                    placeholder="Meal name"
-                    placeholderTextColor={Tokens.textTertiary}
-                    value={name}
-                    onChangeText={setName}
-                    autoCapitalize="words"
-                    returnKeyType="done"
-                  />
+                <TextInput
+                  style={styles.nameInput}
+                  placeholder="Meal name"
+                  placeholderTextColor={Tokens.textTertiary}
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  returnKeyType="done"
+                />
+
+                <View style={styles.totalsRow}>
+                  {[
+                    { key: "calories", value: totalMacros.kcal, unit: "" },
+                    { key: "protein", value: totalMacros.protein, unit: "g" },
+                    { key: "fat", value: totalMacros.fat, unit: "g" },
+                    { key: "carbs", value: totalMacros.carbs, unit: "g" },
+                  ].map((macro) => (
+                    <View key={macro.key} style={styles.totalItem}>
+                      <FontAwesomeIcon
+                        icon={MACRO_ICONS[macro.key]}
+                        size={11}
+                        color={
+                          MACRO_COLORS[macro.key as keyof typeof MACRO_COLORS]
+                        }
+                      />
+                      <Text style={styles.totalValue}>
+                        {Math.round(macro.value)}
+                        {macro.unit}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
 
-                <Text style={styles.sectionLabel}>Items</Text>
+                <Text style={styles.sectionLabel}>Ingredients</Text>
 
                 {items.map((item, index) => (
                   <Animated.View
@@ -368,63 +445,13 @@ export function MealBuilderModal({
 
                 <TouchableOpacity
                   style={styles.addItemButton}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setShowSearch(true);
-                  }}
+                  onPress={handleAddIngredients}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="add" size={20} color={Tokens.accent} />
-                  <Text style={styles.addItemText}>Add Item</Text>
+                  <Ionicons name="add" size={20} color="#6B6B6B" />
+                  <Text style={styles.addItemText}>Add Ingredients</Text>
                 </TouchableOpacity>
               </ScrollView>
-
-              {items.length > 0 && (
-                <Animated.View
-                  entering={FadeInDown.duration(200)}
-                  style={[
-                    styles.totalsBar,
-                    { paddingBottom: insets.bottom + 16 },
-                  ]}
-                >
-                  <View style={styles.totalsRow}>
-                    {[
-                      {
-                        key: "calories",
-                        value: totalMacros.kcal,
-                        unit: "",
-                      },
-                      {
-                        key: "protein",
-                        value: totalMacros.protein,
-                        unit: "g",
-                      },
-                      { key: "fat", value: totalMacros.fat, unit: "g" },
-                      {
-                        key: "carbs",
-                        value: totalMacros.carbs,
-                        unit: "g",
-                      },
-                    ].map((macro) => (
-                      <View key={macro.key} style={styles.totalItem}>
-                        <FontAwesomeIcon
-                          icon={MACRO_ICONS[macro.key]}
-                          size={11}
-                          color={
-                            MACRO_COLORS[
-                              macro.key as keyof typeof MACRO_COLORS
-                            ]
-                          }
-                        />
-                        <Text style={styles.totalValue}>
-                          {Math.round(macro.value)}
-                          {macro.unit}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </Animated.View>
-              )}
             </Animated.View>
           </GestureDetector>
         </GestureHandlerRootView>
@@ -434,6 +461,13 @@ export function MealBuilderModal({
         visible={showSearch}
         onClose={() => setShowSearch(false)}
         onAddEntries={handleAddItems}
+      />
+
+      <BarcodeScannerModal
+        visible={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+        onAddProduct={handleBarcodeProduct}
+        onAddManualEntry={() => setShowBarcodeScanner(false)}
       />
     </>
   );
@@ -494,16 +528,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
   },
-  nameInputContainer: {
-    backgroundColor: Tokens.surfaceRaised,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(0, 0, 0, 0.07)",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 24,
-    ...Tokens.shadowLight,
-  },
   nameInput: {
     fontSize: 16,
     fontFamily: "System",
@@ -511,6 +535,7 @@ const styles = StyleSheet.create({
     color: Tokens.textPrimary,
     letterSpacing: -0.2,
     padding: 0,
+    marginBottom: 16,
   },
   sectionLabel: {
     fontSize: 15,
@@ -576,29 +601,19 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: Tokens.accent,
+    borderColor: "#6B6B6B",
     borderStyle: "dashed",
     marginTop: 8,
   },
   addItemText: {
     fontSize: 15,
     fontWeight: "600",
-    color: Tokens.accent,
-  },
-  totalsBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Tokens.surfaceRaised,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Tokens.border,
-    paddingTop: 14,
-    paddingHorizontal: 24,
+    color: "#6B6B6B",
   },
   totalsRow: {
     flexDirection: "row",
     justifyContent: "space-around",
+    marginBottom: 20,
   },
   totalItem: {
     flexDirection: "row",

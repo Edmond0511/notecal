@@ -65,7 +65,7 @@ export function FoodPhotoModal({
   const insets = useSafeAreaInsets();
   const usePerms = cameraAvailable ? useCameraPermissions : useStubPermissions;
   const [permission, requestPermission] = usePerms();
-  const [flashMode, setFlashMode] = useState<"off" | "on" | "auto">("off");
+  const [torchEnabled, setTorchEnabled] = useState(false);
   const [zoom, setZoom] = useState(0);
   const cameraRef = useRef<any>(null);
   const captureLockRef = useRef(false);
@@ -75,7 +75,7 @@ export function FoodPhotoModal({
   // Reset state when modal opens
   useEffect(() => {
     if (visible) {
-      setFlashMode("off");
+      setTorchEnabled(false);
       setZoom(0);
       translateY.value = 0;
       captureLockRef.current = false;
@@ -111,11 +111,7 @@ export function FoodPhotoModal({
   }, [onClose]);
 
   const toggleFlash = useCallback(() => {
-    setFlashMode((prev) => {
-      if (prev === "off") return "on";
-      if (prev === "on") return "auto";
-      return "off";
-    });
+    setTorchEnabled((prev) => !prev);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
@@ -124,12 +120,7 @@ export function FoodPhotoModal({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
-  const flashIconName =
-    flashMode === "off"
-      ? "flash-off"
-      : flashMode === "on"
-        ? "flash"
-        : "flash-outline";
+  const flashIconName = torchEnabled ? "flash" : "flash-off";
 
   const panGesture = Gesture.Pan()
     .activeOffsetY(10)
@@ -251,7 +242,7 @@ export function FoodPhotoModal({
                   ref={cameraRef}
                   style={StyleSheet.absoluteFill}
                   facing="back"
-                  flash={flashMode}
+                  enableTorch={torchEnabled}
                   zoom={zoom}
                 />
 

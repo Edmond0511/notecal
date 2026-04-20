@@ -152,7 +152,7 @@ function getTimeBadgeStyle(date: Date): { background: string; text: string; icon
     return { background: "#FFF3E0", text: "#BF6C00", icon: "sunny" };
   } else {
     // Night — soft blue-gray
-    return { background: "#ECEEF8", text: "#5C6BC0", icon: "moon" };
+    return { background: "#DBE0F2", text: "#5C6BC0", icon: "moon" };
   }
 }
 

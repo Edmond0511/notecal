@@ -165,6 +165,11 @@ interface DatabaseSearchModalProps {
   ) => void;
   onUseMeal?: (meal: CustomMeal) => void;
   onOpenMealBuilder?: (meal?: CustomMeal | null) => void;
+  nested?: boolean;
+  initialResult?: DatabaseSearchResult | null;
+  initialServingGrams?: number;
+  onUpdateEntry?: (item: { result: DatabaseSearchResult; servingGrams: number }) => void;
+  onRemoveEntry?: () => void;
 }
 
 export function DatabaseSearchModal({
@@ -173,6 +178,11 @@ export function DatabaseSearchModal({
   onAddEntries,
   onUseMeal,
   onOpenMealBuilder,
+  nested,
+  initialResult,
+  initialServingGrams,
+  onUpdateEntry,
+  onRemoveEntry,
 }: DatabaseSearchModalProps) {
   const insets = useSafeAreaInsets();
   const [state, setState] = useState<ModalState>({ type: "idle" });
@@ -368,9 +378,7 @@ export function DatabaseSearchModal({
   // Reset state when modal opens
   useEffect(() => {
     if (visible) {
-      setState({ type: "idle" });
       setSearchText("");
-      setServingGrams("");
       setSelectedPortionIndex(null);
       setCommonResults([]);
       setBrandedResults([]);
@@ -383,6 +391,49 @@ export function DatabaseSearchModal({
       setActiveTab("search");
       setMealsExpandedId(null);
       setMealsSearchText("");
+      setMacroOverrides({});
+      setExtendedOpen(false);
+
+      if (initialResult) {
+        // Open directly to detail view
+        const result = initialResult;
+        if (result.source === "FS" && result.fsServings?.length) {
+          const defaultFs =
+            result.fsServings.find((s) => s.metricUnit === "g") ??
+            result.fsServings[0];
+          setSelectedFsServingId(defaultFs.servingId);
+        } else {
+          setSelectedFsServingId(null);
+        }
+        setServingGrams(
+          initialServingGrams
+            ? Math.round(initialServingGrams).toString()
+            : (result.defaultServingG ?? 100).toString(),
+        );
+        setState({ type: "detail", result });
+
+        if (result.source === "FS" && result.foodId) {
+          if (result.fsServings?.length) {
+            setPortions([]);
+            setPortionsLoading(false);
+          } else {
+            setPortionsLoading(true);
+            fetchFoodDetail(result.foodId)
+              .then((servings) => {
+                result.fsServings = servings;
+              })
+              .finally(() => setPortionsLoading(false));
+          }
+        } else if (result.portions?.length) {
+          setPortions(result.portions);
+        } else {
+          setPortions([]);
+        }
+      } else {
+        setState({ type: "idle" });
+        setServingGrams("");
+        setSelectedFsServingId(null);
+      }
     }
   }, [visible]);
 
@@ -652,14 +703,23 @@ export function DatabaseSearchModal({
       setServingGrams("");
       setSelectedPortionIndex(null);
     } else {
-      // Single-item quick flow: add immediately and close
-      onAddEntries([{ result: resultWithPortions, servingGrams: grams }]);
+      // Single-item quick flow
+      if (initialResult && onUpdateEntry) {
+        onUpdateEntry({ result: resultWithPortions, servingGrams: grams, macroOverrides: { ...macroOverrides } });
+        onClose();
+      } else {
+        onAddEntries([{ result: resultWithPortions, servingGrams: grams, macroOverrides: { ...macroOverrides } }]);
+      }
     }
   }, [
     state,
     servingGrams,
     portions,
     onAddEntries,
+    onClose,
+    initialResult,
+    onUpdateEntry,
+    macroOverrides,
     editingSelectedId,
     selectedItems.length,
     commonResults,
@@ -1062,9 +1122,11 @@ export function DatabaseSearchModal({
   // Detail button label
   const detailAddLabel = editingSelectedId
     ? "Update"
-    : selectedItems.length > 0
-      ? "Add to Selection"
-      : "Add";
+    : initialResult
+      ? "Update"
+      : selectedItems.length > 0
+        ? "Add to Selection"
+        : "Add";
 
   return (
     <Modal
@@ -1087,7 +1149,7 @@ export function DatabaseSearchModal({
             <Animated.View
               style={[
                 styles.container,
-                { marginTop: insets.top },
+                { marginTop: insets.top + (nested ? 16 : 0) },
                 animatedStyle,
               ]}
             >
@@ -1100,7 +1162,9 @@ export function DatabaseSearchModal({
               <View style={styles.header}>
                 <TouchableOpacity
                   onPress={
-                    state.type === "detail" ? handleBackToResults : handleClose
+                    state.type === "detail" && !initialResult
+                      ? handleBackToResults
+                      : handleClose
                   }
                   activeOpacity={0.7}
                 >
@@ -1113,7 +1177,7 @@ export function DatabaseSearchModal({
                     >
                       <Ionicons
                         name={
-                          state.type === "detail" ? "chevron-back" : "close"
+                          state.type === "detail" && !initialResult ? "chevron-back" : "close"
                         }
                         size={20}
                         color={Tokens.textPrimary}
@@ -1125,7 +1189,7 @@ export function DatabaseSearchModal({
                     >
                       <Ionicons
                         name={
-                          state.type === "detail" ? "chevron-back" : "close"
+                          state.type === "detail" && !initialResult ? "chevron-back" : "close"
                         }
                         size={20}
                         color="#666"
@@ -1201,8 +1265,8 @@ export function DatabaseSearchModal({
                 )}
               </View>
 
-              {/* Tab switcher - hidden in detail view */}
-              {state.type !== "detail" && (
+              {/* Tab switcher - hidden in detail view and nested mode */}
+              {state.type !== "detail" && !nested && (
                 <View style={styles.tabSwitcher}>
                   <TouchableOpacity
                     style={[
@@ -2055,7 +2119,7 @@ export function DatabaseSearchModal({
                                   style={styles.macroPillValue}
                                 />
                                 {macro.unit ? (
-                                  <Text style={styles.macroPillValue}>
+                                  <Text style={styles.macroPillUnit}>
                                     {macro.unit}
                                   </Text>
                                 ) : null}
@@ -2134,6 +2198,16 @@ export function DatabaseSearchModal({
                           {detailAddLabel}
                         </Text>
                       </TouchableOpacity>
+                      {onRemoveEntry && (
+                        <TouchableOpacity
+                          style={styles.removeEntryButton}
+                          onPress={onRemoveEntry}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="trash-outline" size={18} color={Tokens.error} />
+                          <Text style={styles.removeEntryButtonText}>Remove from Meal</Text>
+                        </TouchableOpacity>
+                      )}
                     </ScrollView>
                   </Animated.View>
                 )}
@@ -2588,6 +2662,11 @@ const styles = StyleSheet.create({
     color: Tokens.textPrimary,
     letterSpacing: -0.3,
   },
+  macroPillUnit: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: Tokens.textPrimary,
+  },
   macroPillLabel: {
     fontSize: 10,
     fontFamily: "System",
@@ -2670,6 +2749,19 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "600",
     color: "#fff",
+  },
+  removeEntryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 14,
+    marginTop: 12,
+  },
+  removeEntryButtonText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: Tokens.error,
   },
   selectionChipsScroll: {},
   selectionChipsContainer: {

@@ -8,8 +8,16 @@ import {
   LiquidGlassView,
 } from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
+import { IconProp } from "@fortawesome/fontawesome-svg-core";
+import {
+  faDroplet,
+  faDrumstickBite,
+  faFireFlameCurved,
+  faWheatAwn,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MenuView } from "@react-native-menu/menu";
 import {
   Dimensions,
@@ -27,6 +35,7 @@ import {
   Gesture,
   GestureDetector,
   GestureHandlerRootView,
+  Swipeable,
 } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
@@ -38,16 +47,30 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Circle } from "react-native-svg";
+import Svg, { Circle, Path } from "react-native-svg";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
 const MACRO_COLORS = {
-  calories: "#FF6B35",
-  protein: "#4A90D9",
-  fat: "#F5A623",
-  carbs: "#9B6B9E",
+  calories: Tokens.macroKcal,
+  protein: Tokens.macroProtein,
+  fat: Tokens.macroFat,
+  carbs: Tokens.macroCarbs,
+};
+
+const MACRO_ICON_COLORS = {
+  calories: { primary: "#FF6B35" },
+  protein: { primary: "#4A90D9" },
+  fat: { primary: "#F5A623" },
+  carbs: { primary: "#9B6B9E" },
+};
+
+const MACRO_ICONS = {
+  calories: faFireFlameCurved as IconProp,
+  protein: faDrumstickBite as IconProp,
+  fat: faDroplet as IconProp,
+  carbs: faWheatAwn as IconProp,
 };
 
 interface MealBuilderModalProps {
@@ -60,22 +83,19 @@ function computeMacrosForResult(
   result: DatabaseSearchResult,
   servingGrams: number,
 ): Macros {
-  if (result.source === "FS") {
-    const fsMacros =
-      result.defaultServingMacros ?? result.fsServings?.[0]?.macros;
-    if (fsMacros) {
-      const ref =
-        result.fsServings?.find((s) => s.metricUnit === "g") ??
-        result.fsServings?.[0];
-      const refGrams = ref?.metricAmount ?? 100;
-      const scale = servingGrams / refGrams;
-      return {
-        kcal: Math.round(fsMacros.kcal * scale),
-        protein: Math.round(fsMacros.protein * scale * 10) / 10,
-        fat: Math.round(fsMacros.fat * scale * 10) / 10,
-        carbs: Math.round(fsMacros.carbs * scale * 10) / 10,
-      };
-    }
+  if (result.source === "FS" && result.fsServings?.length) {
+    // Use the first fsServing as the reference (DatabaseSearchModal reorders
+    // so the selected serving is first)
+    const ref = result.fsServings[0];
+    const refGrams = ref.metricAmount ?? 100;
+    const refMacros = ref.macros;
+    const scale = servingGrams / refGrams;
+    return {
+      kcal: Math.round(refMacros.kcal * scale),
+      protein: Math.round(refMacros.protein * scale * 10) / 10,
+      fat: Math.round(refMacros.fat * scale * 10) / 10,
+      carbs: Math.round(refMacros.carbs * scale * 10) / 10,
+    };
   }
 
   if (result.macrosPer100g) {
@@ -105,6 +125,8 @@ export function MealBuilderModal({
   const [items, setItems] = useState<CustomMealItem[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const editingItemIdRef = useRef<string | null>(null);
   const translateY = useSharedValue(0);
 
   useEffect(() => {
@@ -147,11 +169,11 @@ export function MealBuilderModal({
 
   const handleAddItems = useCallback(
     (
-      addedItems: { result: DatabaseSearchResult; servingGrams: number }[],
+      addedItems: { result: DatabaseSearchResult; servingGrams: number; macroOverrides?: Partial<Macros> }[],
     ) => {
       const newItems: CustomMealItem[] = addedItems.map(
-        ({ result, servingGrams }, index) => {
-          const macros = computeMacrosForResult(result, servingGrams);
+        ({ result, servingGrams, macroOverrides: overrides }, index) => {
+          const macros = { ...computeMacrosForResult(result, servingGrams), ...overrides };
           const defaultServing =
             result.source === "FS"
               ? (result.fsServings?.find((s) => s.metricUnit === "g") ??
@@ -178,6 +200,47 @@ export function MealBuilderModal({
     },
     [],
   );
+
+  const handleUpdateItem = useCallback(
+    ({ result, servingGrams, macroOverrides: overrides }: { result: DatabaseSearchResult; servingGrams: number; macroOverrides?: Partial<Macros> }) => {
+      const currentEditingId = editingItemIdRef.current;
+      if (!currentEditingId) return;
+      const macros = { ...computeMacrosForResult(result, servingGrams), ...overrides };
+      const defaultServing =
+        result.source === "FS"
+          ? (result.fsServings?.find((s) => s.metricUnit === "g") ??
+            result.fsServings?.[0])
+          : undefined;
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === currentEditingId
+            ? {
+                ...item,
+                servingGrams,
+                macros,
+                macrosPer100g: result.macrosPer100g,
+                fsServings: result.fsServings,
+                fsSelectedServingId: defaultServing?.servingId,
+              }
+            : item,
+        ),
+      );
+      editingItemIdRef.current = null;
+      setEditingItemId(null);
+      setShowSearch(false);
+    },
+    [],
+  );
+
+  const handleRemoveEditingItem = useCallback(() => {
+    const currentEditingId = editingItemIdRef.current;
+    if (!currentEditingId) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setItems((prev) => prev.filter((item) => item.id !== currentEditingId));
+    editingItemIdRef.current = null;
+    setEditingItemId(null);
+    setShowSearch(false);
+  }, []);
 
   const handleBarcodeProduct = useCallback(
     (product: BarcodeProduct, selectedServingId?: string) => {
@@ -216,6 +279,38 @@ export function MealBuilderModal({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setItems((prev) => prev.filter((item) => item.id !== id));
   }, []);
+
+  const handleEditItem = useCallback((item: CustomMealItem) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    editingItemIdRef.current = item.id;
+    setEditingItemId(item.id);
+    setShowSearch(true);
+  }, []);
+
+  // Reconstruct DatabaseSearchResult from the item being edited
+  const editingItemResult: DatabaseSearchResult | null = useMemo(() => {
+    if (!editingItemId) return null;
+    const item = items.find((i) => i.id === editingItemId);
+    if (!item) return null;
+    return {
+      source: item.source,
+      foodId: item.source === "FS" ? item.sourceId : undefined,
+      fdcId: item.source === "FDC" ? Number(item.sourceId) : undefined,
+      offId: item.source === "OFF" ? item.sourceId : undefined,
+      name: item.label,
+      brand: item.brand,
+      macrosPer100g: item.macrosPer100g ?? item.macros,
+      defaultServingG: item.servingGrams,
+      defaultServingLabel: item.servingLabel,
+      fsServings: item.fsServings,
+      defaultServingMacros: item.macros,
+    } as DatabaseSearchResult;
+  }, [editingItemId, items]);
+
+  const editingItemGrams = useMemo(() => {
+    if (!editingItemId) return undefined;
+    return items.find((i) => i.id === editingItemId)?.servingGrams;
+  }, [editingItemId, items]);
 
   const handleMenuAction = useCallback(
     ({ nativeEvent }: { nativeEvent: { event: string } }) => {
@@ -265,9 +360,8 @@ export function MealBuilderModal({
   }));
 
   return (
-    <>
       <Modal
-        visible={visible && !showSearch && !showBarcodeScanner}
+        visible={visible}
         animationType="fade"
         transparent
         onRequestClose={onClose}
@@ -347,70 +441,93 @@ export function MealBuilderModal({
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
               >
-                <TextInput
-                  style={styles.nameInput}
-                  placeholder="Meal name"
-                  placeholderTextColor={Tokens.textTertiary}
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                  returnKeyType="done"
-                />
+                <View style={styles.nameInputRow}>
+                  <TextInput
+                    style={styles.nameInput}
+                    placeholder="New Meal"
+                    placeholderTextColor={Tokens.textTertiary}
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                    returnKeyType="done"
+                  />
+                  <Ionicons name="pencil" size={16} color={Tokens.textTertiary} />
+                </View>
 
                 {(() => {
                   const RING_SIZE = 88;
                   const STROKE = 7;
                   const R = (RING_SIZE - STROKE) / 2;
-                  const CIRC = 2 * Math.PI * R;
+                  const CX = RING_SIZE / 2;
+                  const CY = RING_SIZE / 2;
                   const proteinKcal = totalMacros.protein * 4;
                   const carbsKcal = totalMacros.carbs * 4;
                   const fatKcal = totalMacros.fat * 9;
                   const total = proteinKcal + carbsKcal + fatKcal;
-                  const pPct = total > 0 ? proteinKcal / total : 0;
-                  const cPct = total > 0 ? carbsKcal / total : 0;
-                  const fPct = total > 0 ? fatKcal / total : 0;
-                  // segments: protein, carbs, fat
-                  const segments = [
-                    { pct: fPct, color: MACRO_COLORS.fat, offset: 0 },
-                    { pct: cPct, color: MACRO_COLORS.carbs, offset: fPct },
-                    { pct: pPct, color: MACRO_COLORS.protein, offset: fPct + cPct },
-                  ];
+
+                  const arcSegments: { pct: number; color: string }[] = total > 0
+                    ? [
+                        { pct: proteinKcal / total, color: MACRO_COLORS.protein },
+                        { pct: carbsKcal / total, color: MACRO_COLORS.carbs },
+                        { pct: fatKcal / total, color: MACRO_COLORS.fat },
+                      ]
+                    : [];
+
+                  const GAP = 0.04; // radians gap between segments
+                  const nonZero = arcSegments.filter((s) => s.pct > 0);
+                  const totalGap = nonZero.length > 1 ? GAP * nonZero.length : 0;
+                  const usable = 2 * Math.PI - totalGap;
+
+                  let cursor = -Math.PI / 2; // start at 12 o'clock
+                  const arcs = arcSegments
+                    .filter((s) => s.pct > 0)
+                    .map((seg) => {
+                      const angle = seg.pct * usable;
+                      const startAngle = cursor;
+                      const endAngle = cursor + angle;
+                      cursor = endAngle + GAP;
+                      const x1 = CX + R * Math.cos(startAngle);
+                      const y1 = CY + R * Math.sin(startAngle);
+                      const x2 = CX + R * Math.cos(endAngle);
+                      const y2 = CY + R * Math.sin(endAngle);
+                      const largeArc = angle > Math.PI ? 1 : 0;
+                      return {
+                        d: `M ${x1} ${y1} A ${R} ${R} 0 ${largeArc} 1 ${x2} ${y2}`,
+                        color: seg.color,
+                      };
+                    });
+
                   const macroRows = [
-                    { label: "Fat", pct: fPct, value: totalMacros.fat, color: MACRO_COLORS.fat },
-                    { label: "Carbs", pct: cPct, value: totalMacros.carbs, color: MACRO_COLORS.carbs },
-                    { label: "Protein", pct: pPct, value: totalMacros.protein, color: MACRO_COLORS.protein },
+                    { label: "Protein", value: totalMacros.protein, color: MACRO_COLORS.protein },
+                    { label: "Carbs", value: totalMacros.carbs, color: MACRO_COLORS.carbs },
+                    { label: "Fat", value: totalMacros.fat, color: MACRO_COLORS.fat },
                   ];
                   return (
                     <View style={styles.donutContainer}>
                       <View style={styles.donutRingWrapper}>
                         <Svg width={RING_SIZE} height={RING_SIZE}>
                           <Circle
-                            cx={RING_SIZE / 2}
-                            cy={RING_SIZE / 2}
+                            cx={CX}
+                            cy={CY}
                             r={R}
-                            stroke={Tokens.border}
+                            stroke={arcs.length > 0 ? "#FCFCFB" : Tokens.border}
                             strokeWidth={STROKE}
                             fill="none"
                           />
-                          {total > 0 && segments.map((seg, i) => (
-                            <Circle
+                          {arcs.map((arc, i) => (
+                            <Path
                               key={i}
-                              cx={RING_SIZE / 2}
-                              cy={RING_SIZE / 2}
-                              r={R}
-                              stroke={seg.color}
+                              d={arc.d}
+                              stroke={arc.color}
                               strokeWidth={STROKE}
                               fill="none"
-                              strokeDasharray={`${seg.pct * CIRC} ${CIRC}`}
-                              strokeDashoffset={-seg.offset * CIRC}
-                              strokeLinecap="round"
-                              transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
+                              strokeLinecap="butt"
                             />
                           ))}
                         </Svg>
                         <View style={styles.donutCenter}>
                           <Text style={styles.donutKcalValue}>{Math.round(totalMacros.kcal)}</Text>
-                          <Text style={styles.donutKcalLabel}>kcal</Text>
+                          <Text style={styles.donutKcalLabel}>cal</Text>
                         </View>
                       </View>
                       <View style={styles.donutMacroList}>
@@ -419,11 +536,8 @@ export function MealBuilderModal({
                             <Text style={[styles.donutMacroLabel, { color: row.color }]}>
                               {row.label}
                             </Text>
-                            <Text style={styles.donutMacroPct}>
-                              {total > 0 ? Math.round(row.pct * 100) : 0}%
-                            </Text>
                             <Text style={styles.donutMacroGrams}>
-                              {Math.round(row.value)}g
+                              {Math.round(row.value)}<Text style={styles.donutMacroUnit}>g</Text>
                             </Text>
                           </View>
                         ))}
@@ -438,31 +552,72 @@ export function MealBuilderModal({
                   <Animated.View
                     key={item.id}
                     entering={FadeInDown.delay(index * 30).duration(200)}
-                    style={styles.itemCard}
                   >
-                    <View style={styles.itemInfo}>
-                      <Text style={styles.itemLabel} numberOfLines={1}>
-                        {item.label}
-                        {item.brand && (
-                          <Text style={styles.itemBrand}> · {item.brand}</Text>
-                        )}
-                      </Text>
-                      <Text style={styles.itemServing}>
-                        {Math.round(item.servingGrams)}g
-                      </Text>
-                    </View>
-                    <View style={styles.itemRight}>
-                      <Text style={styles.itemKcal}>
-                        {Math.round(item.macros.kcal)} cal
-                      </Text>
+                    <Swipeable
+                      renderRightActions={() => (
+                        <TouchableOpacity
+                          style={styles.deleteAction}
+                          onPress={() => handleRemoveItem(item.id)}
+                        >
+                          <Ionicons name="trash-outline" size={20} color="#fff" />
+                        </TouchableOpacity>
+                      )}
+                      overshootRight={false}
+                    >
                       <TouchableOpacity
-                        onPress={() => handleRemoveItem(item.id)}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        style={styles.removeButton}
+                        style={styles.itemCard}
+                        onPress={() => handleEditItem(item)}
+                        activeOpacity={0.7}
                       >
-                        <Ionicons name="close-circle" size={20} color="#ccc" />
+                        <View style={styles.itemContent}>
+                          <Text style={styles.itemLabel} numberOfLines={1}>
+                            {item.label}
+                          </Text>
+                          <View style={styles.itemMacrosRow}>
+                            <View style={styles.macroItem}>
+                              <FontAwesomeIcon
+                                icon={MACRO_ICONS.calories}
+                                size={10}
+                                color={MACRO_ICON_COLORS.calories.primary}
+                              />
+                              <Text style={styles.macroValue}>
+                                {Math.round(item.macros.kcal)}
+                              </Text>
+                            </View>
+                            <View style={styles.macroItem}>
+                              <FontAwesomeIcon
+                                icon={MACRO_ICONS.protein}
+                                size={10}
+                                color={MACRO_ICON_COLORS.protein.primary}
+                              />
+                              <Text style={styles.macroValue}>
+                                {Math.round(item.macros.protein)}g
+                              </Text>
+                            </View>
+                            <View style={styles.macroItem}>
+                              <FontAwesomeIcon
+                                icon={MACRO_ICONS.fat}
+                                size={10}
+                                color={MACRO_ICON_COLORS.fat.primary}
+                              />
+                              <Text style={styles.macroValue}>
+                                {Math.round(item.macros.fat)}g
+                              </Text>
+                            </View>
+                            <View style={styles.macroItem}>
+                              <FontAwesomeIcon
+                                icon={MACRO_ICONS.carbs}
+                                size={10}
+                                color={MACRO_ICON_COLORS.carbs.primary}
+                              />
+                              <Text style={styles.macroValue}>
+                                {Math.round(item.macros.carbs)}g
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
                       </TouchableOpacity>
-                    </View>
+                    </Swipeable>
                   </Animated.View>
                 ))}
 
@@ -492,21 +647,29 @@ export function MealBuilderModal({
             </Animated.View>
           </GestureDetector>
         </GestureHandlerRootView>
+
+        <DatabaseSearchModal
+          visible={showSearch}
+          onClose={() => {
+            setShowSearch(false);
+            editingItemIdRef.current = null;
+            setEditingItemId(null);
+          }}
+          onAddEntries={handleAddItems}
+          onUpdateEntry={editingItemId ? handleUpdateItem : undefined}
+          onRemoveEntry={editingItemId ? handleRemoveEditingItem : undefined}
+          nested
+          initialResult={editingItemResult}
+          initialServingGrams={editingItemGrams}
+        />
+
+        <BarcodeScannerModal
+          visible={showBarcodeScanner}
+          onClose={() => setShowBarcodeScanner(false)}
+          onAddProduct={handleBarcodeProduct}
+          onAddManualEntry={() => setShowBarcodeScanner(false)}
+        />
       </Modal>
-
-      <DatabaseSearchModal
-        visible={showSearch}
-        onClose={() => setShowSearch(false)}
-        onAddEntries={handleAddItems}
-      />
-
-      <BarcodeScannerModal
-        visible={showBarcodeScanner}
-        onClose={() => setShowBarcodeScanner(false)}
-        onAddProduct={handleBarcodeProduct}
-        onAddManualEntry={() => setShowBarcodeScanner(false)}
-      />
-    </>
   );
 }
 
@@ -565,17 +728,21 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
   },
+  nameInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    marginBottom: 20,
+    gap: 8,
+  },
   nameInput: {
+    flex: 1,
     fontSize: 17,
     fontFamily: "System",
     fontWeight: "500",
     color: Tokens.textPrimary,
     letterSpacing: -0.3,
     padding: 0,
-    paddingBottom: 14,
-    marginBottom: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Tokens.border,
   },
   sectionLabel: {
     fontSize: 15,
@@ -586,52 +753,49 @@ const styles = StyleSheet.create({
     marginLeft: 0,
   },
   itemCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     backgroundColor: Tokens.surfaceRaised,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(0, 0, 0, 0.07)",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 0.5,
+    borderColor: "#E5E5E5",
+    padding: 16,
     marginBottom: 6,
-    ...Tokens.shadowLight,
   },
-  itemInfo: {
+  itemContent: {
     flex: 1,
-    marginRight: 12,
   },
   itemLabel: {
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: "System",
     fontWeight: "500",
     color: Tokens.textPrimary,
     letterSpacing: -0.2,
+    lineHeight: 22,
+    marginBottom: 8,
   },
-  itemBrand: {
-    fontWeight: "400",
-    color: Tokens.textSecondary,
-  },
-  itemServing: {
-    fontSize: 13,
-    fontWeight: "400",
-    color: Tokens.textSecondary,
-    marginTop: 2,
-  },
-  itemRight: {
+  itemMacrosRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 12,
   },
-  itemKcal: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Tokens.textPrimary,
-    letterSpacing: -0.2,
+  macroItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
-  removeButton: {
-    padding: 2,
+  macroValue: {
+    fontSize: 13,
+    fontFamily: "System",
+    fontWeight: "500",
+    color: Tokens.textSecondary,
+  },
+  deleteAction: {
+    backgroundColor: "#F87171",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 80,
+    borderRadius: 16,
+    marginLeft: 8,
+    marginBottom: 6,
   },
   addItemButton: {
     flexDirection: "row",
@@ -639,10 +803,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 16,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: Tokens.border,
-    borderStyle: "dashed",
+    borderRadius: 999,
+    borderWidth: 0.5,
+    borderColor: "#E5E5E5",
+    backgroundColor: Tokens.surfaceRaised,
     marginTop: 4,
   },
   addItemText: {
@@ -692,12 +856,6 @@ const styles = StyleSheet.create({
     width: 60,
     letterSpacing: -0.2,
   },
-  donutMacroPct: {
-    fontSize: 13,
-    fontWeight: "400",
-    color: Tokens.textSecondary,
-    width: 36,
-  },
   donutMacroGrams: {
     fontSize: 14,
     fontWeight: "600",
@@ -705,5 +863,9 @@ const styles = StyleSheet.create({
     textAlign: "right",
     flex: 1,
     letterSpacing: -0.2,
+  },
+  donutMacroUnit: {
+    fontSize: 13,
+    fontWeight: "500",
   },
 });

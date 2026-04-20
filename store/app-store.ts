@@ -611,7 +611,7 @@ export const useAppStore = create<AppState>()(
     return newEntry;
   },
 
-  addDatabaseSearchEntry: (result: DatabaseSearchResult, servingGrams: number, idSuffix?: number): Entry => {
+  addDatabaseSearchEntry: (result: DatabaseSearchResult, servingGrams: number, idSuffix?: number, macroOverrides?: Partial<import('@/types').Macros>): Entry => {
     const entryId = `${Date.now()}${idSuffix != null ? `-${idSuffix}` : ''}`;
     const currentDate = get().currentDate;
     const isFreeform = get().entryMode === 'freeform';
@@ -695,6 +695,14 @@ export const useAppStore = create<AppState>()(
         ...(result.portions?.length ? { commonPortions: result.portions } : {}),
         ...(result.extendedNutrientsPer100g ? { extendedNutrientsPer100g: result.extendedNutrientsPer100g } : {}),
       };
+    }
+
+    // Apply manual macro overrides if provided
+    if (macroOverrides) {
+      if (!item.originalMacros) {
+        item.originalMacros = { ...item.macros };
+      }
+      item.macros = { ...item.macros, ...macroOverrides };
     }
 
     const newEntry: Entry = {

@@ -25,7 +25,7 @@ import {
 } from "@/services/nutritionApi";
 import { useAppStore } from "@/store/app-store";
 import { useEntriesForDate } from "@/store/selectors";
-import { BarcodeProduct, CustomMeal, DatabaseSearchResult, SavedEntry } from "@/types";
+import { BarcodeProduct, CustomMeal, DatabaseSearchResult, Macros, SavedEntry } from "@/types";
 import { dateToIndex, formatDateDisplay, indexToDate } from "@/utils/dateUtils";
 import {
   isLiquidGlassSupported,
@@ -247,15 +247,16 @@ export default function HomeScreen() {
   );
 
   const handleDatabaseSearchAddEntries = useCallback(
-    (items: { result: DatabaseSearchResult; servingGrams: number }[]) => {
+    (items: { result: DatabaseSearchResult; servingGrams: number; macroOverrides?: Partial<Macros> }[]) => {
       const state = useAppStore.getState();
       let insertText = "";
 
-      items.forEach(({ result, servingGrams }, index) => {
+      items.forEach(({ result, servingGrams, macroOverrides }, index) => {
         const newEntry = state.addDatabaseSearchEntry(
           result,
           servingGrams,
           index,
+          macroOverrides,
         );
         insertText = insertText
           ? `${insertText}\n${newEntry.rawText}`

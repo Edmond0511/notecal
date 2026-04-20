@@ -2,6 +2,7 @@ import { AddActionMenu } from "@/components/AddActionMenu";
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { Calendar } from "@/components/Calendar";
 import { DatabaseSearchModal } from "@/components/DatabaseSearchModal";
+import { MealBuilderModal } from "@/components/MealBuilderModal";
 import { DatePage } from "@/components/DatePage";
 import { FoodPhotoModal } from "@/components/FoodPhotoModal";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
@@ -24,7 +25,7 @@ import {
 } from "@/services/nutritionApi";
 import { useAppStore } from "@/store/app-store";
 import { useEntriesForDate } from "@/store/selectors";
-import { BarcodeProduct, DatabaseSearchResult, SavedEntry } from "@/types";
+import { BarcodeProduct, CustomMeal, DatabaseSearchResult, SavedEntry } from "@/types";
 import { dateToIndex, formatDateDisplay, indexToDate } from "@/utils/dateUtils";
 import {
   isLiquidGlassSupported,
@@ -105,6 +106,8 @@ export default function HomeScreen() {
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [showFoodPhoto, setShowFoodPhoto] = useState(false);
   const [showDatabaseSearch, setShowDatabaseSearch] = useState(false);
+  const [showMealBuilder, setShowMealBuilder] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<CustomMeal | null>(null);
   const [photoToastState, setPhotoToastState] = useState<PhotoToastState>({
     type: "idle",
   });
@@ -177,6 +180,22 @@ export default function HomeScreen() {
     [setPendingInsertion],
   );
 
+  const handleSelectSavedEntries = useCallback(
+    (entries: SavedEntry[]) => {
+      const state = useAppStore.getState();
+      let insertText = "";
+      entries.forEach((savedEntry) => {
+        const newEntry = state.useSavedEntry(savedEntry);
+        insertText = insertText
+          ? `${insertText}\n${newEntry.rawText}`
+          : newEntry.rawText;
+      });
+      setPendingInsertion({ date: state.currentDate, text: insertText });
+      setShowSavedEntriesPopup(false);
+    },
+    [setPendingInsertion],
+  );
+
   // Stable callbacks for TotalsBar
   const handleAddSavedPress = useCallback(() => {
     setShowAddMenu(true);
@@ -207,6 +226,25 @@ export default function HomeScreen() {
     setShowAddMenu(false);
     setShowDatabaseSearch(true);
   }, []);
+
+  const handleUseMeal = useCallback(
+    (meal: CustomMeal) => {
+      const state = useAppStore.getState();
+      const newEntry = state.useCustomMeal(meal);
+      setPendingInsertion({ date: state.currentDate, text: newEntry.rawText });
+      setShowDatabaseSearch(false);
+    },
+    [setPendingInsertion],
+  );
+
+  const handleOpenMealBuilder = useCallback(
+    (meal?: CustomMeal | null) => {
+      setEditingMeal(meal ?? null);
+      setShowDatabaseSearch(false);
+      setShowMealBuilder(true);
+    },
+    [],
+  );
 
   const handleDatabaseSearchAddEntries = useCallback(
     (items: { result: DatabaseSearchResult; servingGrams: number }[]) => {
@@ -513,6 +551,7 @@ export default function HomeScreen() {
         visible={showSavedEntriesPopup}
         onClose={() => setShowSavedEntriesPopup(false)}
         onSelectEntry={handleSelectSavedEntry}
+        onSelectEntries={handleSelectSavedEntries}
       />
 
       {/* Barcode Scanner Modal */}
@@ -528,6 +567,19 @@ export default function HomeScreen() {
         visible={showDatabaseSearch}
         onClose={() => setShowDatabaseSearch(false)}
         onAddEntries={handleDatabaseSearchAddEntries}
+        onUseMeal={handleUseMeal}
+        onOpenMealBuilder={handleOpenMealBuilder}
+      />
+
+      {/* Meal Builder Modal */}
+      <MealBuilderModal
+        visible={showMealBuilder}
+        onClose={() => {
+          setShowMealBuilder(false);
+          setEditingMeal(null);
+          setShowDatabaseSearch(true);
+        }}
+        editingMeal={editingMeal}
       />
 
       {/* Food Photo Modal */}

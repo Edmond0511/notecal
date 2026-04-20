@@ -647,7 +647,7 @@ export function NotificationsModal({
                   >
                     {isLiquidGlassSupported ? (
                       <LiquidGlassView
-                        style={styles.backButton}
+                        style={[styles.backButton, { backgroundColor: Tokens.accent }]}
                         interactive
                         effect="regular"
                         tintColor={Tokens.tintColor}
@@ -655,14 +655,14 @@ export function NotificationsModal({
                         <Ionicons
                           name="add-sharp"
                           size={20}
-                          color={Tokens.textPrimary}
+                          color={Tokens.accent}
                         />
                       </LiquidGlassView>
                     ) : (
                       <View
-                        style={[styles.backButton, styles.backButtonFallback]}
+                        style={[styles.backButton, { backgroundColor: Tokens.accent }]}
                       >
-                        <Ionicons name="add-sharp" size={20} color="#666" />
+                        <Ionicons name="add-sharp" size={20} color="#1A6872" />
                       </View>
                     )}
                   </TouchableOpacity>

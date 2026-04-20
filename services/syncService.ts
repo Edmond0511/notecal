@@ -2,18 +2,19 @@ import { supabase } from '@/lib/supabase';
 import { mmkv } from '@/lib/mmkv';
 import { useAppStore } from '@/store/app-store';
 import { photoSyncService } from '@/services/photoSyncService';
-import { Entry, FoodItem, SavedEntry, WeightEntry, Document, UserGoals, UnitSystem, ManualTargets } from '@/types';
+import { Entry, FoodItem, SavedEntry, WeightEntry, Document, UserGoals, UnitSystem, ManualTargets, CustomMeal } from '@/types';
 
 // ============================================================
 // Types
 // ============================================================
 
-type SyncTable = 'food_entries' | 'documents' | 'saved_entries' | 'weight_entries' | 'user_goals';
+type SyncTable = 'food_entries' | 'documents' | 'saved_entries' | 'custom_meals' | 'weight_entries' | 'user_goals';
 
 interface DirtySet {
   food_entries: string[];
   documents: string[];   // keys are date strings
   saved_entries: string[];
+  custom_meals: string[];
   weight_entries: string[];
   user_goals: string[];  // uses 'current' sentinel (one row per user)
 }
@@ -25,7 +26,7 @@ interface DirtySet {
 const DIRTY_KEY = 'sync-dirty';
 const LAST_PULL_KEY = 'sync-last-pull';
 
-const EMPTY_DIRTY: DirtySet = { food_entries: [], documents: [], saved_entries: [], weight_entries: [], user_goals: [] };
+const EMPTY_DIRTY: DirtySet = { food_entries: [], documents: [], saved_entries: [], custom_meals: [], weight_entries: [], user_goals: [] };
 
 function loadDirty(): DirtySet {
   const raw = mmkv.getString(DIRTY_KEY);
@@ -120,6 +121,33 @@ function rowToSavedEntry(row: any): SavedEntry {
     totalKcal: Number(row.total_kcal),
     usageCount: row.usage_count,
     createdAt: new Date(row.created_at),
+    lastUsedAt: new Date(row.last_used_at),
+  };
+}
+
+function customMealToRow(meal: CustomMeal, userId: string) {
+  return {
+    id: meal.id,
+    user_id: userId,
+    name: meal.name,
+    items: JSON.stringify(meal.items),
+    total_macros: JSON.stringify(meal.totalMacros),
+    usage_count: meal.usageCount,
+    created_at: new Date(meal.createdAt).toISOString(),
+    updated_at: new Date(meal.updatedAt).toISOString(),
+    last_used_at: new Date(meal.lastUsedAt).toISOString(),
+  };
+}
+
+function rowToCustomMeal(row: any): CustomMeal {
+  return {
+    id: row.id,
+    name: row.name,
+    items: typeof row.items === 'string' ? JSON.parse(row.items) : (row.items ?? []),
+    totalMacros: typeof row.total_macros === 'string' ? JSON.parse(row.total_macros) : (row.total_macros ?? { kcal: 0, protein: 0, fat: 0, carbs: 0 }),
+    usageCount: row.usage_count,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
     lastUsedAt: new Date(row.last_used_at),
   };
 }
@@ -290,6 +318,12 @@ class SyncService {
       const row = savedEntryToRow(se, userId);
       const { error } = await supabase.from('saved_entries').upsert(row, { onConflict: 'id' });
       if (error) throw error;
+    } else if (table === 'custom_meals') {
+      const meal = state.customMeals.find((m) => m.id === id);
+      if (!meal) return;
+      const row = customMealToRow(meal, userId);
+      const { error } = await supabase.from('custom_meals').upsert(row, { onConflict: 'id' });
+      if (error) throw error;
     } else if (table === 'weight_entries') {
       const we = state.weightEntries.find((w) => w.id === id);
       if (!we) return;
@@ -395,6 +429,7 @@ class SyncService {
       this.pullEntries(lastPull),
       this.pullDocuments(lastPull),
       this.pullSavedEntries(lastPull),
+      this.pullCustomMeals(lastPull),
       this.pullWeightEntries(lastPull),
       this.pullGoals(lastPull),
     ]);
@@ -549,6 +584,54 @@ class SyncService {
     }
   }
 
+  private async pullCustomMeals(since: string | null) {
+    const userId = this.userId!;
+    let query = supabase
+      .from('custom_meals')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: true });
+    if (since) query = query.gt('updated_at', since);
+
+    const { data, error } = await query;
+    if (error) { console.error('[sync] Pull custom_meals failed:', error.message); return; }
+    if (!data?.length) return;
+
+    const state = useAppStore.getState();
+    const dirty = loadDirty();
+    const localMeals = [...state.customMeals];
+    let changed = false;
+
+    for (const row of data) {
+      const localIdx = localMeals.findIndex((m) => m.id === row.id);
+
+      if (row.deleted_at) {
+        if (localIdx !== -1) {
+          localMeals.splice(localIdx, 1);
+          changed = true;
+        }
+        continue;
+      }
+
+      if (localIdx !== -1) {
+        if (dirty.custom_meals.includes(row.id)) continue;
+        const localUpdated = new Date(localMeals[localIdx].updatedAt).getTime();
+        const remoteUpdated = new Date(row.updated_at).getTime();
+        if (remoteUpdated > localUpdated) {
+          localMeals[localIdx] = rowToCustomMeal(row);
+          changed = true;
+        }
+      } else {
+        localMeals.push(rowToCustomMeal(row));
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      useAppStore.setState({ customMeals: localMeals });
+    }
+  }
+
   private async pullWeightEntries(since: string | null) {
     const userId = this.userId!;
     let query = supabase
@@ -696,6 +779,11 @@ class SyncService {
     for (const se of state.savedEntries) {
       if (!dirty.saved_entries.includes(se.id)) {
         dirty.saved_entries.push(se.id);
+      }
+    }
+    for (const meal of state.customMeals) {
+      if (!dirty.custom_meals.includes(meal.id)) {
+        dirty.custom_meals.push(meal.id);
       }
     }
     for (const we of state.weightEntries) {

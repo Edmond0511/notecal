@@ -97,6 +97,7 @@ export function AddActionMenu({
               <Ionicons name="search-outline" size={28} color="#1a1a1a" />
               <Text style={styles.menuLabel}>Search Foods</Text>
             </TouchableOpacity>
+
           </View>
       </Animated.View>
     </View>

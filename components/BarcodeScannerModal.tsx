@@ -174,6 +174,7 @@ export function BarcodeScannerModal({
     currentValue: number;
   } | null>(null);
   const [extendedOpen, setExtendedOpen] = useState(false);
+  const [torchEnabled, setTorchEnabled] = useState(false);
   const scanLockRef = useRef(false);
   const translateY = useSharedValue(0);
 
@@ -187,6 +188,7 @@ export function BarcodeScannerModal({
       setMacroOverrides({});
       setEditMacroPopup(null);
       setExtendedOpen(false);
+      setTorchEnabled(false);
       scanLockRef.current = false;
       translateY.value = 0;
     }
@@ -462,6 +464,7 @@ export function BarcodeScannerModal({
                 <CameraView
                   style={StyleSheet.absoluteFill}
                   facing="back"
+                  enableTorch={torchEnabled}
                   barcodeScannerSettings={{
                     barcodeTypes: [
                       "ean13",
@@ -471,9 +474,7 @@ export function BarcodeScannerModal({
                       "code128",
                     ],
                   }}
-                  onBarcodeScanned={
-                    state.type === "scanning" ? handleBarcodeScanned : undefined
-                  }
+                  onBarcodeScanned={handleBarcodeScanned}
                 />
 
                 {/* Dark overlay with rounded viewfinder cutout */}
@@ -525,6 +526,22 @@ export function BarcodeScannerModal({
                   activeOpacity={0.7}
                 >
                   <Ionicons name="close" size={26} color="#fff" />
+                </TouchableOpacity>
+
+                {/* Flash toggle */}
+                <TouchableOpacity
+                  style={[styles.flashButton, { top: 12 }]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setTorchEnabled((prev) => !prev);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={torchEnabled ? "flash" : "flash-off"}
+                    size={22}
+                    color="#fff"
+                  />
                 </TouchableOpacity>
 
                 {/* Drag indicator */}
@@ -1099,6 +1116,16 @@ const styles = StyleSheet.create({
   closeButton: {
     position: "absolute",
     left: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  flashButton: {
+    position: "absolute",
+    right: 16,
     width: 48,
     height: 48,
     borderRadius: 24,

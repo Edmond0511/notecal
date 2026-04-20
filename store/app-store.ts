@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStateStorage } from '@/lib/mmkv';
-import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, EntryMode, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct, DatabaseSearchResult, PendingInsertion, MealReminder, FatSecretServing } from '@/types';
+import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, EntryMode, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct, DatabaseSearchResult, PendingInsertion, MealReminder, FatSecretServing, CustomMeal, CustomMealItem } from '@/types';
 import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
 import { barcodeProductToFoodItem } from '@/services/barcodeService';
 import { nutritionQueue } from '@/services/nutritionQueue';
@@ -71,6 +71,7 @@ export const useAppStore = create<AppState>()(
       entryMode: 'freeform' as EntryMode,
       enterOnlyMode: false,
       savedEntries: [],
+      customMeals: [],
       weightEntries: [],
       pendingInsertion: null,
       notificationsEnabled: false,
@@ -441,6 +442,7 @@ export const useAppStore = create<AppState>()(
       documents: [],
       goals: null,
       savedEntries: [],
+      customMeals: [],
       weightEntries: [],
     });
   },
@@ -812,6 +814,137 @@ export const useAppStore = create<AppState>()(
       }
       return { success: false, error: 'Failed to resolve nutrition' };
     }
+  },
+
+  // Custom meals management
+  addCustomMeal: (name: string, items: CustomMealItem[]) => {
+    const totalMacros = items.reduce(
+      (acc, item) => ({
+        kcal: acc.kcal + item.macros.kcal,
+        protein: acc.protein + item.macros.protein,
+        fat: acc.fat + item.macros.fat,
+        carbs: acc.carbs + item.macros.carbs,
+      }),
+      { kcal: 0, protein: 0, fat: 0, carbs: 0 } as Macros,
+    );
+
+    const newMeal: CustomMeal = {
+      id: Date.now().toString(),
+      name,
+      items,
+      totalMacros,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastUsedAt: new Date(),
+      usageCount: 0,
+    };
+
+    set((state) => ({
+      customMeals: [...state.customMeals, newMeal],
+    }));
+  },
+
+  updateCustomMeal: (id: string, name: string, items: CustomMealItem[]) => {
+    const totalMacros = items.reduce(
+      (acc, item) => ({
+        kcal: acc.kcal + item.macros.kcal,
+        protein: acc.protein + item.macros.protein,
+        fat: acc.fat + item.macros.fat,
+        carbs: acc.carbs + item.macros.carbs,
+      }),
+      { kcal: 0, protein: 0, fat: 0, carbs: 0 } as Macros,
+    );
+
+    set((state) => ({
+      customMeals: state.customMeals.map((meal) =>
+        meal.id === id
+          ? { ...meal, name, items, totalMacros, updatedAt: new Date() }
+          : meal,
+      ),
+    }));
+  },
+
+  deleteCustomMeal: (id: string) => {
+    set((state) => ({
+      customMeals: state.customMeals.filter((meal) => meal.id !== id),
+    }));
+  },
+
+  useCustomMeal: (meal: CustomMeal): Entry => {
+    const entryId = Date.now().toString();
+    const currentDate = get().currentDate;
+    const isFreeform = get().entryMode === 'freeform';
+    const rawText = isFreeform ? meal.name : `${EM_DASH} ${meal.name}`;
+
+    const newEntry: Entry = {
+      id: entryId,
+      date: currentDate,
+      rawText,
+      inlineKcal: meal.totalMacros.kcal,
+      status: 'ok',
+      items: meal.items.map((item, idx) => {
+        const isFatSecret = item.source === 'FS';
+        const selectedServing = isFatSecret && item.fsServings?.length
+          ? (item.fsServings.find(s => s.servingId === item.fsSelectedServingId) ?? item.fsServings[0])
+          : undefined;
+
+        const citations = isFatSecret
+          ? [{ provider: 'FatSecret', url: `https://www.fatsecret.com/calories-nutrition/search?q=${encodeURIComponent(item.label)}` }]
+          : item.source === 'FDC'
+            ? [{ provider: 'USDA FoodData Central', url: `https://fdc.nal.usda.gov/fdc-app.html#/food-details/${item.sourceId}/nutrients` }]
+            : [{ provider: 'Open Food Facts', url: `https://world.openfoodfacts.org/product/${item.sourceId}` }];
+
+        const dataSource = isFatSecret
+          ? '[Powered by FatSecret Platform API](https://platform.fatsecret.com)'
+          : item.source === 'FDC'
+            ? 'USDA FoodData Central (FDC)'
+            : 'Open Food Facts (OFF)';
+
+        const servingDesc = isFatSecret && selectedServing
+          ? `\n• Serving: ${selectedServing.description}`
+          : `\n• Serving size: ${Math.round(item.servingGrams)}g`;
+
+        const dbName = isFatSecret
+          ? 'FatSecret database'
+          : item.source === 'FDC'
+            ? 'USDA FoodData Central'
+            : 'Open Food Facts';
+
+        return {
+          id: `${entryId}-meal-${idx}`,
+          entryId,
+          label: item.label,
+          brand: item.brand,
+          qty: item.servingGrams,
+          unit: 'g',
+          source: item.source,
+          sourceId: item.sourceId,
+          macros: { ...item.macros },
+          confidence: 0.95,
+          citations,
+          reasoning: {
+            interpretation: `Custom meal "${meal.name}": ${item.label}\n• Nutrition data from ${dbName}${servingDesc}`,
+            assumptions: [],
+            dataSource,
+          },
+          fsServings: item.fsServings,
+          fsSelectedServingId: item.fsSelectedServingId,
+        };
+      }),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    set((state) => ({
+      entries: [...state.entries, newEntry],
+      customMeals: state.customMeals.map((m) =>
+        m.id === meal.id
+          ? { ...m, lastUsedAt: new Date(), usageCount: m.usageCount + 1 }
+          : m,
+      ),
+    }));
+
+    return newEntry;
   },
 
   updateEntryItemMacro: (entryId: string, itemId: string, macroKey: keyof Macros, value: number) => {
@@ -1313,12 +1446,13 @@ export const useAppStore = create<AppState>()(
         entryMode: state.entryMode,
         enterOnlyMode: state.enterOnlyMode,
         savedEntries: state.savedEntries,
+        customMeals: state.customMeals,
         weightEntries: state.weightEntries,
         notificationsEnabled: state.notificationsEnabled,
         mealReminders: state.mealReminders,
       }),
       // Handle version migrations
-      version: 6,
+      version: 7,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           persistedState = {
@@ -1355,6 +1489,12 @@ export const useAppStore = create<AppState>()(
             enterOnlyMode: persistedState.enterOnlyMode ?? false,
           };
         }
+        if (version < 7) {
+          persistedState = {
+            ...persistedState,
+            customMeals: persistedState.customMeals || [],
+          };
+        }
         return persistedState;
       },
       // Ensure proper merge with initial state
@@ -1366,6 +1506,8 @@ export const useAppStore = create<AppState>()(
         savedEntries: persistedState?.savedEntries ?? currentState.savedEntries ?? [],
         // Ensure weightEntries is always an array
         weightEntries: persistedState?.weightEntries ?? currentState.weightEntries ?? [],
+        // Ensure customMeals is always an array
+        customMeals: persistedState?.customMeals ?? currentState.customMeals ?? [],
         // Ensure mealReminders is always an array
         mealReminders: persistedState?.mealReminders ?? currentState.mealReminders ?? [],
       }),

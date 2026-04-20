@@ -11,6 +11,7 @@ import { mmkv } from "@/lib/mmkv";
 import { useAppStore } from "@/store/app-store";
 import {
   CommonPortion,
+  CustomMeal,
   DatabaseSearchResult,
   FatSecretServing,
   Macros,
@@ -162,12 +163,16 @@ interface DatabaseSearchModalProps {
   onAddEntries: (
     items: { result: DatabaseSearchResult; servingGrams: number }[],
   ) => void;
+  onUseMeal?: (meal: CustomMeal) => void;
+  onOpenMealBuilder?: (meal?: CustomMeal | null) => void;
 }
 
 export function DatabaseSearchModal({
   visible,
   onClose,
   onAddEntries,
+  onUseMeal,
+  onOpenMealBuilder,
 }: DatabaseSearchModalProps) {
   const insets = useSafeAreaInsets();
   const [state, setState] = useState<ModalState>({ type: "idle" });
@@ -202,6 +207,27 @@ export function DatabaseSearchModal({
 
   const entries = useAppStore((s) => s.entries);
   const savedEntries = useAppStore((s) => s.savedEntries);
+
+  // Tab state: "search" or "meals"
+  const [activeTab, setActiveTab] = useState<"search" | "meals">("search");
+
+  // My Meals state
+  const customMeals = useAppStore((s) => s.customMeals);
+  const deleteCustomMeal = useAppStore((s) => s.deleteCustomMeal);
+  const [mealsExpandedId, setMealsExpandedId] = useState<string | null>(null);
+  const [mealsSearchText, setMealsSearchText] = useState("");
+  const mealsSearchInputRef = useRef<TextInput>(null);
+
+  const sortedMeals = useMemo(() => {
+    const query = mealsSearchText.trim().toLowerCase();
+    const filtered = query.length > 0
+      ? customMeals.filter((m) => m.name.toLowerCase().includes(query))
+      : customMeals;
+    return [...filtered].sort(
+      (a, b) =>
+        new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime(),
+    );
+  }, [customMeals, mealsSearchText]);
 
   const RECENTLY_LOGGED_CLEARED_KEY = "recently-logged-cleared-at";
   const [recentlyClearedAt, setRecentlyClearedAt] = useState<number>(
@@ -354,6 +380,9 @@ export function DatabaseSearchModal({
       setEditingSelectedId(null);
       selectionIdCounter.current = 0;
       translateY.value = 0;
+      setActiveTab("search");
+      setMealsExpandedId(null);
+      setMealsSearchText("");
     }
   }, [visible]);
 
@@ -686,6 +715,42 @@ export function DatabaseSearchModal({
     Keyboard.dismiss();
     onClose();
   }, [onClose]);
+
+  // My Meals callbacks
+  const handleMealTap = useCallback(
+    (meal: CustomMeal) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      onUseMeal?.(meal);
+    },
+    [onUseMeal],
+  );
+
+  const handleMealEdit = useCallback((meal: CustomMeal) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onOpenMealBuilder?.(meal);
+  }, [onOpenMealBuilder]);
+
+  const handleMealDelete = useCallback(
+    (id: string) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      deleteCustomMeal(id);
+      if (mealsExpandedId === id) setMealsExpandedId(null);
+    },
+    [deleteCustomMeal, mealsExpandedId],
+  );
+
+  const handleMealNew = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onOpenMealBuilder?.(null);
+  }, [onOpenMealBuilder]);
+
+  const toggleMealExpanded = useCallback(
+    (id: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setMealsExpandedId(mealsExpandedId === id ? null : id);
+    },
+    [mealsExpandedId],
+  );
 
   const handleServingStep = useCallback(
     (delta: number) => {
@@ -1069,7 +1134,33 @@ export function DatabaseSearchModal({
                   )}
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Search Foods</Text>
-                {selectedItems.length > 0 && state.type !== "detail" ? (
+                {activeTab === "meals" && state.type !== "detail" ? (
+                  <TouchableOpacity
+                    onPress={handleMealNew}
+                    activeOpacity={0.7}
+                  >
+                    {showGlass ? (
+                      <LiquidGlassView
+                        style={[styles.backButton, { backgroundColor: Tokens.accent }]}
+                        interactive
+                        effect="regular"
+                        tintColor={Tokens.tintColor}
+                      >
+                        <Ionicons
+                          name="add-sharp"
+                          size={20}
+                          color={Tokens.accent}
+                        />
+                      </LiquidGlassView>
+                    ) : (
+                      <View
+                        style={[styles.backButton, { backgroundColor: Tokens.accent }]}
+                      >
+                        <Ionicons name="add-sharp" size={20} color={TEAL} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ) : selectedItems.length > 0 && state.type !== "detail" ? (
                   <TouchableOpacity
                     onPress={handleSubmitSelection}
                     activeOpacity={0.8}
@@ -1110,8 +1201,48 @@ export function DatabaseSearchModal({
                 )}
               </View>
 
-              {/* Search bar - hidden in detail view */}
+              {/* Tab switcher - hidden in detail view */}
               {state.type !== "detail" && (
+                <View style={styles.tabSwitcher}>
+                  <TouchableOpacity
+                    style={[
+                      styles.tabButton,
+                      activeTab === "search" && styles.tabButtonActive,
+                    ]}
+                    onPress={() => setActiveTab("search")}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.tabButtonText,
+                        activeTab === "search" && styles.tabButtonTextActive,
+                      ]}
+                    >
+                      Search
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.tabButton,
+                      activeTab === "meals" && styles.tabButtonActive,
+                    ]}
+                    onPress={() => setActiveTab("meals")}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.tabButtonText,
+                        activeTab === "meals" && styles.tabButtonTextActive,
+                      ]}
+                    >
+                      My Meals
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Search bar - hidden in detail view and meals tab */}
+              {state.type !== "detail" && activeTab === "search" && (
                 <Pressable
                   style={styles.searchContainer}
                   onPress={() => searchInputRef.current?.focus()}
@@ -1211,7 +1342,7 @@ export function DatabaseSearchModal({
               )}
 
               {/* Selection strip */}
-              {selectedItems.length > 0 && state.type !== "detail" && (
+              {selectedItems.length > 0 && state.type !== "detail" && activeTab === "search" && (
                 <Animated.View
                   entering={FadeInDown.duration(200)}
                   exiting={FadeOutUp.duration(150)}
@@ -1256,8 +1387,231 @@ export function DatabaseSearchModal({
 
               {/* Content area */}
               <View style={styles.contentArea}>
+                {/* My Meals tab */}
+                {activeTab === "meals" && state.type !== "detail" && (
+                    <ScrollView
+                      style={styles.resultsList}
+                      contentContainerStyle={{
+                        paddingBottom: insets.bottom + 24,
+                        flexGrow: 1,
+                      }}
+                      showsVerticalScrollIndicator={false}
+                      keyboardShouldPersistTaps="handled"
+                      keyboardDismissMode="interactive"
+                    >
+                      {/* Meals search bar */}
+                      <Pressable
+                        style={styles.mealsSearchContainer}
+                        onPress={() => mealsSearchInputRef.current?.focus()}
+                      >
+                        <View style={styles.searchShadowWrapper}>
+                          {showGlass ? (
+                            <LiquidGlassView
+                              style={styles.searchGlass}
+                              effect="regular"
+                              tintColor="rgba(250, 250, 247, 0.3)"
+                            >
+                              <View style={styles.searchInputWrapper}>
+                                <Ionicons
+                                  name="search"
+                                  size={18}
+                                  color="#000"
+                                  style={styles.searchIcon}
+                                />
+                                <TextInput
+                                  ref={mealsSearchInputRef}
+                                  style={styles.searchInput}
+                                  placeholder="Search"
+                                  placeholderTextColor="#636366"
+                                  value={mealsSearchText}
+                                  onChangeText={setMealsSearchText}
+                                  autoCorrect={false}
+                                  autoCapitalize="none"
+                                  returnKeyType="search"
+                                />
+                                {mealsSearchText.length > 0 && (
+                                  <TouchableOpacity
+                                    onPress={() => setMealsSearchText("")}
+                                    style={styles.clearButton}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                  >
+                                    <Ionicons name="close-circle" size={18} color="#C7C7CC" />
+                                  </TouchableOpacity>
+                                )}
+                              </View>
+                            </LiquidGlassView>
+                          ) : (
+                            <View style={[styles.searchGlass, styles.searchGlassFallback]}>
+                              <View style={styles.searchInputWrapper}>
+                                <Ionicons
+                                  name="search"
+                                  size={18}
+                                  color="#000"
+                                  style={styles.searchIcon}
+                                />
+                                <TextInput
+                                  ref={mealsSearchInputRef}
+                                  style={styles.searchInput}
+                                  placeholder="Search"
+                                  placeholderTextColor="#636366"
+                                  value={mealsSearchText}
+                                  onChangeText={setMealsSearchText}
+                                  autoCorrect={false}
+                                  autoCapitalize="none"
+                                  returnKeyType="search"
+                                />
+                                {mealsSearchText.length > 0 && (
+                                  <TouchableOpacity
+                                    onPress={() => setMealsSearchText("")}
+                                    style={styles.clearButton}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                  >
+                                    <Ionicons name="close-circle" size={18} color="#C7C7CC" />
+                                  </TouchableOpacity>
+                                )}
+                              </View>
+                            </View>
+                          )}
+                        </View>
+                      </Pressable>
+                      {sortedMeals.length === 0 && mealsSearchText.trim().length > 0 && (
+                        <View style={styles.mealsEmptyFilter}>
+                          <Text style={styles.centeredMessageText}>
+                            No meals match "{mealsSearchText.trim()}"
+                          </Text>
+                        </View>
+                      )}
+                      {customMeals.length === 0 && (
+                        <View style={styles.mealsEmptyState}>
+                          <Text style={styles.idleTitle}>No custom meals yet</Text>
+                          <Text style={styles.idleDescription}>
+                            Create your first meal by tapping the + button above
+                          </Text>
+                        </View>
+                      )}
+                      {sortedMeals.map((meal, index) => {
+                        const isExpanded = mealsExpandedId === meal.id;
+                        return (
+                          <Animated.View
+                            key={meal.id}
+                            entering={FadeInDown.delay(index * 40).duration(200)}
+                          >
+                            <TouchableOpacity
+                              style={[
+                                styles.mealCard,
+                                isExpanded && styles.mealCardExpanded,
+                              ]}
+                              onPress={() => handleMealTap(meal)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={styles.mealCardHeader}>
+                                <View style={styles.mealCardInfo}>
+                                  <Text style={styles.mealName} numberOfLines={1}>
+                                    {meal.name}
+                                  </Text>
+                                  <Text style={styles.mealMeta}>
+                                    {meal.items.length}{" "}
+                                    {meal.items.length === 1 ? "item" : "items"} ·{" "}
+                                    {Math.round(meal.totalMacros.kcal)} cal
+                                  </Text>
+                                </View>
+                                <TouchableOpacity
+                                  onPress={(e) => {
+                                    e.stopPropagation?.();
+                                    toggleMealExpanded(meal.id);
+                                  }}
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  activeOpacity={0.7}
+                                >
+                                  <Ionicons
+                                    name={isExpanded ? "chevron-up" : "chevron-down"}
+                                    size={18}
+                                    color="#bbb"
+                                  />
+                                </TouchableOpacity>
+                              </View>
+
+                              <View style={styles.mealMacroRow}>
+                                {[
+                                  { key: "protein", value: meal.totalMacros.protein },
+                                  { key: "fat", value: meal.totalMacros.fat },
+                                  { key: "carbs", value: meal.totalMacros.carbs },
+                                ].map((macro) => (
+                                  <View key={macro.key} style={styles.macroItem}>
+                                    <FontAwesomeIcon
+                                      icon={MACRO_ICONS[macro.key as keyof typeof MACRO_ICONS]}
+                                      size={10}
+                                      color={MACRO_COLORS[macro.key as keyof typeof MACRO_COLORS]?.primary}
+                                    />
+                                    <Text style={styles.macroValue}>
+                                      {Math.round(macro.value)}g
+                                    </Text>
+                                  </View>
+                                ))}
+                              </View>
+
+                              {isExpanded && (
+                                <Animated.View
+                                  entering={FadeInDown.duration(200)}
+                                  style={styles.mealExpandedContent}
+                                >
+                                  <View style={styles.mealDivider} />
+                                  {meal.items.map((item) => (
+                                    <View key={item.id} style={styles.mealExpandedItem}>
+                                      <View style={styles.mealExpandedItemInfo}>
+                                        <Text
+                                          style={styles.mealExpandedItemLabel}
+                                          numberOfLines={1}
+                                        >
+                                          {item.label}
+                                        </Text>
+                                        <Text style={styles.mealExpandedItemServing}>
+                                          {Math.round(item.servingGrams)}g
+                                        </Text>
+                                      </View>
+                                      <Text style={styles.mealExpandedItemKcal}>
+                                        {Math.round(item.macros.kcal)} cal
+                                      </Text>
+                                    </View>
+                                  ))}
+
+                                  <View style={styles.mealActionRow}>
+                                    <TouchableOpacity
+                                      style={styles.mealLogButton}
+                                      onPress={() => handleMealTap(meal)}
+                                      activeOpacity={0.8}
+                                    >
+                                      <Ionicons name="add-circle" size={18} color="#fff" />
+                                      <Text style={styles.mealLogButtonText}>
+                                        Log Meal
+                                      </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                      style={styles.mealSecondaryButton}
+                                      onPress={() => handleMealEdit(meal)}
+                                      activeOpacity={0.7}
+                                    >
+                                      <Ionicons name="pencil" size={16} color="#666" />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                      style={styles.mealSecondaryButton}
+                                      onPress={() => handleMealDelete(meal.id)}
+                                      activeOpacity={0.7}
+                                    >
+                                      <Ionicons name="trash-outline" size={16} color="#E74C3C" />
+                                    </TouchableOpacity>
+                                  </View>
+                                </Animated.View>
+                              )}
+                            </TouchableOpacity>
+                          </Animated.View>
+                        );
+                      })}
+                    </ScrollView>
+                )}
+
                 {/* Idle state */}
-                {state.type === "idle" &&
+                {activeTab === "search" && state.type === "idle" &&
                   (recentlyLoggedResults.length > 0 ? (
                     <KeyboardAwareScrollView
                       style={styles.resultsList}
@@ -1288,10 +1642,7 @@ export function DatabaseSearchModal({
                   ) : (
                     <Animated.View
                       entering={FadeInDown.delay(100).duration(300)}
-                      style={[
-                        styles.centeredMessage,
-                        { paddingBottom: keyboardHeight },
-                      ]}
+                      style={styles.centeredMessageUpper}
                     >
                       <Text style={styles.idleTitle}>
                         Search for item in database
@@ -1303,26 +1654,16 @@ export function DatabaseSearchModal({
                   ))}
 
                 {/* Searching state */}
-                {state.type === "searching" && (
-                  <View
-                    style={[
-                      styles.centeredMessage,
-                      { paddingBottom: keyboardHeight },
-                    ]}
-                  >
+                {activeTab === "search" && state.type === "searching" && (
+                  <View style={styles.centeredMessageUpper}>
                     <ActivityIndicator size="large" color="#666" />
                     <Text style={styles.centeredMessageText}>Searching...</Text>
                   </View>
                 )}
 
                 {/* Empty state */}
-                {state.type === "empty" && (
-                  <View
-                    style={[
-                      styles.centeredMessage,
-                      { paddingBottom: keyboardHeight },
-                    ]}
-                  >
+                {activeTab === "search" && state.type === "empty" && (
+                  <View style={styles.centeredMessageUpper}>
                     <Ionicons name="search-outline" size={48} color="#ddd" />
                     <Text style={styles.centeredMessageText}>
                       No results found
@@ -1334,13 +1675,8 @@ export function DatabaseSearchModal({
                 )}
 
                 {/* Error state */}
-                {state.type === "error" && (
-                  <View
-                    style={[
-                      styles.centeredMessage,
-                      { paddingBottom: keyboardHeight },
-                    ]}
-                  >
+                {activeTab === "search" && state.type === "error" && (
+                  <View style={styles.centeredMessageUpper}>
                     <Ionicons
                       name="warning-outline"
                       size={48}
@@ -1353,7 +1689,7 @@ export function DatabaseSearchModal({
                 )}
 
                 {/* Results list */}
-                {state.type === "results" && (
+                {activeTab === "search" && state.type === "results" && (
                   <KeyboardAwareScrollView
                     style={styles.resultsList}
                     contentContainerStyle={{
@@ -1885,8 +2221,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#EBEBEB",
   },
   headerRightSpacer: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
   },
   headerTitle: {
     fontSize: 17,
@@ -1951,6 +2287,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 40,
+  },
+  centeredMessageUpper: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 40,
+    paddingBottom: "40%",
   },
   centeredMessageText: {
     fontSize: 15,
@@ -2362,5 +2705,146 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 12,
     marginBottom: 8,
+  },
+  mealsSearchContainer: {
+    paddingBottom: 12,
+  },
+  mealsEmptyFilter: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  mealsEmptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    paddingBottom: "40%",
+  },
+  // Tab switcher
+  tabSwitcher: {
+    flexDirection: "row",
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 6,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  tabButtonActive: {
+    borderBottomColor: Tokens.textPrimary,
+  },
+  tabButtonText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#bbb",
+  },
+  tabButtonTextActive: {
+    color: Tokens.textPrimary,
+    fontWeight: "600",
+  },
+  // Meal cards
+  mealCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    borderWidth: 0.5,
+    borderColor: "#E5E5E5",
+    padding: 16,
+    marginBottom: 8,
+  },
+  mealCardExpanded: {
+    borderColor: TEAL,
+    borderWidth: 1,
+  },
+  mealCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  mealCardInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  mealName: {
+    fontSize: 17,
+    fontFamily: "System",
+    fontWeight: "600",
+    color: Tokens.textPrimary,
+    letterSpacing: -0.2,
+  },
+  mealMeta: {
+    fontSize: 13,
+    fontWeight: "400",
+    color: Tokens.textSecondary,
+    marginTop: 2,
+  },
+  mealMacroRow: {
+    flexDirection: "row",
+    gap: 16,
+    marginTop: 10,
+  },
+  mealExpandedContent: {
+    marginTop: 12,
+  },
+  mealDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#E5E5E5",
+    marginBottom: 12,
+  },
+  mealExpandedItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+  },
+  mealExpandedItemInfo: {
+    flex: 1,
+  },
+  mealExpandedItemLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: Tokens.textPrimary,
+  },
+  mealExpandedItemServing: {
+    fontSize: 12,
+    fontWeight: "400",
+    color: Tokens.textSecondary,
+    marginTop: 1,
+  },
+  mealExpandedItemKcal: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Tokens.textPrimary,
+  },
+  mealActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 14,
+  },
+  mealLogButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 22,
+    backgroundColor: TEAL,
+  },
+  mealLogButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  mealSecondaryButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#F5F5F5",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store/app-store';
 import { syncService } from '@/services/syncService';
-import { Entry, Document, SavedEntry, WeightEntry, UserGoals, UnitSystem } from '@/types';
+import { Entry, Document, SavedEntry, CustomMeal, WeightEntry, UserGoals, UnitSystem } from '@/types';
 
 let unsubscribe: (() => void) | null = null;
 
@@ -74,6 +74,25 @@ export function startSyncSubscriber() {
       for (const id of prevIds) {
         if (!currIds.has(id)) {
           syncService.pushDelete('saved_entries', id);
+        }
+      }
+    }
+
+    // --- Custom Meals ---
+    if (state.customMeals !== prevState.customMeals) {
+      const prevIds = new Set(prevState.customMeals.map((m: CustomMeal) => m.id));
+      const currIds = new Set(state.customMeals.map((m: CustomMeal) => m.id));
+
+      for (const meal of state.customMeals) {
+        const prev = prevState.customMeals.find((m: CustomMeal) => m.id === meal.id);
+        if (!prev || new Date(meal.updatedAt).getTime() !== new Date(prev.updatedAt).getTime() || meal.usageCount !== prev.usageCount) {
+          syncService.debouncedPush('custom_meals', meal.id);
+        }
+      }
+
+      for (const id of prevIds) {
+        if (!currIds.has(id)) {
+          syncService.pushDelete('custom_meals', id);
         }
       }
     }

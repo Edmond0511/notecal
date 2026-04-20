@@ -15,11 +15,12 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import * as Haptics from "expo-haptics";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Dimensions,
   Keyboard,
   Modal,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -37,6 +38,7 @@ import Animated, {
   Extrapolation,
   FadeIn,
   FadeInDown,
+  FadeOutUp,
   interpolate,
   runOnJS,
   useAnimatedStyle,
@@ -79,16 +81,20 @@ const MACRO_ICONS = {
   carbs: faWheatAwn as IconProp,
 };
 
+const TEAL = "#1A6872";
+
 interface SavedEntriesPopupProps {
   visible: boolean;
   onClose: () => void;
   onSelectEntry: (savedEntry: SavedEntry) => void;
+  onSelectEntries?: (savedEntries: SavedEntry[]) => void;
 }
 
 export function SavedEntriesPopup({
   visible,
   onClose,
   onSelectEntry,
+  onSelectEntries,
 }: SavedEntriesPopupProps) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
@@ -99,6 +105,7 @@ export function SavedEntriesPopup({
   const showGlass = isLiquidGlassSupported;
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Reset state when popup opens
   useEffect(() => {
@@ -106,6 +113,7 @@ export function SavedEntriesPopup({
       translateY.value = 0;
       isScrolledToTop.value = true;
       setSearchQuery("");
+      setSelectedIds(new Set());
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   }, [visible]);
@@ -128,20 +136,61 @@ export function SavedEntriesPopup({
     );
   }, [savedEntries, searchQuery]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Keyboard.dismiss();
     onClose();
-  };
+  }, [onClose]);
 
-  const handleSelectEntry = (entry: SavedEntry) => {
+  const handleToggleSelect = useCallback((entry: SavedEntry) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(entry.id)) {
+        next.delete(entry.id);
+      } else {
+        next.add(entry.id);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSubmitSelection = useCallback(() => {
+    if (selectedIds.size === 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onSelectEntry(entry);
-  };
+    const selected = savedEntries.filter((e) => selectedIds.has(e.id));
+    if (onSelectEntries) {
+      onSelectEntries(selected);
+    } else {
+      selected.forEach((e) => onSelectEntry(e));
+    }
+  }, [selectedIds, savedEntries, onSelectEntry, onSelectEntries]);
 
-  const handleDeleteEntry = (id: string) => {
+  const handleRemoveSelected = useCallback((id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const handleDeleteEntry = useCallback((id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     deleteSavedEntry(id);
-  };
+    setSelectedIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, [deleteSavedEntry]);
+
+  const selectionTotalCal = useMemo(() => {
+    return savedEntries
+      .filter((e) => selectedIds.has(e.id))
+      .reduce((sum, e) => sum + e.totalKcal, 0);
+  }, [savedEntries, selectedIds]);
 
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
@@ -214,6 +263,8 @@ export function SavedEntriesPopup({
       { protein: 0, fat: 0, carbs: 0 }
     );
 
+    const selected = selectedIds.has(item.id);
+
     const cardContent = (
       <View style={styles.entryCardInner}>
         <View style={styles.entryContent}>
@@ -264,12 +315,19 @@ export function SavedEntriesPopup({
           </View>
         </View>
         <TouchableOpacity
-          style={styles.quickAddButton}
-          onPress={() => handleSelectEntry(item)}
+          style={[
+            styles.quickAddButton,
+            selected && styles.quickAddButtonSelected,
+          ]}
+          onPress={() => handleToggleSelect(item)}
           activeOpacity={0.6}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="add" size={22} color="#bbb" />
+          <Ionicons
+            name={selected ? "checkmark" : "add"}
+            size={22}
+            color={selected ? TEAL : "#bbb"}
+          />
         </TouchableOpacity>
       </View>
     );
@@ -348,7 +406,45 @@ export function SavedEntriesPopup({
         <View style={styles.titleContainer}>
           <Text style={styles.title}>Saved Foods</Text>
         </View>
-        <View style={styles.headerRightSpacer} />
+        {selectedIds.size > 0 ? (
+          <TouchableOpacity
+            onPress={handleSubmitSelection}
+            activeOpacity={0.8}
+          >
+            {showGlass ? (
+              <LiquidGlassView
+                style={[
+                  styles.backButton,
+                  { backgroundColor: Tokens.accent },
+                ]}
+                interactive
+                effect="regular"
+                tintColor={Tokens.tintColor}
+              >
+                <Ionicons
+                  name="checkmark-sharp"
+                  size={20}
+                  color={Tokens.accent}
+                />
+              </LiquidGlassView>
+            ) : (
+              <View
+                style={[
+                  styles.backButton,
+                  { backgroundColor: Tokens.accent },
+                ]}
+              >
+                <Ionicons
+                  name="checkmark-sharp"
+                  size={20}
+                  color={Tokens.accent}
+                />
+              </View>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerRightSpacer} />
+        )}
       </View>
 
       {/* Search Bar — Liquid Glass Pill */}
@@ -370,6 +466,47 @@ export function SavedEntriesPopup({
           )}
         </View>
       </View>
+
+      {/* Selection strip */}
+      {selectedIds.size > 0 && (
+        <Animated.View
+          entering={FadeInDown.duration(200)}
+          exiting={FadeOutUp.duration(150)}
+          style={styles.selectionStrip}
+        >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.selectionChipsContainer}
+          >
+            {savedEntries
+              .filter((e) => selectedIds.has(e.id))
+              .map((entry) => (
+                <TouchableOpacity
+                  key={entry.id}
+                  style={styles.selectionChip}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.selectionChipName} numberOfLines={1}>
+                    {getDisplayLabel(entry)}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.selectionChipRemove}
+                    onPress={() => handleRemoveSelected(entry.id)}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    <Ionicons name="close" size={14} color="#999" />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              ))}
+          </ScrollView>
+          <Text style={styles.selectionStripSummary}>
+            {selectedIds.size}{" "}
+            {selectedIds.size === 1 ? "item" : "items"} ·{" "}
+            {Math.round(selectionTotalCal)} cal
+          </Text>
+        </Animated.View>
+      )}
 
       {/* Content */}
       {filteredEntries.length > 0 ? (
@@ -608,6 +745,9 @@ const styles = StyleSheet.create({
   quickAddButton: {
     padding: 2,
   },
+  quickAddButtonSelected: {
+    opacity: 0.7,
+  },
   entryContent: {
     flex: 1,
   },
@@ -635,6 +775,42 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     fontWeight: "500",
     color: Tokens.textSecondary,
+  },
+  selectionStrip: {
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  selectionStripSummary: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#999",
+    marginTop: 4,
+    marginLeft: 2,
+  },
+  selectionChipsContainer: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  selectionChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    borderWidth: 0.5,
+    borderColor: "#ddd",
+    paddingLeft: 12,
+    paddingRight: 6,
+    paddingVertical: 6,
+    gap: 4,
+  },
+  selectionChipName: {
+    maxWidth: 140,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#333",
+  },
+  selectionChipRemove: {
+    padding: 2,
   },
   deleteAction: {
     backgroundColor: "#F87171",

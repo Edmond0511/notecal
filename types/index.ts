@@ -149,6 +149,31 @@ export interface MealReminder {
   isDefault: boolean;  // true for breakfast/lunch/dinner (can't be deleted)
 }
 
+export interface CustomMealItem {
+  id: string;
+  label: string;
+  brand?: string;
+  source: 'FDC' | 'OFF' | 'FS';
+  sourceId: string;
+  servingGrams: number;
+  servingLabel?: string;
+  macros: Macros;
+  macrosPer100g?: Macros;
+  fsServings?: FatSecretServing[];
+  fsSelectedServingId?: string;
+}
+
+export interface CustomMeal {
+  id: string;
+  name: string;
+  items: CustomMealItem[];
+  totalMacros: Macros;
+  createdAt: Date;
+  updatedAt: Date;
+  lastUsedAt: Date;
+  usageCount: number;
+}
+
 export interface DailyTotals {
   date: string;
   kcal: number;
@@ -254,6 +279,8 @@ export interface AppState {
   enterOnlyMode: boolean;
   // Saved entries state
   savedEntries: SavedEntry[];
+  // Custom meals state
+  customMeals: CustomMeal[];
   // Weight tracking state
   weightEntries: WeightEntry[];
   // Notifications state
@@ -291,6 +318,11 @@ export interface AppState {
   addDatabaseSearchEntry: (result: DatabaseSearchResult, servingGrams: number, idSuffix?: number) => Entry;
   addPhotoEntry: (items: FoodItem[], totals: Macros) => Entry;
   createSavedEntry: (rawText: string) => Promise<{ success: boolean; error?: string }>;
+  // Custom meals actions
+  addCustomMeal: (name: string, items: CustomMealItem[]) => void;
+  updateCustomMeal: (id: string, name: string, items: CustomMealItem[]) => void;
+  deleteCustomMeal: (id: string) => void;
+  useCustomMeal: (meal: CustomMeal) => Entry;
   // Item editing actions
   updateEntryItemMacro: (entryId: string, itemId: string, macroKey: keyof Macros, value: number) => void;
   revertEntryItemSingleMacro: (entryId: string, itemId: string, macroKey: keyof Macros) => void;

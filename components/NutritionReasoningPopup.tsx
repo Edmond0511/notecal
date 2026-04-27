@@ -1645,7 +1645,22 @@ export function NutritionReasoningPopup({
                 )}
               </TouchableOpacity>
               <Text style={styles.title}>Nutrition Details</Text>
-              <View style={styles.headerRightSpacer} />
+              {displayEntry.status === "ok" && displayEntry.items.length > 0 ? (
+                <TouchableOpacity
+                  onPress={handleSaveEntry}
+                  activeOpacity={0.6}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={styles.headerRightSpacer}
+                >
+                  <Ionicons
+                    name={isSaved || isEntrySaved ? "bookmark" : "bookmark-outline"}
+                    size={24}
+                    color={isSaved || isEntrySaved ? Tokens.accent : Tokens.textPrimary}
+                  />
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.headerRightSpacer} />
+              )}
             </View>
 
             <Animated.ScrollView
@@ -1665,57 +1680,25 @@ export function NutritionReasoningPopup({
                 <Text style={styles.inputText}>
                   {displayEntry.rawText.replace(/^[-—]\s*/, "")}
                 </Text>
-                {/* Metadata Row - Time & Save */}
-                <View style={styles.metadataRow}>
-                  {displayEntry.createdAt && (() => {
-                    const timeBadge = getTimeBadgeStyle(new Date(displayEntry.createdAt));
-                    return (
-                      <View style={[styles.entryTimeBadge, { backgroundColor: timeBadge.background }]}>
-                        <Ionicons name={timeBadge.icon} size={13} color={timeBadge.text} />
-                        <Text style={[styles.entryTimeText, { color: timeBadge.text }]}>
-                          {new Date(displayEntry.createdAt).toLocaleTimeString(
-                            "en-US",
-                            {
-                              hour: "numeric",
-                              minute: "2-digit",
-                              hour12: true,
-                            },
-                          )}
-                        </Text>
-                      </View>
-                    );
-                  })()}
-                  {displayEntry.status === "ok" &&
-                    displayEntry.items.length > 0 && (
-                      <TouchableOpacity
-                        style={[
-                          styles.saveButton,
-                          (isSaved || isEntrySaved) && styles.saveButtonSaved,
-                        ]}
-                        onPress={handleSaveEntry}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons
-                          name={
-                            isSaved || isEntrySaved
-                              ? "bookmark"
-                              : "bookmark-outline"
-                          }
-                          size={14}
-                          color={isSaved || isEntrySaved ? "#fff" : "#1A6872"}
-                        />
-                        <Text
-                          style={[
-                            styles.saveButtonText,
-                            (isSaved || isEntrySaved) &&
-                              styles.saveButtonTextSaved,
-                          ]}
-                        >
-                          {isSaved || isEntrySaved ? "Saved" : "Save"}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                </View>
+                {/* Metadata - Time */}
+                {displayEntry.createdAt && (() => {
+                  const timeBadge = getTimeBadgeStyle(new Date(displayEntry.createdAt));
+                  return (
+                    <View style={[styles.entryTimeBadge, { backgroundColor: timeBadge.background }]}>
+                      <Ionicons name={timeBadge.icon} size={13} color={timeBadge.text} />
+                      <Text style={[styles.entryTimeText, { color: timeBadge.text }]}>
+                        {new Date(displayEntry.createdAt).toLocaleTimeString(
+                          "en-US",
+                          {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          },
+                        )}
+                      </Text>
+                    </View>
+                  );
+                })()}
               </Animated.View>
 
               {/* Items */}
@@ -2486,45 +2469,20 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: -0.3,
   },
-  metadataRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 20,
-  },
   entryTimeBadge: {
     flexDirection: "row",
     alignItems: "center",
+    alignSelf: "flex-start",
     gap: 4,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingVertical: 5,
+    borderRadius: 14,
+    marginBottom: 12,
   },
   entryTimeText: {
     fontSize: 12,
     fontFamily: "System",
     fontWeight: "500",
-  },
-  saveButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#E0F2F1",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
-  },
-  saveButtonSaved: {
-    backgroundColor: "#1A6872",
-  },
-  saveButtonText: {
-    fontSize: 12,
-    fontFamily: "System",
-    fontWeight: "500",
-    color: "#1A6872",
-  },
-  saveButtonTextSaved: {
-    color: "#fff",
   },
   content: {
     flex: 1,

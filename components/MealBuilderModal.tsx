@@ -11,7 +11,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
-  faCircleInfo,
   faDroplet,
   faDrumstickBite,
   faFireFlameCurved,
@@ -22,6 +21,7 @@ import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MenuView } from "@react-native-menu/menu";
 import {
+  Alert,
   Dimensions,
   Keyboard,
   Modal,
@@ -79,6 +79,7 @@ interface MealBuilderModalProps {
   visible: boolean;
   onClose: () => void;
   editingMeal?: CustomMeal | null;
+  nested?: boolean;
 }
 
 function computeMacrosForResult(
@@ -90,28 +91,29 @@ function computeMacrosForResult(
     // so the selected serving is first)
     const ref = result.fsServings[0];
     const refGrams = ref.metricAmount ?? 100;
-    const refMacros = ref.macros;
-    const scale = servingGrams / refGrams;
-    return {
-      kcal: Math.round(refMacros.kcal * scale),
-      protein: Math.round(refMacros.protein * scale * 10) / 10,
-      fat: Math.round(refMacros.fat * scale * 10) / 10,
-      carbs: Math.round(refMacros.carbs * scale * 10) / 10,
-    };
+    return scaleMacros(ref.macros, servingGrams / refGrams);
   }
 
   if (result.macrosPer100g) {
-    const m = result.macrosPer100g;
-    const scale = servingGrams / 100;
-    return {
-      kcal: Math.round(m.kcal * scale),
-      protein: Math.round(m.protein * scale * 10) / 10,
-      fat: Math.round(m.fat * scale * 10) / 10,
-      carbs: Math.round(m.carbs * scale * 10) / 10,
-    };
+    return scaleMacros(result.macrosPer100g, servingGrams / 100);
   }
 
   return { kcal: 0, protein: 0, fat: 0, carbs: 0 };
+}
+
+function scaleMacros(m: Macros, scale: number): Macros {
+  const out: Macros = {
+    kcal: Math.round(m.kcal * scale),
+    protein: Math.round(m.protein * scale * 10) / 10,
+    fat: Math.round(m.fat * scale * 10) / 10,
+    carbs: Math.round(m.carbs * scale * 10) / 10,
+  };
+  if (m.fiber != null) out.fiber = Math.round(m.fiber * scale * 10) / 10;
+  if (m.sugar != null) out.sugar = Math.round(m.sugar * scale * 10) / 10;
+  if (m.sodium != null) out.sodium = Math.round(m.sodium * scale);
+  if (m.potassium != null) out.potassium = Math.round(m.potassium * scale);
+  if (m.water != null) out.water = Math.round(m.water * scale);
+  return out;
 }
 
 function computeExtendedNutrientsForResult(
@@ -148,10 +150,12 @@ export function MealBuilderModal({
   visible,
   onClose,
   editingMeal,
+  nested,
 }: MealBuilderModalProps) {
   const insets = useSafeAreaInsets();
   const addCustomMeal = useAppStore((s) => s.addCustomMeal);
   const updateCustomMeal = useAppStore((s) => s.updateCustomMeal);
+  const deleteCustomMeal = useAppStore((s) => s.deleteCustomMeal);
 
   const [name, setName] = useState("");
   const [items, setItems] = useState<CustomMealItem[]>([]);
@@ -199,6 +203,27 @@ export function MealBuilderModal({
     }
     onClose();
   }, [canSave, editingMeal, name, items, addCustomMeal, updateCustomMeal, onClose]);
+
+  const handleDeleteMeal = useCallback(() => {
+    if (!editingMeal) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      "Delete Meal",
+      `Delete "${editingMeal.name}"? This can't be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            deleteCustomMeal(editingMeal.id);
+            onClose();
+          },
+        },
+      ],
+    );
+  }, [editingMeal, deleteCustomMeal, onClose]);
 
   const handleAddItems = useCallback(
     (
@@ -424,7 +449,7 @@ export function MealBuilderModal({
             <Animated.View
               style={[
                 styles.container,
-                { marginTop: insets.top },
+                { marginTop: insets.top + (nested ? 16 : 0) },
                 animatedStyle,
               ]}
             >
@@ -548,24 +573,29 @@ export function MealBuilderModal({
                     { label: "Fat", value: totalMacros.fat, icon: MACRO_ICONS.fat, iconColor: MACRO_ICON_COLORS.fat.primary },
                   ];
                   return (
-                    <View style={styles.donutContainer}>
-                      {items.length > 0 && (
+                    <View style={styles.nutritionSection}>
+                      <View style={styles.nutritionHeader}>
+                        <Text style={[styles.sectionLabel, styles.nutritionHeaderLabel]}>
+                          Nutrition
+                        </Text>
                         <TouchableOpacity
-                          style={styles.donutInfoButton}
+                          style={styles.nutritionDetailsButton}
                           onPress={() => {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                             setShowNutritionFacts(true);
                           }}
                           activeOpacity={0.6}
-                          hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                          hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
                         >
-                          <FontAwesomeIcon
-                            icon={faCircleInfo as IconProp}
-                            size={16}
-                            color={Tokens.textTertiary}
+                          <Text style={styles.nutritionDetailsText}>See All</Text>
+                          <Ionicons
+                            name="chevron-forward"
+                            size={14}
+                            color={Tokens.accent}
                           />
                         </TouchableOpacity>
-                      )}
+                      </View>
+                      <View style={styles.donutContainer}>
                       <View style={styles.donutRingWrapper}>
                         <Svg width={RING_SIZE} height={RING_SIZE}>
                           <Circle
@@ -602,6 +632,7 @@ export function MealBuilderModal({
                             </Text>
                           </View>
                         ))}
+                      </View>
                       </View>
                     </View>
                   );
@@ -704,6 +735,17 @@ export function MealBuilderModal({
                     <Text style={styles.addItemText}>Add Ingredients</Text>
                   </View>
                 </MenuView>
+
+                {editingMeal && (
+                  <TouchableOpacity
+                    style={styles.deleteMealButton}
+                    onPress={handleDeleteMeal}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="trash-outline" size={18} color={Tokens.error} />
+                    <Text style={styles.deleteMealButtonText}>Delete Meal</Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             </Animated.View>
           </GestureDetector>
@@ -882,22 +924,47 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: Tokens.textSecondary,
   },
+  deleteMealButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 14,
+    marginTop: 12,
+  },
+  deleteMealButtonText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: Tokens.error,
+  },
+  nutritionSection: {
+    marginBottom: 24,
+  },
+  nutritionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  nutritionHeaderLabel: {
+    marginBottom: 0,
+  },
+  nutritionDetailsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    paddingVertical: 4,
+  },
+  nutritionDetailsText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: Tokens.accent,
+    letterSpacing: -0.2,
+  },
   donutContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 24,
     gap: 20,
-    position: "relative",
-  },
-  donutInfoButton: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    width: 28,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 10,
   },
   donutRingWrapper: {
     width: 88,

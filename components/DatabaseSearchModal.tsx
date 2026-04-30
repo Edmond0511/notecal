@@ -57,6 +57,7 @@ import {
   Gesture,
   GestureDetector,
   GestureHandlerRootView,
+  Swipeable,
 } from "react-native-gesture-handler";
 import {
   KeyboardAwareScrollView,
@@ -95,6 +96,10 @@ const MACRO_ICONS = {
 };
 
 const EXTENDED_NUTRIENT_LABELS: Record<string, string> = {
+  fiber: "Dietary Fiber",
+  sugar: "Total Sugars",
+  sodium: "Sodium",
+  potassium: "Potassium",
   saturatedFat: "Saturated Fat",
   polyunsaturatedFat: "Polyunsaturated Fat",
   monounsaturatedFat: "Monounsaturated Fat",
@@ -118,6 +123,10 @@ const EXTENDED_NUTRIENT_LABELS: Record<string, string> = {
 };
 
 const EXTENDED_NUTRIENT_UNITS: Record<string, string> = {
+  fiber: "g",
+  sugar: "g",
+  sodium: "mg",
+  potassium: "mg",
   saturatedFat: "g",
   polyunsaturatedFat: "g",
   monounsaturatedFat: "g",
@@ -170,6 +179,12 @@ interface DatabaseSearchModalProps {
   initialServingGrams?: number;
   onUpdateEntry?: (item: { result: DatabaseSearchResult; servingGrams: number }) => void;
   onRemoveEntry?: () => void;
+  /**
+   * Optional content rendered inside this modal's <Modal> view. Used to nest
+   * other modals (e.g. MealBuilder) so they stack on iOS instead of competing
+   * as sibling top-level Modals.
+   */
+  children?: React.ReactNode;
 }
 
 export function DatabaseSearchModal({
@@ -183,6 +198,7 @@ export function DatabaseSearchModal({
   initialServingGrams,
   onUpdateEntry,
   onRemoveEntry,
+  children,
 }: DatabaseSearchModalProps) {
   const insets = useSafeAreaInsets();
   const [state, setState] = useState<ModalState>({ type: "idle" });
@@ -224,8 +240,8 @@ export function DatabaseSearchModal({
   // My Meals state
   const customMeals = useAppStore((s) => s.customMeals);
   const deleteCustomMeal = useAppStore((s) => s.deleteCustomMeal);
-  const [mealsExpandedId, setMealsExpandedId] = useState<string | null>(null);
   const [mealsSearchText, setMealsSearchText] = useState("");
+  const mealSwipeableRefs = useRef<Map<string, Swipeable>>(new Map());
   const mealsSearchInputRef = useRef<TextInput>(null);
 
   const sortedMeals = useMemo(() => {
@@ -389,7 +405,6 @@ export function DatabaseSearchModal({
       selectionIdCounter.current = 0;
       translateY.value = 0;
       setActiveTab("search");
-      setMealsExpandedId(null);
       setMealsSearchText("");
       setMacroOverrides({});
       setExtendedOpen(false);
@@ -793,10 +808,10 @@ export function DatabaseSearchModal({
   const handleMealDelete = useCallback(
     (id: string) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      mealSwipeableRefs.current.get(id)?.close();
       deleteCustomMeal(id);
-      if (mealsExpandedId === id) setMealsExpandedId(null);
     },
-    [deleteCustomMeal, mealsExpandedId],
+    [deleteCustomMeal],
   );
 
   const handleMealNew = useCallback(() => {
@@ -804,12 +819,17 @@ export function DatabaseSearchModal({
     onOpenMealBuilder?.(null);
   }, [onOpenMealBuilder]);
 
-  const toggleMealExpanded = useCallback(
-    (id: string) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setMealsExpandedId(mealsExpandedId === id ? null : id);
-    },
-    [mealsExpandedId],
+  const renderMealDeleteAction = useCallback(
+    (id: string) => (
+      <TouchableOpacity
+        style={styles.mealDeleteAction}
+        onPress={() => handleMealDelete(id)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="trash-outline" size={20} color="#fff" />
+      </TouchableOpacity>
+    ),
+    [handleMealDelete],
   );
 
   const handleServingStep = useCallback(
@@ -953,6 +973,18 @@ export function DatabaseSearchModal({
     }
     return Object.keys(scaled).length > 0 ? scaled : null;
   }, [state, servingGrams, selectedFsServingId]);
+
+  // Merge sodium/potassium/fiber/sugar (which live on macros) into the
+  // additional-nutrients display so users see the full nutrition label.
+  const previewExtras = useMemo(() => {
+    const extras: Record<string, number> = {};
+    if (previewMacros?.fiber != null) extras.fiber = previewMacros.fiber;
+    if (previewMacros?.sugar != null) extras.sugar = previewMacros.sugar;
+    if (previewMacros?.sodium != null) extras.sodium = previewMacros.sodium;
+    if (previewMacros?.potassium != null) extras.potassium = previewMacros.potassium;
+    if (Object.keys(extras).length === 0 && !previewExtended) return null;
+    return { ...extras, ...(previewExtended ?? {}) };
+  }, [previewMacros, previewExtended]);
 
   const [extendedOpen, setExtendedOpen] = useState(false);
 
@@ -1553,124 +1585,79 @@ export function DatabaseSearchModal({
                           </Text>
                         </View>
                       )}
-                      {sortedMeals.map((meal, index) => {
-                        const isExpanded = mealsExpandedId === meal.id;
-                        return (
-                          <Animated.View
-                            key={meal.id}
-                            entering={FadeInDown.delay(index * 40).duration(200)}
+                      {sortedMeals.map((meal, index) => (
+                        <Animated.View
+                          key={meal.id}
+                          entering={FadeInDown.delay(index * 40).duration(200)}
+                        >
+                          <Swipeable
+                            ref={(ref) => {
+                              if (ref) mealSwipeableRefs.current.set(meal.id, ref);
+                              else mealSwipeableRefs.current.delete(meal.id);
+                            }}
+                            renderRightActions={() => renderMealDeleteAction(meal.id)}
+                            overshootRight={false}
                           >
                             <TouchableOpacity
-                              style={[
-                                styles.mealCard,
-                                isExpanded && styles.mealCardExpanded,
-                              ]}
-                              onPress={() => handleMealTap(meal)}
+                              style={styles.mealCard}
+                              onPress={() => handleMealEdit(meal)}
                               activeOpacity={0.7}
                             >
-                              <View style={styles.mealCardHeader}>
-                                <View style={styles.mealCardInfo}>
+                              <View style={styles.mealCardRow}>
+                                <View style={styles.mealCardContent}>
                                   <Text style={styles.mealName} numberOfLines={1}>
                                     {meal.name}
-                                  </Text>
-                                  <Text style={styles.mealMeta}>
-                                    {meal.items.length}{" "}
-                                    {meal.items.length === 1 ? "item" : "items"} ·{" "}
-                                    {Math.round(meal.totalMacros.kcal)} cal
-                                  </Text>
-                                </View>
-                                <TouchableOpacity
-                                  onPress={(e) => {
-                                    e.stopPropagation?.();
-                                    toggleMealExpanded(meal.id);
-                                  }}
-                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                  activeOpacity={0.7}
-                                >
-                                  <Ionicons
-                                    name={isExpanded ? "chevron-up" : "chevron-down"}
-                                    size={18}
-                                    color="#bbb"
-                                  />
-                                </TouchableOpacity>
-                              </View>
-
-                              <View style={styles.mealMacroRow}>
-                                {[
-                                  { key: "protein", value: meal.totalMacros.protein },
-                                  { key: "fat", value: meal.totalMacros.fat },
-                                  { key: "carbs", value: meal.totalMacros.carbs },
-                                ].map((macro) => (
-                                  <View key={macro.key} style={styles.macroItem}>
-                                    <FontAwesomeIcon
-                                      icon={MACRO_ICONS[macro.key as keyof typeof MACRO_ICONS]}
-                                      size={10}
-                                      color={MACRO_COLORS[macro.key as keyof typeof MACRO_COLORS]?.primary}
-                                    />
-                                    <Text style={styles.macroValue}>
-                                      {Math.round(macro.value)}g
+                                    <Text style={styles.mealMetaInline}>
+                                      {" · "}
+                                      {meal.items.length}{" "}
+                                      {meal.items.length === 1 ? "item" : "items"}
                                     </Text>
-                                  </View>
-                                ))}
-                              </View>
-
-                              {isExpanded && (
-                                <Animated.View
-                                  entering={FadeInDown.duration(200)}
-                                  style={styles.mealExpandedContent}
-                                >
-                                  <View style={styles.mealDivider} />
-                                  {meal.items.map((item) => (
-                                    <View key={item.id} style={styles.mealExpandedItem}>
-                                      <View style={styles.mealExpandedItemInfo}>
-                                        <Text
-                                          style={styles.mealExpandedItemLabel}
-                                          numberOfLines={1}
-                                        >
-                                          {item.label}
-                                        </Text>
-                                        <Text style={styles.mealExpandedItemServing}>
-                                          {Math.round(item.servingGrams)}g
-                                        </Text>
-                                      </View>
-                                      <Text style={styles.mealExpandedItemKcal}>
-                                        {Math.round(item.macros.kcal)} cal
+                                  </Text>
+                                  <View style={styles.mealMacroRow}>
+                                    <View style={styles.macroItem}>
+                                      <FontAwesomeIcon
+                                        icon={MACRO_ICONS.calories}
+                                        size={10}
+                                        color={MACRO_COLORS.calories.primary}
+                                      />
+                                      <Text style={styles.macroValue}>
+                                        {Math.round(meal.totalMacros.kcal)}
                                       </Text>
                                     </View>
-                                  ))}
-
-                                  <View style={styles.mealActionRow}>
-                                    <TouchableOpacity
-                                      style={styles.mealLogButton}
-                                      onPress={() => handleMealTap(meal)}
-                                      activeOpacity={0.8}
-                                    >
-                                      <Ionicons name="add-circle" size={18} color="#fff" />
-                                      <Text style={styles.mealLogButtonText}>
-                                        Log Meal
-                                      </Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                      style={styles.mealSecondaryButton}
-                                      onPress={() => handleMealEdit(meal)}
-                                      activeOpacity={0.7}
-                                    >
-                                      <Ionicons name="pencil" size={16} color="#666" />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                      style={styles.mealSecondaryButton}
-                                      onPress={() => handleMealDelete(meal.id)}
-                                      activeOpacity={0.7}
-                                    >
-                                      <Ionicons name="trash-outline" size={16} color="#E74C3C" />
-                                    </TouchableOpacity>
+                                    {[
+                                      { key: "protein", value: meal.totalMacros.protein },
+                                      { key: "fat", value: meal.totalMacros.fat },
+                                      { key: "carbs", value: meal.totalMacros.carbs },
+                                    ].map((macro) => (
+                                      <View key={macro.key} style={styles.macroItem}>
+                                        <FontAwesomeIcon
+                                          icon={MACRO_ICONS[macro.key as keyof typeof MACRO_ICONS]}
+                                          size={10}
+                                          color={MACRO_COLORS[macro.key as keyof typeof MACRO_COLORS]?.primary}
+                                        />
+                                        <Text style={styles.macroValue}>
+                                          {Math.round(macro.value)}g
+                                        </Text>
+                                      </View>
+                                    ))}
                                   </View>
-                                </Animated.View>
-                              )}
+                                </View>
+                                <TouchableOpacity
+                                  style={styles.mealAddButton}
+                                  onPress={(e) => {
+                                    e.stopPropagation?.();
+                                    handleMealTap(meal);
+                                  }}
+                                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                  activeOpacity={0.6}
+                                >
+                                  <Ionicons name="add" size={22} color="#bbb" />
+                                </TouchableOpacity>
+                              </View>
                             </TouchableOpacity>
-                          </Animated.View>
-                        );
-                      })}
+                          </Swipeable>
+                        </Animated.View>
+                      ))}
                     </ScrollView>
                 )}
 
@@ -2109,7 +2096,7 @@ export function DatabaseSearchModal({
                               <View style={styles.macroIconContainer}>
                                 <FontAwesomeIcon
                                   icon={MACRO_ICONS[macro.key]}
-                                  size={12}
+                                  size={15}
                                   color={MACRO_COLORS[macro.key].primary}
                                 />
                               </View>
@@ -2133,8 +2120,8 @@ export function DatabaseSearchModal({
                       </View>
 
                       {/* Extended nutrients dropdown */}
-                      {previewExtended &&
-                        Object.keys(previewExtended).length > 0 && (
+                      {previewExtras &&
+                        Object.keys(previewExtras).length > 0 && (
                           <View style={styles.extendedSection}>
                             <TouchableOpacity
                               style={styles.extendedToggle}
@@ -2162,7 +2149,7 @@ export function DatabaseSearchModal({
                                 entering={FadeInDown.duration(200)}
                                 style={styles.extendedList}
                               >
-                                {Object.entries(previewExtended).map(
+                                {Object.entries(previewExtras).map(
                                   ([key, val]) => (
                                     <View key={key} style={styles.extendedRow}>
                                       <Text style={styles.extendedLabel}>
@@ -2240,6 +2227,8 @@ export function DatabaseSearchModal({
           onClose={() => setEditMacroPopup(null)}
         />
       )}
+
+      {children}
     </Modal>
   );
 }
@@ -2839,104 +2828,51 @@ const styles = StyleSheet.create({
   },
   // Meal cards
   mealCard: {
-    backgroundColor: "#fff",
+    backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     borderWidth: 0.5,
     borderColor: "#E5E5E5",
     padding: 16,
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  mealCardExpanded: {
-    borderColor: TEAL,
-    borderWidth: 1,
-  },
-  mealCardHeader: {
+  mealCardRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 10,
   },
-  mealCardInfo: {
+  mealCardContent: {
     flex: 1,
-    marginRight: 12,
   },
   mealName: {
     fontSize: 17,
     fontFamily: "System",
-    fontWeight: "600",
+    fontWeight: "500",
     color: Tokens.textPrimary,
+    lineHeight: 22,
     letterSpacing: -0.2,
   },
-  mealMeta: {
-    fontSize: 13,
-    fontWeight: "400",
-    color: Tokens.textSecondary,
-    marginTop: 2,
-  },
-  mealMacroRow: {
-    flexDirection: "row",
-    gap: 16,
-    marginTop: 10,
-  },
-  mealExpandedContent: {
-    marginTop: 12,
-  },
-  mealDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: "#E5E5E5",
-    marginBottom: 12,
-  },
-  mealExpandedItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-  },
-  mealExpandedItemInfo: {
-    flex: 1,
-  },
-  mealExpandedItemLabel: {
-    fontSize: 14,
+  mealMetaInline: {
+    fontSize: 17,
+    fontFamily: "System",
     fontWeight: "500",
     color: Tokens.textPrimary,
   },
-  mealExpandedItemServing: {
-    fontSize: 12,
-    fontWeight: "400",
-    color: Tokens.textSecondary,
-    marginTop: 1,
-  },
-  mealExpandedItemKcal: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Tokens.textPrimary,
-  },
-  mealActionRow: {
+  mealMacroRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginTop: 14,
+    gap: 12,
+    marginTop: 8,
   },
-  mealLogButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+  mealAddButton: {
+    padding: 2,
+  },
+  mealDeleteAction: {
+    backgroundColor: "#F87171",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 22,
-    backgroundColor: TEAL,
-  },
-  mealLogButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  mealSecondaryButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "#F5F5F5",
     alignItems: "center",
-    justifyContent: "center",
+    width: 72,
+    borderRadius: 16,
+    marginLeft: 8,
+    marginBottom: 6,
   },
 });

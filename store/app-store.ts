@@ -641,7 +641,7 @@ export const useAppStore = create<AppState>()(
           { provider: 'FatSecret', url: `https://www.fatsecret.com/calories-nutrition/search?q=${encodeURIComponent(result.name)}` },
         ],
         reasoning: {
-          interpretation: `Database search: ${result.name}\n• Nutrition data from FatSecret database\n• Serving: ${defaultServing.description}`,
+          interpretation: `• Nutrition data from FatSecret database\n• Serving: ${defaultServing.description}`,
           assumptions: [],
           dataSource: '[Powered by FatSecret Platform API](https://platform.fatsecret.com)',
         },

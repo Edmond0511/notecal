@@ -240,7 +240,6 @@ export default function HomeScreen() {
   const handleOpenMealBuilder = useCallback(
     (meal?: CustomMeal | null) => {
       setEditingMeal(meal ?? null);
-      setShowDatabaseSearch(false);
       setShowMealBuilder(true);
     },
     [],
@@ -563,25 +562,24 @@ export default function HomeScreen() {
         onAddManualEntry={handleBarcodeManualEntry}
       />
 
-      {/* Database Search Modal */}
+      {/* Database Search Modal (with nested Meal Builder) */}
       <DatabaseSearchModal
         visible={showDatabaseSearch}
         onClose={() => setShowDatabaseSearch(false)}
         onAddEntries={handleDatabaseSearchAddEntries}
         onUseMeal={handleUseMeal}
         onOpenMealBuilder={handleOpenMealBuilder}
-      />
-
-      {/* Meal Builder Modal */}
-      <MealBuilderModal
-        visible={showMealBuilder}
-        onClose={() => {
-          setShowMealBuilder(false);
-          setEditingMeal(null);
-          setShowDatabaseSearch(true);
-        }}
-        editingMeal={editingMeal}
-      />
+      >
+        <MealBuilderModal
+          visible={showMealBuilder}
+          onClose={() => {
+            setShowMealBuilder(false);
+            setEditingMeal(null);
+          }}
+          editingMeal={editingMeal}
+          nested
+        />
+      </DatabaseSearchModal>
 
       {/* Food Photo Modal */}
       <FoodPhotoModal

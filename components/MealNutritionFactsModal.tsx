@@ -1,5 +1,9 @@
 import { Tokens } from "@/constants/theme";
 import { CustomMealItem } from "@/types";
+import {
+  isLiquidGlassSupported,
+  LiquidGlassView,
+} from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useMemo } from "react";
@@ -158,7 +162,7 @@ export function MealNutritionFactsModal({ visible, items, onClose }: Props) {
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="fade"
       transparent
       onRequestClose={onClose}
     >
@@ -184,13 +188,24 @@ export function MealNutritionFactsModal({ visible, items, onClose }: Props) {
             </View>
 
             <View style={styles.header}>
-              <View style={styles.headerSpacer} />
-              <Text style={styles.headerTitle}>Nutrition Facts</Text>
               <TouchableOpacity onPress={handleClose} activeOpacity={0.7}>
-                <View style={styles.closeButton}>
-                  <Ionicons name="close" size={20} color="#666" />
-                </View>
+                {isLiquidGlassSupported ? (
+                  <LiquidGlassView
+                    style={styles.closeButton}
+                    interactive
+                    effect="regular"
+                    tintColor="rgba(250, 250, 247, 0.3)"
+                  >
+                    <Ionicons name="close" size={20} color={Tokens.textPrimary} />
+                  </LiquidGlassView>
+                ) : (
+                  <View style={[styles.closeButton, styles.closeButtonFallback]}>
+                    <Ionicons name="close" size={20} color="#666" />
+                  </View>
+                )}
               </TouchableOpacity>
+              <Text style={styles.headerTitle}>Nutrition Facts</Text>
+              <View style={styles.headerSpacer} />
             </View>
 
             <ScrollView
@@ -198,7 +213,12 @@ export function MealNutritionFactsModal({ visible, items, onClose }: Props) {
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
             >
-              <Row label="Calories" value={`${Math.round(totals.kcal)}`} bold first />
+              <View style={styles.caloriesRow}>
+                <Text style={styles.caloriesLabel}>Calories</Text>
+                <Text style={styles.caloriesValue}>{Math.round(totals.kcal)}</Text>
+              </View>
+              <View style={styles.thickDivider} />
+
               <Row label="Total Fat" value={formatGrams(totals.fat)} bold />
               <Row label="Saturated Fat" value={formatGrams(totals.saturatedFat)} indent />
               <Row label="Trans Fat" value={formatGrams(totals.transFat)} indent />
@@ -208,8 +228,10 @@ export function MealNutritionFactsModal({ visible, items, onClose }: Props) {
               <Row label="Dietary Fiber" value={formatGrams(totals.fiber)} indent />
               <Row label="Total Sugars" value={formatGrams(totals.sugar)} indent />
               <Row label="Protein" value={formatGrams(totals.protein)} bold />
-              <View style={styles.divider} />
-              <Row label="Vitamin A" value={formatMcg(totals.vitaminA)} />
+
+              <View style={styles.thickDivider} />
+
+              <Row label="Vitamin A" value={formatMcg(totals.vitaminA)} first />
               <Row label="Vitamin C" value={formatMg(totals.vitaminC)} />
               <Row label="Calcium" value={formatMg(totals.calcium)} />
               <Row label="Iron" value={formatMg(totals.iron)} />
@@ -253,7 +275,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: "hidden",
-    maxHeight: SCREEN_HEIGHT * 0.75,
+    maxHeight: SCREEN_HEIGHT * 0.88,
   },
   dragIndicatorContainer: {
     alignItems: "center",
@@ -290,6 +312,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+  },
+  closeButtonFallback: {
     backgroundColor: "#EBEBEB",
   },
   scroll: {
@@ -297,16 +321,43 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingBottom: 16,
+  },
+  caloriesRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    paddingTop: 4,
+    paddingBottom: 6,
+  },
+  caloriesLabel: {
+    fontSize: 22,
+    fontFamily: "System",
+    fontWeight: "700",
+    color: Tokens.textPrimary,
+    letterSpacing: -0.5,
+  },
+  caloriesValue: {
+    fontSize: 28,
+    fontFamily: "System",
+    fontWeight: "700",
+    color: Tokens.textPrimary,
+    letterSpacing: -0.8,
+  },
+  thickDivider: {
+    height: 4,
+    backgroundColor: Tokens.textPrimary,
+    marginVertical: 6,
+    borderRadius: 1,
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
-    minHeight: 40,
+    paddingVertical: 9,
+    minHeight: 36,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#E8E7E3",
+    borderTopColor: Tokens.border,
   },
   rowFirst: {
     borderTopWidth: 0,
@@ -317,30 +368,25 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontFamily: "System",
-    fontWeight: "500",
-    color: "#333",
+    fontWeight: "400",
+    color: Tokens.textPrimary,
+    letterSpacing: -0.2,
   },
   labelBold: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#1a1a1a",
+    color: Tokens.textPrimary,
   },
   value: {
     fontSize: 14,
     fontFamily: "System",
-    fontWeight: "500",
-    color: "#333",
+    fontWeight: "400",
+    color: Tokens.textPrimary,
+    letterSpacing: -0.2,
   },
   valueBold: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#1a1a1a",
-  },
-  divider: {
-    height: 6,
-    backgroundColor: "transparent",
-    borderTopWidth: 2,
-    borderTopColor: "#1a1a1a",
-    marginTop: 4,
+    color: Tokens.textPrimary,
   },
 });

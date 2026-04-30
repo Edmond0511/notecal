@@ -1000,7 +1000,40 @@ export function WeightTrackingModal({
                     )}
                   </TouchableOpacity>
                   <Text style={styles.popupOverlayTitle}>Edit Entry</Text>
-                  <View style={styles.popupOverlayHeaderSpacer} />
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (!editingEntry) return;
+                      const entryId = editingEntry.id;
+                      Alert.alert("Delete Entry", "Remove this weight entry?", [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Delete",
+                          style: "destructive",
+                          onPress: () => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            deleteWeightEntry(entryId);
+                            setEditingEntry(null);
+                          },
+                        },
+                      ]);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    {showGlass ? (
+                      <LiquidGlassView
+                        style={styles.backButton}
+                        interactive
+                        effect="regular"
+                        tintColor="rgba(250, 250, 247, 0.3)"
+                      >
+                        <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                      </LiquidGlassView>
+                    ) : (
+                      <View style={[styles.backButton, styles.backButtonFallback]}>
+                        <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
                 </View>
 
                 {renderPopupContent({

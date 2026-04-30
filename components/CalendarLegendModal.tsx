@@ -37,6 +37,7 @@ const DISMISS_THRESHOLD = 150;
 interface CalendarLegendModalProps {
   visible: boolean;
   onClose: () => void;
+  nested?: boolean;
 }
 
 const LEGEND_ITEMS = [
@@ -69,6 +70,7 @@ const LEGEND_ITEMS = [
 export function CalendarLegendModal({
   visible,
   onClose,
+  nested,
 }: CalendarLegendModalProps) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
@@ -143,7 +145,7 @@ export function CalendarLegendModal({
 
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[styles.container, { marginTop: insets.top }, animatedStyle]}
+            style={[styles.container, { marginTop: insets.top + (nested ? 16 : 0) }, animatedStyle]}
           >
             <View style={styles.dragIndicatorContainer}>
               <View style={styles.dragIndicator} />

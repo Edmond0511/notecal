@@ -57,6 +57,7 @@ const DISMISS_THRESHOLD = 150;
 interface NutritionGoalsModalProps {
   visible: boolean;
   onClose: () => void;
+  nested?: boolean;
 }
 
 type NutrientField =
@@ -160,6 +161,7 @@ const OTHER_NUTRIENTS: OtherNutrient[] = [
 export function NutritionGoalsModal({
   visible,
   onClose,
+  nested,
 }: NutritionGoalsModalProps) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
@@ -610,7 +612,7 @@ export function NutritionGoalsModal({
 
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[styles.container, { marginTop: insets.top }, animatedStyle]}
+            style={[styles.container, { marginTop: insets.top + (nested ? 16 : 0) }, animatedStyle]}
           >
             <View style={styles.dragIndicatorContainer}>
               <View style={styles.dragIndicator} />

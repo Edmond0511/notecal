@@ -57,6 +57,7 @@ interface GoalsWizardProps {
   visible: boolean;
   onClose: () => void;
   existingGoals?: UserGoals | null;
+  nested?: boolean;
 }
 
 export interface WizardFormData {
@@ -99,7 +100,7 @@ const initialFormData: WizardFormData = {
   timelineMonths: '',
 };
 
-export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProps) {
+export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWizardProps) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
@@ -447,7 +448,7 @@ export function GoalsWizard({ visible, onClose, existingGoals }: GoalsWizardProp
           <Animated.View
             style={[
               styles.modalContainer,
-              { marginTop: insets.top },
+              { marginTop: insets.top + (nested ? 16 : 0) },
               animatedStyle,
             ]}
           >

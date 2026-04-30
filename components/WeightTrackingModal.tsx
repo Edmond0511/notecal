@@ -66,12 +66,14 @@ interface WeightTrackingModalProps {
   visible: boolean;
   onClose: () => void;
   openToLog?: boolean;
+  nested?: boolean;
 }
 
 export function WeightTrackingModal({
   visible,
   onClose,
   openToLog,
+  nested,
 }: WeightTrackingModalProps) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
@@ -631,7 +633,7 @@ export function WeightTrackingModal({
 
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[styles.container, { marginTop: insets.top }, animatedStyle]}
+            style={[styles.container, { marginTop: insets.top + (nested ? 16 : 0) }, animatedStyle]}
           >
             <View style={styles.dragIndicatorContainer}>
               <View style={styles.dragIndicator} />
@@ -896,7 +898,7 @@ export function WeightTrackingModal({
               <Animated.View
                 style={[
                   styles.popupOverlayContainer,
-                  { marginTop: insets.top },
+                  { marginTop: insets.top + 16 },
                   logPopupAnimatedStyle,
                 ]}
               >
@@ -969,7 +971,7 @@ export function WeightTrackingModal({
               <Animated.View
                 style={[
                   styles.popupOverlayContainer,
-                  { marginTop: insets.top },
+                  { marginTop: insets.top + 16 },
                   editPopupAnimatedStyle,
                 ]}
               >

@@ -51,11 +51,13 @@ type EditingField = "age" | "sex" | "height" | "weight" | null;
 interface PersonalInfoModalProps {
   visible: boolean;
   onClose: () => void;
+  nested?: boolean;
 }
 
 export function PersonalInfoModal({
   visible,
   onClose,
+  nested,
 }: PersonalInfoModalProps) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
@@ -555,7 +557,7 @@ export function PersonalInfoModal({
 
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[styles.container, { marginTop: insets.top }, animatedStyle]}
+            style={[styles.container, { marginTop: insets.top + (nested ? 16 : 0) }, animatedStyle]}
           >
             <View style={styles.dragIndicatorContainer}>
               <View style={styles.dragIndicator} />

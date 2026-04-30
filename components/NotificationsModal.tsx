@@ -54,6 +54,7 @@ const SWIPE_ACTION_WIDTH = 72;
 interface NotificationsModalProps {
   visible: boolean;
   onClose: () => void;
+  nested?: boolean;
 }
 
 function formatTime(time24: string): string {
@@ -329,7 +330,7 @@ function AddReminderPopup({
           <Animated.View
             style={[
               styles.popupContainer,
-              { marginTop: insets.top },
+              { marginTop: insets.top + 16 },
               animatedStyle,
             ]}
           >
@@ -443,6 +444,7 @@ function AddReminderPopup({
 export function NotificationsModal({
   visible,
   onClose,
+  nested,
 }: NotificationsModalProps) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
@@ -603,7 +605,7 @@ export function NotificationsModal({
             <Animated.View
               style={[
                 styles.container,
-                { marginTop: insets.top },
+                { marginTop: insets.top + (nested ? 16 : 0) },
                 animatedStyle,
               ]}
             >

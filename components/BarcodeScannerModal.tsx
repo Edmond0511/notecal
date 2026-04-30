@@ -146,6 +146,7 @@ interface BarcodeScannerModalProps {
   onAddProduct: (product: BarcodeProduct, selectedServingId?: string) => void;
   onAddManualEntry: (text: string) => void;
   onSnapPhoto?: (uri: string) => void;
+  nested?: boolean;
 }
 
 // Stub hook when expo-camera is not available
@@ -159,6 +160,7 @@ export function BarcodeScannerModal({
   onAddProduct,
   onAddManualEntry,
   onSnapPhoto,
+  nested,
 }: BarcodeScannerModalProps) {
   const insets = useSafeAreaInsets();
   const usePerms = cameraAvailable ? useCameraPermissions : useStubPermissions;
@@ -420,7 +422,7 @@ export function BarcodeScannerModal({
         </Animated.View>
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[styles.container, { marginTop: insets.top }, animatedStyle]}
+            style={[styles.container, { marginTop: insets.top + (nested ? 16 : 0) }, animatedStyle]}
           >
             {!cameraAvailable ? (
               // Native module not built yet

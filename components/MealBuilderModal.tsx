@@ -498,9 +498,9 @@ export function MealBuilderModal({
                     });
 
                   const macroRows = [
-                    { label: "Protein", value: totalMacros.protein, color: MACRO_COLORS.protein },
-                    { label: "Carbs", value: totalMacros.carbs, color: MACRO_COLORS.carbs },
-                    { label: "Fat", value: totalMacros.fat, color: MACRO_COLORS.fat },
+                    { label: "Protein", value: totalMacros.protein, icon: MACRO_ICONS.protein, iconColor: MACRO_ICON_COLORS.protein.primary },
+                    { label: "Carbs", value: totalMacros.carbs, icon: MACRO_ICONS.carbs, iconColor: MACRO_ICON_COLORS.carbs.primary },
+                    { label: "Fat", value: totalMacros.fat, icon: MACRO_ICONS.fat, iconColor: MACRO_ICON_COLORS.fat.primary },
                   ];
                   return (
                     <View style={styles.donutContainer}>
@@ -533,9 +533,8 @@ export function MealBuilderModal({
                       <View style={styles.donutMacroList}>
                         {macroRows.map((row) => (
                           <View key={row.label} style={styles.donutMacroRow}>
-                            <Text style={[styles.donutMacroLabel, { color: row.color }]}>
-                              {row.label}
-                            </Text>
+                            <FontAwesomeIcon icon={row.icon} size={12} color={row.iconColor} />
+                            <Text style={styles.donutMacroLabel}>{row.label}</Text>
                             <Text style={styles.donutMacroGrams}>
                               {Math.round(row.value)}<Text style={styles.donutMacroUnit}>g</Text>
                             </Text>
@@ -668,6 +667,7 @@ export function MealBuilderModal({
           onClose={() => setShowBarcodeScanner(false)}
           onAddProduct={handleBarcodeProduct}
           onAddManualEntry={() => setShowBarcodeScanner(false)}
+          nested
         />
       </Modal>
   );
@@ -849,12 +849,14 @@ const styles = StyleSheet.create({
   donutMacroRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
   },
   donutMacroLabel: {
     fontSize: 14,
     fontWeight: "600",
-    width: 60,
+    width: 52,
     letterSpacing: -0.2,
+    color: Tokens.textPrimary,
   },
   donutMacroGrams: {
     fontSize: 14,

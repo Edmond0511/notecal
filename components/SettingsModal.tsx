@@ -697,6 +697,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           <NutritionGoalsModal
             visible={showNutritionGoals}
             onClose={() => setShowNutritionGoals(false)}
+            nested
           />
         )}
 
@@ -705,6 +706,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             visible={showGoalsWizard}
             onClose={() => setShowGoalsWizard(false)}
             existingGoals={goals}
+            nested
           />
         )}
 
@@ -712,6 +714,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           <WeightTrackingModal
             visible={showWeightTracking}
             onClose={() => setShowWeightTracking(false)}
+            nested
           />
         )}
 
@@ -719,6 +722,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           <CalendarLegendModal
             visible={showCalendarLegend}
             onClose={() => setShowCalendarLegend(false)}
+            nested
           />
         )}
 
@@ -726,6 +730,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           <PersonalInfoModal
             visible={showPersonalInfo}
             onClose={() => setShowPersonalInfo(false)}
+            nested
           />
         )}
 
@@ -733,6 +738,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           <NotificationsModal
             visible={showNotifications}
             onClose={() => setShowNotifications(false)}
+            nested
           />
         )}
 
@@ -740,6 +746,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           <PreferencesModal
             visible={showPreferences}
             onClose={() => setShowPreferences(false)}
+            nested
           />
         )}
       </Modal>

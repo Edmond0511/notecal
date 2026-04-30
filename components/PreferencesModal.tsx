@@ -38,9 +38,10 @@ const DISMISS_THRESHOLD = 150;
 interface PreferencesModalProps {
   visible: boolean;
   onClose: () => void;
+  nested?: boolean;
 }
 
-export function PreferencesModal({ visible, onClose }: PreferencesModalProps) {
+export function PreferencesModal({ visible, onClose, nested }: PreferencesModalProps) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
@@ -113,7 +114,7 @@ export function PreferencesModal({ visible, onClose }: PreferencesModalProps) {
           <Animated.View
             style={[
               styles.container,
-              { marginTop: insets.top },
+              { marginTop: insets.top + (nested ? 16 : 0) },
               animatedStyle,
             ]}
           >

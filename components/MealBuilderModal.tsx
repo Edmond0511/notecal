@@ -1,8 +1,9 @@
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { DatabaseSearchModal } from "@/components/DatabaseSearchModal";
+import { MealNutritionFactsModal } from "@/components/MealNutritionFactsModal";
 import { Tokens } from "@/constants/theme";
 import { useAppStore } from "@/store/app-store";
-import { BarcodeProduct, CustomMeal, CustomMealItem, DatabaseSearchResult, Macros } from "@/types";
+import { BarcodeProduct, CustomMeal, CustomMealItem, DatabaseSearchResult, ExtendedNutrients, Macros } from "@/types";
 import {
   isLiquidGlassSupported,
   LiquidGlassView,
@@ -10,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
+  faCircleInfo,
   faDroplet,
   faDrumstickBite,
   faFireFlameCurved,
@@ -112,6 +114,36 @@ function computeMacrosForResult(
   return { kcal: 0, protein: 0, fat: 0, carbs: 0 };
 }
 
+function computeExtendedNutrientsForResult(
+  result: DatabaseSearchResult,
+  servingGrams: number,
+): ExtendedNutrients | undefined {
+  if (result.source === "FS" && result.fsServings?.length) {
+    const ref = result.fsServings[0];
+    const ext = ref.extendedNutrients;
+    if (!ext) return undefined;
+    const refGrams = ref.metricAmount ?? 100;
+    const scale = servingGrams / refGrams;
+    const scaled: Record<string, number> = {};
+    for (const [key, val] of Object.entries(ext)) {
+      if (val != null) scaled[key] = Math.round(val * scale * 100) / 100;
+    }
+    return Object.keys(scaled).length > 0 ? (scaled as ExtendedNutrients) : undefined;
+  }
+
+  if (result.extendedNutrientsPer100g) {
+    const ext = result.extendedNutrientsPer100g as Record<string, number>;
+    const scale = servingGrams / 100;
+    const scaled: Record<string, number> = {};
+    for (const [key, val] of Object.entries(ext)) {
+      if (val != null) scaled[key] = Math.round(val * scale * 100) / 100;
+    }
+    return Object.keys(scaled).length > 0 ? (scaled as ExtendedNutrients) : undefined;
+  }
+
+  return undefined;
+}
+
 export function MealBuilderModal({
   visible,
   onClose,
@@ -125,6 +157,7 @@ export function MealBuilderModal({
   const [items, setItems] = useState<CustomMealItem[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [showNutritionFacts, setShowNutritionFacts] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const editingItemIdRef = useRef<string | null>(null);
   const translateY = useSharedValue(0);
@@ -174,6 +207,7 @@ export function MealBuilderModal({
       const newItems: CustomMealItem[] = addedItems.map(
         ({ result, servingGrams, macroOverrides: overrides }, index) => {
           const macros = { ...computeMacrosForResult(result, servingGrams), ...overrides };
+          const extendedNutrients = computeExtendedNutrientsForResult(result, servingGrams);
           const defaultServing =
             result.source === "FS"
               ? (result.fsServings?.find((s) => s.metricUnit === "g") ??
@@ -190,6 +224,8 @@ export function MealBuilderModal({
             servingGrams,
             macros,
             macrosPer100g: result.macrosPer100g,
+            extendedNutrients,
+            extendedNutrientsPer100g: result.extendedNutrientsPer100g,
             fsServings: result.fsServings,
             fsSelectedServingId: defaultServing?.servingId,
           };
@@ -206,6 +242,7 @@ export function MealBuilderModal({
       const currentEditingId = editingItemIdRef.current;
       if (!currentEditingId) return;
       const macros = { ...computeMacrosForResult(result, servingGrams), ...overrides };
+      const extendedNutrients = computeExtendedNutrientsForResult(result, servingGrams);
       const defaultServing =
         result.source === "FS"
           ? (result.fsServings?.find((s) => s.metricUnit === "g") ??
@@ -219,6 +256,8 @@ export function MealBuilderModal({
                 servingGrams,
                 macros,
                 macrosPer100g: result.macrosPer100g,
+                extendedNutrients,
+                extendedNutrientsPer100g: result.extendedNutrientsPer100g,
                 fsServings: result.fsServings,
                 fsSelectedServingId: defaultServing?.servingId,
               }
@@ -254,6 +293,10 @@ export function MealBuilderModal({
         protein: Math.round(serving.macros.protein * 10) / 10,
         fat: Math.round(serving.macros.fat * 10) / 10,
         carbs: Math.round(serving.macros.carbs * 10) / 10,
+        ...(serving.macros.fiber != null && { fiber: serving.macros.fiber }),
+        ...(serving.macros.sugar != null && { sugar: serving.macros.sugar }),
+        ...(serving.macros.sodium != null && { sodium: serving.macros.sodium }),
+        ...(serving.macros.potassium != null && { potassium: serving.macros.potassium }),
       };
 
       const newItem: CustomMealItem = {
@@ -265,6 +308,7 @@ export function MealBuilderModal({
         servingGrams: serving.metricAmount ?? 100,
         servingLabel: serving.description,
         macros,
+        extendedNutrients: serving.extendedNutrients as ExtendedNutrients | undefined,
         fsServings: product.servings,
         fsSelectedServingId: serving.servingId,
       };
@@ -300,6 +344,7 @@ export function MealBuilderModal({
       name: item.label,
       brand: item.brand,
       macrosPer100g: item.macrosPer100g ?? item.macros,
+      extendedNutrientsPer100g: item.extendedNutrientsPer100g,
       defaultServingG: item.servingGrams,
       defaultServingLabel: item.servingLabel,
       fsServings: item.fsServings,
@@ -418,7 +463,7 @@ export function MealBuilderModal({
                         style={[styles.backButton, { backgroundColor: Tokens.accent }]}
                         interactive
                         effect="regular"
-                        tintColor={Tokens.accent}
+                        tintColor={Tokens.tintColor}
                       >
                         <Ionicons name="checkmark" size={20} color={Tokens.accent} />
                       </LiquidGlassView>
@@ -504,6 +549,23 @@ export function MealBuilderModal({
                   ];
                   return (
                     <View style={styles.donutContainer}>
+                      {items.length > 0 && (
+                        <TouchableOpacity
+                          style={styles.donutInfoButton}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setShowNutritionFacts(true);
+                          }}
+                          activeOpacity={0.6}
+                          hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                        >
+                          <FontAwesomeIcon
+                            icon={faCircleInfo as IconProp}
+                            size={16}
+                            color={Tokens.textTertiary}
+                          />
+                        </TouchableOpacity>
+                      )}
                       <View style={styles.donutRingWrapper}>
                         <Svg width={RING_SIZE} height={RING_SIZE}>
                           <Circle
@@ -669,6 +731,12 @@ export function MealBuilderModal({
           onAddManualEntry={() => setShowBarcodeScanner(false)}
           nested
         />
+
+        <MealNutritionFactsModal
+          visible={showNutritionFacts}
+          items={items}
+          onClose={() => setShowNutritionFacts(false)}
+        />
       </Modal>
   );
 }
@@ -819,6 +887,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 24,
     gap: 20,
+    position: "relative",
+  },
+  donutInfoButton: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
   },
   donutRingWrapper: {
     width: 88,

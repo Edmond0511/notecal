@@ -1073,7 +1073,7 @@ export const useAppStore = create<AppState>()(
     }));
   },
 
-  updateEntryItemQuantity: (entryId: string, itemId: string, newServings: number, newQty?: number, newUnit?: string) => {
+  updateEntryItemQuantity: (entryId: string, itemId: string, newServings: number, newQty?: number, newUnit?: string, macroScale?: number) => {
     set((state) => ({
       entries: state.entries.map((entry) => {
         if (entry.id !== entryId) return entry;
@@ -1087,8 +1087,9 @@ export const useAppStore = create<AppState>()(
           // Prevent division by zero
           if (currentServings <= 0) return item;
 
-          // Calculate scale factor based on servings change
-          const scaleFactor = newServings / currentServings;
+          // Macro scale factor: explicit override (used when rebasing qty/unit
+          // independently of the stored servings value), else derived from servings change.
+          const scaleFactor = macroScale ?? (newServings / currentServings);
 
           // Scale all macros proportionally
           const scaledMacros = {

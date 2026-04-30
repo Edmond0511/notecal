@@ -159,6 +159,8 @@ export interface CustomMealItem {
   servingLabel?: string;
   macros: Macros;
   macrosPer100g?: Macros;
+  extendedNutrients?: ExtendedNutrients;
+  extendedNutrientsPer100g?: ExtendedNutrients;
   fsServings?: FatSecretServing[];
   fsSelectedServingId?: string;
 }
@@ -334,6 +336,7 @@ export interface AppState {
     newServings: number,
     newQty?: number,
     newUnit?: string,
+    macroScale?: number,
   ) => void;
   setFoodItemServing: (entryId: string, itemId: string, servingId: string) => void;
   // Correction action

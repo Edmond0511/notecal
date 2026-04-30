@@ -1078,9 +1078,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
   },
   dragIndicator: {
-    width: 32,
-    height: 3,
-    borderRadius: 1.5,
+    width: 36,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: Tokens.border,
   },
   header: {

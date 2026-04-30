@@ -691,15 +691,15 @@ class SyncService {
     }
   }
 
-  private async pullGoals(since: string | null) {
+  private async pullGoals(_since: string | null) {
     const userId = this.userId!;
-    let query = supabase
+    // user_goals is one row per user — always fetch it (no time filter).
+    // Filtering by updated_at would conflate "no row" with "row not updated since",
+    // causing local goals to be wrongly cleared on every incremental pull.
+    const { data, error } = await supabase
       .from('user_goals')
       .select('*')
       .eq('user_id', userId);
-    if (since) query = query.gt('updated_at', since);
-
-    const { data, error } = await query;
     if (error) { console.error('[sync] Pull user_goals failed:', error.message); return; }
 
     const dirty = loadDirty();
@@ -707,9 +707,10 @@ class SyncService {
     if (dirty.user_goals.includes('current')) return;
 
     if (!data?.length) {
-      // No remote goals — if we had local goals that aren't dirty, remote was deleted
-      // Only clear on incremental pull (since !== null), not on first pull
-      if (since) {
+      // Row genuinely doesn't exist on server. Clear local only after the first
+      // sync — on cold start before any sync has run, local goals may simply not
+      // have been pushed yet.
+      if (getLastPull()) {
         const state = useAppStore.getState();
         if (state.goals) {
           useAppStore.setState({ goals: null });

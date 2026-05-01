@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { NutritionResolveResponse, Macros, FoodItem, NutritionReasoning } from '@/types';
+import { computeConfidenceScore, getCacheEntry, setCacheEntry } from './nutritionCache';
 
 export interface NutritionApiOptions {
   userId?: string;
@@ -53,6 +54,14 @@ export async function resolveNutrition(
     throw new NutritionApiError('Food text is required');
   }
 
+  const cached = getCacheEntry(userId ?? null, foodText);
+  if (cached) {
+    if (__DEV__) {
+      console.log('[nutritionApi] CACHE HIT:', foodText.trim());
+    }
+    return cached;
+  }
+
   try {
     // Check user quota if userId is provided
     if (userId) {
@@ -100,6 +109,8 @@ export async function resolveNutrition(
     if (!data.totals || typeof data.totals !== 'object') {
       throw new NutritionApiError('Invalid response format: missing totals object');
     }
+
+    setCacheEntry(userId ?? null, foodText, data, computeConfidenceScore(data));
 
     return data;
 
@@ -371,56 +382,6 @@ export async function updateFavoriteFood(
   } catch (error) {
     throw new NutritionApiError(
       `Failed to update favorite food: ${error.message}`,
-      undefined,
-      error as Error
-    );
-  }
-}
-
-/**
- * Clear the nutrition cache for a specific query
- * @param foodQuery The food query to clear from cache
- */
-export async function clearCacheEntry(foodQuery: string) {
-  try {
-    const { error } = await supabase
-      .from('nutrition_cache')
-      .delete()
-      .eq('food_query', foodQuery.toLowerCase().trim());
-
-    if (error) {
-      throw new NutritionApiError(`Failed to clear cache entry: ${error.message}`);
-    }
-
-    return true;
-  } catch (error) {
-    throw new NutritionApiError(
-      `Failed to clear cache entry: ${error.message}`,
-      undefined,
-      error as Error
-    );
-  }
-}
-
-/**
- * Get popular cached foods (frequently requested)
- * @param limit Maximum number of results to return
- */
-export async function getPopularFoods(limit: number = 50) {
-  try {
-    const { data, error } = await supabase
-      .from('popular_foods')
-      .select('*')
-      .limit(limit);
-
-    if (error) {
-      throw new NutritionApiError(`Failed to get popular foods: ${error.message}`);
-    }
-
-    return data || [];
-  } catch (error) {
-    throw new NutritionApiError(
-      `Failed to get popular foods: ${error.message}`,
       undefined,
       error as Error
     );

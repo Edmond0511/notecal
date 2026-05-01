@@ -1478,7 +1478,7 @@ export const useAppStore = create<AppState>()(
         if (version < 4) {
           persistedState = {
             ...persistedState,
-            entryMode: persistedState.entryMode || 'dash',
+            entryMode: persistedState.entryMode || 'freeform',
           };
         }
         if (version < 5) {

@@ -45,7 +45,7 @@ export function PreferencesModal({ visible, onClose, nested }: PreferencesModalP
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
-  const entryMode = useAppStore((s) => s.entryMode ?? "dash");
+  const entryMode = useAppStore((s) => s.entryMode ?? "freeform");
   const enterOnlyMode = useAppStore((s) => s.enterOnlyMode ?? false);
 
   const handleClose = () => {

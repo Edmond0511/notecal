@@ -84,16 +84,6 @@ interface CorrectionResponse {
   reasoning?: NutritionReasoning;
 }
 
-function normalizeCacheKey(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/^[-•*]\s*/, "") // strip leading bullets
-    .replace(/\s+/g, " ") // collapse whitespace
-    .replace(/\s*,\s*/g, ", ") // normalize comma spacing
-    .replace(/[.!?]+$/, ""); // strip trailing punctuation
-}
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -162,98 +152,13 @@ serve(async (req) => {
     let costCents = 0;
     let nutritionData: NutritionData;
 
-    // 1. Check cache first
-    const cacheKey = normalizeCacheKey(foodText);
-    console.log(`[Cache] Looking up: "${cacheKey}"`);
-
-    const { data: cachedData, error: cacheError } = await supabase
-      .from("nutrition_cache")
-      .select("*")
-      .eq("food_query", cacheKey)
-      .gte("expires_at", new Date().toISOString())
-      .single();
-
-    if (cacheError) {
-      console.log(`[Cache] Miss - ${cacheError.code}: ${cacheError.message}`);
-    }
-
-    if (!cacheError && cachedData) {
-      console.log(`[Cache] Hit! hit_count: ${cachedData.hit_count}`);
-      // Cache hit - update hit count and extend TTL (fire-and-forget)
-      const newExpiry = new Date();
-      newExpiry.setDate(newExpiry.getDate() + 7);
-
-      supabase
-        .from("nutrition_cache")
-        .update({
-          hit_count: cachedData.hit_count + 1,
-          expires_at: newExpiry.toISOString(),
-        })
-        .eq("id", cachedData.id)
-        .then(({ error }: any) => {
-          if (error)
-            console.error("[Cache] Hit count update error:", error.message);
-        });
-
-      nutritionData = cachedData.nutrition_data as NutritionData;
-
-
-      // Log cache hit usage (fire-and-forget)
-      if (userId) {
-        logApiUsage(supabase, userId, 0, 0, "cache_hit", startTime);
-      }
-
-      return new Response(
-        JSON.stringify({
-          resolved: nutritionData.items,
-          totals: nutritionData.totals,
-        } as ApiResponse),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    // 2. Cache miss - call AI service
     try {
       const aiResult = await callAIService(foodText);
       nutritionData = aiResult.data;
       tokensUsed = aiResult.tokens || 0;
       costCents = calculateCost(tokensUsed);
 
-      // 3. Cache the result (fire-and-forget — don't block the response)
-      // Only cache results with sufficient confidence (>= 0.6)
-      const avgConfidence = calculateConfidenceScore(nutritionData);
-      if (avgConfidence >= 0.6) {
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
-
-        supabase
-          .from("nutrition_cache")
-          .upsert(
-            {
-              food_query: cacheKey,
-              normalized_query: cacheKey,
-              nutrition_data: nutritionData,
-              confidence_score: avgConfidence,
-              hit_count: 1,
-              expires_at: expiresAt.toISOString(),
-            },
-            {
-              onConflict: "food_query",
-            },
-          )
-          .then(({ error }: any) => {
-            if (error) console.error("[Cache] Write error:", error.message);
-          });
-      } else {
-        console.log(
-          `[Cache] Skipping cache write — low confidence: ${avgConfidence}`,
-        );
-      }
-
-      // 4. Log API usage (fire-and-forget)
+      // Log API usage (fire-and-forget)
       if (userId) {
         logApiUsage(
           supabase,
@@ -637,43 +542,6 @@ JSON:`;
 function calculateCost(tokens: number): number {
   const costPerMillion = 0.25; // $0.25 per 1M tokens for Gemini
   return Math.ceil((tokens / 1000000) * costPerMillion * 100); // convert to cents
-}
-
-function calculateConfidenceScore(data: NutritionData): number {
-  if (!data.items || data.items.length === 0) return 0;
-
-  const avgConfidence =
-    data.items.reduce((sum, item) => sum + item.confidence, 0) /
-    data.items.length;
-
-  // Apply quality factors
-  let qualityMultiplier = 1.0;
-
-  // Penalize very high calorie estimates (likely errors)
-  const totalCalories = data.totals.kcal;
-  if (totalCalories > 2000) {
-    qualityMultiplier *= 0.8;
-  }
-
-  // Boost confidence for balanced macros
-  const hasProtein = data.totals.protein > 0;
-  const hasFat = data.totals.fat > 0;
-  const hasCarbs = data.totals.carbs > 0;
-  if (hasProtein && hasFat && hasCarbs) {
-    qualityMultiplier *= 1.1;
-  }
-
-  // Penalize if all items have the same confidence (suggests generic estimation)
-  const confidences = data.items.map((item) => item.confidence);
-  const hasVaryingConfidence = new Set(confidences).size > 1;
-  if (!hasVaryingConfidence && avgConfidence === 0.8) {
-    qualityMultiplier *= 0.9;
-  }
-
-  return Math.min(
-    1.0,
-    Math.round(avgConfidence * qualityMultiplier * 100) / 100,
-  );
 }
 
 function generateFallbackResponse(foodText: string): NutritionData {

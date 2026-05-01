@@ -1,6 +1,7 @@
 import { Tokens } from "@/constants/theme";
 import { mmkv } from "@/lib/mmkv";
 import { supabase } from "@/lib/supabase";
+import { clearNutritionCache } from "@/services/nutritionCache";
 import { useAppStore } from "@/store/app-store";
 import {
   isLiquidGlassSupported,
@@ -183,6 +184,32 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleClearCache = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      "Clear nutrition cache?",
+      "This removes cached AI nutrition resolutions on this device. Future entries will be re-resolved by the AI.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear",
+          style: "destructive",
+          onPress: async () => {
+            const {
+              data: { user: authUser },
+            } = await supabase.auth.getUser();
+            const cleared = clearNutritionCache(authUser?.id ?? null);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert(
+              "Cache cleared",
+              `${cleared} cached entr${cleared === 1 ? "y" : "ies"} removed.`,
+            );
+          },
+        },
+      ],
+    );
   };
 
   const handleSignOut = async () => {
@@ -669,6 +696,15 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                   >
                     <TouchableOpacity
                       style={styles.signOutButton}
+                      onPress={handleClearCache}
+                      disabled={isSigningOut || isDeletingAccount}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.signOutText}>Clear Cache</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.signOutButton, { marginTop: 6 }]}
                       onPress={handleSignOut}
                       disabled={isSigningOut || isDeletingAccount}
                       activeOpacity={0.7}
@@ -907,7 +943,7 @@ const styles = StyleSheet.create({
   deleteAccountButton: {
     alignItems: "center",
     padding: 16,
-    marginTop: 12,
+    marginTop: 6,
     backgroundColor: Tokens.surfaceRaised,
     borderRadius: 99,
     borderWidth: StyleSheet.hairlineWidth,

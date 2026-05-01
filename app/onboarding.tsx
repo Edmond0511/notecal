@@ -1,26 +1,6 @@
-import { Tokens } from "@/constants/theme";
-import { GoalsWizard } from "@/components/goals/GoalsWizard";
-import { useRouter } from "expo-router";
-import React from "react";
-import { StyleSheet, View } from "react-native";
+import { OnboardingWizard } from '@/components/onboarding';
+import React from 'react';
 
 export default function OnboardingScreen() {
-  const router = useRouter();
-
-  return (
-    <View style={styles.container}>
-      <GoalsWizard
-        visible={true}
-        existingGoals={null}
-        onClose={() => router.replace("/auth")}
-      />
-    </View>
-  );
+  return <OnboardingWizard />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Tokens.background,
-  },
-});

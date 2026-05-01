@@ -61,6 +61,7 @@ AGENTS.md
 # Markdown / docs (never push)
 *.md
 !README.md
+website/README.md
 docs/
 
 # Supabase

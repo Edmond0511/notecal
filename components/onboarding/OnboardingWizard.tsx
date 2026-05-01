@@ -1,0 +1,274 @@
+import { Tokens } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAppStore } from '@/store/app-store';
+import { UserGoals } from '@/types';
+import { IBMPlexSans_700Bold, useFonts } from '@expo-google-fonts/ibm-plex-sans';
+import { useFocusEffect, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import React, { useCallback, useRef, useState } from 'react';
+import {
+  BackHandler,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import Animated, {
+  SlideInLeft,
+  SlideInRight,
+  SlideOutLeft,
+  SlideOutRight,
+  useReducedMotion,
+} from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { canAdvance, OnboardingData } from './canAdvance';
+import { PrimaryButton } from './PrimaryButton';
+import { StepHeader } from './StepHeader';
+import { StepActivity } from './steps/StepActivity';
+import { StepAge } from './steps/StepAge';
+import { StepBody } from './steps/StepBody';
+import { StepGoal } from './steps/StepGoal';
+import { StepSex } from './steps/StepSex';
+import { StepTargets } from './steps/StepTargets';
+
+const TOTAL_STEPS = 6;
+const SLIDE_DURATION = 280;
+
+interface StepCopy {
+  title: string;
+  subtitle: string;
+  cta: string;
+}
+
+const COPY: StepCopy[] = [
+  { title: "What's your\nsex?", subtitle: 'Used to estimate calories', cta: 'Continue' },
+  { title: 'How old\nare you?', subtitle: 'Helps tune your daily target', cta: 'Continue' },
+  { title: 'Your height\nand weight', subtitle: 'Use the units you prefer', cta: 'Continue' },
+  { title: 'How active\nare you?', subtitle: "We'll factor this into your TDEE", cta: 'Continue' },
+  { title: "What's your\ngoal?", subtitle: "We'll set a sustainable deficit/surplus", cta: 'See my targets' },
+  { title: 'Your daily\ntargets', subtitle: 'Computed from Mifflin-St Jeor', cta: 'Start tracking' },
+];
+
+const initialData: OnboardingData = {
+  sex: null,
+  age: null,
+  heightCm: null,
+  weightKg: null,
+  heightUnit: 'metric',
+  weightUnit: 'metric',
+  activity: null,
+  goal: null,
+};
+
+export function OnboardingWizard() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const setGoals = useAppStore((s) => s.setGoals);
+  const setPreferredUnits = useAppStore((s) => s.setPreferredUnits);
+  const preferredUnits = useAppStore((s) => s.preferredUnits);
+  const reducedMotion = useReducedMotion();
+  const [fontsLoaded] = useFonts({ IBMPlexSans_700Bold });
+
+  const [step, setStep] = useState(0);
+  const [direction, setDirection] = useState<'next' | 'back'>('next');
+  const [data, setData] = useState<OnboardingData>(() => ({
+    ...initialData,
+    heightUnit: preferredUnits === 'imperial' ? 'imperial' : 'metric',
+    weightUnit: preferredUnits === 'imperial' ? 'imperial' : 'metric',
+  }));
+  const computedGoalsRef = useRef<UserGoals | null>(null);
+
+  const update = useCallback(<K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
+    setData((d) => ({ ...d, [key]: value }));
+  }, []);
+
+  const goNext = useCallback(() => {
+    if (step >= TOTAL_STEPS - 1) return;
+    setDirection('next');
+    setStep((s) => s + 1);
+  }, [step]);
+
+  const goBack = useCallback(() => {
+    if (step <= 0) {
+      // At step 0: unauthed users can return to /get-started; authed users have no escape.
+      if (!isAuthenticated && router.canGoBack()) {
+        router.back();
+      }
+      return;
+    }
+    setDirection('back');
+    setStep((s) => s - 1);
+  }, [step, isAuthenticated, router]);
+
+  const handleComplete = useCallback(() => {
+    const goals = computedGoalsRef.current;
+    if (!goals) return;
+    const useImperial = data.heightUnit === 'imperial' || data.weightUnit === 'imperial';
+    setPreferredUnits(useImperial ? 'imperial' : 'metric');
+    setGoals(goals);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    router.replace(isAuthenticated ? '/' : '/auth');
+  }, [data.heightUnit, data.weightUnit, setGoals, setPreferredUnits, router, isAuthenticated]);
+
+  const onPrimary = useCallback(() => {
+    if (step === TOTAL_STEPS - 1) {
+      handleComplete();
+    } else {
+      goNext();
+    }
+  }, [step, goNext, handleComplete]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        goBack();
+        return true;
+      });
+      return () => sub.remove();
+    }, [goBack]),
+  );
+
+  const enteringAnim = reducedMotion
+    ? undefined
+    : (direction === 'next' ? SlideInRight : SlideInLeft).duration(SLIDE_DURATION);
+  const exitingAnim = reducedMotion
+    ? undefined
+    : (direction === 'next' ? SlideOutLeft : SlideOutRight).duration(SLIDE_DURATION);
+
+  const renderStep = () => {
+    switch (step) {
+      case 0:
+        return <StepSex value={data.sex} onChange={(v) => update('sex', v)} />;
+      case 1:
+        return <StepAge value={data.age} onChange={(v) => update('age', v)} />;
+      case 2:
+        return (
+          <StepBody
+            heightCm={data.heightCm}
+            weightKg={data.weightKg}
+            heightUnit={data.heightUnit}
+            weightUnit={data.weightUnit}
+            onChangeHeightCm={(v) => update('heightCm', v)}
+            onChangeWeightKg={(v) => update('weightKg', v)}
+            onChangeHeightUnit={(u) => update('heightUnit', u)}
+            onChangeWeightUnit={(u) => update('weightUnit', u)}
+          />
+        );
+      case 3:
+        return <StepActivity value={data.activity} onChange={(v) => update('activity', v)} />;
+      case 4:
+        return <StepGoal value={data.goal} onChange={(v) => update('goal', v)} />;
+      case 5:
+        if (
+          data.sex == null ||
+          data.age == null ||
+          data.heightCm == null ||
+          data.weightKg == null ||
+          data.activity == null ||
+          data.goal == null
+        ) {
+          return null;
+        }
+        return (
+          <StepTargets
+            sex={data.sex}
+            age={data.age}
+            heightCm={data.heightCm}
+            weightKg={data.weightKg}
+            activity={data.activity}
+            goal={data.goal}
+            onComputed={(g) => {
+              computedGoalsRef.current = g;
+            }}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  const heroFont = fontsLoaded ? { fontFamily: 'IBMPlexSans_700Bold' as const } : null;
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <StatusBar barStyle="dark-content" backgroundColor={Tokens.background} />
+      <View style={styles.headerWrap}>
+        <StepHeader
+          step={step}
+          total={TOTAL_STEPS}
+          onBack={goBack}
+          showBack={step > 0 || !isAuthenticated}
+        />
+      </View>
+      <KeyboardAwareScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={20}
+      >
+        <Animated.View
+          key={step}
+          entering={enteringAnim}
+          exiting={exitingAnim}
+          style={styles.slideTrack}
+        >
+          <View style={styles.heroBlock}>
+            <Text style={[styles.heroTitle, heroFont]}>{COPY[step].title}</Text>
+            <Text style={styles.heroSubtitle}>{COPY[step].subtitle}</Text>
+          </View>
+          <View style={styles.body}>{renderStep()}</View>
+        </Animated.View>
+      </KeyboardAwareScrollView>
+      <View style={styles.footer}>
+        <PrimaryButton
+          label={COPY[step].cta}
+          onPress={onPrimary}
+          disabled={!canAdvance(step, data)}
+        />
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Tokens.background,
+  },
+  headerWrap: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+  },
+  scroll: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
+  slideTrack: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 32,
+  },
+  heroBlock: {
+    marginBottom: 24,
+    gap: 8,
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: -0.8,
+    lineHeight: 32,
+    color: Tokens.textPrimary,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    color: Tokens.textSecondary,
+    lineHeight: 20,
+  },
+  body: {
+    flex: 1,
+  },
+  footer: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 40,
+  },
+});

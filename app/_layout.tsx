@@ -3,10 +3,11 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { offlineReconnectService } from '@/services/offlineReconnectService';
 import { syncService } from '@/services/syncService';
 import { startSyncSubscriber, stopSyncSubscriber } from '@/services/syncSubscriber';
+import { useAppStore } from '@/store/app-store';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -16,20 +17,32 @@ function RootLayoutNav() {
   const { isLoading, isAuthenticated } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const goals = useAppStore((s) => s.goals);
+  const [firstSyncDone, setFirstSyncDone] = useState(false);
 
   useEffect(() => {
     if (isLoading) return;
 
     const seg = segments[0];
-    const inPreAuthFlow =
-      seg === 'get-started' || seg === 'auth' || seg === 'onboarding';
+    const onOnboarding = seg === 'onboarding';
+    const isPreAuth = seg === 'get-started' || seg === 'auth' || onOnboarding;
 
-    if (!isAuthenticated && !inPreAuthFlow) {
-      router.replace('/get-started');
-    } else if (isAuthenticated && inPreAuthFlow) {
+    if (!isAuthenticated) {
+      if (!isPreAuth) router.replace('/get-started');
+      return;
+    }
+
+    // Authenticated: wait for first server sync before deciding onboarding gate.
+    if (!firstSyncDone) return;
+
+    const needsOnboarding = !goals;
+
+    if (needsOnboarding && !onOnboarding) {
+      router.replace('/onboarding');
+    } else if (!needsOnboarding && isPreAuth) {
       router.replace('/');
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, segments, goals, firstSyncDone]);
 
   // Start offline reconnect service after auth loading resolves
   useEffect(() => {
@@ -41,10 +54,14 @@ function RootLayoutNav() {
 
   // Start sync subscriber + cold-start sync when authenticated
   useEffect(() => {
-    if (isLoading || !isAuthenticated) return;
+    if (!isAuthenticated) {
+      setFirstSyncDone(false);
+      return;
+    }
+    if (isLoading) return;
 
     startSyncSubscriber();
-    syncService.fullSync(); // Sync on cold start
+    syncService.fullSync().finally(() => setFirstSyncDone(true));
 
     return () => {
       stopSyncSubscriber();

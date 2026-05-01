@@ -14,9 +14,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   Easing,
   FadeInDown,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -28,21 +30,24 @@ type Slide = { src: ImageSourcePropType; headline: string };
 const SLIDES: Slide[] = [
   {
     src: require("@/assets/onboarding/screen-1-notes.png"),
-    headline: "Just write what\nyou ate. We'll do\nthe **math**.",
+    headline: "Just write what you ate.\nWe'll do the **math**.",
   },
   {
-    src: require("@/assets/onboarding/screen-2-progress.png"),
-    headline: "See your day\nin **one glance**.",
-  },
-  {
-    src: require("@/assets/onboarding/screen-3-nutrition.png"),
+    src: require("@/assets/onboarding/screen-2-nutrition.png"),
     headline: "Every meal,\n**broken down**.",
+  },
+  {
+    src: require("@/assets/onboarding/screen-3-progress.png"),
+    headline: "See your day\nin **one glance**.",
   },
   {
     src: require("@/assets/onboarding/screen-4-add.png"),
     headline: "Snap, scan, or\n**just type it**.",
   },
 ];
+
+const SWIPE_THRESHOLD = 40;
+const SWIPE_VELOCITY_THRESHOLD = 400;
 
 const INTERVAL_MS = 3500;
 const CROSSFADE_DURATION = 600;
@@ -107,7 +112,7 @@ function Dot({ isActive, onPress }: { isActive: boolean; onPress: () => void }) 
       <Animated.View
         style={[
           styles.dot,
-          { backgroundColor: isActive ? Tokens.textPrimary : Tokens.border },
+          { backgroundColor: isActive ? Tokens.textPrimary : Tokens.textTertiary },
           animatedStyle,
         ]}
       />
@@ -151,6 +156,30 @@ export default function GetStartedScreen() {
     if (!paused) startInterval();
   };
 
+  const goNext = () => setIdx((i) => (i + 1) % SLIDES.length);
+  const goPrev = () => setIdx((i) => (i - 1 + SLIDES.length) % SLIDES.length);
+
+  const swipeGesture = Gesture.Pan()
+    .activeOffsetX([-12, 12])
+    .failOffsetY([-20, 20])
+    .onBegin(() => {
+      runOnJS(setPaused)(true);
+    })
+    .onEnd((e) => {
+      const passedDistance = Math.abs(e.translationX) > SWIPE_THRESHOLD;
+      const passedVelocity = Math.abs(e.velocityX) > SWIPE_VELOCITY_THRESHOLD;
+      if (passedDistance || passedVelocity) {
+        if (e.translationX < 0) {
+          runOnJS(goNext)();
+        } else {
+          runOnJS(goPrev)();
+        }
+      }
+    })
+    .onFinalize(() => {
+      runOnJS(setPaused)(false);
+    });
+
   const fontFamily = fontsLoaded ? "IBMPlexSans_700Bold" : null;
 
   return (
@@ -164,16 +193,14 @@ export default function GetStartedScreen() {
         </Animated.View>
       </View>
 
-      {/* Screenshot stack — pause autoplay while pressed */}
-      <Pressable
-        style={styles.imageStack}
-        onPressIn={() => setPaused(true)}
-        onPressOut={() => setPaused(false)}
-      >
-        {SLIDES.map((s, i) => (
-          <CarouselImage key={i} source={s.src} isActive={i === idx} />
-        ))}
-      </Pressable>
+      {/* Screenshot stack — swipe to navigate; pause autoplay while touched */}
+      <GestureDetector gesture={swipeGesture}>
+        <Animated.View style={styles.imageStack}>
+          {SLIDES.map((s, i) => (
+            <CarouselImage key={i} source={s.src} isActive={i === idx} />
+          ))}
+        </Animated.View>
+      </GestureDetector>
 
       {/* Dots */}
       <View style={styles.dotsRow}>
@@ -281,7 +308,7 @@ const styles = StyleSheet.create({
   ctaButton: {
     width: "100%",
     height: 56,
-    borderRadius: 16,
+    borderRadius: 999,
     backgroundColor: Tokens.textPrimary,
     flexDirection: "row",
     alignItems: "center",

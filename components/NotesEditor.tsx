@@ -1086,9 +1086,14 @@ export function NotesEditor({
         }
       }
 
-      // Instant trigger: all food entries removed from document
+      // Instant trigger: an entry line was removed from the document.
+      // Fires on full-line deletion (single or multi-line). Character-level
+      // edits within a line still go through the adaptive debounce below —
+      // this avoids flicker on typo correction while keeping deliberate
+      // deletes snappy.
       const currentFoodLines = parseDocumentForFoodEntries(finalText);
-      if (currentFoodLines.length === 0 && entries.length > 0) {
+      const previousFoodLines = parseDocumentForFoodEntries(oldText);
+      if (currentFoodLines.length < previousFoodLines.length) {
         processDocumentChanges(finalText);
         return;
       }

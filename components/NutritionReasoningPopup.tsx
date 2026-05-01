@@ -1739,13 +1739,17 @@ export function NutritionReasoningPopup({
                           activeOpacity={0.6}
                         >
                           <Text style={styles.quantityText} numberOfLines={1}>
-                            {normalizeUnit(item.unit)
-                              ? `${formatQtyValue(item.qty * (item.servings ?? 1))}${item.unit}`
-                              : `×${
-                                  Number.isInteger(item.servings ?? 1)
-                                    ? (item.servings ?? 1)
-                                    : (item.servings ?? 1).toFixed(1)
-                                }`}
+                            {(() => {
+                              const servings = item.servings ?? 1;
+                              const isWeight = normalizeUnit(item.unit);
+                              if (servings !== 1 || !isWeight) {
+                                const formatted = Number.isInteger(servings)
+                                  ? servings
+                                  : servings.toFixed(1);
+                                return `×${formatted}`;
+                              }
+                              return `${formatQtyValue(item.qty)}${item.unit}`;
+                            })()}
                           </Text>
                           <Ionicons
                             name="pencil"

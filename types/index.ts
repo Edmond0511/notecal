@@ -190,7 +190,7 @@ export interface DailyTotals {
 }
 
 // Goals Feature Types
-export type Sex = 'male' | 'female';
+export type Sex = 'male' | 'female' | 'other';
 
 export type ActivityLevel =
   | 'sedentary'      // Desk job, no exercise (1.2)

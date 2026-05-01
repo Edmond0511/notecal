@@ -130,11 +130,12 @@ export default function AuthScreen() {
       </View>
 
       <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.wordmarkWrap}>
-        <Text style={[styles.wordmark, heroFont]}>Welcome</Text>
-        <Text style={[styles.wordmark, heroFont]}>
-          back<Text style={[styles.wordmark, heroFont, styles.wordmarkAccent]}>.</Text>
+        <Text style={[styles.wordmark, heroFont]}>Eat.</Text>
+        <Text style={[styles.wordmark, heroFont]}>Type.</Text>
+        <Text style={[styles.wordmark, heroFont, styles.wordmarkAccent]}>Track.</Text>
+        <Text style={styles.tagline}>
+          A calorie tracker that feels like a notes app — because it is one.
         </Text>
-        <Text style={styles.tagline}>Sign in to continue tracking.</Text>
       </Animated.View>
 
       <Animated.View entering={FadeInDown.delay(200).duration(500)} style={styles.bottom}>
@@ -147,13 +148,18 @@ export default function AuthScreen() {
             accessibilityLabel="Continue with Apple"
             style={[styles.btn, styles.appleBtn]}
           >
-            {isLoading === 'apple' ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Ionicons name="logo-apple" size={18} color="#fff" />
-                <Text style={[styles.btnLabel, styles.appleBtnLabel]}>Continue with Apple</Text>
-              </>
+            <View style={styles.btnLeft}>
+              {isLoading === 'apple' ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="logo-apple" size={18} color="#fff" />
+                  <Text style={[styles.btnLabel, styles.appleBtnLabel]}>Continue with Apple</Text>
+                </>
+              )}
+            </View>
+            {isLoading !== 'apple' && (
+              <Ionicons name="arrow-forward" size={16} color="#fff" />
             )}
           </TouchableOpacity>
         )}
@@ -166,13 +172,18 @@ export default function AuthScreen() {
           accessibilityLabel="Continue with Google"
           style={[styles.btn, styles.googleBtn]}
         >
-          {isLoading === 'google' ? (
-            <ActivityIndicator color={Tokens.textSecondary} />
-          ) : (
-            <>
-              <GoogleG size={18} />
-              <Text style={[styles.btnLabel, styles.googleBtnLabel]}>Continue with Google</Text>
-            </>
+          <View style={styles.btnLeft}>
+            {isLoading === 'google' ? (
+              <ActivityIndicator color={Tokens.textSecondary} />
+            ) : (
+              <>
+                <GoogleG size={18} />
+                <Text style={[styles.btnLabel, styles.googleBtnLabel]}>Continue with Google</Text>
+              </>
+            )}
+          </View>
+          {isLoading !== 'google' && (
+            <Ionicons name="arrow-forward" size={16} color={Tokens.textPrimary} />
           )}
         </TouchableOpacity>
 
@@ -199,7 +210,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   eyebrowWrap: {
-    paddingTop: 80,
+    paddingTop: 12,
   },
   eyebrow: {
     fontSize: 13,
@@ -210,7 +221,8 @@ const styles = StyleSheet.create({
   },
   wordmarkWrap: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 32,
   },
   wordmark: {
     fontSize: 36,
@@ -235,10 +247,14 @@ const styles = StyleSheet.create({
   btn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     height: 56,
     borderRadius: 30,
-    paddingHorizontal: 24,
+    paddingHorizontal: 22,
+  },
+  btnLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
   },
   appleBtn: {

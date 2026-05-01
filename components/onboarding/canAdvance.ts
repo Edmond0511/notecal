@@ -9,6 +9,8 @@ export interface OnboardingData {
   weightUnit: 'metric' | 'imperial';
   activity: ActivityLevel | null;
   goal: GoalType | null;
+  targetWeightKg: number | null;
+  timelineWeeks: number | null;
 }
 
 export function canAdvance(step: number, data: OnboardingData): boolean {
@@ -23,7 +25,22 @@ export function canAdvance(step: number, data: OnboardingData): boolean {
       return data.activity !== null;
     case 4:
       return data.goal !== null;
-    case 5:
+    case 5: {
+      // Weight target step (only reached when goal is lose/gain)
+      if (
+        data.targetWeightKg == null ||
+        data.targetWeightKg <= 0 ||
+        data.timelineWeeks == null ||
+        data.timelineWeeks <= 0 ||
+        data.weightKg == null
+      ) {
+        return false;
+      }
+      if (data.goal === 'lose') return data.targetWeightKg < data.weightKg;
+      if (data.goal === 'gain') return data.targetWeightKg > data.weightKg;
+      return true;
+    }
+    case 6:
       return true;
     default:
       return false;

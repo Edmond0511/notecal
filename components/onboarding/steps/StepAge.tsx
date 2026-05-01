@@ -1,71 +1,80 @@
 import { Tokens } from '@/constants/theme';
-import React from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import React, { useMemo, useState } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 
 interface Props {
   value: number | null;
   onChange: (v: number | null) => void;
 }
 
-export function StepAge({ value, onChange }: Props) {
-  const handleChange = (text: string) => {
-    if (text === '') return onChange(null);
-    const n = parseInt(text.replace(/[^0-9]/g, ''), 10);
-    if (Number.isNaN(n)) return onChange(null);
-    onChange(n);
-  };
+const MIN_AGE = 13;
+const MAX_AGE = 100;
 
-  const handleBlur = () => {
-    if (value == null) return;
-    if (value < 13) onChange(13);
-    else if (value > 100) onChange(100);
+function ageToBirthDate(age: number): Date {
+  const now = new Date();
+  return new Date(now.getFullYear() - age, now.getMonth(), now.getDate());
+}
+
+function birthDateToAge(date: Date): number {
+  const now = new Date();
+  let age = now.getFullYear() - date.getFullYear();
+  const m = now.getMonth() - date.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < date.getDate())) {
+    age -= 1;
+  }
+  return age;
+}
+
+export function StepAge({ value, onChange }: Props) {
+  const [birthDate, setBirthDate] = useState<Date>(() =>
+    ageToBirthDate(value ?? 25),
+  );
+
+  const { minDate, maxDate } = useMemo(() => {
+    const now = new Date();
+    return {
+      minDate: new Date(now.getFullYear() - MAX_AGE, now.getMonth(), now.getDate()),
+      maxDate: new Date(now.getFullYear() - MIN_AGE, now.getMonth(), now.getDate()),
+    };
+  }, []);
+
+  const handleChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (!date) return;
+    setBirthDate(date);
+    const age = birthDateToAge(date);
+    if (age < MIN_AGE || age > MAX_AGE) {
+      onChange(null);
+      return;
+    }
+    onChange(age);
   };
 
   return (
     <View style={styles.card}>
-      <TextInput
-        value={value == null ? '' : String(value)}
-        onChangeText={handleChange}
-        onBlur={handleBlur}
-        keyboardType="number-pad"
-        autoFocus
-        maxLength={3}
-        style={styles.input}
-        placeholder="0"
-        placeholderTextColor={Tokens.textTertiary}
-        accessibilityLabel="Age in years"
+      <DateTimePicker
+        value={birthDate}
+        mode="date"
+        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+        minimumDate={minDate}
+        maximumDate={maxDate}
+        onChange={handleChange}
+        style={styles.picker}
+        accessibilityLabel="Date of birth"
       />
-      <Text style={styles.unit}>years</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Tokens.surfaceRaised,
+    backgroundColor: Tokens.background,
     borderRadius: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Tokens.border,
-    paddingVertical: 28,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'center',
-    gap: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    overflow: 'hidden',
   },
-  input: {
-    fontFamily: 'IBMPlexSans_700Bold',
-    fontSize: 64,
-    fontWeight: '700',
-    letterSpacing: -2,
-    color: Tokens.textPrimary,
-    minWidth: 120,
-    textAlign: 'right',
-    paddingVertical: 0,
-  },
-  unit: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: Tokens.textSecondary,
+  picker: {
+    height: 200,
   },
 });

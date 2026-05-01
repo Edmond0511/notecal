@@ -412,7 +412,7 @@ function AddReminderPopup({
                 <View style={styles.popupDivider} />
                 <TextInput
                   style={styles.popupInput}
-                  placeholder="Snack, Pre-workout..."
+                  placeholder="Reminder"
                   placeholderTextColor={Tokens.textTertiary}
                   value={name}
                   onChangeText={onNameChange}
@@ -1009,6 +1009,7 @@ const styles = StyleSheet.create({
     color: Tokens.textPrimary,
     padding: 0,
     paddingVertical: 14,
+    letterSpacing: 0,
   },
   popupDivider: {
     height: 1,

@@ -15,11 +15,11 @@ const OPTIONS: {
   subtitle: string;
   iconName: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { value: 'sedentary', title: 'Sedentary', subtitle: 'Desk job, mostly sitting', iconName: 'bed-outline' },
+  { value: 'sedentary', title: 'Sedentary', subtitle: 'Desk job, mostly sitting', iconName: 'body-outline' },
   { value: 'light', title: 'Lightly active', subtitle: '1–3 light workouts a week', iconName: 'walk-outline' },
   { value: 'moderate', title: 'Moderately active', subtitle: '3–5 workouts a week', iconName: 'bicycle-outline' },
-  { value: 'active', title: 'Very active', subtitle: '6+ workouts or physical job', iconName: 'barbell-outline' },
-  { value: 'extra_active', title: 'Extra active', subtitle: 'Athletic training daily', iconName: 'flame-outline' },
+  { value: 'active', title: 'Very active', subtitle: '6+ workouts or physical job', iconName: 'fitness-outline' },
+  { value: 'extra_active', title: 'Extra active', subtitle: 'Athletic training daily', iconName: 'barbell-outline' },
 ];
 
 export function StepActivity({ value, onChange }: Props) {

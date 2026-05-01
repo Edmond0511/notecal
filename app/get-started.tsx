@@ -1,3 +1,4 @@
+import { SignInModal } from "@/components/SignInModal";
 import { Tokens } from "@/constants/theme";
 import { IBMPlexSans_700Bold, useFonts } from "@expo-google-fonts/ibm-plex-sans";
 import { Ionicons } from "@expo/vector-icons";
@@ -125,6 +126,7 @@ export default function GetStartedScreen() {
   const [fontsLoaded] = useFonts({ IBMPlexSans_700Bold });
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [signInVisible, setSignInVisible] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startInterval = useMemo(
@@ -226,13 +228,15 @@ export default function GetStartedScreen() {
           Already have an account?{" "}
           <Text
             style={styles.signInLink}
-            onPress={() => router.push("/auth")}
+            onPress={() => setSignInVisible(true)}
             accessibilityRole="link"
           >
             Sign in
           </Text>
         </Text>
       </View>
+
+      <SignInModal visible={signInVisible} onClose={() => setSignInVisible(false)} />
     </SafeAreaView>
   );
 }

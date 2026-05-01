@@ -704,7 +704,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={[styles.signOutButton, { marginTop: 6 }]}
+                      style={[styles.signOutButton, { marginTop: 10 }]}
                       onPress={handleSignOut}
                       disabled={isSigningOut || isDeletingAccount}
                       activeOpacity={0.7}
@@ -943,7 +943,7 @@ const styles = StyleSheet.create({
   deleteAccountButton: {
     alignItems: "center",
     padding: 16,
-    marginTop: 6,
+    marginTop: 10,
     backgroundColor: Tokens.surfaceRaised,
     borderRadius: 99,
     borderWidth: StyleSheet.hairlineWidth,

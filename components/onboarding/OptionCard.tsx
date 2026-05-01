@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     backgroundColor: Tokens.surfaceRaised,
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Tokens.border,
+    borderColor: 'rgba(0, 0, 0, 0.07)',
     paddingVertical: 16,
     paddingHorizontal: 18,
     minHeight: 56,
@@ -65,8 +65,6 @@ const styles = StyleSheet.create({
   },
   cardSelected: {
     backgroundColor: Tokens.accentTint,
-    borderColor: Tokens.accent,
-    borderWidth: 1,
   },
   icon: { width: 24 },
   textCol: { flex: 1, gap: 2 },

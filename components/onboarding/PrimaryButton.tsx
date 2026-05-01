@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: Tokens.textPrimary,
     height: 56,
-    borderRadius: 16,
+    borderRadius: 9999,
     paddingHorizontal: 20,
     width: '100%',
   },

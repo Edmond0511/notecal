@@ -1,4 +1,5 @@
 import { GoalType } from '@/types';
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { OptionCard } from '../OptionCard';
@@ -8,10 +9,15 @@ interface Props {
   onChange: (v: GoalType) => void;
 }
 
-const OPTIONS: { value: GoalType; title: string; subtitle: string }[] = [
-  { value: 'lose', title: 'Lose weight', subtitle: 'About 0.5 kg / week' },
-  { value: 'maintain', title: 'Maintain', subtitle: 'Stay where I am' },
-  { value: 'gain', title: 'Gain weight', subtitle: 'About 0.25 kg / week' },
+const OPTIONS: {
+  value: GoalType;
+  title: string;
+  subtitle: string;
+  iconName: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { value: 'lose', title: 'Lose Weight', subtitle: 'Calorie deficit to lose weight', iconName: 'trending-down' },
+  { value: 'maintain', title: 'Maintain', subtitle: 'Keep current weight', iconName: 'remove-outline' },
+  { value: 'gain', title: 'Gain Weight', subtitle: 'Calorie surplus to build muscle', iconName: 'trending-up' },
 ];
 
 export function StepGoal({ value, onChange }: Props) {
@@ -22,6 +28,7 @@ export function StepGoal({ value, onChange }: Props) {
           key={opt.value}
           title={opt.title}
           subtitle={opt.subtitle}
+          iconName={opt.iconName}
           selected={value === opt.value}
           onPress={() => onChange(opt.value)}
         />

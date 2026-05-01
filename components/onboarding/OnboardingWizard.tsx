@@ -31,8 +31,11 @@ import { StepBody } from './steps/StepBody';
 import { StepGoal } from './steps/StepGoal';
 import { StepSex } from './steps/StepSex';
 import { StepTargets } from './steps/StepTargets';
+import { StepWeightTarget } from './steps/StepWeightTarget';
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
+const WEIGHT_TARGET_STEP = 5;
+const TARGETS_STEP = 6;
 const SLIDE_DURATION = 280;
 
 interface StepCopy {
@@ -42,11 +45,12 @@ interface StepCopy {
 }
 
 const COPY: StepCopy[] = [
-  { title: "What's your\nsex?", subtitle: 'Used to estimate calories', cta: 'Continue' },
-  { title: 'How old\nare you?', subtitle: 'Helps tune your daily target', cta: 'Continue' },
+  { title: "Choose your\ngender", subtitle: 'Used to estimate calories', cta: 'Continue' },
+  { title: 'Enter your age', subtitle: 'Helps tune your daily target', cta: 'Continue' },
   { title: 'Your height\nand weight', subtitle: 'Use the units you prefer', cta: 'Continue' },
-  { title: 'How active\nare you?', subtitle: "We'll factor this into your TDEE", cta: 'Continue' },
-  { title: "What's your\ngoal?", subtitle: "We'll set a sustainable deficit/surplus", cta: 'See my targets' },
+  { title: 'How active\nare you?', subtitle: 'Helps us estimate your daily calorie burn', cta: 'Continue' },
+  { title: "What's your\ngoal?", subtitle: "We'll set a sustainable deficit/surplus", cta: 'Continue' },
+  { title: 'Pick your\ntarget weight', subtitle: 'And when you want to reach it', cta: 'See my targets' },
   { title: 'Your daily\ntargets', subtitle: 'Computed from Mifflin-St Jeor', cta: 'Start tracking' },
 ];
 
@@ -59,6 +63,8 @@ const initialData: OnboardingData = {
   weightUnit: 'metric',
   activity: null,
   goal: null,
+  targetWeightKg: null,
+  timelineWeeks: null,
 };
 
 export function OnboardingWizard() {
@@ -83,11 +89,17 @@ export function OnboardingWizard() {
     setData((d) => ({ ...d, [key]: value }));
   }, []);
 
+  const skipsWeightTarget = data.goal === 'maintain';
+
   const goNext = useCallback(() => {
     if (step >= TOTAL_STEPS - 1) return;
     setDirection('next');
-    setStep((s) => s + 1);
-  }, [step]);
+    if (step === WEIGHT_TARGET_STEP - 1 && skipsWeightTarget) {
+      setStep(TARGETS_STEP);
+    } else {
+      setStep((s) => s + 1);
+    }
+  }, [step, skipsWeightTarget]);
 
   const goBack = useCallback(() => {
     if (step <= 0) {
@@ -98,8 +110,12 @@ export function OnboardingWizard() {
       return;
     }
     setDirection('back');
-    setStep((s) => s - 1);
-  }, [step, isAuthenticated, router]);
+    if (step === TARGETS_STEP && skipsWeightTarget) {
+      setStep(WEIGHT_TARGET_STEP - 1);
+    } else {
+      setStep((s) => s - 1);
+    }
+  }, [step, isAuthenticated, router, skipsWeightTarget]);
 
   const handleComplete = useCallback(() => {
     const goals = computedGoalsRef.current;
@@ -112,12 +128,16 @@ export function OnboardingWizard() {
   }, [data.heightUnit, data.weightUnit, setGoals, setPreferredUnits, router, isAuthenticated]);
 
   const onPrimary = useCallback(() => {
-    if (step === TOTAL_STEPS - 1) {
+    if (step === TARGETS_STEP) {
       handleComplete();
     } else {
       goNext();
     }
   }, [step, goNext, handleComplete]);
+
+  const visibleTotal = skipsWeightTarget ? TOTAL_STEPS - 1 : TOTAL_STEPS;
+  const visibleStep =
+    step < WEIGHT_TARGET_STEP ? step : skipsWeightTarget ? step - 1 : step;
 
   useFocusEffect(
     useCallback(() => {
@@ -160,6 +180,21 @@ export function OnboardingWizard() {
       case 4:
         return <StepGoal value={data.goal} onChange={(v) => update('goal', v)} />;
       case 5:
+        if (data.weightKg == null || data.goal == null || data.goal === 'maintain') {
+          return null;
+        }
+        return (
+          <StepWeightTarget
+            goal={data.goal}
+            currentWeightKg={data.weightKg}
+            weightUnit={data.weightUnit}
+            targetWeightKg={data.targetWeightKg}
+            timelineWeeks={data.timelineWeeks}
+            onChangeTargetWeightKg={(v) => update('targetWeightKg', v)}
+            onChangeTimelineWeeks={(v) => update('timelineWeeks', v)}
+          />
+        );
+      case 6:
         if (
           data.sex == null ||
           data.age == null ||
@@ -178,6 +213,8 @@ export function OnboardingWizard() {
             weightKg={data.weightKg}
             activity={data.activity}
             goal={data.goal}
+            targetWeightKg={data.targetWeightKg}
+            timelineWeeks={data.timelineWeeks}
             onComputed={(g) => {
               computedGoalsRef.current = g;
             }}
@@ -195,8 +232,8 @@ export function OnboardingWizard() {
       <StatusBar barStyle="dark-content" backgroundColor={Tokens.background} />
       <View style={styles.headerWrap}>
         <StepHeader
-          step={step}
-          total={TOTAL_STEPS}
+          step={visibleStep}
+          total={visibleTotal}
           onBack={goBack}
           showBack={step > 0 || !isAuthenticated}
         />

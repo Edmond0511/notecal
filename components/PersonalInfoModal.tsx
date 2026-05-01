@@ -1,5 +1,6 @@
 import { Tokens } from "@/constants/theme";
 import { useAppStore } from "@/store/app-store";
+import { Sex } from "@/types";
 import {
   calculateBMI,
   cmToFeetInches,
@@ -69,7 +70,7 @@ export function PersonalInfoModal({
   // Editing state
   const [editingField, setEditingField] = useState<EditingField>(null);
   const [editAge, setEditAge] = useState("");
-  const [editSex, setEditSex] = useState<"male" | "female">("male");
+  const [editSex, setEditSex] = useState<Sex>("male");
   const [editHeightCm, setEditHeightCm] = useState("");
   const [editHeightFeet, setEditHeightFeet] = useState("");
   const [editHeightInches, setEditHeightInches] = useState("");
@@ -317,7 +318,7 @@ export function PersonalInfoModal({
                   isEditing && styles.metricValueEditing,
                 ]}
               >
-                {editSex === "male" ? "Male" : "Female"}
+                {editSex === "male" ? "Male" : editSex === "female" ? "Female" : "Other"}
               </Text>
             )}
             {field === "height" && (

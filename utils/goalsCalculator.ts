@@ -52,6 +52,7 @@ const MIN_CARBS_G = 50;
 const MIN_CALORIES: Record<Sex, number> = {
   male: 1500,
   female: 1200,
+  other: 1350,
 };
 
 /**
@@ -68,8 +69,11 @@ export function calculateBMR(
 
   if (sex === 'male') {
     return Math.round(baseBMR + 5);
-  } else {
+  } else if (sex === 'female') {
     return Math.round(baseBMR - 161);
+  } else {
+    // 'other' — average of the male/female offsets ((+5 + -161) / 2 = -78)
+    return Math.round(baseBMR - 78);
   }
 }
 

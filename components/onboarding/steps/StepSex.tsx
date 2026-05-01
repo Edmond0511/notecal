@@ -21,6 +21,11 @@ export function StepSex({ value, onChange }: Props) {
         selected={value === 'male'}
         onPress={() => onChange('male')}
       />
+      <OptionCard
+        title="Other"
+        selected={value === 'other'}
+        onPress={() => onChange('other')}
+      />
     </View>
   );
 }

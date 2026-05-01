@@ -13,13 +13,25 @@ interface Props {
   weightKg: number;
   activity: ActivityLevel;
   goal: GoalType;
+  targetWeightKg?: number | null;
+  timelineWeeks?: number | null;
   onComputed: (g: UserGoals) => void;
 }
 
 const RING_SIZE = 200;
 const RING_STROKE = 14;
 
-export function StepTargets({ sex, age, heightCm, weightKg, activity, goal, onComputed }: Props) {
+export function StepTargets({
+  sex,
+  age,
+  heightCm,
+  weightKg,
+  activity,
+  goal,
+  targetWeightKg,
+  timelineWeeks,
+  onComputed,
+}: Props) {
   const computed = useMemo(
     () =>
       calculateGoals({
@@ -31,8 +43,10 @@ export function StepTargets({ sex, age, heightCm, weightKg, activity, goal, onCo
         goalType: goal,
         proteinPreference: 'standard',
         carbPreference: 'standard',
+        targetWeightKg: targetWeightKg ?? undefined,
+        timelineWeeks: timelineWeeks ?? undefined,
       }),
-    [sex, age, heightCm, weightKg, activity, goal],
+    [sex, age, heightCm, weightKg, activity, goal, targetWeightKg, timelineWeeks],
   );
 
   React.useEffect(() => {

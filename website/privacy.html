@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy Policy — NoteCal</title>
+    <meta name="description" content="How NoteCal collects, stores, and protects your information." />
+    <link rel="icon" href="assets/favicon.png" type="image/png" />
+    <meta name="theme-color" content="#1A6872" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a href="index.html" class="brand">
+          <img src="assets/icon.png" alt="" class="brand-mark" />
+          <span class="brand-name">NoteCal</span>
+        </a>
+        <nav class="site-nav">
+          <a href="privacy.html">Privacy</a>
+          <a href="terms.html">Terms</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="legal">
+      <div class="container-narrow">
+        <h1>Privacy Policy</h1>
+        <p class="legal-meta">Effective May 1, 2026</p>
+
+        <p>
+          NoteCal ("we", "our", or "the app") is built around a simple idea:
+          tracking food should be fast, and your data should stay yours. This
+          policy explains what we collect, how we store it, and the choices you
+          have. We do not sell your data, and we do not use it for advertising.
+        </p>
+
+        <h2>1. Information we collect</h2>
+        <p>We only collect what's needed to make the app work:</p>
+        <ul>
+          <li>
+            <strong>Account information.</strong> If you choose to sign in, we
+            receive your email address and a unique account identifier from
+            Google or Apple via OAuth. We do not receive your password.
+          </li>
+          <li>
+            <strong>Food entries.</strong> The text you enter (e.g.
+            "chicken breast, 150g") and the nutrition information our system
+            resolves for it.
+          </li>
+          <li>
+            <strong>Personal health metrics.</strong> If you choose to set up
+            personalized goals, the wizard collects your sex, age, height,
+            weight, activity level, and goal type to compute your daily
+            calorie and macro targets. Body fat percentage is optional.
+          </li>
+          <li>
+            <strong>Weight tracking entries.</strong> Weight values, optional
+            notes, and the date of each entry.
+          </li>
+        </ul>
+
+        <h2>2. How your data is stored</h2>
+        <p>
+          NoteCal is <strong>local-first</strong>. Your entries, goals, and
+          history are saved directly on your device using encrypted local
+          storage. The app works fully offline.
+        </p>
+        <p>
+          If you sign in, your data is synced to our hosted database
+          (Supabase, a managed Postgres provider) so it stays consistent across
+          your devices. Sync is bidirectional and uses
+          <strong>row-level security</strong> — only you can read or write your
+          own records.
+        </p>
+
+        <h2>3. AI processing</h2>
+        <p>
+          To resolve nutrition values, the text of your food entries is sent to
+          Google Gemini through our serverless edge function. Frequently
+          requested entries are cached for up to 7 days on our server to reduce
+          repeat AI calls. The cache stores food text and resolved nutrition
+          only — it does not associate cached results with a specific user.
+        </p>
+
+        <h2>4. Authentication</h2>
+        <p>
+          We use Supabase Auth with Google Sign-In and Apple Sign-In. You can
+          use the app without an account; signing in is required only for
+          cross-device sync.
+        </p>
+
+        <h2>5. Photos</h2>
+        <p>
+          Photos you attach to weight-tracking entries are stored
+          <strong>only on your device</strong>. They are not uploaded to our
+          servers and they do not sync across devices.
+        </p>
+
+        <h2>6. Data sharing</h2>
+        <p>
+          We do not sell, rent, or share your personal information with
+          advertisers, brokers, or analytics platforms. The only third parties
+          that process your data are the infrastructure providers required to
+          operate the service:
+        </p>
+        <ul>
+          <li><strong>Supabase</strong> — hosted database, authentication, and edge functions.</li>
+          <li><strong>Google Gemini</strong> — AI nutrition resolution.</li>
+          <li><strong>Apple / Google</strong> — only if you sign in with their identity providers.</li>
+        </ul>
+
+        <h2>7. Your rights</h2>
+        <p>You can:</p>
+        <ul>
+          <li><strong>Access and edit</strong> any entry directly in the app.</li>
+          <li>
+            <strong>Delete your account</strong> from the in-app settings. This
+            removes all of your records from our servers. Data stored locally on
+            your device is also cleared.
+          </li>
+          <li>
+            <strong>Use the app without signing in</strong>, in which case no
+            data ever leaves your device.
+          </li>
+        </ul>
+
+        <h2>8. Children's privacy</h2>
+        <p>
+          NoteCal is intended for users 18 and older. The goals wizard requires
+          confirmation that you are at least 18. We do not knowingly collect
+          information from children under 18.
+        </p>
+
+        <h2>9. Security</h2>
+        <p>
+          Data in transit is encrypted using TLS. Local storage on your device
+          is protected by the operating system's app sandbox. While no system
+          can be guaranteed perfectly secure, we follow industry-standard
+          practices to protect your information.
+        </p>
+
+        <h2>10. Changes to this policy</h2>
+        <p>
+          If we make material changes to this policy, we will update the
+          effective date above and notify you in the app before the changes
+          take effect.
+        </p>
+
+        <h2>11. Contact</h2>
+        <p>
+          Questions, requests, or concerns? Email
+          <a href="mailto:edmondyang11@gmail.com">edmondyang11@gmail.com</a>.
+        </p>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <span class="footer-copy">© 2026 NoteCal</span>
+        <nav class="footer-links">
+          <a href="privacy.html">Privacy</a>
+          <a href="terms.html">Terms</a>
+          <a href="mailto:edmondyang11@gmail.com">Contact</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -20,13 +20,13 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthScreen = segments[0] === 'auth';
+    const seg = segments[0];
+    const inPreAuthFlow =
+      seg === 'get-started' || seg === 'auth' || seg === 'onboarding';
 
-    if (!isAuthenticated && !inAuthScreen) {
-      // Redirect to auth if not authenticated and not already on auth screen
-      router.replace('/auth');
-    } else if (isAuthenticated && inAuthScreen) {
-      // Redirect to main app if authenticated and on auth screen
+    if (!isAuthenticated && !inPreAuthFlow) {
+      router.replace('/get-started');
+    } else if (isAuthenticated && inPreAuthFlow) {
       router.replace('/');
     }
   }, [isAuthenticated, isLoading, segments]);
@@ -64,6 +64,8 @@ function RootLayoutNav() {
     <ThemeProvider value={DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="get-started" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>

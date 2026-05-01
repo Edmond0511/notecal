@@ -232,8 +232,15 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
     setIsDeletingAccount(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     try {
-      const { error } = await supabase.functions.invoke("account-delete");
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke("account-delete");
+      if (error) {
+        console.error("[delete-account] invoke error:", error);
+        throw error;
+      }
+      if (data?.error) {
+        console.error("[delete-account] function returned error:", data.error);
+        throw new Error(data.error);
+      }
       // Sign out locally — triggers AuthContext SIGNED_OUT handler
       // which runs clearUserData(), stops sync services, clears queues
       await supabase.auth.signOut();
@@ -241,8 +248,10 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onClose();
     } catch (error) {
+      console.error("[delete-account] failed:", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Error", "Failed to delete account. Please try again.");
+      const message = error instanceof Error ? error.message : "Please try again.";
+      Alert.alert("Error", `Failed to delete account. ${message}`);
     } finally {
       setIsDeletingAccount(false);
     }

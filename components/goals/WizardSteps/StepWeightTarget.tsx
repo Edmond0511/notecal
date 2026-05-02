@@ -1,15 +1,12 @@
 import { Tokens } from '@/constants/theme';
 import { StepWeightTarget as OnboardingStepWeightTarget } from '@/components/onboarding/steps/StepWeightTarget';
 import { GoalType } from '@/types';
-import { kgToLbs } from '@/utils/goalsCalculator';
-import { Ionicons } from '@expo/vector-icons';
+import { calculateBMR, calculateTDEE, kgToLbs } from '@/utils/goalsCalculator';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { WizardFormData } from '../GoalsWizard';
 
 const WEEKS_PER_MONTH = 52 / 12;
-const AGGRESSIVE_LOSS_KG_PER_WEEK = 0.9;
-const AGGRESSIVE_GAIN_KG_PER_WEEK = 0.45;
 
 interface StepWeightTargetProps {
   formData: WizardFormData;
@@ -36,6 +33,25 @@ export function StepWeightTarget({
 
   // Goal must be lose|gain here (goals wizard only renders this step then)
   const goal = (formData.goalType ?? 'lose') as Exclude<GoalType, 'maintain'>;
+
+  const heightCm = formData.heightUseImperial
+    ? ((parseFloat(formData.heightFeet) || 0) * 12 +
+        (parseFloat(formData.heightInches) || 0)) *
+      2.54
+    : parseFloat(formData.heightCm) || 0;
+  const age = parseInt(formData.age, 10) || 0;
+
+  const tdee =
+    formData.sex != null &&
+    formData.activityLevel != null &&
+    age > 0 &&
+    heightCm > 0 &&
+    currentWeightKg > 0
+      ? calculateTDEE(
+          calculateBMR(formData.sex, currentWeightKg, heightCm, age),
+          formData.activityLevel,
+        )
+      : undefined;
 
   const handleTargetChange = (kg: number | null) => {
     if (kg == null) {
@@ -68,15 +84,6 @@ export function StepWeightTarget({
     );
   }
 
-  const weeklyRateKg =
-    targetWeightKg && timelineWeeks && timelineWeeks > 0
-      ? Math.abs(targetWeightKg - currentWeightKg) / timelineWeeks
-      : 0;
-  const aggressive =
-    goal === 'lose'
-      ? weeklyRateKg > AGGRESSIVE_LOSS_KG_PER_WEEK
-      : weeklyRateKg > AGGRESSIVE_GAIN_KG_PER_WEEK;
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Pick your{`\n`}target weight</Text>
@@ -91,18 +98,9 @@ export function StepWeightTarget({
           timelineWeeks={timelineWeeks}
           onChangeTargetWeightKg={handleTargetChange}
           onChangeTimelineWeeks={handleTimelineChange}
+          sex={formData.sex ?? undefined}
+          tdee={tdee}
         />
-
-        {aggressive && (
-          <View style={styles.cautionBox}>
-            <Ionicons name="warning" size={16} color={Tokens.error} />
-            <Text style={styles.cautionText}>
-              {goal === 'lose'
-                ? 'This pace exceeds ~0.9 kg/week (~2 lb/week). Consider a longer timeline for sustainable results.'
-                : 'This pace exceeds ~0.45 kg/week (~1 lb/week). Consider a longer timeline to minimize fat gain.'}
-            </Text>
-          </View>
-        )}
       </View>
     </View>
   );
@@ -133,20 +131,5 @@ const styles = StyleSheet.create({
   helperText: {
     fontSize: 14,
     color: Tokens.textSecondary,
-  },
-  cautionBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    marginTop: 20,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: Tokens.errorTint,
-  },
-  cautionText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-    color: Tokens.error,
   },
 });

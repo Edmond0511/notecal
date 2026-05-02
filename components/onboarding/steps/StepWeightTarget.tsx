@@ -1,6 +1,8 @@
 import { Tokens } from '@/constants/theme';
-import { GoalType } from '@/types';
-import { kgToLbs, lbsToKg } from '@/utils/goalsCalculator';
+import { GoalType, Sex } from '@/types';
+import { calculateGoalAdjustment, kgToLbs, lbsToKg } from '@/utils/goalsCalculator';
+import { assessPace } from '@/utils/paceAdvisor';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
@@ -29,6 +31,8 @@ interface Props {
   timelineWeeks: number | null;
   onChangeTargetWeightKg: (kg: number | null) => void;
   onChangeTimelineWeeks: (weeks: number | null) => void;
+  sex?: Sex;
+  tdee?: number;
 }
 
 export function StepWeightTarget({
@@ -39,6 +43,8 @@ export function StepWeightTarget({
   timelineWeeks,
   onChangeTargetWeightKg,
   onChangeTimelineWeeks,
+  sex,
+  tdee,
 }: Props) {
   const isImperial = weightUnit === 'imperial';
   const unitLabel = isImperial ? 'lbs' : 'kg';
@@ -130,6 +136,38 @@ export function StepWeightTarget({
     };
   }, [targetWeightKg, timelineWeeks, currentWeightKg, isImperial, unitLabel]);
 
+  const paceAssessment = useMemo(() => {
+    if (
+      targetWeightKg == null ||
+      timelineWeeks == null ||
+      timelineWeeks <= 0 ||
+      currentWeightKg <= 0
+    ) {
+      return null;
+    }
+    const dailyKcalAdjustment = calculateGoalAdjustment(
+      currentWeightKg,
+      targetWeightKg,
+      timelineWeeks,
+    );
+    return assessPace({
+      goal,
+      sex,
+      currentWeightKg,
+      targetWeightKg,
+      timelineWeeks,
+      tdee,
+      dailyKcalAdjustment,
+    });
+  }, [
+    goal,
+    sex,
+    currentWeightKg,
+    targetWeightKg,
+    timelineWeeks,
+    tdee,
+  ]);
+
   return (
     <View style={styles.container}>
       <View style={styles.heroBlock}>
@@ -179,6 +217,24 @@ export function StepWeightTarget({
           <Text style={styles.summaryDate}>Reach by {summary.date}</Text>
         </View>
       )}
+
+      {paceAssessment && paceAssessment.level !== 'safe' && paceAssessment.message && (
+        <PaceCallout message={paceAssessment.message} />
+      )}
+    </View>
+  );
+}
+
+function PaceCallout({ message }: { message: string }) {
+  return (
+    <View style={styles.calloutBox}>
+      <Ionicons
+        name="warning"
+        size={16}
+        color={Tokens.error}
+        style={styles.calloutIcon}
+      />
+      <Text style={styles.calloutText}>{message}</Text>
     </View>
   );
 }
@@ -362,5 +418,22 @@ const styles = StyleSheet.create({
   summaryDate: {
     fontSize: 13,
     color: Tokens.textSecondary,
+  },
+  calloutBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: Tokens.errorTint,
+  },
+  calloutIcon: {
+    marginTop: 1,
+  },
+  calloutText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: Tokens.error,
   },
 });

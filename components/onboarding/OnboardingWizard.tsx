@@ -31,6 +31,7 @@ import { StepMacros } from "./steps/StepMacros";
 import { StepSex } from "./steps/StepSex";
 import { StepTargets } from "./steps/StepTargets";
 import { StepWeightTarget } from "./steps/StepWeightTarget";
+import { calculateBMR, calculateTDEE } from "@/utils/goalsCalculator";
 
 const TOTAL_STEPS = 8;
 const WEIGHT_TARGET_STEP = 5;
@@ -243,7 +244,7 @@ export function OnboardingWizard() {
         return (
           <StepGoal value={data.goal} onChange={(v) => update("goal", v)} />
         );
-      case 5:
+      case 5: {
         if (
           data.weightKg == null ||
           data.goal == null ||
@@ -251,6 +252,16 @@ export function OnboardingWizard() {
         ) {
           return null;
         }
+        const tdee =
+          data.sex != null &&
+          data.age != null &&
+          data.heightCm != null &&
+          data.activity != null
+            ? calculateTDEE(
+                calculateBMR(data.sex, data.weightKg, data.heightCm, data.age),
+                data.activity,
+              )
+            : undefined;
         return (
           <StepWeightTarget
             goal={data.goal}
@@ -260,8 +271,11 @@ export function OnboardingWizard() {
             timelineWeeks={data.timelineWeeks}
             onChangeTargetWeightKg={(v) => update("targetWeightKg", v)}
             onChangeTimelineWeeks={(v) => update("timelineWeeks", v)}
+            sex={data.sex ?? undefined}
+            tdee={tdee}
           />
         );
+      }
       case 6:
         return (
           <StepMacros

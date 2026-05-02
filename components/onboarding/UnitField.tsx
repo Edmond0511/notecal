@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
     color: Tokens.textPrimary,
     padding: 0,
-    minWidth: 36,
+    minWidth: 56,
     textAlign: 'left',
     includeFontPadding: false,
   },

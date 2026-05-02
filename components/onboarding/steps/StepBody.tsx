@@ -1,5 +1,5 @@
 import { cmToFeetInches, feetInchesToCm, kgToLbs, lbsToKg } from '@/utils/goalsCalculator';
-import React, { useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { UnitField } from '../UnitField';
 
@@ -20,6 +20,16 @@ const parseNum = (s: string): number | null => {
   return Number.isNaN(n) ? null : n;
 };
 
+const cmToStr = (cm: number | null) => (cm == null ? '' : String(Math.round(cm)));
+const cmToFeetStr = (cm: number | null) =>
+  cm == null ? '' : String(cmToFeetInches(cm).feet);
+const cmToInchesStr = (cm: number | null) =>
+  cm == null ? '' : String(cmToFeetInches(cm).inches);
+const kgToStr = (kg: number | null, unit: 'metric' | 'imperial') => {
+  if (kg == null) return '';
+  return unit === 'metric' ? String(Math.round(kg)) : String(Math.round(kgToLbs(kg)));
+};
+
 export function StepBody({
   heightCm,
   weightKg,
@@ -30,16 +40,25 @@ export function StepBody({
   onChangeHeightUnit,
   onChangeWeightUnit,
 }: Props) {
-  const heightCmStr = heightCm == null ? '' : String(Math.round(heightCm));
-  const { feet, inches } = useMemo(
-    () => (heightCm == null ? { feet: 0, inches: 0 } : cmToFeetInches(heightCm)),
-    [heightCm],
-  );
-  const feetStr = heightCm == null ? '' : String(feet);
-  const inchesStr = heightCm == null ? '' : String(inches);
+  // Local draft strings so typed values don't round-trip through unit conversion
+  // (e.g., typing "13" in inches would normalize to "1 ft 1 in" without this).
+  const [cmStr, setCmStr] = useState(() => cmToStr(heightCm));
+  const [feetStr, setFeetStr] = useState(() => cmToFeetStr(heightCm));
+  const [inchesStr, setInchesStr] = useState(() => cmToInchesStr(heightCm));
+  const [weightStr, setWeightStr] = useState(() => kgToStr(weightKg, weightUnit));
 
-  const weightKgStr = weightKg == null ? '' : String(Math.round(weightKg));
-  const weightLbsStr = weightKg == null ? '' : String(Math.round(kgToLbs(weightKg)));
+  // When the unit toggles, resync drafts from canonical state in the new unit.
+  useEffect(() => {
+    setCmStr(cmToStr(heightCm));
+    setFeetStr(cmToFeetStr(heightCm));
+    setInchesStr(cmToInchesStr(heightCm));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heightUnit]);
+
+  useEffect(() => {
+    setWeightStr(kgToStr(weightKg, weightUnit));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weightUnit]);
 
   return (
     <View style={styles.container}>
@@ -47,10 +66,10 @@ export function StepBody({
         <UnitField
           kind="single"
           label="Height"
-          value={heightCmStr}
+          value={cmStr}
           onChangeValue={(s) => {
-            const n = parseNum(s);
-            onChangeHeightCm(n);
+            setCmStr(s);
+            onChangeHeightCm(parseNum(s));
           }}
           unit="cm"
           unitOptions={['cm', 'ft']}
@@ -63,16 +82,26 @@ export function StepBody({
           primary={feetStr}
           primaryUnit="ft"
           primaryOnChange={(s) => {
-            const f = parseNum(s) ?? 0;
-            const i = parseNum(inchesStr) ?? 0;
-            onChangeHeightCm(feetInchesToCm(f, i));
+            setFeetStr(s);
+            const f = parseNum(s);
+            const i = parseNum(inchesStr);
+            if (f == null && i == null) {
+              onChangeHeightCm(null);
+            } else {
+              onChangeHeightCm(feetInchesToCm(f ?? 0, i ?? 0));
+            }
           }}
           secondary={inchesStr}
           secondaryUnit="in"
           secondaryOnChange={(s) => {
-            const f = parseNum(feetStr) ?? 0;
-            const i = parseNum(s) ?? 0;
-            onChangeHeightCm(feetInchesToCm(f, i));
+            setInchesStr(s);
+            const f = parseNum(feetStr);
+            const i = parseNum(s);
+            if (f == null && i == null) {
+              onChangeHeightCm(null);
+            } else {
+              onChangeHeightCm(feetInchesToCm(f ?? 0, i ?? 0));
+            }
           }}
           unit="ft"
           unitOptions={['cm', 'ft']}
@@ -82,8 +111,9 @@ export function StepBody({
       <UnitField
         kind="single"
         label="Weight"
-        value={weightUnit === 'metric' ? weightKgStr : weightLbsStr}
+        value={weightStr}
         onChangeValue={(s) => {
+          setWeightStr(s);
           const n = parseNum(s);
           if (n == null) return onChangeWeightKg(null);
           onChangeWeightKg(weightUnit === 'metric' ? n : lbsToKg(n));

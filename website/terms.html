@@ -3,30 +3,35 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Terms of Service — NoteCal</title>
+    <title>Terms — NoteCal</title>
     <meta name="description" content="The terms that govern your use of NoteCal." />
     <link rel="icon" href="assets/favicon.png" type="image/png" />
-    <meta name="theme-color" content="#1A6872" />
+    <meta name="theme-color" content="#FAFAFA" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="site-header">
-      <div class="container">
-        <a href="index.html" class="brand">
-          <img src="assets/icon.png" alt="" class="brand-mark" />
-          <span class="brand-name">NoteCal</span>
-        </a>
-        <nav class="site-nav">
-          <a href="privacy.html">Privacy</a>
-          <a href="terms.html">Terms</a>
+    <header class="nav">
+      <div class="shell nav__inner">
+        <a href="index.html" class="wordmark">NoteCal</a>
+        <nav class="nav__links" aria-label="Primary">
+          <a href="privacy.html">Privacy Policy</a>
+          <a href="terms.html">Terms of Service</a>
         </nav>
       </div>
     </header>
 
     <main class="legal">
-      <div class="container-narrow">
-        <h1>Terms of Service</h1>
-        <p class="legal-meta">Effective May 1, 2026</p>
+      <div class="shell shell--narrow">
+        <h1 class="legal__title">Terms</h1>
+        <p class="legal__meta">Effective May 1, 2026</p>
 
         <p>
           These terms ("Terms") govern your use of NoteCal ("the app",
@@ -42,8 +47,8 @@
         </p>
 
         <h2>2. Nutrition and health disclaimer</h2>
-        <div class="callout">
-          <strong>Important:</strong> NoteCal is for informational purposes
+        <div class="legal__callout">
+          <strong>Important.</strong> NoteCal is for informational purposes
           only. It is <strong>not</strong> medical, dietetic, nutritional, or
           fitness advice, and it is not a substitute for professional guidance.
           AI-generated nutrition values are estimates and may be inaccurate.
@@ -155,10 +160,10 @@
       </div>
     </main>
 
-    <footer class="site-footer">
-      <div class="container">
-        <span class="footer-copy">© 2026 NoteCal</span>
-        <nav class="footer-links">
+    <footer class="foot">
+      <div class="shell foot__inner">
+        <span class="foot__copy">© 2026 NoteCal</span>
+        <nav class="foot__links" aria-label="Footer">
           <a href="privacy.html">Privacy</a>
           <a href="terms.html">Terms</a>
           <a href="mailto:edmondyang11@gmail.com">Contact</a>

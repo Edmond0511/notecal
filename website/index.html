@@ -3,135 +3,185 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>NoteCal — AI-powered nutrition tracking</title>
-    <meta name="description" content="Type what you ate. NoteCal's AI handles the math — calories, macros, and goals tracked the simple way." />
+    <title>NoteCal — Calorie tracking without the friction.</title>
+    <meta name="description" content="Write what you ate. NoteCal handles the math, macros, and goals." />
     <link rel="icon" href="assets/favicon.png" type="image/png" />
-    <meta name="theme-color" content="#1A6872" />
-    <meta property="og:title" content="NoteCal" />
-    <meta property="og:description" content="AI-powered nutrition tracking. Type what you ate — we'll handle the math." />
+    <meta name="theme-color" content="#FAFAFA" />
+    <meta property="og:title" content="NoteCal — Calorie tracking without the friction." />
+    <meta property="og:description" content="Write what you ate. NoteCal handles the math, macros, and goals." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="assets/icon.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="site-header">
-      <div class="container">
-        <a href="index.html" class="brand">
-          <img src="assets/icon.png" alt="" class="brand-mark" />
-          <span class="brand-name">NoteCal</span>
-        </a>
-        <nav class="site-nav">
-          <a href="privacy.html">Privacy</a>
-          <a href="terms.html">Terms</a>
+    <header class="nav">
+      <div class="shell nav__inner">
+        <a href="index.html" class="wordmark">NoteCal</a>
+        <nav class="nav__links" aria-label="Primary">
+          <a href="privacy.html">Privacy Policy</a>
+          <a href="terms.html">Terms of Service</a>
         </nav>
       </div>
     </header>
 
     <main>
       <section class="hero">
-        <div class="container">
-          <h1>Track nutrition without the friction.</h1>
-          <p class="subhead">
-            Type what you ate. NoteCal's AI handles the math — calories, macros,
-            and goals, all in plain language.
-          </p>
-          <div class="hero-actions">
-            <span class="btn btn-disabled">Coming soon to iOS</span>
-            <a class="btn btn-ghost" href="mailto:edmondyang11@gmail.com?subject=Notify%20me%20when%20NoteCal%20launches">
-              Get notified at launch →
-            </a>
+        <div class="shell hero__inner">
+          <div class="hero__copy">
+            <h1 class="hero__title">
+              Calorie tracking<br />without the friction.
+            </h1>
+            <p class="hero__sub">
+              Write what you ate. NoteCal handles the math, macros, and goals.
+            </p>
+          </div>
+
+          <div class="hero__device">
+            <div class="device" id="carousel" aria-label="App preview">
+              <div class="device__stack">
+                <img
+                  class="slide"
+                  src="assets/screen-1-notes.png"
+                  alt="The NoteCal home screen showing a list of food entries with calorie pills."
+                  loading="eager"
+                  width="1419"
+                  height="2796"
+                />
+                <img
+                  class="slide"
+                  src="assets/screen-2-nutrition.png"
+                  alt="A nutrition details panel showing a macro breakdown for grilled salmon."
+                  loading="lazy"
+                  width="1419"
+                  height="2796"
+                />
+                <img
+                  class="slide"
+                  src="assets/screen-3-progress.png"
+                  alt="Daily progress screen with calorie ring and macro progress."
+                  loading="lazy"
+                  width="1419"
+                  height="2796"
+                />
+                <img
+                  class="slide"
+                  src="assets/screen-4-add.png"
+                  alt="Quick-add menu with options to scan a barcode, log weight, or snap food."
+                  loading="lazy"
+                  width="1419"
+                  height="2796"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       <section class="section">
-        <div class="container">
-          <div class="section-title">
-            <div class="section-eyebrow">How it works</div>
-            <h2>Three lines. One day of food.</h2>
+        <div class="shell">
+          <div class="section__head">
+            <div class="section__kicker">How it works</div>
+            <h2 class="section__title">
+              Three lines. One day of food.
+            </h2>
           </div>
-          <div class="step-grid">
-            <div class="step">
-              <span class="step-num">1</span>
-              <h3>Type what you ate</h3>
-              <p>
-                Plain language, just like a notes app. Try
-                <code>- chicken breast, 150g</code> or <code>- 2 eggs</code>.
-              </p>
-            </div>
-            <div class="step">
-              <span class="step-num">2</span>
-              <h3>AI does the math</h3>
-              <p>
-                Each line is resolved against trusted nutrition databases — with
-                confidence scores and reasoning you can review.
-              </p>
-            </div>
-            <div class="step">
-              <span class="step-num">3</span>
-              <h3>Hit your goals</h3>
-              <p>
-                Personalized calorie and macro targets, weight tracking, and
-                cross-device sync when you sign in.
-              </p>
-            </div>
+
+          <div class="steps">
+            <article class="step">
+              <div class="step__num">01</div>
+              <div class="step__body">
+                <h3>Type what you ate</h3>
+                <p>
+                  Plain language, just like a notes app. Try
+                  <code>chicken breast, 150g</code> or <code>2 eggs</code>.
+                </p>
+              </div>
+            </article>
+
+            <article class="step">
+              <div class="step__num">02</div>
+              <div class="step__body">
+                <h3>The app does the math</h3>
+                <p>
+                  Each line is resolved against trusted nutrition databases —
+                  with confidence scores and reasoning you can review.
+                </p>
+              </div>
+            </article>
+
+            <article class="step">
+              <div class="step__num">03</div>
+              <div class="step__body">
+                <h3>Hit your goals</h3>
+                <p>
+                  Personalized calorie and macro targets, weight tracking, and
+                  cross-device sync when you sign in.
+                </p>
+              </div>
+            </article>
           </div>
         </div>
       </section>
 
       <section class="section">
-        <div class="container">
-          <div class="section-title">
-            <div class="section-eyebrow">Features</div>
-            <h2>Everything you need. Nothing you don't.</h2>
+        <div class="shell">
+          <div class="section__head">
+            <div class="section__kicker">What it does</div>
+            <h2 class="section__title">
+              Everything you need. Nothing you don't.
+            </h2>
           </div>
-          <div class="feature-grid">
-            <div class="feature">
-              <span class="feature-icon" aria-hidden="true">🧠</span>
-              <h3>AI nutrition resolution</h3>
-              <p>
-                Powered by Google Gemini. Handles brands, prep methods, and
-                portion sizes — even when you forget the grams.
+
+          <div class="what">
+            <div class="what__row">
+              <div class="what__label">Nutrition resolution</div>
+              <p class="what__desc">
+                Handles brands, prep methods, and portion sizes — even when you
+                forget the grams. Each estimate ships with reasoning, sources,
+                and a confidence score.
               </p>
             </div>
-            <div class="feature">
-              <span class="feature-icon" aria-hidden="true">🎯</span>
-              <h3>Personalized goals</h3>
-              <p>
+            <div class="what__row">
+              <div class="what__label">Personalized goals</div>
+              <p class="what__desc">
                 A short wizard sets your daily calorie and macro targets using
                 Mifflin–St Jeor and your activity level.
               </p>
             </div>
-            <div class="feature">
-              <span class="feature-icon" aria-hidden="true">⚖️</span>
-              <h3>Weight tracking</h3>
-              <p>
+            <div class="what__row">
+              <div class="what__label">Weight tracking</div>
+              <p class="what__desc">
                 Log weight with optional notes and photos. Trend chart over 30,
                 60, or 90 days.
               </p>
             </div>
-            <div class="feature">
-              <span class="feature-icon" aria-hidden="true">☁️</span>
-              <h3>Cross-device sync</h3>
-              <p>
-                Sign in with Google or Apple to keep your entries, goals, and
-                weight history in sync.
+            <div class="what__row">
+              <div class="what__label">Cross-device sync</div>
+              <p class="what__desc">
+                Sign in with Google or Apple to keep entries, goals, and
+                weight history in sync. No account required to use the app.
               </p>
             </div>
-            <div class="feature">
-              <span class="feature-icon" aria-hidden="true">📡</span>
-              <h3>Works offline</h3>
-              <p>
-                Log anytime. Entries queue locally and resolve automatically when
-                you're back online.
+            <div class="what__row">
+              <div class="what__label">Works offline</div>
+              <p class="what__desc">
+                Log anytime. Entries queue locally and resolve automatically
+                when you're back online.
               </p>
             </div>
-            <div class="feature">
-              <span class="feature-icon" aria-hidden="true">⭐</span>
-              <h3>Saved entries</h3>
-              <p>
-                Save your go-to meals once, reuse them instantly — no extra API
-                calls, no waiting.
+            <div class="what__row">
+              <div class="what__label">Saved entries</div>
+              <p class="what__desc">
+                Save your go-to meals once, reuse them instantly — no extra
+                lookup, no waiting.
               </p>
             </div>
           </div>
@@ -139,28 +189,29 @@
       </section>
 
       <section class="closing">
-        <div class="container-narrow">
-          <h2>Built for people who hate tracking food.</h2>
-          <p>
-            Local-first. No ads. No selling your data. Just a faster way to know
-            what you're eating.
+        <div class="shell shell--narrow">
+          <h2 class="closing__title">
+            For people who hate tracking food.
+          </h2>
+          <p class="closing__sub">
+            Local-first. No ads. No selling your data. Just a faster way to
+            know what you're eating.
           </p>
-          <a class="btn btn-primary" href="mailto:edmondyang11@gmail.com?subject=Notify%20me%20when%20NoteCal%20launches">
-            Get notified at launch
-          </a>
         </div>
       </section>
     </main>
 
-    <footer class="site-footer">
-      <div class="container">
-        <span class="footer-copy">© 2026 NoteCal</span>
-        <nav class="footer-links">
+    <footer class="foot">
+      <div class="shell foot__inner">
+        <span class="foot__copy">© 2026 NoteCal</span>
+        <nav class="foot__links" aria-label="Footer">
           <a href="privacy.html">Privacy</a>
           <a href="terms.html">Terms</a>
           <a href="mailto:edmondyang11@gmail.com">Contact</a>
         </nav>
       </div>
     </footer>
+
+    <script src="script.js" defer></script>
   </body>
 </html>

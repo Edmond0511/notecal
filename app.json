@@ -12,9 +12,12 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.edmond0511.notecal",
       "usesAppleSignIn": true,
+      "usesHealthKit": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Allow NoteCal to scan barcodes on food products"
+        "NSCameraUsageDescription": "Allow NoteCal to scan barcodes on food products",
+        "NSHealthShareUsageDescription": "NoteCal reads your body weight from Apple Health so you can see your full weight history without re-entering it.",
+        "NSHealthUpdateUsageDescription": "NoteCal writes your logged meals (calories, macros, water) and weight entries to Apple Health so they appear alongside your other health data."
       }
     },
     "android": {
@@ -60,6 +63,13 @@
         "expo-notifications",
         {
           "sounds": []
+        }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "NoteCal reads your body weight from Apple Health so you can see your full weight history without re-entering it.",
+          "NSHealthUpdateUsageDescription": "NoteCal writes your logged meals (calories, macros, water) and weight entries to Apple Health so they appear alongside your other health data."
         }
       ]
     ],

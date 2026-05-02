@@ -70,6 +70,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         syncService.setUser(session.user.id);
         photoSyncService.setUser(session.user.id);
         syncService.fullSync();
+        // Health sync runs in parallel; safe to fire-and-forget
+        import('@/services/healthkit/healthSyncService').then(({ healthSyncService }) =>
+          healthSyncService.fullHealthSync(),
+        );
       } else if (event === "SIGNED_OUT") {
         nutritionQueue.clearAll();
         // Archive outgoing user's data before clearing

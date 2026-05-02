@@ -17,6 +17,7 @@ import {
   Dimensions,
   Image,
   Modal,
+  Platform,
   StatusBar,
   StyleSheet,
   Text,
@@ -38,6 +39,7 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AppleHealthModal } from "./AppleHealthModal";
 import { CalendarLegendModal } from "./CalendarLegendModal";
 import { GoalsWizard } from "./goals/GoalsWizard";
 import { NotificationsModal } from "./NotificationsModal";
@@ -92,6 +94,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [showPersonalInfo, setShowPersonalInfo] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
+  const [showAppleHealth, setShowAppleHealth] = useState(false);
   const goals = useAppStore((s) => s.goals);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -576,6 +579,36 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
                       <View style={styles.menuDivider} />
 
+                      {Platform.OS === 'ios' && (
+                        <>
+                          <TouchableOpacity
+                            style={styles.menuItem}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              Haptics.impactAsync(
+                                Haptics.ImpactFeedbackStyle.Light,
+                              );
+                              setShowAppleHealth(true);
+                            }}
+                          >
+                            <Ionicons
+                              name="heart-outline"
+                              size={20}
+                              color={Tokens.textPrimary}
+                              style={{ marginRight: 12 }}
+                            />
+                            <Text style={styles.menuItemText}>Apple Health</Text>
+                            <Ionicons
+                              name="chevron-forward"
+                              size={20}
+                              color={Tokens.textTertiary}
+                            />
+                          </TouchableOpacity>
+
+                          <View style={styles.menuDivider} />
+                        </>
+                      )}
+
                       <TouchableOpacity
                         style={styles.menuItem}
                         activeOpacity={0.7}
@@ -791,6 +824,14 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           <PreferencesModal
             visible={showPreferences}
             onClose={() => setShowPreferences(false)}
+            nested
+          />
+        )}
+
+        {showAppleHealth && (
+          <AppleHealthModal
+            visible={showAppleHealth}
+            onClose={() => setShowAppleHealth(false)}
             nested
           />
         )}

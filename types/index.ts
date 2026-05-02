@@ -142,6 +142,8 @@ export interface WeightEntry {
   photoUri?: string;   // legacy single photo - migrated to photoUris
   photoUris?: string[]; // multiple photo URIs
   createdAt: string;   // ISO string
+  source?: 'manual' | 'health';   // added: provenance for dedup
+  healthSampleId?: string;        // added: HKQuantitySample UUID when imported from Health
 }
 
 export interface MealReminder {

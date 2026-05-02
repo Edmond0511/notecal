@@ -46,6 +46,10 @@ export function canAdvance(step: number, data: OnboardingData): boolean {
       // Macro preferences — defaults to 'standard' so always advanceable
       return true;
     case 7:
+      // Apple Health step — optional, always advanceable on iOS; auto-skipped on Android
+      return true;
+    case 8:
+      // Targets review — always advanceable
       return true;
     default:
       return false;

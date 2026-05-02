@@ -27,17 +27,15 @@ class OfflineReconnectService {
   }
 
   private init() {
-    // Drain pending entries and flush photo uploads on startup if online
     NetInfo.fetch().then((state) => {
       if (state.isConnected) {
         console.log('[reconnect] Online at startup — draining pending entries');
         useAppStore.getState().enqueuePendingEntries();
         photoSyncService.flushUploadQueue();
+        this.runHealthSync();
       }
     });
 
-    // Listen for connectivity changes — schedule drain whenever connected
-    // No wasOffline flag needed; enqueuePendingEntries is a no-op when nothing is pending
     this.netInfoSub = NetInfo.addEventListener((state) => {
       if (state.isConnected) {
         this.scheduleDrain();
@@ -46,8 +44,6 @@ class OfflineReconnectService {
       }
     });
 
-    // Backup: also drain when app returns to foreground
-    // NetInfo events can be unreliable on some devices/simulators
     this.appStateSub = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
         NetInfo.fetch().then((state) => {
@@ -55,6 +51,7 @@ class OfflineReconnectService {
             console.log('[reconnect] App foregrounded while online — draining pending entries');
             useAppStore.getState().enqueuePendingEntries();
             photoSyncService.flushUploadQueue();
+            this.runHealthSync();
           }
         });
       }
@@ -67,7 +64,19 @@ class OfflineReconnectService {
       console.log('[reconnect] Connectivity detected — draining pending entries');
       useAppStore.getState().enqueuePendingEntries();
       photoSyncService.flushUploadQueue();
+      this.runHealthSync();
     }, DEBOUNCE_MS);
+  }
+
+  private async runHealthSync() {
+    try {
+      const { getHealthSettings } = await import('@/services/healthkit/healthSettings');
+      if (!getHealthSettings().healthEnabled) return;
+      const { healthSyncService } = await import('@/services/healthkit/healthSyncService');
+      healthSyncService.fullHealthSync();
+    } catch (e) {
+      console.warn('[reconnect] health sync failed', e);
+    }
   }
 
   private clearDebounce() {

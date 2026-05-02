@@ -10,7 +10,7 @@ import {
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { BackHandler, StatusBar, StyleSheet, Text, View } from "react-native";
+import { BackHandler, Platform, StatusBar, StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import Animated, {
   SlideInLeft,
@@ -31,12 +31,14 @@ import { StepMacros } from "./steps/StepMacros";
 import { StepSex } from "./steps/StepSex";
 import { StepTargets } from "./steps/StepTargets";
 import { StepWeightTarget } from "./steps/StepWeightTarget";
+import { StepHealthConnect } from "./steps/StepHealthConnect";
 import { calculateBMR, calculateTDEE } from "@/utils/goalsCalculator";
 
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 9;
 const WEIGHT_TARGET_STEP = 5;
 const MACROS_STEP = 6;
-const TARGETS_STEP = 7;
+const HEALTH_STEP = 7;
+const TARGETS_STEP = 8;
 const SLIDE_DURATION = 280;
 
 interface StepCopy {
@@ -80,6 +82,11 @@ const COPY: StepCopy[] = [
     title: "Macro preferences",
     subtitle: "Tune your protein and carb split",
     cta: "See my targets",
+  },
+  {
+    title: "Connect Apple\nHealth",
+    subtitle: "Sync meals and weight with the Health app",
+    cta: "Continue",
   },
   {
     title: "Your daily targets",
@@ -132,16 +139,19 @@ export function OnboardingWizard() {
   );
 
   const skipsWeightTarget = data.goal === "maintain";
+  const skipsHealth = Platform.OS !== "ios";
 
   const goNext = useCallback(() => {
     if (step >= TOTAL_STEPS - 1) return;
     setDirection("next");
     if (step === WEIGHT_TARGET_STEP - 1 && skipsWeightTarget) {
       setStep(MACROS_STEP);
+    } else if (step === MACROS_STEP && skipsHealth) {
+      setStep(TARGETS_STEP);
     } else {
       setStep((s) => s + 1);
     }
-  }, [step, skipsWeightTarget]);
+  }, [step, skipsWeightTarget, skipsHealth]);
 
   const goBack = useCallback(() => {
     if (step <= 0) {
@@ -154,10 +164,12 @@ export function OnboardingWizard() {
     setDirection("back");
     if (step === MACROS_STEP && skipsWeightTarget) {
       setStep(WEIGHT_TARGET_STEP - 1);
+    } else if (step === TARGETS_STEP && skipsHealth) {
+      setStep(MACROS_STEP);
     } else {
       setStep((s) => s - 1);
     }
-  }, [step, isAuthenticated, router, skipsWeightTarget]);
+  }, [step, isAuthenticated, router, skipsWeightTarget, skipsHealth]);
 
   const handleComplete = useCallback(() => {
     const goals = computedGoalsRef.current;
@@ -189,9 +201,15 @@ export function OnboardingWizard() {
     }
   }, [step, goNext, handleComplete]);
 
-  const visibleTotal = skipsWeightTarget ? TOTAL_STEPS - 1 : TOTAL_STEPS;
-  const visibleStep =
-    step < WEIGHT_TARGET_STEP ? step : skipsWeightTarget ? step - 1 : step;
+  const visibleTotal =
+    TOTAL_STEPS - (skipsWeightTarget ? 1 : 0) - (skipsHealth ? 1 : 0);
+
+  const visibleStep = (() => {
+    let s = step;
+    if (skipsWeightTarget && step > WEIGHT_TARGET_STEP) s -= 1;
+    if (skipsHealth && step > HEALTH_STEP) s -= 1;
+    return s;
+  })();
 
   useFocusEffect(
     useCallback(() => {
@@ -286,6 +304,8 @@ export function OnboardingWizard() {
           />
         );
       case 7:
+        return <StepHealthConnect />;
+      case 8:
         if (
           data.sex == null ||
           data.age == null ||

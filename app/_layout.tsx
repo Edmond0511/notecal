@@ -61,10 +61,32 @@ function RootLayoutNav() {
     if (isLoading) return;
 
     startSyncSubscriber();
+
+    // Health: start subscriber + observer if enabled, run cold-start sync
+    let cancelled = false;
+    (async () => {
+      const { startHealthSubscriber } = await import('@/services/healthkit/healthSubscriber');
+      const { healthSyncService } = await import('@/services/healthkit/healthSyncService');
+      const { getHealthSettings } = await import('@/services/healthkit/healthSettings');
+      if (cancelled) return;
+      if (getHealthSettings().healthEnabled) {
+        startHealthSubscriber();
+        healthSyncService.startWeightObserver();
+        healthSyncService.fullHealthSync();
+      }
+    })();
+
     syncService.fullSync().finally(() => setFirstSyncDone(true));
 
     return () => {
+      cancelled = true;
       stopSyncSubscriber();
+      (async () => {
+        const { stopHealthSubscriber } = await import('@/services/healthkit/healthSubscriber');
+        const { healthSyncService } = await import('@/services/healthkit/healthSyncService');
+        stopHealthSubscriber();
+        healthSyncService.stopWeightObserver();
+      })();
     };
   }, [isLoading, isAuthenticated]);
 

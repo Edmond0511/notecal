@@ -847,11 +847,11 @@ const styles = StyleSheet.create({
   },
   nameInput: {
     flex: 1,
-    fontSize: 17,
+    fontSize: 22,
     fontFamily: "System",
-    fontWeight: "500",
+    fontWeight: "700",
     color: Tokens.textPrimary,
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
     padding: 0,
   },
   sectionLabel: {
@@ -874,12 +874,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemLabel: {
-    fontSize: 17,
+    fontSize: 16,
     fontFamily: "System",
-    fontWeight: "500",
+    fontWeight: "600",
     color: Tokens.textPrimary,
     letterSpacing: -0.2,
-    lineHeight: 22,
+    lineHeight: 21,
     marginBottom: 8,
   },
   itemMacrosRow: {

@@ -1,4 +1,4 @@
-import { resolveNutrition } from '@/services/nutritionApi';
+import { resolveNutrition, NutritionRateLimitError } from '@/services/nutritionApi';
 import { NutritionResolveResponse } from '@/types';
 
 const MAX_CONCURRENT = 3;
@@ -16,8 +16,30 @@ export interface QueueItem {
 class NutritionQueue {
   private queue: QueueItem[] = [];
   private active = new Map<string, QueueItem>();
+  // When non-zero, the queue is paused until this timestamp (ms since epoch).
+  // Set when the edge function returns 429 so we don't burn the cooldown
+  // window with retries for queued items the server will just reject anyway.
+  private pausedUntil = 0;
+  private resumeTimer: ReturnType<typeof setTimeout> | null = null;
 
   enqueue(item: QueueItem) {
+    // Already in cooldown? Don't bother hitting the server — fail immediately
+    // with the same rate-limit error so the entry gets its "limit reached"
+    // badge right away instead of sitting in 'pending' for up to an hour.
+    if (Date.now() < this.pausedUntil) {
+      const cooldownLeft = Math.ceil((this.pausedUntil - Date.now()) / 1000);
+      const reason = cooldownLeft > 120 ? 'day_limit' : 'minute_limit';
+      const message = reason === 'day_limit'
+        ? 'Daily AI limit reached. Try again tomorrow.'
+        : "You're moving too fast — wait a minute before trying again.";
+      item.onError(
+        new NutritionRateLimitError(message, {
+          reason,
+          retryAfterSeconds: cooldownLeft,
+        }),
+      );
+      return;
+    }
     this.queue.push(item);
     this.drain();
   }
@@ -48,6 +70,18 @@ class NutritionQueue {
   }
 
   private drain() {
+    const now = Date.now();
+    if (now < this.pausedUntil) {
+      if (!this.resumeTimer) {
+        const delay = this.pausedUntil - now + 50;
+        this.resumeTimer = setTimeout(() => {
+          this.resumeTimer = null;
+          this.drain();
+        }, delay);
+      }
+      return;
+    }
+
     while (this.active.size < MAX_CONCURRENT && this.queue.length > 0) {
       const item = this.queue.shift()!;
       this.active.set(item.entryId, item);
@@ -70,6 +104,22 @@ class NutritionQueue {
         item.onResolved(data);
       }
     } catch (err) {
+      if (err instanceof NutritionRateLimitError) {
+        const cooldownMs = err.retryAfterSeconds * 1000;
+        this.pausedUntil = Math.max(this.pausedUntil, Date.now() + cooldownMs);
+        console.warn(
+          `[queue] rate limited (${err.reason ?? 'unknown'}), pausing ${err.retryAfterSeconds}s`,
+        );
+
+        // Fail every item already queued behind us with the same error so
+        // they show the limit badge immediately instead of being stuck in
+        // 'pending' for the entire cooldown window.
+        const queued = this.queue.splice(0);
+        for (const q of queued) {
+          if (!q.isEntryDeleted()) q.onError(err);
+        }
+      }
+
       if (!item.isEntryDeleted()) {
         item.onError(err instanceof Error ? err : new Error(String(err)));
       }

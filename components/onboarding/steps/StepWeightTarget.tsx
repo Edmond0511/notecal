@@ -134,7 +134,6 @@ export function StepWeightTarget({
     <View style={styles.container}>
       <View style={styles.heroBlock}>
         <Text style={styles.heroValue}>{targetDisplay}</Text>
-        <View style={styles.heroAccent} />
         <Text style={styles.heroUnit}>{unitLabel}</Text>
       </View>
 
@@ -267,31 +266,23 @@ const styles = StyleSheet.create({
     gap: 28,
   },
   heroBlock: {
-    alignItems: 'center',
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    gap: 8,
   },
   heroValue: {
-    fontFamily: 'IBMPlexSans_700Bold',
-    fontSize: 72,
+    fontSize: 56,
     fontWeight: '700',
     color: Tokens.textPrimary,
     letterSpacing: -2,
     fontVariant: ['tabular-nums'],
     includeFontPadding: false,
   },
-  heroAccent: {
-    width: 56,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: Tokens.accent,
-    marginTop: 6,
-  },
   heroUnit: {
-    fontSize: 13,
+    fontSize: 20,
     fontWeight: '500',
     color: Tokens.textTertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginTop: 8,
   },
   sliderSection: {
     gap: 6,

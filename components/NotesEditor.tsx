@@ -557,13 +557,18 @@ const WaterBadge = React.memo<{ amountL: number }>(({ amountL }) => (
 WaterBadge.displayName = "WaterBadge";
 
 // Memoized error badge - tap to retry resolution
-const ErrorBadge = React.memo<{ onPress: () => void }>(({ onPress }) => (
+const ErrorBadge = React.memo<{
+  onPress: () => void;
+  reason?: 'rate_limit' | 'unknown';
+}>(({ onPress, reason }) => (
   <TouchableOpacity
     style={styles.inlineError}
     onPress={onPress}
     activeOpacity={0.7}
   >
-    <Text style={styles.errorText}>error</Text>
+    <Text style={styles.errorText}>
+      {reason === 'rate_limit' ? 'limit reached' : 'error'}
+    </Text>
   </TouchableOpacity>
 ));
 ErrorBadge.displayName = "ErrorBadge";
@@ -664,7 +669,7 @@ const IndicatorRow = React.memo<{
               {hasWater && <WaterBadge amountL={waterAmount} />}
             </>
           ) : displayedStatus === "error" ? (
-            <ErrorBadge onPress={handlePress} />
+            <ErrorBadge onPress={handlePress} reason={entry.errorReason} />
           ) : null}
         </RNAnimated.View>
       </View>
@@ -673,6 +678,7 @@ const IndicatorRow = React.memo<{
   (prev, next) =>
     prev.entry.id === next.entry.id &&
     prev.entry.status === next.entry.status &&
+    prev.entry.errorReason === next.entry.errorReason &&
     prev.entry.inlineKcal === next.entry.inlineKcal &&
     prev.entry.items === next.entry.items &&
     prev.yPosition === next.yPosition &&

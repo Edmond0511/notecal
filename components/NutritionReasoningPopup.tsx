@@ -22,6 +22,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useRef, useState } from "react";
 import {
+  Alert,
   Dimensions,
   Image,
   Keyboard,
@@ -36,6 +37,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { NutritionRateLimitError } from "@/services/nutritionApi";
 import {
   Gesture,
   GestureDetector,
@@ -170,6 +172,34 @@ function getFaviconUrl(url: string): string {
   return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
 }
 
+function SourcePill({ url, label }: { url?: string; label: string }) {
+  const [faviconFailed, setFaviconFailed] = useState(false);
+  const showFavicon = !!url && !faviconFailed;
+  return (
+    <TouchableOpacity
+      style={styles.sourcePill}
+      activeOpacity={0.7}
+      onPress={() => {
+        if (url) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          Linking.openURL(url);
+        }
+      }}
+    >
+      {showFavicon && (
+        <Image
+          source={{ uri: getFaviconUrl(url) }}
+          style={styles.sourceFavicon}
+          onError={() => setFaviconFailed(true)}
+        />
+      )}
+      <Text style={styles.sourcePillText} numberOfLines={1}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 function shortenDomain(domain: string): string {
   // Show concise domain labels
   if (domain.includes("fdc.nal.usda.gov")) return "USDA FDC";
@@ -285,29 +315,7 @@ function ParsedText({ text, style, pillLinks }: { text: string; style: any; pill
           {linkParts.map((part, index) => {
             const domain = part.url ? getDomainFromUrl(part.url) : "";
             const label = part.url ? shortenDomain(domain) : part.content;
-            return (
-              <TouchableOpacity
-                key={index}
-                style={styles.sourcePill}
-                activeOpacity={0.7}
-                onPress={() => {
-                  if (part.url) {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    Linking.openURL(part.url);
-                  }
-                }}
-              >
-                {part.url && (
-                  <Image
-                    source={{ uri: getFaviconUrl(part.url) }}
-                    style={styles.sourceFavicon}
-                  />
-                )}
-                <Text style={styles.sourcePillText} numberOfLines={1}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
+            return <SourcePill key={index} url={part.url} label={label} />;
           })}
         </View>
       </View>
@@ -1551,6 +1559,19 @@ export function NutritionReasoningPopup({
       } catch (error) {
         console.error("Error correcting entry:", error);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        if (error instanceof NutritionRateLimitError) {
+          Alert.alert(
+            "AI limit reached",
+            error.reason === "minute_limit"
+              ? "You're moving too fast. Wait a minute and try again."
+              : "Daily AI limit reached. Try again tomorrow.",
+          );
+        } else {
+          Alert.alert(
+            "Couldn't apply correction",
+            "Something went wrong. Please try again.",
+          );
+        }
       } finally {
         setIsCorrecting(false);
       }

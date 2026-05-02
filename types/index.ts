@@ -116,6 +116,9 @@ export interface Entry {
   rawText: string;
   inlineKcal?: number | null;
   status: 'pending' | 'ok' | 'error';
+  // Set when status === 'error' so the UI can render a specific badge
+  // ('rate_limit' renders "limit reached" instead of generic "error').
+  errorReason?: 'rate_limit' | 'unknown';
   items: FoodItem[];
   createdAt: Date;
   updatedAt: Date;

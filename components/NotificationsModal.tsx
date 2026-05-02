@@ -947,7 +947,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderRadius: 100,
-    backgroundColor: "#1A6872",
+    backgroundColor: Tokens.textPrimary,
   },
   doneButtonText: {
     fontSize: 15,

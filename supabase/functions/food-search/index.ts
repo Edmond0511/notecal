@@ -45,7 +45,9 @@ interface DatabaseSearchResult {
 }
 
 function normalizeCacheKey(query: string): string {
-  return "fs:search:" + query.toLowerCase().trim().replace(/\s+/g, " ");
+  // Bump the version suffix to invalidate after changing the nutrient
+  // extraction in _shared/fatsecret.ts.
+  return "fs:search:v2:" + query.toLowerCase().trim().replace(/\s+/g, " ");
 }
 
 function fsSearchResultToResult(food: any): DatabaseSearchResult | null {
@@ -91,7 +93,7 @@ serve(async (req) => {
 
     // --- Detail mode: fetch full food with servings ---
     if (mode === "detail" && foodId) {
-      const detailCacheKey = `fs:food:${foodId}`;
+      const detailCacheKey = `fs:food:v2:${foodId}`;
       const { data: cachedDetail } = await supabase
         .from("food_search_cache")
         .select("results, expires_at")

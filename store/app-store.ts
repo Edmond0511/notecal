@@ -185,6 +185,7 @@ export const useAppStore = create<AppState>()(
                       ...entry,
                       inlineKcal: nutritionData.totals.kcal,
                       status: (nutritionData as any).error ? 'error' as const : 'ok' as const,
+                      errorReason: undefined,
                       items: assignItemIds(nutritionData.resolved, entryId),
                       updatedAt: new Date(),
                     }
@@ -194,12 +195,14 @@ export const useAppStore = create<AppState>()(
           },
           onError: (error) => {
             console.error('Error resolving entry:', error);
+            const errorReason = error instanceof NutritionRateLimitError ? 'rate_limit' as const : 'unknown' as const;
             set((state: AppState) => ({
               entries: state.entries.map((entry: Entry) =>
                 entry.id === entryId
                   ? {
                       ...entry,
                       status: 'error' as const,
+                      errorReason,
                       updatedAt: new Date(),
                     }
                   : entry
@@ -249,7 +252,7 @@ export const useAppStore = create<AppState>()(
     set((state) => ({
       entries: state.entries.map((e) =>
         e.id === id
-          ? { ...e, rawText, status: 'pending' as const, updatedAt: new Date() }
+          ? { ...e, rawText, status: 'pending' as const, errorReason: undefined, updatedAt: new Date() }
           : e
       ),
     }));
@@ -279,6 +282,7 @@ export const useAppStore = create<AppState>()(
                   ...entry,
                   inlineKcal: nutritionData.totals.kcal,
                   status: (nutritionData as any).error ? 'error' as const : 'ok' as const,
+                  errorReason: undefined,
                   items: assignItemIds(nutritionData.resolved, id),
                   updatedAt: new Date(),
                 }
@@ -288,10 +292,11 @@ export const useAppStore = create<AppState>()(
       },
       onError: (error) => {
         console.error('Error resolving updated entry:', error);
+        const errorReason = error instanceof NutritionRateLimitError ? 'rate_limit' as const : 'unknown' as const;
         set((state: AppState) => ({
           entries: state.entries.map((entry: Entry) =>
             entry.id === id
-              ? { ...entry, status: 'error' as const, updatedAt: new Date() }
+              ? { ...entry, status: 'error' as const, errorReason, updatedAt: new Date() }
               : entry
           ),
         }));
@@ -1294,6 +1299,7 @@ export const useAppStore = create<AppState>()(
                         ...e,
                         inlineKcal: nutritionData.totals.kcal,
                         status: (nutritionData as any).error ? 'error' as const : 'ok' as const,
+                        errorReason: undefined,
                         items: assignItemIds(nutritionData.resolved, entry.id),
                         updatedAt: new Date(),
                       }
@@ -1303,10 +1309,11 @@ export const useAppStore = create<AppState>()(
             },
             onError: (error) => {
               console.error('[enqueuePendingEntries] Error resolving entry:', error);
+              const errorReason = error instanceof NutritionRateLimitError ? 'rate_limit' as const : 'unknown' as const;
               set((state: AppState) => ({
                 entries: state.entries.map((e: Entry) =>
                   e.id === entry.id
-                    ? { ...e, status: 'error' as const, updatedAt: new Date() }
+                    ? { ...e, status: 'error' as const, errorReason, updatedAt: new Date() }
                     : e
                 ),
               }));

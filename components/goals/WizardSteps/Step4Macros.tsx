@@ -1,10 +1,8 @@
-import { Tokens } from "@/constants/theme";
-import { CarbPreference, ProteinPreference } from "@/types";
-import * as Haptics from "expo-haptics";
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-
-// Cast icons to IconProp to fix type mismatch between FA packages
+import { Tokens } from '@/constants/theme';
+import { CarbPreference, ProteinPreference } from '@/types';
+import * as Haptics from 'expo-haptics';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface Step4MacrosProps {
   proteinPreference: ProteinPreference;
@@ -18,21 +16,9 @@ const proteinOptions: {
   label: string;
   description: string;
 }[] = [
-  {
-    value: "low",
-    label: "Lower",
-    description: "Lower protein (1.2g/kg body weight)",
-  },
-  {
-    value: "standard",
-    label: "Standard",
-    description: "Balanced protein intake (1.6-2.0g/kg)",
-  },
-  {
-    value: "high",
-    label: "Higher",
-    description: "Extra protein for muscle (2.0-2.2g/kg)",
-  },
+  { value: 'low', label: 'Lower', description: 'Lower protein (1.2g/kg body weight)' },
+  { value: 'standard', label: 'Standard', description: 'Balanced protein intake (1.6–2.0g/kg)' },
+  { value: 'high', label: 'Higher', description: 'Extra protein for muscle (2.0–2.2g/kg)' },
 ];
 
 const carbOptions: {
@@ -40,17 +26,9 @@ const carbOptions: {
   label: string;
   description: string;
 }[] = [
-  {
-    value: "low",
-    label: "Low Carb",
-    description: "Low carb, higher fat approach",
-  },
-  { value: "standard", label: "Standard", description: "Balanced macro split" },
-  {
-    value: "high",
-    label: "High Carb",
-    description: "High carb for fuel, lower fat",
-  },
+  { value: 'low', label: 'Low Carb', description: 'Low carb, higher fat approach' },
+  { value: 'standard', label: 'Standard', description: 'Balanced macro split' },
+  { value: 'high', label: 'High Carb', description: 'High carb for fuel, lower fat' },
 ];
 
 export function Step4Macros({
@@ -59,94 +37,78 @@ export function Step4Macros({
   onProteinChange,
   onCarbChange,
 }: Step4MacrosProps) {
-  const handleProteinSelect = (pref: ProteinPreference) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onProteinChange(pref);
+  const selectProtein = (v: ProteinPreference) => {
+    Haptics.selectionAsync();
+    onProteinChange(v);
   };
-
-  const handleCarbSelect = (pref: CarbPreference) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onCarbChange(pref);
+  const selectCarb = (v: CarbPreference) => {
+    Haptics.selectionAsync();
+    onCarbChange(v);
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Macro Preferences</Text>
-      <Text style={styles.subtitle}>
-        Optional adjustments to customize your macronutrient split
-      </Text>
+      <Text style={styles.title}>Macro preferences</Text>
+      <Text style={styles.subtitle}>Tune your protein and carb split</Text>
 
-      {/* Protein preference card */}
-      <View style={styles.card}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Protein Level</Text>
-        </View>
-        <View style={styles.optionsRow}>
-          {proteinOptions.map((option) => {
-            const isSelected = proteinPreference === option.value;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  styles.optionButton,
-                  isSelected && styles.optionButtonSelected,
-                ]}
-                onPress={() => handleProteinSelect(option.value)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.optionLabel,
-                    isSelected && styles.optionLabelSelected,
-                  ]}
+      <View style={styles.body}>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Protein</Text>
+          <View style={styles.optionsRow}>
+            {proteinOptions.map((opt) => {
+              const isSelected = proteinPreference === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.optionButton, isSelected && styles.optionButtonSelected]}
+                  onPress={() => selectProtein(opt.value)}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={`Protein ${opt.label}`}
                 >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+                  <Text
+                    style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <Text style={styles.description}>
+            {proteinOptions.find((o) => o.value === proteinPreference)?.description}
+          </Text>
         </View>
-        <Text style={styles.optionDescription}>
-          {
-            proteinOptions.find((o) => o.value === proteinPreference)
-              ?.description
-          }
-        </Text>
-      </View>
 
-      {/* Carb preference card */}
-      <View style={styles.card}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Carb Level</Text>
-        </View>
-        <View style={styles.optionsRow}>
-          {carbOptions.map((option) => {
-            const isSelected = carbPreference === option.value;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  styles.optionButton,
-                  isSelected && styles.optionButtonSelected,
-                ]}
-                onPress={() => handleCarbSelect(option.value)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.optionLabel,
-                    isSelected && styles.optionLabelSelected,
-                  ]}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Carbs</Text>
+          <View style={styles.optionsRow}>
+            {carbOptions.map((opt) => {
+              const isSelected = carbPreference === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.optionButton, isSelected && styles.optionButtonSelected]}
+                  onPress={() => selectCarb(opt.value)}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={`Carbs ${opt.label}`}
                 >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+                  <Text
+                    style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <Text style={styles.description}>
+            {carbOptions.find((o) => o.value === carbPreference)?.description}
+          </Text>
         </View>
-        <Text style={styles.optionDescription}>
-          {carbOptions.find((o) => o.value === carbPreference)?.description}
-        </Text>
       </View>
     </View>
   );
@@ -157,86 +119,60 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   title: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#333",
+    fontFamily: 'IBMPlexSans_700Bold',
+    fontSize: 28,
+    letterSpacing: -0.8,
+    lineHeight: 32,
+    color: Tokens.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 24,
+    fontFamily: 'IBMPlexSans_400Regular',
+    fontSize: 15,
+    color: Tokens.textSecondary,
     lineHeight: 20,
+    marginBottom: 24,
+  },
+  body: {
+    gap: 24,
   },
   card: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  sectionIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
+    gap: 12,
   },
   sectionTitle: {
     fontSize: 15,
-    fontWeight: "500",
-    color: "#333",
+    fontWeight: '600',
+    color: Tokens.textPrimary,
+    letterSpacing: -0.2,
   },
   optionsRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 8,
-    marginBottom: 10,
   },
   optionButton: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 16,
-    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: Tokens.surface,
+    borderRadius: 12,
+    alignItems: 'center',
   },
   optionButtonSelected: {
-    backgroundColor: "#E0F2F1",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: Tokens.accentTint,
   },
   optionLabel: {
     fontSize: 14,
-    fontWeight: "500",
-    color: "#666",
+    fontWeight: '500',
+    color: Tokens.textSecondary,
   },
   optionLabelSelected: {
-    color: "#1A6872",
+    color: Tokens.accent,
+    fontWeight: '600',
   },
-  optionDescription: {
+  description: {
     fontSize: 13,
-    color: "#888",
-    textAlign: "center",
-  },
-  infoBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#E0F2F1",
-    padding: 14,
-    borderRadius: 16,
-    gap: 10,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 13,
-    color: "#1A6872",
+    color: Tokens.textSecondary,
+    textAlign: 'center',
     lineHeight: 18,
   },
 });

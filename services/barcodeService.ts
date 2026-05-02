@@ -47,7 +47,10 @@ export async function lookupBarcode(barcode: string): Promise<BarcodeProduct> {
     if (body?.error === 'not_found') {
       throw new BarcodeNotFoundError(barcode);
     }
-    throw new BarcodeLookupError(body?.error || error.message || 'Failed to look up barcode');
+    if (status === 429) {
+      throw new BarcodeLookupError("Too many requests — try again in a moment");
+    }
+    throw new BarcodeLookupError("Couldn't look up this barcode");
   }
 
   if (!data || !data.servings?.length) {

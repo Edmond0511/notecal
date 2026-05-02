@@ -21,6 +21,7 @@ import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { supabase } from "@/lib/supabase";
 import {
   NutritionNotFoodError,
+  NutritionRateLimitError,
   resolveNutritionFromPhoto,
 } from "@/services/nutritionApi";
 import { useAppStore } from "@/store/app-store";
@@ -308,6 +309,14 @@ export default function HomeScreen() {
           setPhotoToastState({
             type: "error",
             message: "No food items identified",
+          });
+        } else if (error instanceof NutritionRateLimitError) {
+          setPhotoToastState({
+            type: "error",
+            message:
+              error.reason === "minute_limit"
+                ? "Slow down — try again in a minute"
+                : "Daily AI limit reached. Try again tomorrow.",
           });
         } else {
           console.error("[HomeScreen] Photo processing error:", error);

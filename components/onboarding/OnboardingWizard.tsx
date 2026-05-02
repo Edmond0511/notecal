@@ -1,41 +1,41 @@
-import { Tokens } from '@/constants/theme';
-import { useAuth } from '@/contexts/AuthContext';
-import { useAppStore } from '@/store/app-store';
-import { UserGoals } from '@/types';
-import { IBMPlexSans_700Bold, useFonts } from '@expo-google-fonts/ibm-plex-sans';
-import { useFocusEffect, useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import React, { useCallback, useRef, useState } from 'react';
+import { Tokens } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAppStore } from "@/store/app-store";
+import { UserGoals } from "@/types";
 import {
-  BackHandler,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+  IBMPlexSans_400Regular,
+  IBMPlexSans_700Bold,
+  useFonts,
+} from "@expo-google-fonts/ibm-plex-sans";
+import * as Haptics from "expo-haptics";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useRef, useState } from "react";
+import { BackHandler, StatusBar, StyleSheet, Text, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import Animated, {
   SlideInLeft,
   SlideInRight,
   SlideOutLeft,
   SlideOutRight,
   useReducedMotion,
-} from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { canAdvance, OnboardingData } from './canAdvance';
-import { PrimaryButton } from './PrimaryButton';
-import { StepHeader } from './StepHeader';
-import { StepActivity } from './steps/StepActivity';
-import { StepAge } from './steps/StepAge';
-import { StepBody } from './steps/StepBody';
-import { StepGoal } from './steps/StepGoal';
-import { StepSex } from './steps/StepSex';
-import { StepTargets } from './steps/StepTargets';
-import { StepWeightTarget } from './steps/StepWeightTarget';
+} from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { canAdvance, OnboardingData } from "./canAdvance";
+import { PrimaryButton } from "./PrimaryButton";
+import { StepHeader } from "./StepHeader";
+import { StepActivity } from "./steps/StepActivity";
+import { StepAge } from "./steps/StepAge";
+import { StepBody } from "./steps/StepBody";
+import { StepGoal } from "./steps/StepGoal";
+import { StepMacros } from "./steps/StepMacros";
+import { StepSex } from "./steps/StepSex";
+import { StepTargets } from "./steps/StepTargets";
+import { StepWeightTarget } from "./steps/StepWeightTarget";
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 const WEIGHT_TARGET_STEP = 5;
-const TARGETS_STEP = 6;
+const MACROS_STEP = 6;
+const TARGETS_STEP = 7;
 const SLIDE_DURATION = 280;
 
 interface StepCopy {
@@ -45,13 +45,46 @@ interface StepCopy {
 }
 
 const COPY: StepCopy[] = [
-  { title: "Choose your\ngender", subtitle: 'Used to estimate calories', cta: 'Continue' },
-  { title: 'Enter your age', subtitle: 'Helps tune your daily target', cta: 'Continue' },
-  { title: 'Your height\nand weight', subtitle: 'Use the units you prefer', cta: 'Continue' },
-  { title: 'How active\nare you?', subtitle: 'Helps us estimate your daily calorie burn', cta: 'Continue' },
-  { title: "What's your\ngoal?", subtitle: "We'll set a sustainable deficit/surplus", cta: 'Continue' },
-  { title: 'Pick your\ntarget weight', subtitle: 'And when you want to reach it', cta: 'See my targets' },
-  { title: 'Your daily\ntargets', subtitle: 'Computed from Mifflin-St Jeor', cta: 'Start tracking' },
+  {
+    title: "Choose your\ngender",
+    subtitle: "Used to estimate calories",
+    cta: "Continue",
+  },
+  {
+    title: "Enter your age",
+    subtitle: "Helps tune your daily target",
+    cta: "Continue",
+  },
+  {
+    title: "Enter your height\nand weight",
+    subtitle: "Use the units you prefer",
+    cta: "Continue",
+  },
+  {
+    title: "How active are you?",
+    subtitle: "Helps us estimate your daily calorie burn",
+    cta: "Continue",
+  },
+  {
+    title: "What's your goal?",
+    subtitle: "We'll set a sustainable deficit/surplus",
+    cta: "Continue",
+  },
+  {
+    title: "Pick your\ntarget weight",
+    subtitle: "And when you want to reach it",
+    cta: "Continue",
+  },
+  {
+    title: "Macro preferences",
+    subtitle: "Tune your protein and carb split",
+    cta: "See my targets",
+  },
+  {
+    title: "Your daily targets",
+    subtitle: "Computed using Mifflin-St Jeor",
+    cta: "Start tracking",
+  },
 ];
 
 const initialData: OnboardingData = {
@@ -59,12 +92,14 @@ const initialData: OnboardingData = {
   age: null,
   heightCm: null,
   weightKg: null,
-  heightUnit: 'metric',
-  weightUnit: 'metric',
+  heightUnit: "metric",
+  weightUnit: "metric",
   activity: null,
   goal: null,
   targetWeightKg: null,
   timelineWeeks: null,
+  proteinPreference: "standard",
+  carbPreference: "standard",
 };
 
 export function OnboardingWizard() {
@@ -74,28 +109,34 @@ export function OnboardingWizard() {
   const setPreferredUnits = useAppStore((s) => s.setPreferredUnits);
   const preferredUnits = useAppStore((s) => s.preferredUnits);
   const reducedMotion = useReducedMotion();
-  const [fontsLoaded] = useFonts({ IBMPlexSans_700Bold });
+  const [fontsLoaded] = useFonts({
+    IBMPlexSans_400Regular,
+    IBMPlexSans_700Bold,
+  });
 
   const [step, setStep] = useState(0);
-  const [direction, setDirection] = useState<'next' | 'back'>('next');
+  const [direction, setDirection] = useState<"next" | "back">("next");
   const [data, setData] = useState<OnboardingData>(() => ({
     ...initialData,
-    heightUnit: preferredUnits === 'imperial' ? 'imperial' : 'metric',
-    weightUnit: preferredUnits === 'imperial' ? 'imperial' : 'metric',
+    heightUnit: preferredUnits === "imperial" ? "imperial" : "metric",
+    weightUnit: preferredUnits === "imperial" ? "imperial" : "metric",
   }));
   const computedGoalsRef = useRef<UserGoals | null>(null);
 
-  const update = useCallback(<K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
-    setData((d) => ({ ...d, [key]: value }));
-  }, []);
+  const update = useCallback(
+    <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
+      setData((d) => ({ ...d, [key]: value }));
+    },
+    [],
+  );
 
-  const skipsWeightTarget = data.goal === 'maintain';
+  const skipsWeightTarget = data.goal === "maintain";
 
   const goNext = useCallback(() => {
     if (step >= TOTAL_STEPS - 1) return;
-    setDirection('next');
+    setDirection("next");
     if (step === WEIGHT_TARGET_STEP - 1 && skipsWeightTarget) {
-      setStep(TARGETS_STEP);
+      setStep(MACROS_STEP);
     } else {
       setStep((s) => s + 1);
     }
@@ -109,8 +150,8 @@ export function OnboardingWizard() {
       }
       return;
     }
-    setDirection('back');
-    if (step === TARGETS_STEP && skipsWeightTarget) {
+    setDirection("back");
+    if (step === MACROS_STEP && skipsWeightTarget) {
       setStep(WEIGHT_TARGET_STEP - 1);
     } else {
       setStep((s) => s - 1);
@@ -120,12 +161,24 @@ export function OnboardingWizard() {
   const handleComplete = useCallback(() => {
     const goals = computedGoalsRef.current;
     if (!goals) return;
-    const useImperial = data.heightUnit === 'imperial' || data.weightUnit === 'imperial';
-    setPreferredUnits(useImperial ? 'imperial' : 'metric');
+    const useImperial =
+      data.heightUnit === "imperial" || data.weightUnit === "imperial";
+    setPreferredUnits(useImperial ? "imperial" : "metric");
     setGoals(goals);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.replace(isAuthenticated ? '/' : '/auth');
-  }, [data.heightUnit, data.weightUnit, setGoals, setPreferredUnits, router, isAuthenticated]);
+    if (isAuthenticated) {
+      router.replace("/");
+    } else {
+      router.push("/auth");
+    }
+  }, [
+    data.heightUnit,
+    data.weightUnit,
+    setGoals,
+    setPreferredUnits,
+    router,
+    isAuthenticated,
+  ]);
 
   const onPrimary = useCallback(() => {
     if (step === TARGETS_STEP) {
@@ -141,7 +194,7 @@ export function OnboardingWizard() {
 
   useFocusEffect(
     useCallback(() => {
-      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      const sub = BackHandler.addEventListener("hardwareBackPress", () => {
         goBack();
         return true;
       });
@@ -151,17 +204,21 @@ export function OnboardingWizard() {
 
   const enteringAnim = reducedMotion
     ? undefined
-    : (direction === 'next' ? SlideInRight : SlideInLeft).duration(SLIDE_DURATION);
+    : (direction === "next" ? SlideInRight : SlideInLeft).duration(
+        SLIDE_DURATION,
+      );
   const exitingAnim = reducedMotion
     ? undefined
-    : (direction === 'next' ? SlideOutLeft : SlideOutRight).duration(SLIDE_DURATION);
+    : (direction === "next" ? SlideOutLeft : SlideOutRight).duration(
+        SLIDE_DURATION,
+      );
 
   const renderStep = () => {
     switch (step) {
       case 0:
-        return <StepSex value={data.sex} onChange={(v) => update('sex', v)} />;
+        return <StepSex value={data.sex} onChange={(v) => update("sex", v)} />;
       case 1:
-        return <StepAge value={data.age} onChange={(v) => update('age', v)} />;
+        return <StepAge value={data.age} onChange={(v) => update("age", v)} />;
       case 2:
         return (
           <StepBody
@@ -169,18 +226,29 @@ export function OnboardingWizard() {
             weightKg={data.weightKg}
             heightUnit={data.heightUnit}
             weightUnit={data.weightUnit}
-            onChangeHeightCm={(v) => update('heightCm', v)}
-            onChangeWeightKg={(v) => update('weightKg', v)}
-            onChangeHeightUnit={(u) => update('heightUnit', u)}
-            onChangeWeightUnit={(u) => update('weightUnit', u)}
+            onChangeHeightCm={(v) => update("heightCm", v)}
+            onChangeWeightKg={(v) => update("weightKg", v)}
+            onChangeHeightUnit={(u) => update("heightUnit", u)}
+            onChangeWeightUnit={(u) => update("weightUnit", u)}
           />
         );
       case 3:
-        return <StepActivity value={data.activity} onChange={(v) => update('activity', v)} />;
+        return (
+          <StepActivity
+            value={data.activity}
+            onChange={(v) => update("activity", v)}
+          />
+        );
       case 4:
-        return <StepGoal value={data.goal} onChange={(v) => update('goal', v)} />;
+        return (
+          <StepGoal value={data.goal} onChange={(v) => update("goal", v)} />
+        );
       case 5:
-        if (data.weightKg == null || data.goal == null || data.goal === 'maintain') {
+        if (
+          data.weightKg == null ||
+          data.goal == null ||
+          data.goal === "maintain"
+        ) {
           return null;
         }
         return (
@@ -190,11 +258,20 @@ export function OnboardingWizard() {
             weightUnit={data.weightUnit}
             targetWeightKg={data.targetWeightKg}
             timelineWeeks={data.timelineWeeks}
-            onChangeTargetWeightKg={(v) => update('targetWeightKg', v)}
-            onChangeTimelineWeeks={(v) => update('timelineWeeks', v)}
+            onChangeTargetWeightKg={(v) => update("targetWeightKg", v)}
+            onChangeTimelineWeeks={(v) => update("timelineWeeks", v)}
           />
         );
       case 6:
+        return (
+          <StepMacros
+            proteinPreference={data.proteinPreference}
+            carbPreference={data.carbPreference}
+            onProteinChange={(v) => update("proteinPreference", v)}
+            onCarbChange={(v) => update("carbPreference", v)}
+          />
+        );
+      case 7:
         if (
           data.sex == null ||
           data.age == null ||
@@ -213,8 +290,12 @@ export function OnboardingWizard() {
             weightKg={data.weightKg}
             activity={data.activity}
             goal={data.goal}
+            heightUnit={data.heightUnit}
+            weightUnit={data.weightUnit}
             targetWeightKg={data.targetWeightKg}
             timelineWeeks={data.timelineWeeks}
+            proteinPreference={data.proteinPreference}
+            carbPreference={data.carbPreference}
             onComputed={(g) => {
               computedGoalsRef.current = g;
             }}
@@ -225,10 +306,15 @@ export function OnboardingWizard() {
     }
   };
 
-  const heroFont = fontsLoaded ? { fontFamily: 'IBMPlexSans_700Bold' as const } : null;
+  const heroFont = fontsLoaded
+    ? { fontFamily: "IBMPlexSans_700Bold" as const }
+    : null;
+  const subtitleFont = fontsLoaded
+    ? { fontFamily: "IBMPlexSans_400Regular" as const }
+    : null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <StatusBar barStyle="dark-content" backgroundColor={Tokens.background} />
       <View style={styles.headerWrap}>
         <StepHeader
@@ -252,7 +338,7 @@ export function OnboardingWizard() {
         >
           <View style={styles.heroBlock}>
             <Text style={[styles.heroTitle, heroFont]}>{COPY[step].title}</Text>
-            <Text style={styles.heroSubtitle}>{COPY[step].subtitle}</Text>
+            <Text style={[styles.heroSubtitle, subtitleFont]}>{COPY[step].subtitle}</Text>
           </View>
           <View style={styles.body}>{renderStep()}</View>
         </Animated.View>
@@ -290,7 +376,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: -0.8,
     lineHeight: 32,
     color: Tokens.textPrimary,

@@ -1,4 +1,5 @@
 import { AnimatedDigits } from "@/components/AnimatedDigits";
+import { MealNutritionFactsModal } from "@/components/MealNutritionFactsModal";
 import { EditNutrientPopup } from "@/components/NutritionReasoningPopup";
 import { Tokens } from "@/constants/theme";
 import {
@@ -6,7 +7,13 @@ import {
   BarcodeNotFoundError,
   lookupBarcode,
 } from "@/services/barcodeService";
-import { BarcodeProduct, FatSecretServing, Macros } from "@/types";
+import {
+  BarcodeProduct,
+  CustomMealItem,
+  ExtendedNutrients,
+  FatSecretServing,
+  Macros,
+} from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -23,7 +30,6 @@ import {
   Dimensions,
   Keyboard,
   LayoutAnimation,
-  Linking,
   Modal,
   ScrollView,
   StatusBar,
@@ -49,7 +55,7 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Defs, Mask, Rect } from "react-native-svg";
+import Svg, { Circle, Defs, Mask, Path, Rect } from "react-native-svg";
 
 // Lazy-load expo-camera to avoid crashing before native rebuild
 let CameraView: any = null;
@@ -85,52 +91,6 @@ const MACRO_ICONS = {
   protein: faDrumstickBite as IconProp,
   fat: faDroplet as IconProp,
   carbs: faWheatAwn as IconProp,
-};
-
-const EXTENDED_NUTRIENT_LABELS: Record<string, string> = {
-  saturatedFat: "Saturated Fat",
-  polyunsaturatedFat: "Polyunsaturated Fat",
-  monounsaturatedFat: "Monounsaturated Fat",
-  transFat: "Trans Fat",
-  cholesterol: "Cholesterol",
-  calcium: "Calcium",
-  iron: "Iron",
-  magnesium: "Magnesium",
-  phosphorus: "Phosphorus",
-  zinc: "Zinc",
-  vitaminA: "Vitamin A",
-  vitaminC: "Vitamin C",
-  vitaminD: "Vitamin D",
-  vitaminE: "Vitamin E",
-  vitaminK: "Vitamin K",
-  vitaminB6: "Vitamin B6",
-  vitaminB12: "Vitamin B12",
-  folate: "Folate",
-  niacin: "Niacin",
-  caffeine: "Caffeine",
-};
-
-const EXTENDED_NUTRIENT_UNITS: Record<string, string> = {
-  saturatedFat: "g",
-  polyunsaturatedFat: "g",
-  monounsaturatedFat: "g",
-  transFat: "g",
-  cholesterol: "mg",
-  calcium: "mg",
-  iron: "mg",
-  magnesium: "mg",
-  phosphorus: "mg",
-  zinc: "mg",
-  vitaminA: "mcg",
-  vitaminC: "mg",
-  vitaminD: "mcg",
-  vitaminE: "mg",
-  vitaminK: "mcg",
-  vitaminB6: "mg",
-  vitaminB12: "mcg",
-  folate: "mcg",
-  niacin: "mg",
-  caffeine: "mg",
 };
 
 type ScannerState =
@@ -177,7 +137,7 @@ export function BarcodeScannerModal({
     nutrientKey: "kcal" | "protein" | "fat" | "carbs";
     currentValue: number;
   } | null>(null);
-  const [extendedOpen, setExtendedOpen] = useState(false);
+  const [showNutritionFacts, setShowNutritionFacts] = useState(false);
   const [torchEnabled, setTorchEnabled] = useState(false);
   const cameraRef = useRef<any>(null);
   const scanLockRef = useRef(false);
@@ -192,7 +152,7 @@ export function BarcodeScannerModal({
       setManualText("");
       setMacroOverrides({});
       setEditMacroPopup(null);
-      setExtendedOpen(false);
+      setShowNutritionFacts(false);
       setTorchEnabled(false);
       scanLockRef.current = false;
       translateY.value = 0;
@@ -236,7 +196,7 @@ export function BarcodeScannerModal({
         );
       }
       setMacroOverrides({});
-      setExtendedOpen(false);
+      setShowNutritionFacts(false);
     }
   }, [state.type === "found" ? (state as any).product : null]);
 
@@ -294,7 +254,7 @@ export function BarcodeScannerModal({
     setServingGrams("");
     setManualText("");
     setMacroOverrides({});
-    setExtendedOpen(false);
+    setShowNutritionFacts(false);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -315,6 +275,18 @@ export function BarcodeScannerModal({
     }
   }, [onSnapPhoto]);
 
+  // Drag-to-dismiss: when a bottom card is open, drag dismisses just the sheet
+  // and returns to the scanning state. When already in scanning state, drag
+  // closes the whole modal.
+  const handleDragDismiss = useCallback(() => {
+    if (state.type === "scanning") {
+      handleClose();
+    } else {
+      translateY.value = 0;
+      handleScanAgain();
+    }
+  }, [state.type, handleClose, handleScanAgain, translateY]);
+
   const panGesture = Gesture.Pan()
     .activeOffsetY(10)
     .onUpdate((event) => {
@@ -324,18 +296,37 @@ export function BarcodeScannerModal({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
-          damping: 20,
-          stiffness: 200,
-        });
-        runOnJS(handleClose)();
+        translateY.value = withSpring(
+          SCREEN_HEIGHT,
+          { damping: 20, stiffness: 200 },
+          (finished) => {
+            if (finished) runOnJS(handleDragDismiss)();
+          },
+        );
       } else {
         translateY.value = withSpring(0, { damping: 20, stiffness: 400 });
       }
     });
 
+  // Mirror state.type into a shared value so animated styles can route
+  // translateY to the correct layer (whole modal vs. just the bottom card).
+  const isScanningShared = useSharedValue(state.type === "scanning" ? 1 : 0);
+  useEffect(() => {
+    isScanningShared.value = state.type === "scanning" ? 1 : 0;
+  }, [state.type, isScanningShared]);
+
+  // Translates the whole modal (including camera) — only active in scanning state.
+  const outerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: isScanningShared.value === 1 ? translateY.value : 0 },
+    ],
+  }));
+
+  // Translates only the bottom card — only active when a bottom card is open.
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
+    transform: [
+      { translateY: isScanningShared.value === 1 ? 0 : translateY.value },
+    ],
   }));
 
   const backdropStyle = useAnimatedStyle(() => ({
@@ -399,6 +390,27 @@ export function BarcodeScannerModal({
     return Object.keys(scaled).length > 0 ? scaled : null;
   }, [state, servingGrams, selectedServingId]);
 
+  // Wrap the current preview as a single CustomMealItem so MealNutritionFactsModal
+  // can render its FDA-style label (always shows the standard rows, defaulting to 0
+  // for missing fields — same form as MealBuilderModal).
+  const factsItems: CustomMealItem[] = useMemo(() => {
+    if (state.type !== "found" || !previewMacros) return [];
+    return [
+      {
+        id: state.product.foodId,
+        label: state.product.name,
+        brand: state.product.brand,
+        source: "FS",
+        sourceId: state.product.foodId,
+        servingGrams: parseFloat(servingGrams) || 100,
+        macros: previewMacros,
+        extendedNutrients: (previewExtended ?? undefined) as
+          | ExtendedNutrients
+          | undefined,
+      },
+    ];
+  }, [state, previewMacros, previewExtended, servingGrams]);
+
   // Not yet loaded
   if (!permission) {
     return null;
@@ -422,7 +434,11 @@ export function BarcodeScannerModal({
         </Animated.View>
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[styles.container, { marginTop: insets.top + (nested ? 16 : 0) }, animatedStyle]}
+            style={[
+              styles.container,
+              { marginTop: insets.top + (nested ? 16 : 0) },
+              outerAnimatedStyle,
+            ]}
           >
             {!cameraAvailable ? (
               // Native module not built yet
@@ -563,13 +579,15 @@ export function BarcodeScannerModal({
                   />
                 </TouchableOpacity>
 
-                {/* Drag indicator */}
-                <View
-                  style={styles.dragIndicatorContainer}
-                  pointerEvents="none"
-                >
-                  <View style={styles.dragIndicator} />
-                </View>
+                {/* Drag indicator (over camera, hidden once a bottom card opens) */}
+                {state.type === "scanning" && (
+                  <View
+                    style={styles.dragIndicatorContainer}
+                    pointerEvents="none"
+                  >
+                    <View style={styles.dragIndicator} />
+                  </View>
+                )}
 
                 {/* Scanning hint */}
                 {state.type === "scanning" && (
@@ -609,8 +627,11 @@ export function BarcodeScannerModal({
                 {state.type === "loading" && (
                   <Animated.View
                     entering={FadeIn.duration(200)}
-                    style={styles.bottomCard}
+                    style={[styles.bottomCard, animatedStyle]}
                   >
+                    <View style={styles.bottomCardDragHandleContainer}>
+                      <View style={styles.bottomCardDragHandle} />
+                    </View>
                     <View style={styles.loadingContent}>
                       <ActivityIndicator size="small" color="#666" />
                       <Text style={styles.loadingText}>
@@ -627,8 +648,12 @@ export function BarcodeScannerModal({
                     style={[
                       styles.bottomCard,
                       { paddingBottom: keyboardHeight || insets.bottom + 16 },
+                      animatedStyle,
                     ]}
                   >
+                    <View style={styles.bottomCardDragHandleContainer}>
+                      <View style={styles.bottomCardDragHandle} />
+                    </View>
                     <ScrollView
                       showsVerticalScrollIndicator={false}
                       keyboardShouldPersistTaps="handled"
@@ -744,155 +769,215 @@ export function BarcodeScannerModal({
                         </View>
                       </View>
 
-                      {/* Macros (editable, with AnimatedDigits) */}
-                      <View style={styles.macrosCard}>
-                        {[
-                          {
-                            key: "calories" as const,
-                            value: previewMacros.kcal,
-                            unit: "",
-                            label: "calories",
-                          },
+                      {/* Macros - donut ring with macro list */}
+                      {(() => {
+                        const RING_SIZE = 88;
+                        const STROKE = 7;
+                        const R = (RING_SIZE - STROKE) / 2;
+                        const CX = RING_SIZE / 2;
+                        const CY = RING_SIZE / 2;
+                        const proteinKcal = previewMacros.protein * 4;
+                        const carbsKcal = previewMacros.carbs * 4;
+                        const fatKcal = previewMacros.fat * 9;
+                        const total = proteinKcal + carbsKcal + fatKcal;
+
+                        const arcSegments: { pct: number; color: string }[] =
+                          total > 0
+                            ? [
+                                {
+                                  pct: proteinKcal / total,
+                                  color: MACRO_COLORS.protein.primary,
+                                },
+                                {
+                                  pct: carbsKcal / total,
+                                  color: MACRO_COLORS.carbs.primary,
+                                },
+                                {
+                                  pct: fatKcal / total,
+                                  color: MACRO_COLORS.fat.primary,
+                                },
+                              ]
+                            : [];
+
+                        const GAP = 0.04;
+                        const nonZero = arcSegments.filter((s) => s.pct > 0);
+                        const totalGap =
+                          nonZero.length > 1 ? GAP * nonZero.length : 0;
+                        const usable = 2 * Math.PI - totalGap;
+
+                        let cursor = -Math.PI / 2;
+                        const arcs = arcSegments
+                          .filter((s) => s.pct > 0)
+                          .map((seg) => {
+                            const angle = seg.pct * usable;
+                            const startAngle = cursor;
+                            const endAngle = cursor + angle;
+                            cursor = endAngle + GAP;
+                            const x1 = CX + R * Math.cos(startAngle);
+                            const y1 = CY + R * Math.sin(startAngle);
+                            const x2 = CX + R * Math.cos(endAngle);
+                            const y2 = CY + R * Math.sin(endAngle);
+                            const largeArc = angle > Math.PI ? 1 : 0;
+                            return {
+                              d: `M ${x1} ${y1} A ${R} ${R} 0 ${largeArc} 1 ${x2} ${y2}`,
+                              color: seg.color,
+                            };
+                          });
+
+                        const macroRows = [
                           {
                             key: "protein" as const,
+                            label: "Protein",
                             value: previewMacros.protein,
-                            unit: "g",
-                            label: "protein",
-                          },
-                          {
-                            key: "fat" as const,
-                            value: previewMacros.fat,
-                            unit: "g",
-                            label: "fat",
+                            icon: MACRO_ICONS.protein,
+                            iconColor: MACRO_COLORS.protein.primary,
                           },
                           {
                             key: "carbs" as const,
+                            label: "Carbs",
                             value: previewMacros.carbs,
-                            unit: "g",
-                            label: "carbs",
+                            icon: MACRO_ICONS.carbs,
+                            iconColor: MACRO_COLORS.carbs.primary,
                           },
-                        ].map((macro, i) => (
-                          <Animated.View
-                            key={macro.key}
-                            entering={FadeInDown.delay(i * 60).duration(250)}
-                            style={styles.macroPill}
-                          >
-                            <TouchableOpacity
-                              style={styles.macroPillTouchable}
-                              activeOpacity={0.6}
-                              onPress={() => {
-                                Haptics.impactAsync(
-                                  Haptics.ImpactFeedbackStyle.Light,
-                                );
-                                setEditMacroPopup({
-                                  nutrientKey:
-                                    macro.key === "calories" ? "kcal" : macro.key,
-                                  currentValue: macro.value,
-                                });
-                              }}
-                            >
-                              <View style={styles.macroIconContainer}>
-                                <FontAwesomeIcon
-                                  icon={MACRO_ICONS[macro.key]}
-                                  size={12}
-                                  color={MACRO_COLORS[macro.key].primary}
-                                />
-                              </View>
-                              <View style={styles.macroPillValueRow}>
-                                <AnimatedDigits
-                                  value={macro.value}
-                                  style={styles.macroPillValue}
-                                />
-                                {macro.unit ? (
-                                  <Text style={styles.macroPillValue}>
-                                    {macro.unit}
-                                  </Text>
-                                ) : null}
-                              </View>
-                              <Text style={styles.macroPillLabel}>
-                                {macro.label}
-                              </Text>
-                            </TouchableOpacity>
-                          </Animated.View>
-                        ))}
-                      </View>
+                          {
+                            key: "fat" as const,
+                            label: "Fat",
+                            value: previewMacros.fat,
+                            icon: MACRO_ICONS.fat,
+                            iconColor: MACRO_COLORS.fat.primary,
+                          },
+                        ];
 
-                      {/* Extended nutrients dropdown */}
-                      {previewExtended &&
-                        Object.keys(previewExtended).length > 0 && (
-                          <View style={styles.extendedSection}>
-                            <TouchableOpacity
-                              style={styles.extendedToggle}
-                              onPress={() => {
-                                Haptics.impactAsync(
-                                  Haptics.ImpactFeedbackStyle.Light,
-                                );
-                                setExtendedOpen((prev) => !prev);
-                              }}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={styles.extendedToggleText}>
-                                Additional Nutrition Facts
-                              </Text>
-                              <Ionicons
-                                name={
-                                  extendedOpen ? "chevron-up" : "chevron-down"
-                                }
-                                size={16}
-                                color="#999"
-                              />
-                            </TouchableOpacity>
-                            {extendedOpen && (
-                              <Animated.View
-                                entering={FadeInDown.duration(200)}
-                                style={styles.extendedList}
+                        return (
+                          <View style={styles.nutritionSection}>
+                            <View style={styles.nutritionHeader}>
+                              <Text
+                                style={[
+                                  styles.sectionLabel,
+                                  styles.nutritionHeaderLabel,
+                                ]}
                               >
-                                {Object.entries(previewExtended).map(
-                                  ([key, val]) => (
-                                    <View key={key} style={styles.extendedRow}>
-                                      <Text style={styles.extendedLabel}>
-                                        {EXTENDED_NUTRIENT_LABELS[key] ?? key}
-                                      </Text>
-                                      <Text style={styles.extendedValue}>
-                                        {val < 1
-                                          ? val.toFixed(2)
-                                          : Math.round(val * 10) / 10}
-                                        {EXTENDED_NUTRIENT_UNITS[key] ?? ""}
-                                      </Text>
-                                    </View>
-                                  ),
-                                )}
-                              </Animated.View>
-                            )}
+                                Nutrition
+                              </Text>
+                              <TouchableOpacity
+                                style={styles.nutritionDetailsButton}
+                                onPress={() => {
+                                  Haptics.impactAsync(
+                                    Haptics.ImpactFeedbackStyle.Light,
+                                  );
+                                  setShowNutritionFacts(true);
+                                }}
+                                activeOpacity={0.6}
+                                hitSlop={{
+                                  top: 12,
+                                  right: 12,
+                                  bottom: 12,
+                                  left: 12,
+                                }}
+                              >
+                                <Text style={styles.nutritionDetailsText}>
+                                  See All
+                                </Text>
+                                <Ionicons
+                                  name="chevron-forward"
+                                  size={14}
+                                  color={Tokens.accent}
+                                />
+                              </TouchableOpacity>
+                            </View>
+                            <View style={styles.donutContainer}>
+                              <TouchableOpacity
+                                style={styles.donutRingWrapper}
+                                onPress={() => {
+                                  Haptics.impactAsync(
+                                    Haptics.ImpactFeedbackStyle.Light,
+                                  );
+                                  setEditMacroPopup({
+                                    nutrientKey: "kcal",
+                                    currentValue: previewMacros.kcal,
+                                  });
+                                }}
+                                activeOpacity={0.7}
+                              >
+                                <Svg width={RING_SIZE} height={RING_SIZE}>
+                                  <Circle
+                                    cx={CX}
+                                    cy={CY}
+                                    r={R}
+                                    stroke={Tokens.border}
+                                    strokeWidth={STROKE}
+                                    fill="none"
+                                  />
+                                  {arcs.map((arc, i) => (
+                                    <Path
+                                      key={i}
+                                      d={arc.d}
+                                      stroke={arc.color}
+                                      strokeWidth={STROKE}
+                                      fill="none"
+                                      strokeLinecap="butt"
+                                    />
+                                  ))}
+                                </Svg>
+                                <View style={styles.donutCenter}>
+                                  <AnimatedDigits
+                                    value={previewMacros.kcal}
+                                    style={styles.donutKcalValue}
+                                  />
+                                  <Text style={styles.donutKcalLabel}>cal</Text>
+                                </View>
+                              </TouchableOpacity>
+                              <View style={styles.donutMacroList}>
+                                {macroRows.map((row) => (
+                                  <TouchableOpacity
+                                    key={row.key}
+                                    style={styles.donutMacroRow}
+                                    onPress={() => {
+                                      Haptics.impactAsync(
+                                        Haptics.ImpactFeedbackStyle.Light,
+                                      );
+                                      setEditMacroPopup({
+                                        nutrientKey: row.key,
+                                        currentValue: row.value,
+                                      });
+                                    }}
+                                    activeOpacity={0.7}
+                                  >
+                                    <FontAwesomeIcon
+                                      icon={row.icon}
+                                      size={12}
+                                      color={row.iconColor}
+                                    />
+                                    <Text style={styles.donutMacroLabel}>
+                                      {row.label}
+                                    </Text>
+                                    <Text style={styles.donutMacroGrams}>
+                                      {Math.round(row.value)}
+                                      <Text style={styles.donutMacroUnit}>g</Text>
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            </View>
                           </View>
-                        )}
+                        );
+                      })()}
 
-                      {/* Action buttons */}
+                      {/* Action button */}
                       <View style={{ height: 20 }} />
                       <TouchableOpacity
                         style={styles.addButton}
                         onPress={handleAdd}
-                        activeOpacity={0.8}
+                        activeOpacity={0.85}
                       >
-                        <Ionicons name="add" size={20} color="#fff" />
+                        <View style={styles.addButtonSpacer} />
                         <Text style={styles.addButtonText}>Add</Text>
+                        <Ionicons
+                          name="arrow-forward"
+                          size={16}
+                          color="#fff"
+                        />
                       </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.scanAgainButtonAlt}
-                        onPress={handleScanAgain}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="scan-outline" size={16} color="#666" />
-                        <Text style={styles.scanAgainText}>Scan Again</Text>
-                      </TouchableOpacity>
-                      <Text
-                        style={styles.attribution}
-                        onPress={() =>
-                          Linking.openURL("https://platform.fatsecret.com")
-                        }
-                      >
-                        Powered by FatSecret Platform API
-                      </Text>
                     </ScrollView>
                   </Animated.View>
                 )}
@@ -904,8 +989,12 @@ export function BarcodeScannerModal({
                     style={[
                       styles.bottomCard,
                       { paddingBottom: keyboardHeight || insets.bottom + 16 },
+                      animatedStyle,
                     ]}
                   >
+                    <View style={styles.bottomCardDragHandleContainer}>
+                      <View style={styles.bottomCardDragHandle} />
+                    </View>
                     <View style={styles.notFoundHeader}>
                       <Text style={styles.notFoundTitle}>
                         Product not found
@@ -959,16 +1048,46 @@ export function BarcodeScannerModal({
                     entering={FadeInDown.duration(300)}
                     style={[
                       styles.bottomCard,
-                      { paddingBottom: insets.bottom + 16 },
+                      { paddingBottom: keyboardHeight || insets.bottom + 16 },
+                      animatedStyle,
                     ]}
                   >
+                    <View style={styles.bottomCardDragHandleContainer}>
+                      <View style={styles.bottomCardDragHandle} />
+                    </View>
                     <View style={styles.notFoundHeader}>
-                      <Ionicons
-                        name="warning-outline"
-                        size={24}
-                        color="#F87171"
-                      />
                       <Text style={styles.notFoundTitle}>{state.message}</Text>
+                    </View>
+                    <Text style={styles.notFoundDescription}>
+                      Type the product name below and we'll calculate the macros
+                      for you.
+                    </Text>
+                    <View style={styles.manualInputRow}>
+                      <TextInput
+                        style={styles.manualInput}
+                        placeholder="Search"
+                        placeholderTextColor="#999"
+                        value={manualText}
+                        onChangeText={setManualText}
+                        autoFocus
+                        returnKeyType="go"
+                        onSubmitEditing={handleManualSubmit}
+                      />
+                      <TouchableOpacity
+                        style={[
+                          styles.manualSubmitButton,
+                          !manualText.trim() && styles.manualSubmitDisabled,
+                        ]}
+                        onPress={handleManualSubmit}
+                        disabled={!manualText.trim()}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons
+                          name="arrow-forward"
+                          size={20}
+                          color={manualText.trim() ? "#fff" : "#ccc"}
+                        />
+                      </TouchableOpacity>
                     </View>
                     <TouchableOpacity
                       style={styles.scanAgainButtonAlt}
@@ -976,7 +1095,7 @@ export function BarcodeScannerModal({
                       activeOpacity={0.7}
                     >
                       <Ionicons name="scan-outline" size={16} color="#666" />
-                      <Text style={styles.scanAgainText}>Try Again</Text>
+                      <Text style={styles.scanAgainText}>Scan Again</Text>
                     </TouchableOpacity>
                   </Animated.View>
                 )}
@@ -1008,6 +1127,12 @@ export function BarcodeScannerModal({
           onClose={() => setEditMacroPopup(null)}
         />
       )}
+      {/* Nutrition facts (FDA-style label) — same component as MealBuilderModal */}
+      <MealNutritionFactsModal
+        visible={showNutritionFacts}
+        items={factsItems}
+        onClose={() => setShowNutritionFacts(false)}
+      />
     </Modal>
   );
 }
@@ -1224,7 +1349,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f8f8",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 20,
+  },
+  bottomCardDragHandleContainer: {
+    alignItems: "center",
+    paddingTop: 4,
+    paddingBottom: 12,
+  },
+  bottomCardDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Tokens.border,
   },
   // Loading
   loadingContent: {
@@ -1307,7 +1445,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginBottom: 12,
     backgroundColor: "#fff",
-    borderRadius: 14,
+    borderRadius: 20,
+    borderCurve: "continuous",
     borderWidth: 0.5,
     borderColor: Tokens.border,
   },
@@ -1350,89 +1489,95 @@ const styles = StyleSheet.create({
     color: Tokens.textPrimary,
     marginLeft: 2,
   },
-  // Macros
-  macrosCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 8,
+  // Macros - donut ring
+  nutritionSection: {
     marginBottom: 16,
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    borderWidth: 0.5,
-    borderColor: Tokens.border,
-    gap: 8,
+    paddingVertical: 8,
   },
-  macroPill: {
-    alignItems: "center",
-    flex: 1,
-  },
-  macroPillTouchable: {
-    alignItems: "center",
-  },
-  macroIconContainer: {
-    marginBottom: 3,
-  },
-  macroPillValueRow: {
+  donutContainer: {
     flexDirection: "row",
-    alignItems: "baseline",
-    marginBottom: 1,
+    alignItems: "center",
+    gap: 20,
   },
-  macroPillValue: {
-    fontSize: 18,
-    fontFamily: "System",
+  donutRingWrapper: {
+    width: 88,
+    height: 88,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  donutCenter: {
+    position: "absolute",
+    alignItems: "center",
+  },
+  donutKcalValue: {
+    fontSize: 20,
     fontWeight: "700",
     color: Tokens.textPrimary,
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
   },
-  macroPillLabel: {
-    fontSize: 10,
-    fontFamily: "System",
+  donutKcalLabel: {
+    fontSize: 11,
     fontWeight: "500",
-    textTransform: "capitalize",
-    letterSpacing: -0.2,
     color: Tokens.textSecondary,
+    marginTop: -2,
   },
-  // Extended nutrients
-  extendedSection: {
-    marginTop: 12,
+  donutMacroList: {
+    flex: 1,
+    gap: 8,
   },
-  extendedToggle: {
+  donutMacroRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 4,
+    gap: 8,
   },
-  extendedToggleText: {
+  donutMacroLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#666",
+    width: 52,
+    letterSpacing: -0.2,
+    color: Tokens.textPrimary,
   },
-  extendedList: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 0.5,
-    borderColor: "#eee",
+  donutMacroGrams: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Tokens.textPrimary,
+    textAlign: "right",
+    flex: 1,
+    letterSpacing: -0.2,
   },
-  extendedRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 6,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#f0f0f0",
-  },
-  extendedLabel: {
+  donutMacroUnit: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#555",
   },
-  extendedValue: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#333",
+  // Nutrition section header (matches MealBuilderModal)
+  sectionLabel: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#6B6B6B",
+    textTransform: "capitalize",
+    marginBottom: 10,
+    marginLeft: 0,
+  },
+  nutritionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  nutritionHeaderLabel: {
+    marginBottom: 0,
+  },
+  nutritionDetailsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    paddingVertical: 4,
+  },
+  nutritionDetailsText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: Tokens.accent,
+    letterSpacing: -0.2,
   },
   scanAgainText: {
     fontSize: 15,
@@ -1443,16 +1588,20 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 15,
-    borderRadius: 26,
-    backgroundColor: TEAL,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    height: 56,
+    borderRadius: 9999,
+    backgroundColor: Tokens.textPrimary,
+  },
+  addButtonSpacer: {
+    width: 16,
   },
   addButtonText: {
-    fontSize: 17,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "500",
     color: "#fff",
+    letterSpacing: -0.2,
   },
   // Not found / error states
   notFoundHeader: {
@@ -1498,7 +1647,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 999,
-    backgroundColor: TEAL,
+    backgroundColor: "#000",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1511,13 +1660,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 12,
-  },
-  attribution: {
-    fontSize: 11,
-    fontFamily: "System",
-    fontWeight: "400",
-    color: "#bbb",
-    textAlign: "center",
-    marginTop: 8,
   },
 });

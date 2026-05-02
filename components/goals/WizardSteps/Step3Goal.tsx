@@ -1,89 +1,43 @@
 import { Tokens } from '@/constants/theme';
+import { OptionCard } from '@/components/onboarding/OptionCard';
 import { GoalType } from '@/types';
-import { getGoalTypeDescription } from '@/utils/goalsCalculator';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface Step3GoalProps {
   selectedGoal: GoalType | null;
   onSelect: (goal: GoalType) => void;
 }
 
-const goalTypes: GoalType[] = ['lose', 'maintain', 'gain'];
-
-const goalIcons: Record<GoalType, keyof typeof Ionicons.glyphMap> = {
-  lose: 'trending-down',
-  maintain: 'remove-outline',
-  gain: 'trending-up',
-};
-
-const goalColors: Record<GoalType, string> = {
-  lose: '#FB8C00',
-  maintain: '#43A047',
-  gain: '#1E88E5',
-};
+const OPTIONS: {
+  value: GoalType;
+  title: string;
+  subtitle: string;
+  iconName: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { value: 'lose', title: 'Lose Weight', subtitle: 'Calorie deficit to lose weight', iconName: 'trending-down' },
+  { value: 'maintain', title: 'Maintain', subtitle: 'Keep current weight', iconName: 'remove-outline' },
+  { value: 'gain', title: 'Gain Weight', subtitle: 'Calorie surplus to build muscle', iconName: 'trending-up' },
+];
 
 export function Step3Goal({ selectedGoal, onSelect }: Step3GoalProps) {
-  const handleSelect = (goal: GoalType) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onSelect(goal);
-  };
-
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Your Goal</Text>
-      <Text style={styles.subtitle}>
-        What would you like to achieve?
-      </Text>
+      <Text style={styles.title}>What&apos;s your goal?</Text>
+      <Text style={styles.subtitle}>We&apos;ll set a sustainable deficit/surplus</Text>
 
-      <View style={styles.optionsContainer}>
-        {goalTypes.map((goal) => {
-          const { title, description } = getGoalTypeDescription(goal);
-          const isSelected = selectedGoal === goal;
-          const color = goalColors[goal];
-
-          return (
-            <TouchableOpacity
-              key={goal}
-              style={[
-                styles.optionCard,
-                isSelected && styles.optionCardSelected,
-              ]}
-              onPress={() => handleSelect(goal)}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={goalIcons[goal]}
-                size={24}
-                color={isSelected ? '#1A6872' : '#333'}
-                style={styles.icon}
-              />
-              <View style={styles.textContainer}>
-                <Text
-                  style={[
-                    styles.optionTitle,
-                    isSelected && styles.optionTitleSelected,
-                  ]}
-                >
-                  {title}
-                </Text>
-                <Text style={styles.optionDescription}>
-                  {description}
-                </Text>
-              </View>
-              {isSelected && (
-                <Ionicons
-                  name="checkmark-circle"
-                  size={22}
-                  color="#1A6872"
-                  style={styles.checkIcon}
-                />
-              )}
-            </TouchableOpacity>
-          );
-        })}
+      <View style={styles.options}>
+        {OPTIONS.map((opt) => (
+          <OptionCard
+            key={opt.value}
+            title={opt.title}
+            subtitle={opt.subtitle}
+            iconName={opt.iconName}
+            selected={selectedGoal === opt.value}
+            onPress={() => onSelect(opt.value)}
+          />
+        ))}
       </View>
     </View>
   );
@@ -94,54 +48,21 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   title: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: '#333',
+    fontFamily: 'IBMPlexSans_700Bold',
+    fontSize: 28,
+    letterSpacing: -0.8,
+    lineHeight: 32,
+    color: Tokens.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 24,
+    fontFamily: 'IBMPlexSans_400Regular',
+    fontSize: 15,
+    color: Tokens.textSecondary,
     lineHeight: 20,
+    marginBottom: 24,
   },
-  optionsContainer: {
+  options: {
     gap: 12,
-  },
-  optionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
-  },
-  optionCardSelected: {
-    backgroundColor: '#E0F2F1',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  icon: {
-    marginRight: 12,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: '#333',
-    marginBottom: 2,
-  },
-  optionTitleSelected: {
-    color: '#1A6872',
-  },
-  optionDescription: {
-    fontSize: 13,
-    color: '#666',
-  },
-  checkIcon: {
-    marginLeft: 8,
   },
 });

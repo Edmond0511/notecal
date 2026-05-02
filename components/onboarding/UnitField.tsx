@@ -132,7 +132,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   input: {
-    fontFamily: 'IBMPlexSans_700Bold',
     fontSize: 28,
     fontWeight: '700',
     letterSpacing: -0.6,

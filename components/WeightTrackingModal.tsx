@@ -518,7 +518,6 @@ export function WeightTrackingModal({
               textAlign="center"
             />
             <Text style={styles.heroUnitLabel}>{unitLabel}</Text>
-            <View style={styles.heroAccentLine} />
             <TouchableOpacity
               style={styles.dateTapLabel}
               onPress={() => {
@@ -1279,7 +1278,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 16,
     borderRadius: 25,
-    backgroundColor: "#1A6872",
+    backgroundColor: Tokens.textPrimary,
   },
   logButtonText: {
     fontSize: 15,
@@ -1351,27 +1350,18 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   heroWeightInput: {
-    fontSize: 56,
+    fontSize: 44,
     fontWeight: "700",
     color: Tokens.textPrimary,
     padding: 0,
-    minWidth: 120,
+    minWidth: 100,
     letterSpacing: -1,
   },
   heroUnitLabel: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
     color: Tokens.textTertiary,
-    textTransform: "uppercase",
-    letterSpacing: 1.5,
     marginTop: 2,
-  },
-  heroAccentLine: {
-    width: 48,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: Tokens.border,
-    marginTop: 10,
   },
   // Date tap label
   dateTapLabel: {
@@ -1446,12 +1436,12 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flexDirection: "row",
-    backgroundColor: "#1A6872",
+    backgroundColor: Tokens.textPrimary,
     paddingVertical: 15,
     borderRadius: 25,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#1A6872",
+    shadowColor: Tokens.textPrimary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

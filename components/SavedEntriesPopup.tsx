@@ -752,12 +752,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   entryLabel: {
-    fontSize: 17,
+    fontSize: 16,
     fontFamily: "System",
-    fontWeight: "500",
+    fontWeight: "600",
     color: Tokens.textPrimary,
     marginBottom: 8,
-    lineHeight: 22,
+    lineHeight: 21,
     letterSpacing: -0.2,
   },
   macrosRow: {

@@ -1,91 +1,45 @@
-import { Tokens } from "@/constants/theme";
-import { ActivityLevel } from "@/types";
-import { getActivityLevelDescription } from "@/utils/goalsCalculator";
-import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Tokens } from '@/constants/theme';
+import { OptionCard } from '@/components/onboarding/OptionCard';
+import { ActivityLevel } from '@/types';
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface Step2ActivityProps {
   selectedActivity: ActivityLevel | null;
   onSelect: (level: ActivityLevel) => void;
 }
 
-const activityLevels: ActivityLevel[] = [
-  "sedentary",
-  "light",
-  "moderate",
-  "active",
-  "extra_active",
+const OPTIONS: {
+  value: ActivityLevel;
+  title: string;
+  subtitle: string;
+  iconName: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { value: 'sedentary', title: 'Sedentary', subtitle: 'Desk job, mostly sitting', iconName: 'body-outline' },
+  { value: 'light', title: 'Lightly active', subtitle: '1–3 light workouts a week', iconName: 'walk-outline' },
+  { value: 'moderate', title: 'Moderately active', subtitle: '3–5 workouts a week', iconName: 'bicycle-outline' },
+  { value: 'active', title: 'Very active', subtitle: '6+ workouts or physical job', iconName: 'fitness-outline' },
+  { value: 'extra_active', title: 'Extra active', subtitle: 'Athletic training daily', iconName: 'barbell-outline' },
 ];
 
-const activityIcons: Record<ActivityLevel, keyof typeof Ionicons.glyphMap> = {
-  sedentary: "body-outline",
-  light: "walk-outline",
-  moderate: "bicycle-outline",
-  active: "fitness-outline",
-  extra_active: "barbell-outline",
-};
-
-export function Step2Activity({
-  selectedActivity,
-  onSelect,
-}: Step2ActivityProps) {
-  const handleSelect = (level: ActivityLevel) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onSelect(level);
-  };
-
+export function Step2Activity({ selectedActivity, onSelect }: Step2ActivityProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Activity Level</Text>
-      <Text style={styles.subtitle}>How active are you on a typical week?</Text>
+      <Text style={styles.title}>How active are you?</Text>
+      <Text style={styles.subtitle}>Helps us estimate your daily calorie burn</Text>
 
-      <View style={styles.optionsContainer}>
-        {activityLevels.map((level) => {
-          const { title, description } = getActivityLevelDescription(level);
-          const isSelected = selectedActivity === level;
-
-          return (
-            <TouchableOpacity
-              key={level}
-              style={[
-                styles.optionCard,
-                isSelected && styles.optionCardSelected,
-              ]}
-              onPress={() => handleSelect(level)}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={activityIcons[level]}
-                size={24}
-                color={isSelected ? "#1A6872" : "#000"}
-                style={styles.icon}
-              />
-              <View style={styles.textContainer}>
-                <Text
-                  style={[
-                    styles.optionTitle,
-                    isSelected && styles.optionTitleSelected,
-                  ]}
-                >
-                  {title}
-                </Text>
-                <Text style={styles.optionDescription}>
-                  {description}
-                </Text>
-              </View>
-              {isSelected && (
-                <Ionicons
-                  name="checkmark-circle"
-                  size={22}
-                  color="#1A6872"
-                  style={styles.checkIcon}
-                />
-              )}
-            </TouchableOpacity>
-          );
-        })}
+      <View style={styles.options}>
+        {OPTIONS.map((opt) => (
+          <OptionCard
+            key={opt.value}
+            title={opt.title}
+            subtitle={opt.subtitle}
+            iconName={opt.iconName}
+            selected={selectedActivity === opt.value}
+            onPress={() => onSelect(opt.value)}
+          />
+        ))}
       </View>
     </View>
   );
@@ -96,54 +50,21 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   title: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#333",
+    fontFamily: 'IBMPlexSans_700Bold',
+    fontSize: 28,
+    letterSpacing: -0.8,
+    lineHeight: 32,
+    color: Tokens.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 24,
+    fontFamily: 'IBMPlexSans_400Regular',
+    fontSize: 15,
+    color: Tokens.textSecondary,
     lineHeight: 20,
+    marginBottom: 24,
   },
-  optionsContainer: {
+  options: {
     gap: 12,
-  },
-  optionCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 16,
-  },
-  optionCardSelected: {
-    backgroundColor: "#E0F2F1",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  icon: {
-    marginRight: 12,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#333",
-    marginBottom: 2,
-  },
-  optionTitleSelected: {
-    color: "#1A6872",
-  },
-  optionDescription: {
-    fontSize: 13,
-    color: "#666",
-  },
-  checkIcon: {
-    marginLeft: 8,
   },
 });

@@ -5,33 +5,165 @@ import { IBMPlexSans_700Bold, useFonts } from '@expo-google-fonts/ibm-plex-sans'
 import { Ionicons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
+  ImageSourcePropType,
   Platform,
+  Pressable,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 WebBrowser.maybeCompleteAuthSession();
 
+const SLIDES: ImageSourcePropType[] = [
+  require('@/assets/onboarding/screen-1-notes.png'),
+  require('@/assets/onboarding/screen-2-nutrition.png'),
+  require('@/assets/onboarding/screen-3-progress.png'),
+  require('@/assets/onboarding/screen-4-add.png'),
+];
+
+const INTERVAL_MS = 3500;
+const CROSSFADE_DURATION = 600;
+const CROSSFADE_EASING = Easing.bezier(0.2, 0.7, 0.2, 1);
+const DOT_DURATION = 300;
+const SWIPE_THRESHOLD = 40;
+const SWIPE_VELOCITY_THRESHOLD = 400;
+
+function CarouselImage({ source, isActive }: { source: ImageSourcePropType; isActive: boolean }) {
+  const opacity = useSharedValue(isActive ? 1 : 0);
+  const translateY = useSharedValue(isActive ? 0 : 8);
+  const scale = useSharedValue(isActive ? 1 : 0.985);
+
+  useEffect(() => {
+    const config = { duration: CROSSFADE_DURATION, easing: CROSSFADE_EASING };
+    opacity.value = withTiming(isActive ? 1 : 0, config);
+    translateY.value = withTiming(isActive ? 0 : 8, config);
+    scale.value = withTiming(isActive ? 1 : 0.985, config);
+  }, [isActive, opacity, translateY, scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }, { scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.imageWrapper, animatedStyle]} pointerEvents="none">
+      <Image source={source} style={styles.image} resizeMode="contain" />
+    </Animated.View>
+  );
+}
+
+function Dot({ isActive, onPress }: { isActive: boolean; onPress: () => void }) {
+  const width = useSharedValue(isActive ? 22 : 6);
+
+  useEffect(() => {
+    width.value = withTiming(isActive ? 22 : 6, { duration: DOT_DURATION });
+  }, [isActive, width]);
+
+  const animatedStyle = useAnimatedStyle(() => ({ width: width.value }));
+
+  return (
+    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button">
+      <Animated.View
+        style={[
+          styles.dot,
+          { backgroundColor: isActive ? Tokens.textPrimary : Tokens.textTertiary },
+          animatedStyle,
+        ]}
+      />
+    </Pressable>
+  );
+}
+
 export default function AuthScreen() {
+  const router = useRouter();
   const [fontsLoaded] = useFonts({ IBMPlexSans_700Bold });
   const [isLoading, setIsLoading] = useState<'google' | 'apple' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
+  const [idx, setIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const headlineFont = fontsLoaded ? { fontFamily: 'IBMPlexSans_700Bold' as const } : null;
 
   useEffect(() => {
     if (Platform.OS === 'ios') {
       AppleAuthentication.isAvailableAsync().then(setIsAppleAvailable);
     }
   }, []);
+
+  const startInterval = useMemo(
+    () => () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(() => {
+        setIdx((i) => (i + 1) % SLIDES.length);
+      }, INTERVAL_MS);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (paused) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      return;
+    }
+    startInterval();
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [paused, startInterval]);
+
+  const handleDotPress = (i: number) => {
+    setIdx(i);
+    if (!paused) startInterval();
+  };
+
+  const goNext = () => setIdx((i) => (i + 1) % SLIDES.length);
+  const goPrev = () => setIdx((i) => (i - 1 + SLIDES.length) % SLIDES.length);
+
+  const swipeGesture = Gesture.Pan()
+    .activeOffsetX([-12, 12])
+    .failOffsetY([-20, 20])
+    .onBegin(() => {
+      runOnJS(setPaused)(true);
+    })
+    .onEnd((e) => {
+      const passedDistance = Math.abs(e.translationX) > SWIPE_THRESHOLD;
+      const passedVelocity = Math.abs(e.velocityX) > SWIPE_VELOCITY_THRESHOLD;
+      if (passedDistance || passedVelocity) {
+        if (e.translationX < 0) {
+          runOnJS(goNext)();
+        } else {
+          runOnJS(goPrev)();
+        }
+      }
+    })
+    .onFinalize(() => {
+      runOnJS(setPaused)(false);
+    });
 
   const handleGoogleSignIn = async () => {
     try {
@@ -118,25 +250,51 @@ export default function AuthScreen() {
     }
   };
 
-  const heroFont = fontsLoaded ? { fontFamily: 'IBMPlexSans_700Bold' as const } : null;
   const showApple = Platform.OS === 'ios' && isAppleAvailable;
+
+  const handleBack = () => {
+    Haptics.selectionAsync();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/onboarding');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor={Tokens.background} />
 
-      <View style={styles.eyebrowWrap}>
-        <Text style={styles.eyebrow}>NoteCal</Text>
+      <TouchableOpacity
+        onPress={handleBack}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+        hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
+        style={styles.backButton}
+      >
+        <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
+      </TouchableOpacity>
+
+      <View style={styles.headlineContainer}>
+        <Text style={[styles.headline, headlineFont]}>
+          Start tracking <Text style={styles.headlineAccent}>today.</Text>
+        </Text>
       </View>
 
-      <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.wordmarkWrap}>
-        <Text style={[styles.wordmark, heroFont]}>Eat.</Text>
-        <Text style={[styles.wordmark, heroFont]}>Type.</Text>
-        <Text style={[styles.wordmark, heroFont, styles.wordmarkAccent]}>Track.</Text>
-        <Text style={styles.tagline}>
-          A calorie tracker that feels like a notes app — because it is one.
-        </Text>
-      </Animated.View>
+      <GestureDetector gesture={swipeGesture}>
+        <Animated.View style={styles.imageStack}>
+          {SLIDES.map((src, i) => (
+            <CarouselImage key={i} source={src} isActive={i === idx} />
+          ))}
+        </Animated.View>
+      </GestureDetector>
+
+      <View style={styles.dotsRow}>
+        {SLIDES.map((_, i) => (
+          <Dot key={i} isActive={i === idx} onPress={() => handleDotPress(i)} />
+        ))}
+      </View>
 
       <Animated.View entering={FadeInDown.delay(200).duration(500)} style={styles.bottom}>
         {showApple && (
@@ -209,36 +367,72 @@ const styles = StyleSheet.create({
     backgroundColor: Tokens.background,
     paddingHorizontal: 24,
   },
-  eyebrowWrap: {
-    paddingTop: 12,
+  backButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -8,
+    marginTop: 4,
   },
-  eyebrow: {
-    fontSize: 13,
-    fontWeight: '500',
-    letterSpacing: 0.5,
-    color: Tokens.textSecondary,
-    textTransform: 'uppercase',
+  headlineContainer: {
+    paddingTop: 16,
+    paddingBottom: 12,
   },
-  wordmarkWrap: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    paddingBottom: 32,
-  },
-  wordmark: {
-    fontSize: 36,
+  headline: {
+    fontSize: 28,
+    lineHeight: 33,
+    letterSpacing: -1,
     fontWeight: '700',
-    letterSpacing: -1.4,
-    lineHeight: 40,
     color: Tokens.textPrimary,
+    textAlign: 'center',
   },
-  wordmarkAccent: {
+  headlineAccent: {
     color: Tokens.accent,
   },
-  tagline: {
-    fontSize: 15,
-    color: Tokens.textSecondary,
-    marginTop: 12,
-    letterSpacing: -0.1,
+  imageStack: {
+    flex: 1,
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 0,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  imageWrapper: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 24 },
+        shadowOpacity: 0.1,
+        shadowRadius: 40,
+      },
+      android: {
+        elevation: 16,
+      },
+    }),
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    justifyContent: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  dot: {
+    height: 6,
+    borderRadius: 3,
   },
   bottom: {
     paddingBottom: 40,

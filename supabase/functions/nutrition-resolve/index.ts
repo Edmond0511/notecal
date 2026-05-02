@@ -11,7 +11,8 @@ interface NutritionRequest {
   textLine?: string;
   foodText?: string; // Keep for backward compatibility
   locale?: "en-CA" | "en-US";
-  userId?: string;
+  // userId is intentionally NOT read from the body — see JWT extraction below.
+  // Anything a client passes here is ignored to prevent quota spoofing.
   // Correction mode fields
   correctionMode?: boolean;
   currentMacros?: Macros;
@@ -22,6 +23,83 @@ interface NutritionRequest {
   photoMode?: boolean;
   base64Image?: string;
   mimeType?: string;
+}
+
+interface RateLimitDecision {
+  response?: Response;
+  pendingRowId: number | null;
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(input),
+  );
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function checkRateLimit(
+  supabase: any,
+  userId: string | null,
+  ipHash: string,
+  requestType: "nutrition" | "photo" | "correction",
+  cost: number,
+): Promise<RateLimitDecision> {
+  try {
+    const { data, error } = await supabase.rpc("check_and_record_usage", {
+      p_user_id: userId,
+      p_ip_hash: ipHash,
+      p_request_type: requestType,
+      p_cost_credits: cost,
+    });
+
+    if (error) {
+      console.error("[RateLimit] RPC error, failing open:", error);
+      return { pendingRowId: null };
+    }
+
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) {
+      console.error("[RateLimit] RPC returned no row, failing open");
+      return { pendingRowId: null };
+    }
+
+    if (!row.allowed) {
+      const retryAfter = row.retry_after_seconds ?? 60;
+      const remaining = Math.max(0, (row.limit_day ?? 0) - (row.used_day ?? 0));
+      return {
+        pendingRowId: null,
+        response: new Response(
+          JSON.stringify({
+            error: "rate_limit_exceeded",
+            reason: row.reason,
+            usedDay: row.used_day,
+            limitDay: row.limit_day,
+            usedMinute: row.used_minute,
+            limitMinute: row.limit_minute,
+            retryAfterSeconds: retryAfter,
+          }),
+          {
+            status: 429,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+              "Retry-After": String(retryAfter),
+              "X-RateLimit-Limit": String(row.limit_day ?? 0),
+              "X-RateLimit-Remaining": String(remaining),
+            },
+          },
+        ),
+      };
+    }
+
+    return { pendingRowId: row.pending_row_id ?? null };
+  } catch (e) {
+    console.error("[RateLimit] Unexpected error, failing open:", e);
+    return { pendingRowId: null };
+  }
 }
 
 interface NutritionReasoning {
@@ -93,14 +171,37 @@ serve(async (req) => {
   try {
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Derive userId from the JWT in the Authorization header. Anything a
+    // client passes in the body is ignored. Anonymous (no header) calls are
+    // allowed but throttled harder via the IP-keyed limit branch.
+    let userId: string | null = null;
+    const authHeader = req.headers.get("authorization");
+    if (authHeader) {
+      const token = authHeader.replace("Bearer ", "");
+      try {
+        const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
+          global: { headers: { Authorization: `Bearer ${token}` } },
+        });
+        const { data: { user } } = await anonClient.auth.getUser(token);
+        userId = user?.id ?? null;
+      } catch (e) {
+        console.warn("[Auth] JWT validation failed, treating as anonymous:", e);
+      }
+    }
+
+    // IP for the anonymous throttle bucket. Hashed so we don't store raw IPs.
+    const xff = req.headers.get("x-forwarded-for") ?? "";
+    const clientIp = xff.split(",")[0].trim() || "unknown";
+    const ipHash = await sha256Hex(clientIp);
 
     const {
       textLine,
       foodText: foodTextFromRequest,
       locale = "en-US",
-      userId,
       correctionMode,
       currentMacros,
       qty,
@@ -113,12 +214,20 @@ serve(async (req) => {
 
     // Handle correction mode
     if (correctionMode) {
+      const rl = await checkRateLimit(
+        supabase,
+        userId,
+        ipHash,
+        "correction",
+        3,
+      );
+      if (rl.response) return rl.response;
       return await handleCorrectionRequest(
         foodTextFromRequest || "",
         currentMacros,
         userFeedback || "",
-        userId,
         supabase,
+        rl.pendingRowId,
         qty,
         unit,
       );
@@ -126,11 +235,13 @@ serve(async (req) => {
 
     // Handle photo mode
     if (photoMode && base64Image) {
+      const rl = await checkRateLimit(supabase, userId, ipHash, "photo", 5);
+      if (rl.response) return rl.response;
       return await handlePhotoRequest(
         base64Image,
         mimeType || "image/jpeg",
-        userId,
         supabase,
+        rl.pendingRowId,
       );
     }
 
@@ -147,6 +258,10 @@ serve(async (req) => {
       );
     }
 
+    const rl = await checkRateLimit(supabase, userId, ipHash, "nutrition", 1);
+    if (rl.response) return rl.response;
+    const pendingRowId = rl.pendingRowId;
+
     const startTime = Date.now();
     let tokensUsed = 0;
     let costCents = 0;
@@ -158,17 +273,14 @@ serve(async (req) => {
       tokensUsed = aiResult.tokens || 0;
       costCents = calculateCost(tokensUsed);
 
-      // Log API usage (fire-and-forget)
-      if (userId) {
-        logApiUsage(
-          supabase,
-          userId,
-          tokensUsed,
-          costCents,
-          "success",
-          startTime,
-        );
-      }
+      logApiUsage(
+        supabase,
+        pendingRowId,
+        tokensUsed,
+        costCents,
+        "success",
+        startTime,
+      );
 
       return new Response(
         JSON.stringify({
@@ -194,18 +306,15 @@ serve(async (req) => {
 
       console.error(`[AI Error] Food: "${foodText}" | Error: ${errorDetails}`);
 
-      // Log error usage (fire-and-forget)
-      if (userId) {
-        logApiUsage(
-          supabase,
-          userId,
-          0,
-          0,
-          "ai_error",
-          startTime,
-          errorDetails,
-        );
-      }
+      logApiUsage(
+        supabase,
+        pendingRowId,
+        0,
+        0,
+        "ai_error",
+        startTime,
+        errorDetails,
+      );
 
       // Return fallback response
       const fallbackData = generateFallbackResponse(foodText);
@@ -582,42 +691,60 @@ function generateFallbackResponse(foodText: string): NutritionData {
   };
 }
 
+// Updates the pending api_usage row that check_and_record_usage created.
+// Fire-and-forget: failures here shouldn't block the response.
 async function logApiUsage(
   supabase: any,
-  userId: string,
+  pendingRowId: number | null,
   tokens: number,
   costCents: number,
-  status: string,
+  status: "success" | "ai_error" | "rate_limited",
   startTime: number,
   errorMessage?: string,
 ) {
+  if (pendingRowId == null) return;
   const responseTime = Date.now() - startTime;
 
-  await supabase.from("api_usage").insert({
-    user_id: userId,
-    tokens_used: tokens,
-    cost_cents: costCents,
-    request_type: "nutrition",
-    status,
-    error_message: errorMessage,
-    response_time_ms: responseTime,
-  });
+  const { error } = await supabase
+    .from("api_usage")
+    .update({
+      tokens_used: tokens,
+      cost_cents: costCents,
+      status,
+      error_message: errorMessage,
+      response_time_ms: responseTime,
+    })
+    .eq("id", pendingRowId);
+
+  if (error) {
+    console.error("[logApiUsage] update failed:", error);
+  }
 }
 
 async function handlePhotoRequest(
   base64Image: string,
   mimeType: string,
-  userId: string | undefined,
   supabase: any,
+  pendingRowId: number | null,
 ): Promise<Response> {
   const startTime = Date.now();
 
   try {
     const result = await callGeminiWithPhoto(base64Image, mimeType);
+    const tokens = result.tokens || 0;
 
     // Check for not_food response — return 200 so Supabase client
     // delivers the body via `data` instead of swallowing it in `error`.
     if (result.data.notFood) {
+      logApiUsage(
+        supabase,
+        pendingRowId,
+        tokens,
+        calculateCost(tokens),
+        "success",
+        startTime,
+        "not_food",
+      );
       return new Response(
         JSON.stringify({ error: "not_food", resolved: [], totals: null }),
         {
@@ -627,17 +754,14 @@ async function handlePhotoRequest(
       );
     }
 
-    // Log usage (fire-and-forget)
-    if (userId) {
-      logApiUsage(
-        supabase,
-        userId,
-        result.tokens || 0,
-        calculateCost(result.tokens || 0),
-        "photo_success",
-        startTime,
-      );
-    }
+    logApiUsage(
+      supabase,
+      pendingRowId,
+      tokens,
+      calculateCost(tokens),
+      "success",
+      startTime,
+    );
 
     return new Response(
       JSON.stringify({
@@ -652,17 +776,15 @@ async function handlePhotoRequest(
   } catch (error) {
     console.error("[Photo] Error:", error);
 
-    if (userId) {
-      logApiUsage(
-        supabase,
-        userId,
-        0,
-        0,
-        "photo_error",
-        startTime,
-        error instanceof Error ? error.message : "Unknown error",
-      );
-    }
+    logApiUsage(
+      supabase,
+      pendingRowId,
+      0,
+      0,
+      "ai_error",
+      startTime,
+      error instanceof Error ? error.message : "Unknown error",
+    );
 
     return new Response(JSON.stringify({ error: "Failed to analyze photo" }), {
       status: 500,
@@ -891,8 +1013,8 @@ async function handleCorrectionRequest(
   foodText: string,
   currentMacros: Macros | undefined,
   userFeedback: string,
-  userId: string | undefined,
   supabase: any,
+  pendingRowId: number | null,
   qty?: number,
   unit?: string,
 ): Promise<Response> {
@@ -918,17 +1040,14 @@ async function handleCorrectionRequest(
       unit,
     );
 
-    // Log usage (fire-and-forget)
-    if (userId) {
-      logApiUsage(
-        supabase,
-        userId,
-        correctionResult.tokens || 0,
-        calculateCost(correctionResult.tokens || 0),
-        "correction_success",
-        startTime,
-      );
-    }
+    logApiUsage(
+      supabase,
+      pendingRowId,
+      correctionResult.tokens || 0,
+      calculateCost(correctionResult.tokens || 0),
+      "success",
+      startTime,
+    );
 
     return new Response(
       JSON.stringify(correctionResult.data as CorrectionResponse),
@@ -940,18 +1059,15 @@ async function handleCorrectionRequest(
   } catch (error) {
     console.error("[Correction] Error:", error);
 
-    // Log error (fire-and-forget)
-    if (userId) {
-      logApiUsage(
-        supabase,
-        userId,
-        0,
-        0,
-        "correction_error",
-        startTime,
-        error instanceof Error ? error.message : "Unknown error",
-      );
-    }
+    logApiUsage(
+      supabase,
+      pendingRowId,
+      0,
+      0,
+      "ai_error",
+      startTime,
+      error instanceof Error ? error.message : "Unknown error",
+    );
 
     return new Response(
       JSON.stringify({ error: "Failed to process correction" }),

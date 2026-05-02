@@ -17,10 +17,32 @@ export class NutritionApiError extends Error {
   }
 }
 
+export interface RateLimitInfo {
+  reason?: 'minute_limit' | 'day_limit';
+  retryAfterSeconds?: number;
+  usedDay?: number;
+  limitDay?: number;
+  usedMinute?: number;
+  limitMinute?: number;
+}
+
 export class NutritionRateLimitError extends NutritionApiError {
-  constructor(message: string) {
+  reason?: 'minute_limit' | 'day_limit';
+  retryAfterSeconds: number;
+  usedDay?: number;
+  limitDay?: number;
+  usedMinute?: number;
+  limitMinute?: number;
+
+  constructor(message: string, info: RateLimitInfo = {}) {
     super(message, 429);
     this.name = 'NutritionRateLimitError';
+    this.reason = info.reason;
+    this.retryAfterSeconds = info.retryAfterSeconds ?? 60;
+    this.usedDay = info.usedDay;
+    this.limitDay = info.limitDay;
+    this.usedMinute = info.usedMinute;
+    this.limitMinute = info.limitMinute;
   }
 }
 
@@ -36,6 +58,36 @@ export class NutritionNotFoodError extends NutritionApiError {
     super('No food items identified in photo', 422);
     this.name = 'NutritionNotFoodError';
   }
+}
+
+// supabase.functions.invoke wraps non-2xx responses in FunctionsHttpError
+// where the original Response is on `error.context`. If the edge function
+// returned 429, parse the structured body and throw a typed rate-limit error.
+async function throwIfRateLimited(error: unknown): Promise<void> {
+  const ctx = (error as any)?.context;
+  if (!ctx || typeof ctx.status !== 'number' || ctx.status !== 429) return;
+
+  let body: any = {};
+  try {
+    body = await ctx.json();
+  } catch {
+    // body might already be consumed — fall through with empty info
+  }
+
+  const reason = body.reason as 'minute_limit' | 'day_limit' | undefined;
+  const message =
+    reason === 'minute_limit'
+      ? "You're moving too fast — wait a minute before trying again."
+      : "Daily AI limit reached. Try again tomorrow.";
+
+  throw new NutritionRateLimitError(message, {
+    reason,
+    retryAfterSeconds: body.retryAfterSeconds,
+    usedDay: body.usedDay,
+    limitDay: body.limitDay,
+    usedMinute: body.usedMinute,
+    limitMinute: body.limitMinute,
+  });
 }
 
 /**
@@ -63,15 +115,11 @@ export async function resolveNutrition(
   }
 
   try {
-    // Check user quota if userId is provided
-    if (userId) {
-      await checkUserQuota(userId);
-    }
-
-    // Call the Supabase Edge Function
+    // userId no longer goes in the body — the edge function derives it from
+    // the JWT that supabase-js attaches automatically. We still keep userId
+    // for the local MMKV cache key.
     const requestBody = {
       foodText: foodText.trim(),
-      userId
     };
 
     if (__DEV__) {
@@ -84,13 +132,14 @@ export async function resolveNutrition(
 
     if (__DEV__) {
       if (error) {
-        console.log('[nutritionApi] ERR:', JSON.stringify({ message: error.message, status: (error as any).status, context: (error as any).context?.message }));
+        console.log('[nutritionApi] ERR:', JSON.stringify({ message: error.message, status: (error as any).status, context: (error as any).context?.status }));
       } else {
         console.log('[nutritionApi] RES:', JSON.stringify({ items: data?.resolved?.length, totals: data?.totals }));
       }
     }
 
     if (error) {
+      await throwIfRateLimited(error);
       throw new NutritionApiError(
         error.message || 'Failed to resolve nutrition',
         (error as any).status
@@ -115,26 +164,13 @@ export async function resolveNutrition(
     return data;
 
   } catch (error) {
-    if (__DEV__) {
-      console.log('[nutritionApi] CATCH:', error?.message, '| context:', (error as any)?.context?.message);
-    }
-
     if (error instanceof NutritionApiError) {
       throw error;
     }
 
-    // Handle specific error types
-    if (error.message?.includes('rate limit')) {
-      throw new NutritionRateLimitError('Rate limit exceeded. Please try again later.');
-    }
-
-    if (error.message?.includes('quota exceeded')) {
-      throw new NutritionQuotaExceededError('Monthly quota exceeded. Please upgrade your plan.');
-    }
-
     // Network or other errors
     throw new NutritionApiError(
-      `Failed to resolve nutrition: ${error.message}`,
+      `Failed to resolve nutrition: ${(error as Error)?.message ?? 'unknown'}`,
       undefined,
       error as Error
     );
@@ -151,20 +187,13 @@ export async function resolveNutrition(
 export async function resolveNutritionFromPhoto(
   base64Image: string,
   mimeType: string,
-  options: NutritionApiOptions = {}
+  _options: NutritionApiOptions = {}
 ): Promise<NutritionResolveResponse> {
-  const { userId } = options;
-
   try {
-    if (userId) {
-      await checkUserQuota(userId);
-    }
-
     const requestBody = {
       photoMode: true,
       base64Image,
       mimeType,
-      userId,
     };
 
     if (__DEV__) {
@@ -177,13 +206,14 @@ export async function resolveNutritionFromPhoto(
 
     if (__DEV__) {
       if (error) {
-        console.log('[nutritionApi] PHOTO ERR:', JSON.stringify({ message: error.message, status: (error as any).status }));
+        console.log('[nutritionApi] PHOTO ERR:', JSON.stringify({ message: error.message, status: (error as any).status, context: (error as any).context?.status }));
       } else {
         console.log('[nutritionApi] PHOTO RES:', JSON.stringify({ items: data?.resolved?.length, totals: data?.totals }));
       }
     }
 
     if (error) {
+      await throwIfRateLimited(error);
       throw new NutritionApiError(
         error.message || 'Failed to analyze photo',
         (error as any).status
@@ -209,12 +239,8 @@ export async function resolveNutritionFromPhoto(
       throw error;
     }
 
-    if (error.message?.includes('rate limit')) {
-      throw new NutritionRateLimitError('Rate limit exceeded. Please try again later.');
-    }
-
     throw new NutritionApiError(
-      `Failed to analyze photo: ${error.message}`,
+      `Failed to analyze photo: ${(error as Error)?.message ?? 'unknown'}`,
       undefined,
       error as Error
     );
@@ -261,8 +287,8 @@ export async function batchResolveNutrition(
         const index = promiseResult.status === 'fulfilled'
           ? promiseResult.value.index
           : i + batch.indexOf(foodTexts[i + batchResults.length]);
-        const error = promiseResult.status === 'fulfilled'
-          ? promiseResult.value.error
+        const error: Error = promiseResult.status === 'fulfilled'
+          ? promiseResult.value.error ?? new Error('Unknown batch error')
           : new Error('Batch processing failed');
 
         errors.push({ index, error });
@@ -279,125 +305,6 @@ export async function batchResolveNutrition(
   }
 
   return results;
-}
-
-/**
- * Get user's current usage statistics
- * @param userId The user ID to check
- * @returns Usage statistics for the current month
- */
-export async function getUserUsageStats(userId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('user_usage_summary')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-      throw new NutritionApiError(`Failed to fetch usage stats: ${error.message}`);
-    }
-
-    return data || {
-      user_id: userId,
-      usage_quota: 1000,
-      current_usage: 0,
-      total_requests: 0,
-      total_tokens: 0,
-      total_cost_cents: 0,
-      last_request: null
-    };
-  } catch (error) {
-    throw new NutritionApiError(
-      `Failed to get usage statistics: ${error.message}`,
-      undefined,
-      error as Error
-    );
-  }
-}
-
-/**
- * Get user's favorite foods for quick access
- * @param userId The user ID
- * @returns Array of favorite foods
- */
-export async function getUserFavoriteFoods(userId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('favorite_foods')
-      .select('*')
-      .eq('user_id', userId)
-      .order('frequency_score', { ascending: false })
-      .order('last_used_at', { ascending: false })
-      .limit(20);
-
-    if (error) {
-      throw new NutritionApiError(`Failed to fetch favorite foods: ${error.message}`);
-    }
-
-    return data || [];
-  } catch (error) {
-    throw new NutritionApiError(
-      `Failed to get favorite foods: ${error.message}`,
-      undefined,
-      error as Error
-    );
-  }
-}
-
-/**
- * Add or update a favorite food
- * @param userId The user ID
- * @param foodLabel The food label
- * @param portionQty Standard portion quantity
- * @param portionUnit Standard portion unit
- */
-export async function updateFavoriteFood(
-  userId: string,
-  foodLabel: string,
-  portionQty: number = 100,
-  portionUnit: string = 'g'
-) {
-  try {
-    const { data, error } = await supabase
-      .from('favorite_foods')
-      .upsert({
-        user_id: userId,
-        food_label: foodLabel.trim(),
-        standard_portion_qty: portionQty,
-        standard_portion_unit: portionUnit,
-        frequency_score: 1, // Will be updated separately
-        last_used_at: new Date().toISOString()
-      }, {
-        onConflict: 'user_id,food_label'
-      })
-      .select()
-      .single();
-
-    if (error) {
-      throw new NutritionApiError(`Failed to update favorite food: ${error.message}`);
-    }
-
-    return data;
-  } catch (error) {
-    throw new NutritionApiError(
-      `Failed to update favorite food: ${error.message}`,
-      undefined,
-      error as Error
-    );
-  }
-}
-
-// Helper functions
-
-async function checkUserQuota(userId: string) {
-  const stats = await getUserUsageStats(userId);
-
-  if (stats.current_usage >= stats.usage_quota) {
-    throw new NutritionQuotaExceededError(
-      `Monthly quota exceeded (${stats.current_usage}/${stats.usage_quota}). Please upgrade your plan.`
-    );
-  }
 }
 
 function createFallbackResponse(foodText: string): NutritionResolveResponse {
@@ -445,21 +352,13 @@ export interface CorrectionResponse {
 export async function correctNutrition(
   item: FoodItem,
   feedback: string,
-  options: NutritionApiOptions = {}
+  _options: NutritionApiOptions = {}
 ): Promise<CorrectionResponse> {
-  const { userId } = options;
-
   if (!feedback || feedback.trim().length === 0) {
     throw new NutritionApiError('Feedback is required');
   }
 
   try {
-    // Check user quota if userId is provided
-    if (userId) {
-      await checkUserQuota(userId);
-    }
-
-    // Call the Supabase Edge Function with correction mode
     const correctionBody = {
       correctionMode: true,
       foodText: item.label,
@@ -467,7 +366,6 @@ export async function correctNutrition(
       qty: item.qty,
       unit: item.unit,
       userFeedback: feedback.trim(),
-      userId
     };
 
     if (__DEV__) {
@@ -480,13 +378,14 @@ export async function correctNutrition(
 
     if (__DEV__) {
       if (error) {
-        console.log('[nutritionApi] CORRECTION ERR:', JSON.stringify({ message: error.message, status: (error as any).status, context: (error as any).context?.message }));
+        console.log('[nutritionApi] CORRECTION ERR:', JSON.stringify({ message: error.message, status: (error as any).status, context: (error as any).context?.status }));
       } else {
         console.log('[nutritionApi] CORRECTION RES:', JSON.stringify({ kcal: data?.correctedMacros?.kcal, label: data?.correctedLabel }));
       }
     }
 
     if (error) {
+      await throwIfRateLimited(error);
       throw new NutritionApiError(
         error.message || 'Failed to correct nutrition',
         (error as any).status
@@ -513,18 +412,8 @@ export async function correctNutrition(
       throw error;
     }
 
-    // Handle specific error types
-    if (error.message?.includes('rate limit')) {
-      throw new NutritionRateLimitError('Rate limit exceeded. Please try again later.');
-    }
-
-    if (error.message?.includes('quota exceeded')) {
-      throw new NutritionQuotaExceededError('Monthly quota exceeded. Please upgrade your plan.');
-    }
-
-    // Network or other errors
     throw new NutritionApiError(
-      `Failed to correct nutrition: ${error.message}`,
+      `Failed to correct nutrition: ${(error as Error)?.message ?? 'unknown'}`,
       undefined,
       error as Error
     );

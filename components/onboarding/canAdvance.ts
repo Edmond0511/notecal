@@ -1,4 +1,4 @@
-import { ActivityLevel, GoalType, Sex } from '@/types';
+import { ActivityLevel, CarbPreference, GoalType, ProteinPreference, Sex } from '@/types';
 
 export interface OnboardingData {
   sex: Sex | null;
@@ -11,6 +11,8 @@ export interface OnboardingData {
   goal: GoalType | null;
   targetWeightKg: number | null;
   timelineWeeks: number | null;
+  proteinPreference: ProteinPreference;
+  carbPreference: CarbPreference;
 }
 
 export function canAdvance(step: number, data: OnboardingData): boolean {
@@ -41,6 +43,9 @@ export function canAdvance(step: number, data: OnboardingData): boolean {
       return true;
     }
     case 6:
+      // Macro preferences — defaults to 'standard' so always advanceable
+      return true;
+    case 7:
       return true;
     default:
       return false;

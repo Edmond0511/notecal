@@ -11,11 +11,12 @@ import {
   UserGoalsInput,
 } from '@/types';
 import { calculateGoals } from '@/utils/goalsCalculator';
-import {
-  isLiquidGlassSupported,
-  LiquidGlassView,
-} from '@callstack/liquid-glass';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  IBMPlexSans_400Regular,
+  IBMPlexSans_700Bold,
+  useFonts,
+} from '@expo-google-fonts/ibm-plex-sans';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
 import {
@@ -23,7 +24,6 @@ import {
   Modal,
   StatusBar,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -43,7 +43,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Step1Metrics } from './WizardSteps/Step1Metrics';
+import { PrimaryButton } from '@/components/onboarding/PrimaryButton';
+import { ProgressDots } from '@/components/onboarding/ProgressDots';
+import { Step1Sex } from './WizardSteps/Step1Sex';
+import { Step2Age } from './WizardSteps/Step2Age';
+import { Step3Body } from './WizardSteps/Step3Body';
 import { Step2Activity } from './WizardSteps/Step2Activity';
 import { Step3Goal } from './WizardSteps/Step3Goal';
 import { Step4Macros } from './WizardSteps/Step4Macros';
@@ -108,6 +112,11 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
   const preferredUnits = useAppStore((state) => state.preferredUnits);
   const setPreferredUnits = useAppStore((state) => state.setPreferredUnits);
 
+  useFonts({
+    IBMPlexSans_400Regular,
+    IBMPlexSans_700Bold,
+  });
+
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<WizardFormData>(initialFormData);
 
@@ -170,30 +179,36 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
 
   // Whether the weight target step should be shown
   const hasWeightTargetStep = formData.goalType === 'lose' || formData.goalType === 'gain';
-  const totalSteps = hasWeightTargetStep ? 6 : 5;
+  const totalSteps = hasWeightTargetStep ? 8 : 7;
 
   // Map logical step to content:
-  // With weight target: 1-Metrics, 2-Activity, 3-Goal, 4-WeightTarget, 5-Macros, 6-Review
-  // Without:            1-Metrics, 2-Activity, 3-Goal, 4-Macros, 5-Review
+  // With weight target: 1-Sex, 2-Age, 3-Body, 4-Activity, 5-Goal, 6-WeightTarget, 7-Macros, 8-Review
+  // Without:            1-Sex, 2-Age, 3-Body, 4-Activity, 5-Goal, 6-Macros, 7-Review
   const getStepContent = (step: number): string => {
-    if (step <= 3) return ['metrics', 'activity', 'goal'][step - 1];
+    if (step <= 5) return ['sex', 'age', 'body', 'activity', 'goal'][step - 1];
     if (hasWeightTargetStep) {
-      return ['weight_target', 'macros', 'review'][step - 4];
+      return ['weight_target', 'macros', 'review'][step - 6];
     }
-    return ['macros', 'review'][step - 4];
+    return ['macros', 'review'][step - 6];
   };
 
   const canProceed = (): boolean => {
     const content = getStepContent(currentStep);
     switch (content) {
-      case 'metrics': {
+      case 'sex':
+        return !!formData.sex;
+      case 'age': {
+        const ageNum = parseInt(formData.age, 10);
+        return !!formData.age && ageNum >= 13 && ageNum <= 100;
+      }
+      case 'body': {
         const hasHeight = formData.heightUseImperial
           ? !!formData.heightFeet
           : !!formData.heightCm;
         const hasWeight = formData.weightUseImperial
           ? !!formData.weightLbs
           : !!formData.weightKg;
-        return !!(formData.sex && formData.age && hasHeight && hasWeight);
+        return hasHeight && hasWeight;
       }
       case 'activity':
         return !!formData.activityLevel;
@@ -377,9 +392,23 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
   const renderStep = () => {
     const content = getStepContent(currentStep);
     switch (content) {
-      case 'metrics':
+      case 'sex':
         return (
-          <Step1Metrics
+          <Step1Sex
+            value={formData.sex}
+            onSelect={(sex) => updateFormData({ sex })}
+          />
+        );
+      case 'age':
+        return (
+          <Step2Age
+            age={formData.age}
+            onChangeAge={(age) => updateFormData({ age })}
+          />
+        );
+      case 'body':
+        return (
+          <Step3Body
             formData={formData}
             updateFormData={updateFormData}
           />
@@ -456,50 +485,25 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
               <View style={styles.dragIndicator} />
             </View>
 
-            {/* Header */}
+            {/* Header — onboarding-style: back chevron + progress dots */}
             <View style={styles.header}>
-              <TouchableOpacity
-                onPress={handleClose}
-                activeOpacity={0.7}
-              >
-                {isLiquidGlassSupported ? (
-                  <LiquidGlassView
-                    style={styles.headerBackButton}
-                    interactive
-                    effect="regular"
-                    tintColor="rgba(250, 250, 247, 0.3)"
-                  >
-                    <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
-                  </LiquidGlassView>
-                ) : (
-                  <View style={[styles.headerBackButton, styles.headerBackButtonFallback]}>
-                    <Ionicons name="chevron-back" size={20} color={Tokens.textSecondary} />
-                  </View>
-                )}
-              </TouchableOpacity>
-              <View style={styles.headerContent}>
-                <Text style={styles.headerTitle}>
-                  {existingGoals ? 'Edit Goals' : 'Set Up Goals'}
-                </Text>
-                <Text style={styles.headerSubtitle}>
-                  Step {currentStep} of {totalSteps}
-                </Text>
+              <View style={styles.headerSide}>
+                <TouchableOpacity
+                  onPress={currentStep > 1 ? goToPreviousStep : handleClose}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={currentStep > 1 ? 'Back' : 'Close'}
+                  style={styles.chevronBtn}
+                >
+                  <Ionicons
+                    name={currentStep > 1 ? 'chevron-back' : 'close'}
+                    size={24}
+                    color={Tokens.textPrimary}
+                  />
+                </TouchableOpacity>
               </View>
-              <View style={styles.headerRightSpacer} />
-            </View>
-
-            {/* Progress indicator */}
-            <View style={styles.progressContainer}>
-              {Array.from({ length: totalSteps }).map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.progressDot,
-                    index < currentStep && styles.progressDotActive,
-                    index === currentStep - 1 && styles.progressDotCurrent,
-                  ]}
-                />
-              ))}
+              <ProgressDots total={totalSteps} current={currentStep - 1} />
+              <View style={styles.headerSide} />
             </View>
 
             {/* Content */}
@@ -519,56 +523,24 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
               </Animated.View>
             </KeyboardAwareScrollView>
 
-            {/* Navigation buttons */}
+            {/* Navigation button — onboarding-style PrimaryButton */}
             <View
               style={[
                 styles.navigationContainer,
                 { paddingBottom: insets.bottom + 16 },
               ]}
             >
-              {currentStep > 1 ? (
-                <TouchableOpacity
-                  style={styles.backButton}
-                  onPress={goToPreviousStep}
-                >
-                  <Ionicons name="arrow-back" size={20} color={Tokens.textSecondary} />
-                  <Text style={styles.backButtonText}>Back</Text>
-                </TouchableOpacity>
-              ) : (
-                <View style={styles.backButton} />
-              )}
-
-              {currentStep < totalSteps ? (
-                <TouchableOpacity
-                  style={[
-                    styles.nextButton,
-                    !canProceed() && styles.nextButtonDisabled,
-                  ]}
-                  onPress={goToNextStep}
-                  disabled={!canProceed()}
-                >
-                  <Text
-                    style={[
-                      styles.nextButtonText,
-                      !canProceed() && styles.nextButtonTextDisabled,
-                    ]}
-                  >
-                    Next
-                  </Text>
-                  <Ionicons
-                    name="arrow-forward"
-                    size={20}
-                    color={canProceed() ? '#fff' : Tokens.textTertiary}
-                  />
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={styles.saveButton}
-                  onPress={handleSave}
-                >
-                  <Text style={styles.saveButtonText}>Save Goals</Text>
-                </TouchableOpacity>
-              )}
+              <PrimaryButton
+                label={
+                  currentStep < totalSteps
+                    ? currentStep === totalSteps - 1
+                      ? 'See my targets'
+                      : 'Continue'
+                    : 'Save Goals'
+                }
+                onPress={currentStep < totalSteps ? goToNextStep : handleSave}
+                disabled={currentStep < totalSteps && !canProceed()}
+              />
             </View>
           </Animated.View>
         </GestureDetector>
@@ -591,7 +563,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#FCFCFB',
+    backgroundColor: Tokens.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -599,7 +571,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     paddingBottom: 8,
-    backgroundColor: '#FCFCFB',
+    backgroundColor: Tokens.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -613,56 +585,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#FCFCFB',
+    paddingHorizontal: 24,
+    paddingTop: 4,
+    paddingBottom: 12,
+    height: 56,
+    backgroundColor: Tokens.background,
   },
-  headerBackButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  headerSide: {
+    width: 44,
+    alignItems: 'flex-start',
+  },
+  chevronBtn: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerBackButtonFallback: {
-    backgroundColor: '#EBEBEB',
-  },
-  headerRightSpacer: {
-    width: 36,
-  },
-  headerContent: {
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: Tokens.textPrimary,
-    textAlign: 'center',
-    letterSpacing: -0.3,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: Tokens.textSecondary,
-    marginTop: 2,
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    paddingBottom: 20,
-  },
-  progressDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Tokens.border,
-  },
-  progressDotActive: {
-    backgroundColor: '#1A6872',
-  },
-  progressDotCurrent: {
-    width: 24,
-    backgroundColor: '#1A6872',
+    marginLeft: -10,
   },
   contentContainer: {
     flex: 1,
@@ -674,57 +612,8 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   navigationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingTop: 16,
     backgroundColor: 'transparent',
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    minWidth: 100,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: Tokens.textSecondary,
-    marginLeft: 4,
-  },
-  nextButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1A6872',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 25,
-    gap: 8,
-  },
-  nextButtonDisabled: {
-    backgroundColor: Tokens.border,
-  },
-  nextButtonText: {
-    fontSize: 16,
-    fontWeight: "400",
-    color: '#fff',
-  },
-  nextButtonTextDisabled: {
-    color: Tokens.textTertiary,
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1A6872',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 25,
-    gap: 8,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: "400",
-    color: '#fff',
   },
 });

@@ -360,8 +360,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                   entering={FadeInDown.delay(100).duration(400)}
                   style={styles.section}
                 >
-                  <Text style={styles.sectionTitle}>Account</Text>
-
                   {isLoading ? (
                     <View style={styles.loadingContainer}>
                       <ActivityIndicator size="small" color={Tokens.textSecondary} />
@@ -406,14 +404,15 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                       )}
                     </>
                   )}
-                </Animated.View>
 
-                {/* App Section */}
-                <Animated.View
-                  entering={FadeInDown.delay(200).duration(400)}
-                  style={styles.section}
-                >
-                  <Text style={styles.sectionTitle}>General</Text>
+                  <Text
+                    style={[
+                      styles.sectionTitle,
+                      user ? styles.accountSectionTitleSpacing : null,
+                    ]}
+                  >
+                    Account
+                  </Text>
 
                   <View style={styles.menuCardShadow}>
                     <View style={styles.menuCard}>
@@ -447,6 +446,42 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
                       <View style={styles.menuDivider} />
 
+                      <TouchableOpacity
+                        style={styles.menuItem}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
+                          setShowPreferences(true);
+                        }}
+                      >
+                        <Ionicons
+                          name="options-outline"
+                          size={20}
+                          color={Tokens.textPrimary}
+                          style={{ marginRight: 12 }}
+                        />
+                        <Text style={styles.menuItemText}>Preferences</Text>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color={Tokens.textTertiary}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </Animated.View>
+
+                {/* App Section */}
+                <Animated.View
+                  entering={FadeInDown.delay(200).duration(400)}
+                  style={styles.section}
+                >
+                  <Text style={styles.sectionTitle}>General</Text>
+
+                  <View style={styles.menuCardShadow}>
+                    <View style={styles.menuCard}>
                       <TouchableOpacity
                         style={styles.menuItem}
                         activeOpacity={0.7}
@@ -544,32 +579,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           style={{ marginRight: 12 }}
                         />
                         <Text style={styles.menuItemText}>Notifications</Text>
-                        <Ionicons
-                          name="chevron-forward"
-                          size={20}
-                          color={Tokens.textTertiary}
-                        />
-                      </TouchableOpacity>
-
-                      <View style={styles.menuDivider} />
-
-                      <TouchableOpacity
-                        style={styles.menuItem}
-                        activeOpacity={0.7}
-                        onPress={() => {
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light,
-                          );
-                          setShowPreferences(true);
-                        }}
-                      >
-                        <Ionicons
-                          name="options-outline"
-                          size={20}
-                          color={Tokens.textPrimary}
-                          style={{ marginRight: 12 }}
-                        />
-                        <Text style={styles.menuItemText}>Preferences</Text>
                         <Ionicons
                           name="chevron-forward"
                           size={20}
@@ -924,7 +933,7 @@ const styles = StyleSheet.create({
   },
   accountCard: {
     backgroundColor: Tokens.surfaceRaised,
-    borderRadius: 16,
+    borderRadius: 22,
     padding: 16,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(0, 0, 0, 0.07)",
@@ -1000,9 +1009,12 @@ const styles = StyleSheet.create({
   menuCardShadow: {
     ...Tokens.shadowLight,
   },
+  accountSectionTitleSpacing: {
+    marginTop: 16,
+  },
   menuCard: {
     backgroundColor: Tokens.surfaceRaised,
-    borderRadius: 16,
+    borderRadius: 22,
     overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(0, 0, 0, 0.07)",

@@ -937,7 +937,7 @@ const styles = StyleSheet.create({
   },
   goalsCard: {
     backgroundColor: Tokens.surfaceRaised,
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(0, 0, 0, 0.07)",
     paddingVertical: 4,
@@ -1014,7 +1014,7 @@ const styles = StyleSheet.create({
   },
   toggleCard: {
     backgroundColor: Tokens.surfaceRaised,
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(0, 0, 0, 0.07)",
     overflow: "hidden",

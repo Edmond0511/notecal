@@ -12,6 +12,8 @@ export function startHealthSubscriber() {
   if (unsubscribe) return;
 
   unsubscribe = useAppStore.subscribe((state, prev) => {
+    let changed = false;
+
     // --- Entries ---
     if (state.entries !== prev.entries) {
       const prevById = new Map(prev.entries.map((e: Entry) => [e.id, e]));
@@ -21,11 +23,13 @@ export function startHealthSubscriber() {
         const before = prevById.get(id);
         if (!before || entry.updatedAt !== before.updatedAt || entry.status !== before.status) {
           healthSyncService.markHealthDirty('food_entries', id);
+          changed = true;
         }
       }
       for (const id of prevById.keys()) {
         if (!currById.has(id)) {
           healthSyncService.markHealthDeleted('food_entries', id);
+          changed = true;
         }
       }
     }
@@ -39,14 +43,18 @@ export function startHealthSubscriber() {
         const before = prevById.get(id);
         if (!before || weightChanged(w, before)) {
           healthSyncService.markHealthDirty('weight_entries', id);
+          changed = true;
         }
       }
       for (const id of prevById.keys()) {
         if (!currById.has(id)) {
           healthSyncService.markHealthDeleted('weight_entries', id);
+          changed = true;
         }
       }
     }
+
+    if (changed) healthSyncService.scheduleFlush();
   });
 }
 

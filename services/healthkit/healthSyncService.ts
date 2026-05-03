@@ -21,6 +21,7 @@ const DIRTY_KEY = 'health-dirty';
 const DELETES_KEY = 'health-dirty-deletes';
 const FAILURE_COUNT_KEY = 'health-failure-counts';
 const MAX_RETRIES = 5;
+const FLUSH_DEBOUNCE_MS = 1500;
 
 function isIos(): boolean { return Platform.OS === 'ios'; }
 
@@ -69,6 +70,24 @@ function isAuthError(e: any): boolean {
 }
 
 class HealthSyncService {
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Coalesce bursts of dirty markings into one push pass. */
+  scheduleFlush(): void {
+    if (!isIos()) return;
+    if (!getHealthSettings().healthEnabled) return;
+    if (this.flushTimer) clearTimeout(this.flushTimer);
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = null;
+      this.pushDirtyEntries().catch((e) =>
+        console.warn('[health] flush pushDirtyEntries failed', e),
+      );
+      this.pushDirtyWeights().catch((e) =>
+        console.warn('[health] flush pushDirtyWeights failed', e),
+      );
+    }, FLUSH_DEBOUNCE_MS);
+  }
+
   // --- Dirty set API ---
   markHealthDirty(table: HealthTable, id: string): void {
     if (!isIos()) return;
@@ -89,6 +108,10 @@ class HealthSyncService {
   }
 
   clearDirty(): void {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
     saveDirty({ food_entries: [], weight_entries: [] });
     saveDeletes({ food_entries: [], weight_entries: [] });
     saveFailures({});

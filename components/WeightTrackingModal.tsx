@@ -1162,7 +1162,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: Tokens.surfaceRaised,
-    borderRadius: 16,
+    borderRadius: 22,
     padding: 14,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(0, 0, 0, 0.07)",

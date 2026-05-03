@@ -2501,7 +2501,7 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     backgroundColor: Tokens.surfaceRaised,
-    borderRadius: 16,
+    borderRadius: 22,
     padding: 20,
     marginBottom: 16,
     borderWidth: StyleSheet.hairlineWidth,
@@ -2682,7 +2682,7 @@ const styles = StyleSheet.create({
   totalsSection: {
     marginTop: 4,
     backgroundColor: Tokens.surfaceRaised,
-    borderRadius: 16,
+    borderRadius: 22,
     padding: 0,
     marginBottom: 16,
     borderWidth: StyleSheet.hairlineWidth,

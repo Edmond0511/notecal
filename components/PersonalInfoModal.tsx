@@ -738,14 +738,14 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: Tokens.surfaceRaised,
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(0, 0, 0, 0.07)",
     ...Tokens.shadowLight,
   },
   bmiCard: {
     backgroundColor: Tokens.surfaceRaised,
-    borderRadius: 16,
+    borderRadius: 22,
     padding: 16,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(0, 0, 0, 0.07)",

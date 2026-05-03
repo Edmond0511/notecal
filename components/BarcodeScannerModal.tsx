@@ -809,6 +809,9 @@ export function BarcodeScannerModal({
                         const arcs = arcSegments
                           .filter((s) => s.pct > 0)
                           .map((seg) => {
+                            if (seg.pct >= 1) {
+                              return { d: null, color: seg.color, fullCircle: true };
+                            }
                             const angle = seg.pct * usable;
                             const startAngle = cursor;
                             const endAngle = cursor + angle;
@@ -821,6 +824,7 @@ export function BarcodeScannerModal({
                             return {
                               d: `M ${x1} ${y1} A ${R} ${R} 0 ${largeArc} 1 ${x2} ${y2}`,
                               color: seg.color,
+                              fullCircle: false,
                             };
                           });
 
@@ -908,16 +912,28 @@ export function BarcodeScannerModal({
                                     strokeWidth={STROKE}
                                     fill="none"
                                   />
-                                  {arcs.map((arc, i) => (
-                                    <Path
-                                      key={i}
-                                      d={arc.d}
-                                      stroke={arc.color}
-                                      strokeWidth={STROKE}
-                                      fill="none"
-                                      strokeLinecap="butt"
-                                    />
-                                  ))}
+                                  {arcs.map((arc, i) =>
+                                    arc.fullCircle ? (
+                                      <Circle
+                                        key={i}
+                                        cx={CX}
+                                        cy={CY}
+                                        r={R}
+                                        stroke={arc.color}
+                                        strokeWidth={STROKE}
+                                        fill="none"
+                                      />
+                                    ) : (
+                                      <Path
+                                        key={i}
+                                        d={arc.d as string}
+                                        stroke={arc.color}
+                                        strokeWidth={STROKE}
+                                        fill="none"
+                                        strokeLinecap="butt"
+                                      />
+                                    ),
+                                  )}
                                 </Svg>
                                 <View style={styles.donutCenter}>
                                   <AnimatedDigits
@@ -970,7 +986,6 @@ export function BarcodeScannerModal({
                         onPress={handleAdd}
                         activeOpacity={0.85}
                       >
-                        <View style={styles.addButtonSpacer} />
                         <Text style={styles.addButtonText}>Add</Text>
                         <Ionicons
                           name="arrow-forward"
@@ -1588,14 +1603,12 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
+    gap: 8,
     paddingHorizontal: 20,
     height: 56,
     borderRadius: 9999,
     backgroundColor: Tokens.textPrimary,
-  },
-  addButtonSpacer: {
-    width: 16,
   },
   addButtonText: {
     fontSize: 16,

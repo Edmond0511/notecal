@@ -39,16 +39,20 @@ const ALLOWED_IMAGE_MIME_TYPES = new Set<string>([
 
 // Zod schemas for validating Gemini's JSON output. Without this, a prompt-
 // injected `kcal: 1e308` propagates straight into client state.
+//
+// `.nullish()` is used in place of `.optional()` for fields the AI may emit as
+// explicit `null` when omitting them — newer Gemini models (3.x) tend to
+// return `"brand": null` for unbranded foods rather than dropping the key.
 const MacrosSchema = z.object({
   kcal: z.number().min(0).max(20000),
   protein: z.number().min(0).max(2000),
   fat: z.number().min(0).max(2000),
   carbs: z.number().min(0).max(2000),
-  fiber: z.number().min(0).max(2000).optional(),
-  sugar: z.number().min(0).max(2000).optional(),
-  sodium: z.number().min(0).max(100000).optional(),
-  potassium: z.number().min(0).max(100000).optional(),
-  water: z.number().min(0).max(20000).optional(),
+  fiber: z.number().min(0).max(2000).nullish(),
+  sugar: z.number().min(0).max(2000).nullish(),
+  sodium: z.number().min(0).max(100000).nullish(),
+  potassium: z.number().min(0).max(100000).nullish(),
+  water: z.number().min(0).max(20000).nullish(),
 });
 
 const CommonPortionSchema = z.object({
@@ -57,24 +61,28 @@ const CommonPortionSchema = z.object({
 });
 
 const ReasoningSchema = z.object({
-  interpretation: z.string().max(2000).optional(),
-  assumptions: z.array(z.string().max(500)).max(20).optional(),
-  portionNotes: z.string().max(2000).optional(),
-  dataSource: z.string().max(2000).optional(),
-  confidenceExplanation: z.string().max(1000).optional(),
-  confidenceAnalysis: z.string().max(4000).optional(),
+  interpretation: z.string().max(2000).nullish(),
+  assumptions: z.array(z.string().max(500)).max(20).nullish(),
+  portionNotes: z.string().max(2000).nullish(),
+  dataSource: z.string().max(2000).nullish(),
+  confidenceExplanation: z.string().max(1000).nullish(),
+  confidenceAnalysis: z.string().max(4000).nullish(),
 }).partial();
 
 const ItemSchema = z.object({
   label: z.string().min(0).max(500),
-  brand: z.string().max(200).optional(),
-  source: z.enum(["brand", "USDA", "ai-estimate"]).optional(),
+  brand: z.string().max(200).nullish(),
+  // Gemini occasionally emits values outside the documented enum (e.g.
+  // "none" for non-food inputs). The client maps unknown sources to "ai",
+  // so cap length and let any string through rather than failing the whole
+  // response.
+  source: z.string().max(50).nullish(),
   qty: z.number().min(0).max(50000),
   unit: z.string().max(50),
   confidence: z.number().min(0).max(1),
   macros: MacrosSchema,
-  reasoning: ReasoningSchema.optional(),
-  commonPortions: z.array(CommonPortionSchema).max(10).optional(),
+  reasoning: ReasoningSchema.nullish(),
+  commonPortions: z.array(CommonPortionSchema).max(10).nullish(),
 });
 
 const ResponseSchema = z.object({
@@ -85,12 +93,12 @@ const ResponseSchema = z.object({
 // Looser correction-mode response schema (the AI returns a different shape).
 const CorrectionResponseSchema = z.object({
   correctedMacros: MacrosSchema,
-  correctedLabel: z.string().max(500).nullable().optional(),
-  correctedQty: z.number().min(0).max(50000).optional(),
-  correctedUnit: z.string().max(50).optional(),
-  explanation: z.string().max(2000).optional(),
-  confidence: z.number().min(0).max(1).optional(),
-  reasoning: ReasoningSchema.optional(),
+  correctedLabel: z.string().max(500).nullish(),
+  correctedQty: z.number().min(0).max(50000).nullish(),
+  correctedUnit: z.string().max(50).nullish(),
+  explanation: z.string().max(2000).nullish(),
+  confidence: z.number().min(0).max(1).nullish(),
+  reasoning: ReasoningSchema.nullish(),
 });
 
 interface NutritionRequest {
@@ -599,7 +607,7 @@ async function callAIService(
 
 // Models in order of preference
 const GEMINI_MODELS = {
-  primary: "gemini-2.5-flash",
+  primary: "gemini-3.1-flash-lite-preview",
   fallback: "gemini-2.5-flash-lite",
   correction: "gemini-2.5-flash-lite",
 };

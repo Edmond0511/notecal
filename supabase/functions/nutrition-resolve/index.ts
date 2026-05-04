@@ -1173,7 +1173,7 @@ OUTPUT FORMAT (JSON only, no markdown):
         "interpretation": "Identified grilled chicken breast from visual appearance - pale, lean meat with grill marks",
         "assumptions": ["Boneless skinless breast", "No added oil or sauce visible", "Grilled preparation based on char marks"],
         "portionNotes": "Estimated ~150g based on size relative to dinner plate",
-        "dataSource": "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=chicken+breast)",
+        "dataSource": "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=chicken+breast&type=SR%20Legacy)",
         "confidenceExplanation": "Medium confidence, visual identification with estimated portion size",
         "confidenceAnalysis": "This item was identified as grilled chicken breast based on visual characteristics. The portion was estimated at 150g using plate-size reference. Exact weight and preparation method introduce uncertainty."
       }
@@ -1196,7 +1196,18 @@ DATA SOURCE FORMAT:
      b. Link to the brand's official homepage: "[Brand Name](https://www.brandname.com)". For well-known brands, use their real domain.
      c. NEVER use google.com, wikipedia.org, or any search engine as the URL.
      If brand-specific nutrition data is NOT available, fall back to USDA or other credible databases and cite them instead.
-  2. GENERIC/UNBRANDED ITEMS or BRANDED FALLBACK: Use the FDC food search URL: "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)" - replace FOOD_NAME with the URL-encoded food label.
+  2. GENERIC/UNBRANDED ITEMS or BRANDED FALLBACK: Use an FDC food search URL with a single dataType filter applied: "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME&type=TYPE)".
+     a. Replace FOOD_NAME with the URL-encoded food label (spaces as "+"). Examples: "banana" -> "banana", "chicken breast" -> "chicken+breast".
+     b. Replace TYPE with EXACTLY ONE of these URL-encoded values, chosen to fit the food:
+        - "Foundation" - lab-measured raw whole foods (e.g., banana, apple, raw spinach).
+        - "SR%20Legacy" - broad coverage of common foods, raw or prepared (e.g., chicken breast, oats, greek yogurt). Use as the default when unsure.
+        - "Survey%20(FNDDS)" - multi-ingredient or prepared dishes (e.g., macaroni and cheese, beef stew, chicken alfredo).
+     c. Use ONLY ONE type value. NEVER use comma-separated lists like "Foundation,SR%20Legacy".
+     d. Concrete examples to imitate:
+        - "banana" -> "https://fdc.nal.usda.gov/food-search?query=banana&type=Foundation"
+        - "chicken breast" -> "https://fdc.nal.usda.gov/food-search?query=chicken+breast&type=SR%20Legacy"
+        - "macaroni and cheese" -> "https://fdc.nal.usda.gov/food-search?query=macaroni+and+cheese&type=Survey%20(FNDDS)"
+     e. Do NOT fabricate a specific FDC food ID number.
   3. NEVER output a bare/raw URL. URLs must be wrapped in a markdown link [Name](url).
   4. NEVER fabricate specific food ID numbers. Use the search URL format instead.
   5. NEVER use em dashes anywhere in your output. Use commas, periods, semicolons, or hyphens (-) instead.
@@ -1508,7 +1519,7 @@ async function callCorrectionAI(
       "interpretation": "<1 sentence: what was corrected - e.g., 'Corrected from medium to large size'>",
       "assumptions": ["<short assumptions, max 2-3 items>"],
       "portionNotes": "<brief portion note if relevant, otherwise omit>",
-      "dataSource": "For branded items, cite the BRAND/MANUFACTURER (not product name) and link to their official homepage: '[Brand Name](https://www.brandname.com)'. If brand data unavailable, fall back to USDA. NEVER use google.com or search engines. For generic foods use '[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)'.",
+      "dataSource": "For branded items, cite the BRAND/MANUFACTURER (not product name) and link to their official homepage: '[Brand Name](https://www.brandname.com)'. If brand data unavailable, fall back to USDA. NEVER use google.com or search engines. For generic foods use the FDC search URL with one dataType filter: '[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME&type=TYPE)' where TYPE is exactly one of 'Foundation', 'SR%20Legacy', or 'Survey%20(FNDDS)' - never a comma-separated list.",
       "confidenceExplanation": "One-line: High/Medium/Low confidence + short reason",
       "confidenceAnalysis": "1-2 sentences max. What source was used and main uncertainty."
     }

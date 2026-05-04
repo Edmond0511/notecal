@@ -90,7 +90,7 @@ const COPY: StepCopy[] = [
   },
   {
     title: "Your daily targets",
-    subtitle: "Computed using Mifflin-St Jeor",
+    subtitle: "Personalized to your body and goal",
     cta: "Start tracking",
   },
 ];

@@ -8,7 +8,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
-  faArrowRight,
   faBolt,
   faCubesStacked,
   faDroplet,
@@ -19,14 +18,12 @@ import {
   faWheatAwn,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import * as Haptics from "expo-haptics";
-import React, { useRef, useState } from "react";
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Animated, { FadeIn } from "react-native-reanimated";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { CalculationBreakdown } from "./CalculationBreakdown";
 
 const icons = {
   fire: faFireFlameCurved as IconProp,
-  arrowRight: faArrowRight as IconProp,
   drumstickBite: faDrumstickBite as IconProp,
   droplet: faDroplet as IconProp,
   wheatAwn: faWheatAwn as IconProp,
@@ -36,59 +33,12 @@ const icons = {
   bolt: faBolt as IconProp,
 };
 
-const CALORIE_EXPLANATIONS = {
-  bmr: {
-    title: "BMR (Basal Metabolic Rate)",
-    description:
-      "The calories your body burns at complete rest - just to keep vital organs like your heart, lungs, and brain functioning.",
-    formula:
-      "Calculated using the Mifflin-St Jeor equation based on your age, sex, height, and weight.",
-  },
-  tdee: {
-    title: "TDEE (Total Daily Energy Expenditure)",
-    description:
-      "Your BMR plus calories burned through daily activity and exercise. This is your estimated total daily calorie burn.",
-    formula: "TDEE = BMR × Activity Multiplier",
-  },
-};
-
 const OTHER_NUTRIENTS = [
   { key: "fiber" as const, label: "Fiber", unit: "g", color: "#B08C5A", icon: icons.seedling },
   { key: "sugar" as const, label: "Sugar", unit: "g", color: "#D4687E", icon: icons.cubesStacked },
   { key: "sodium" as const, label: "Sodium", unit: "mg", color: "#6898BE", icon: icons.tint },
   { key: "potassium" as const, label: "Potassium", unit: "mg", color: "#72A868", icon: icons.bolt },
 ];
-
-function CalorieExplanationPopup({
-  type,
-  visible,
-  onClose,
-}: {
-  type: "bmr" | "tdee";
-  visible: boolean;
-  onClose: () => void;
-}) {
-  const explanation = CALORIE_EXPLANATIONS[type];
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.explanationPopupOverlay}>
-        <TouchableOpacity
-          style={styles.explanationPopupBackdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
-        <Animated.View
-          entering={FadeIn.duration(200)}
-          style={styles.explanationPopup}
-        >
-          <Text style={styles.explanationTitle}>{explanation.title}</Text>
-          <Text style={styles.explanationDescription}>{explanation.description}</Text>
-          <Text style={styles.explanationFormula}>{explanation.formula}</Text>
-        </Animated.View>
-      </View>
-    </Modal>
-  );
-}
 
 interface ReviewSummaryProps {
   goals: UserGoals;
@@ -103,15 +53,6 @@ export function ReviewSummary({
   weightDisplay,
   useImperial,
 }: ReviewSummaryProps) {
-  const [activeExplanation, setActiveExplanation] = useState<"bmr" | "tdee" | null>(null);
-  const lastExplanationType = useRef<"bmr" | "tdee">("bmr");
-
-  const handleExplanationPress = (type: "bmr" | "tdee") => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    lastExplanationType.current = type;
-    setActiveExplanation(type);
-  };
-
   const activityInfo = getActivityLevelDescription(goals.activityLevel);
   const goalInfo = getGoalTypeDescription(goals.goalType);
 
@@ -127,48 +68,6 @@ export function ReviewSummary({
           <FontAwesomeIcon icon={icons.fire} size={28} color={Tokens.macroKcal} />
           <Text style={styles.mainTargetValue}>{goals.targetKcal}</Text>
           <Text style={styles.mainTargetUnit}>cal/day</Text>
-        </View>
-        <View style={styles.calculationBreakdown}>
-          <View style={styles.breakdownItem}>
-            <TouchableOpacity
-              style={styles.breakdownLabelRow}
-              onPress={() => handleExplanationPress("bmr")}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.breakdownLabel}>BMR</Text>
-              <Ionicons
-                name="information-circle-outline"
-                size={12}
-                color="#FF8A65"
-                style={styles.breakdownInfoIcon}
-              />
-            </TouchableOpacity>
-            <Text style={styles.breakdownValue}>{goals.bmr}</Text>
-          </View>
-          <FontAwesomeIcon icon={icons.arrowRight} size={14} color={Tokens.macroKcal} />
-          <View style={styles.breakdownItem}>
-            <TouchableOpacity
-              style={styles.breakdownLabelRow}
-              onPress={() => handleExplanationPress("tdee")}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.breakdownLabel}>TDEE</Text>
-              <Ionicons
-                name="information-circle-outline"
-                size={12}
-                color="#FF8A65"
-                style={styles.breakdownInfoIcon}
-              />
-            </TouchableOpacity>
-            <Text style={styles.breakdownValue}>{goals.tdee}</Text>
-          </View>
-          <FontAwesomeIcon icon={icons.arrowRight} size={14} color={Tokens.macroKcal} />
-          <View style={styles.breakdownItem}>
-            <Text style={styles.breakdownLabel}>Target</Text>
-            <Text style={styles.breakdownValue}>{goals.targetKcal}</Text>
-          </View>
         </View>
       </View>
 
@@ -220,6 +119,9 @@ export function ReviewSummary({
           </View>
         </View>
       )}
+
+      {/* Calculation breakdown */}
+      <CalculationBreakdown goals={goals} useImperial={useImperial} />
 
       {/* Profile summary */}
       <View style={styles.summaryCard}>
@@ -276,11 +178,6 @@ export function ReviewSummary({
         </View>
       )}
 
-      <CalorieExplanationPopup
-        type={lastExplanationType.current}
-        visible={activeExplanation !== null}
-        onClose={() => setActiveExplanation(null)}
-      />
     </View>
   );
 }
@@ -289,7 +186,8 @@ const styles = StyleSheet.create({
   mainTargetCard: {
     backgroundColor: "#FFE5D9",
     borderRadius: 16,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 36,
     marginBottom: 16,
     alignItems: "center",
     ...Tokens.shadowLight,
@@ -299,7 +197,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
-    marginBottom: 16,
   },
   mainTargetValue: {
     fontSize: 48,
@@ -312,44 +209,15 @@ const styles = StyleSheet.create({
     color: "#FF8A65",
     fontWeight: "500",
   },
-  calculationBreakdown: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  breakdownItem: {
-    alignItems: "center",
-    minWidth: 52,
-  },
-  breakdownLabel: {
-    fontSize: 11,
-    color: "#FF8A65",
-    marginBottom: 2,
-    letterSpacing: 0.3,
-  },
-  breakdownValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FF8A65",
-  },
-  breakdownLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  breakdownInfoIcon: {
-    marginLeft: 2,
-  },
   macrosCard: {
     marginBottom: 16,
   },
   sectionTitle: {
+    fontFamily: "IBMPlexSans_700Bold",
     fontSize: 15,
-    fontWeight: "600",
-    color: Tokens.textPrimary,
+    color: "#6B6B6B",
     marginBottom: 12,
-    letterSpacing: -0.2,
+    letterSpacing: -0.1,
   },
   macrosGrid: {
     flexDirection: "row",
@@ -376,7 +244,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   otherNutrientsCard: {
-    marginBottom: 16,
+    marginBottom: 24,
   },
   otherNutrientsGrid: {
     gap: 8,
@@ -411,8 +279,7 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     paddingHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 16,
+    marginBottom: 24,
   },
   summaryGrid: {
     flexDirection: "row",
@@ -435,7 +302,7 @@ const styles = StyleSheet.create({
   },
   weightTargetCard: {
     paddingHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 24,
   },
   weightTargetRow: {
     flexDirection: "row",
@@ -456,44 +323,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Tokens.textPrimary,
     letterSpacing: -0.3,
-  },
-  explanationPopupOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  explanationPopupBackdrop: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
-  },
-  explanationPopup: {
-    backgroundColor: Tokens.surfaceRaised,
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 20,
-    maxWidth: 320,
-    ...Tokens.shadowMedium,
-  },
-  explanationTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Tokens.textPrimary,
-    marginBottom: 12,
-    letterSpacing: -0.3,
-  },
-  explanationDescription: {
-    fontSize: 14,
-    color: Tokens.textSecondary,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  explanationFormula: {
-    fontSize: 13,
-    color: Tokens.textTertiary,
-    fontStyle: "italic",
   },
 });

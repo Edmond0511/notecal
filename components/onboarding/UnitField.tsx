@@ -114,8 +114,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    fontSize: 13,
-    color: Tokens.textSecondary,
+    fontFamily: 'IBMPlexSans_700Bold',
+    fontSize: 15,
+    color: '#6B6B6B',
     letterSpacing: -0.1,
   },
   row: {

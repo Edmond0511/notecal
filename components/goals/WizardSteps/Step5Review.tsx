@@ -16,7 +16,7 @@ export function Step5Review({ goals, formData }: Step5ReviewProps) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Your daily targets</Text>
-        <Text style={styles.subtitle}>Computed using Mifflin-St Jeor</Text>
+        <Text style={styles.subtitle}>Personalized to your body and goal</Text>
         <Text style={styles.errorText}>
           Unable to calculate goals. Please go back and fill in all required fields.
         </Text>
@@ -35,7 +35,7 @@ export function Step5Review({ goals, formData }: Step5ReviewProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Your daily targets</Text>
-      <Text style={styles.subtitle}>Computed using Mifflin-St Jeor</Text>
+      <Text style={styles.subtitle}>Personalized to your body and goal</Text>
       <ReviewSummary
         goals={goals}
         heightDisplay={heightDisplay}

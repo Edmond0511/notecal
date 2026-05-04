@@ -176,6 +176,7 @@ export function StepWeightTarget({
       </View>
 
       <View style={styles.sliderSection}>
+        <Text style={styles.timelineLabel}>Weight</Text>
         <RangeSlider
           value={targetDisplay}
           min={weightRange.min}
@@ -353,10 +354,10 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   timelineLabel: {
+    fontFamily: 'IBMPlexSans_700Bold',
     fontSize: 15,
-    fontWeight: '500',
     color: '#6B6B6B',
-    textTransform: 'capitalize',
+    letterSpacing: -0.1,
   },
   timelineValue: {
     fontSize: 17,

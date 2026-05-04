@@ -140,10 +140,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionTitle: {
+    fontFamily: 'IBMPlexSans_700Bold',
     fontSize: 15,
-    fontWeight: '600',
-    color: Tokens.textPrimary,
-    letterSpacing: -0.2,
+    color: '#6B6B6B',
+    letterSpacing: -0.1,
   },
   optionsRow: {
     flexDirection: 'row',

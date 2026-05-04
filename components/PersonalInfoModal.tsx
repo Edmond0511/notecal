@@ -181,7 +181,7 @@ export function PersonalInfoModal({
     if (!goals || !hasChanges) return;
 
     // Validate
-    if (currentAge < 18 || currentAge > 100) return;
+    if (currentAge < 13 || currentAge > 100) return;
     if (currentHeightCm < 100 || currentHeightCm > 275) return;
     if (currentWeightKg < 30 || currentWeightKg > 300) return;
 
@@ -374,7 +374,7 @@ export function PersonalInfoModal({
               keyboardType="number-pad"
               autoFocus
               selectTextOnFocus
-              placeholder="18-100"
+              placeholder="13-100"
               placeholderTextColor={Tokens.textTertiary}
             />
             <Text style={styles.editUnit}>years</Text>

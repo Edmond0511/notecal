@@ -1,50 +1,24 @@
-# Welcome to your Expo app 👋
+<h1 align="center">NoteCal</h1>
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+<p align="center">A nutrition tracker that feels like a notes app.<br />
+Type a line of food. Get the calories, macros, and progress toward your goal.</p>
 
-## Get started
+<p align="center">
+  <img src="website/assets/screen-1-notes.png" alt="Notes" width="200" />
+  <img src="website/assets/screen-2-nutrition.png" alt="Nutrition" width="200" />
+  <img src="website/assets/screen-3-progress.png" alt="Progress" width="200" />
+  <img src="website/assets/screen-4-add.png" alt="Add" width="200" />
+</p>
 
-1. Install dependencies
+## The idea
 
-   ```bash
-   npm install
-   ```
+Most calorie apps make you search a database, pick a serving size, and tap through forms. NoteCal lets you write `2 eggs` or `oats, 50g` and figures the rest out — portion, brand, prep — using AI grounded in real nutrition data. Every estimate shows its reasoning so you can sanity-check it.
 
-2. Start the app
+## Features
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- AI nutrition lookup with confidence scores and source citations
+- Daily calorie + macro targets from a quick goals wizard (Mifflin–St Jeor)
+- Weight log with photos and trend charts
+- Saved meals for instant reuse, no lookup needed
+- Fully offline-capable; entries resolve when you reconnect
+- Optional Google / Apple sign-in for cross-device sync

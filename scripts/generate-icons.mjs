@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const srcDir = join(root, 'assets/app-icon');
 const outDir = join(root, 'assets/images');
+const webDir = join(root, 'website/assets');
 
 const sourceSvg = readFileSync(join(srcDir, 'icon-1024.svg'), 'utf8');
 
@@ -81,9 +82,31 @@ async function buildSplash() {
   console.log('✓ splash-icon.png (1024×1024, transparent)');
 }
 
+// Marketing site (website/) — favicon, og:image, and Apple touch icon
+async function buildWebsite() {
+  await sharp(Buffer.from(sourceSvg))
+    .resize(32, 32)
+    .png()
+    .toFile(join(webDir, 'favicon.png'));
+  console.log('✓ website/assets/favicon.png (32×32)');
+
+  await sharp(Buffer.from(sourceSvg))
+    .resize(180, 180)
+    .png()
+    .toFile(join(webDir, 'apple-touch-icon.png'));
+  console.log('✓ website/assets/apple-touch-icon.png (180×180)');
+
+  await sharp(Buffer.from(sourceSvg))
+    .resize(1024, 1024)
+    .png()
+    .toFile(join(webDir, 'icon.png'));
+  console.log('✓ website/assets/icon.png (1024×1024)');
+}
+
 await buildIos();
 await buildAndroidForeground();
 await buildAndroidBackground();
 await buildAndroidMonochrome();
 await buildFavicon();
 await buildSplash();
+await buildWebsite();

@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>NoteCal — Calorie tracking without the friction.</title>
     <meta name="description" content="Write what you ate. NoteCal handles the math, macros, and goals." />
-    <link rel="icon" href="assets/favicon.png" type="image/png" />
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+    <link rel="icon" type="image/png" href="assets/favicon.png" />
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
     <meta name="theme-color" content="#FAFAFA" />
     <meta property="og:title" content="NoteCal — Calorie tracking without the friction." />
     <meta property="og:description" content="Write what you ate. NoteCal handles the math, macros, and goals." />
@@ -24,7 +26,17 @@
   <body>
     <header class="nav">
       <div class="shell nav__inner">
-        <a href="index.html" class="wordmark">NoteCal</a>
+        <a href="index.html" class="wordmark">
+          <svg class="wordmark__icon" viewBox="0 0 1024 1024" aria-hidden="true">
+            <g transform="translate(512, 512) scale(9)">
+              <g transform="skewX(-14)">
+                <path d="M -26 -14 C -26 -44, 26 -44, 26 -14 L 26 40 L 13 40 L 13 -8 C 13 -22, -13 -22, -13 -8 L -13 40 L -26 40 Z" fill="currentColor"/>
+              </g>
+              <circle cx="24" cy="36" r="6" fill="currentColor"/>
+            </g>
+          </svg>
+          <span>NoteCal</span>
+        </a>
         <nav class="nav__links" aria-label="Primary">
           <a href="privacy.html">Privacy Policy</a>
           <a href="terms.html">Terms of Service</a>
@@ -188,17 +200,6 @@
         </div>
       </section>
 
-      <section class="closing">
-        <div class="shell shell--narrow">
-          <h2 class="closing__title">
-            For people who hate tracking food.
-          </h2>
-          <p class="closing__sub">
-            Local-first. No ads. No selling your data. Just a faster way to
-            know what you're eating.
-          </p>
-        </div>
-      </section>
     </main>
 
     <footer class="foot">

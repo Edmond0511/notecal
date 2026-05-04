@@ -320,8 +320,36 @@ export function SignInModal({ visible, onClose }: Props) {
 
               <Text style={styles.legal}>
                 By continuing you agree to our{" "}
-                <Text style={styles.legalEmph}>Terms</Text> ·{" "}
-                <Text style={styles.legalEmph}>Privacy</Text>
+                <Text
+                  style={styles.legalEmph}
+                  onPress={() =>
+                    WebBrowser.openBrowserAsync(
+                      "https://notecal.app/terms"
+                    )
+                  }
+                >
+                  Terms
+                </Text>{" "}
+                ·{" "}
+                <Text
+                  style={styles.legalEmph}
+                  onPress={() =>
+                    WebBrowser.openBrowserAsync(
+                      "https://notecal.app/privacy"
+                    )
+                  }
+                >
+                  Privacy
+                </Text>
+              </Text>
+
+              <Text
+                style={styles.attribution}
+                onPress={() =>
+                  WebBrowser.openBrowserAsync("https://platform.fatsecret.com")
+                }
+              >
+                Powered by fatsecret Platform API
               </Text>
             </View>
           </Animated.View>
@@ -435,5 +463,11 @@ const styles = StyleSheet.create({
   },
   legalEmph: {
     color: Tokens.textSecondary,
+  },
+  attribution: {
+    fontSize: 11,
+    color: Tokens.textTertiary,
+    textAlign: "center",
+    marginTop: 6,
   },
 });

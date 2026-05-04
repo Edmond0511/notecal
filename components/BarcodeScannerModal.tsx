@@ -30,6 +30,7 @@ import {
   Dimensions,
   Keyboard,
   LayoutAnimation,
+  Linking,
   Modal,
   ScrollView,
   StatusBar,
@@ -1011,6 +1012,15 @@ export function BarcodeScannerModal({
                           color="#fff"
                         />
                       </TouchableOpacity>
+
+                      <Text
+                        style={styles.attribution}
+                        onPress={() =>
+                          Linking.openURL("https://platform.fatsecret.com")
+                        }
+                      >
+                        Powered by FatSecret Platform API
+                      </Text>
                     </ScrollView>
                   </Animated.View>
                 )}
@@ -1633,6 +1643,15 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#fff",
     letterSpacing: -0.2,
+  },
+  attribution: {
+    fontSize: 11,
+    fontFamily: "System",
+    fontWeight: "400",
+    color: "#bbb",
+    textAlign: "center",
+    marginTop: 12,
+    marginBottom: 8,
   },
   // Not found / error states
   notFoundHeader: {

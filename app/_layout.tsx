@@ -8,7 +8,7 @@ import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import 'react-native-reanimated';
@@ -90,11 +90,16 @@ function RootLayoutNav() {
     };
   }, [isLoading, isAuthenticated]);
 
-  // Show loading screen while checking auth
+  // Show loading screen while checking auth — mirrors the native SplashScreen
+  // (200×200 NoteCal glyph on white) so reload doesn't flash a gray spinner.
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#666" />
+        <Image
+          source={require('@/assets/images/splash-icon.png')}
+          style={styles.loadingLogo}
+          resizeMode="contain"
+        />
       </View>
     );
   }
@@ -131,5 +136,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
+  },
+  loadingLogo: {
+    width: 200,
+    height: 200,
   },
 });

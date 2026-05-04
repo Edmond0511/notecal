@@ -7,6 +7,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const srcDir = join(root, 'assets/app-icon');
 const outDir = join(root, 'assets/images');
 const webDir = join(root, 'website/assets');
+const webRootDir = join(root, 'website');
 
 const sourceSvg = readFileSync(join(srcDir, 'icon-1024.svg'), 'utf8');
 
@@ -82,13 +83,18 @@ async function buildSplash() {
   console.log('✓ splash-icon.png (1024×1024, transparent)');
 }
 
-// Marketing site (website/) — favicon, og:image, and Apple touch icon
+// Marketing site (website/) — favicon, og:image, and Apple touch icon.
+// Favicons live at the site root so browsers' implicit /favicon.ico request
+// resolves to the NoteCal glyph (not a gray default) during reload.
 async function buildWebsite() {
-  await sharp(Buffer.from(sourceSvg))
+  const faviconPng = await sharp(Buffer.from(sourceSvg))
     .resize(32, 32)
     .png()
-    .toFile(join(webDir, 'favicon.png'));
-  console.log('✓ website/assets/favicon.png (32×32)');
+    .toBuffer();
+
+  await sharp(faviconPng).toFile(join(webRootDir, 'favicon.png'));
+  await sharp(faviconPng).toFile(join(webRootDir, 'favicon.ico'));
+  console.log('✓ website/favicon.{png,ico} (32×32)');
 
   await sharp(Buffer.from(sourceSvg))
     .resize(180, 180)

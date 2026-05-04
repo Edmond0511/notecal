@@ -352,13 +352,27 @@ a { color: inherit; text-decoration: none; }
 .foot__copy {
   font-size: 13px;
   color: var(--ink-3);
+  flex: 1;
+  text-align: left;
 }
+
+.foot__attribution {
+  font-size: 13px;
+  color: var(--ink-3);
+  flex: 1;
+  text-align: center;
+}
+
+.foot__attribution a { color: inherit; }
+.foot__attribution a:hover { color: var(--ink); }
 
 .foot__links {
   display: flex;
   gap: 24px;
   font-size: 13px;
   color: var(--ink-3);
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .foot__links a:hover { color: var(--ink); }

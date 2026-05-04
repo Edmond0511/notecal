@@ -158,6 +158,15 @@ function getTimeBadgeStyle(date: Date): { background: string; text: string; icon
   }
 }
 
+function isSafeUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    return u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function getDomainFromUrl(url: string): string {
   try {
     const hostname = new URL(url).hostname;
@@ -174,13 +183,26 @@ function getFaviconUrl(url: string): string {
 
 function SourcePill({ url, label }: { url?: string; label: string }) {
   const [faviconFailed, setFaviconFailed] = useState(false);
-  const showFavicon = !!url && !faviconFailed;
+  const safe = !!url && isSafeUrl(url);
+  const showFavicon = safe && !faviconFailed;
+
+  // Disallowed/missing URL: render as non-tappable plain pill
+  if (!safe) {
+    return (
+      <View style={styles.sourcePill}>
+        <Text style={styles.sourcePillText} numberOfLines={1}>
+          {label}
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <TouchableOpacity
       style={styles.sourcePill}
       activeOpacity={0.7}
       onPress={() => {
-        if (url) {
+        if (url && isSafeUrl(url)) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           Linking.openURL(url);
         }
@@ -188,7 +210,7 @@ function SourcePill({ url, label }: { url?: string; label: string }) {
     >
       {showFavicon && (
         <Image
-          source={{ uri: getFaviconUrl(url) }}
+          source={{ uri: getFaviconUrl(url!) }}
           style={styles.sourceFavicon}
           onError={() => setFaviconFailed(true)}
         />
@@ -326,20 +348,24 @@ function ParsedText({ text, style, pillLinks }: { text: string; style: any; pill
     <Text style={style}>
       {parts.map((part, index) => {
         if (part.type === "link") {
-          return (
-            <Text
-              key={index}
-              style={styles.linkText}
-              onPress={() => {
-                if (part.url) {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  Linking.openURL(part.url);
-                }
-              }}
-            >
-              {part.content}
-            </Text>
-          );
+          if (part.url && isSafeUrl(part.url)) {
+            return (
+              <Text
+                key={index}
+                style={styles.linkText}
+                onPress={() => {
+                  if (part.url && isSafeUrl(part.url)) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    Linking.openURL(part.url);
+                  }
+                }}
+              >
+                {part.content}
+              </Text>
+            );
+          }
+          // Disallowed URL: render link text as plain text (no tap)
+          return <Text key={index}>{part.content}</Text>;
         }
         return <Text key={index}>{part.content}</Text>;
       })}

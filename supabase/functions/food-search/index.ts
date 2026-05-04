@@ -7,11 +7,21 @@ import {
   type NormalizedServing,
 } from "../_shared/fatsecret.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://notecal.app",
+  "http://localhost:8081",
+]);
+
+function buildCors(req: Request) {
+  const origin = req.headers.get("origin") ?? "";
+  const allowed = ALLOWED_ORIGINS.has(origin) ? origin : "";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
 
 interface SearchRequest {
   query?: string;
@@ -42,6 +52,112 @@ interface DatabaseSearchResult {
   fsServings: NormalizedServing[];
   defaultServingMacros: Macros;
   defaultServingDescription: string;
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(input),
+  );
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+interface RateLimitDecision {
+  response?: Response;
+  pendingRowId: number | null;
+}
+
+async function checkRateLimit(
+  supabase: any,
+  userId: string,
+  ipHash: string,
+  requestType: string,
+  cost: number,
+  corsHeaders: Record<string, string>,
+): Promise<RateLimitDecision> {
+  try {
+    const { data, error } = await supabase.rpc("check_and_record_usage", {
+      p_user_id: userId,
+      p_ip_hash: ipHash,
+      p_request_type: requestType,
+      p_cost_credits: cost,
+    });
+
+    if (error) {
+      // Fail closed — refuse the request when rate-limit infra is unavailable.
+      console.error("[RateLimit] RPC error, failing closed:", error);
+      return {
+        pendingRowId: null,
+        response: new Response(
+          JSON.stringify({ error: "rate_limit_unavailable" }),
+          {
+            status: 503,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        ),
+      };
+    }
+
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) {
+      console.error("[RateLimit] RPC returned no row, failing closed");
+      return {
+        pendingRowId: null,
+        response: new Response(
+          JSON.stringify({ error: "rate_limit_unavailable" }),
+          {
+            status: 503,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        ),
+      };
+    }
+
+    if (!row.allowed) {
+      const retryAfter = row.retry_after_seconds ?? 60;
+      const remaining = Math.max(0, (row.limit_day ?? 0) - (row.used_day ?? 0));
+      return {
+        pendingRowId: null,
+        response: new Response(
+          JSON.stringify({
+            error: "rate_limit_exceeded",
+            reason: row.reason,
+            usedDay: row.used_day,
+            limitDay: row.limit_day,
+            usedMinute: row.used_minute,
+            limitMinute: row.limit_minute,
+            retryAfterSeconds: retryAfter,
+          }),
+          {
+            status: 429,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+              "Retry-After": String(retryAfter),
+              "X-RateLimit-Limit": String(row.limit_day ?? 0),
+              "X-RateLimit-Remaining": String(remaining),
+            },
+          },
+        ),
+      };
+    }
+
+    return { pendingRowId: row.pending_row_id ?? null };
+  } catch (e) {
+    console.error("[RateLimit] Unexpected error, failing closed:", e);
+    return {
+      pendingRowId: null,
+      response: new Response(
+        JSON.stringify({ error: "rate_limit_unavailable" }),
+        {
+          status: 503,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      ),
+    };
+  }
 }
 
 function normalizeCacheKey(query: string): string {
@@ -79,20 +195,80 @@ function fsSearchResultToResult(food: any): DatabaseSearchResult | null {
 }
 
 serve(async (req) => {
+  const corsHeaders = buildCors(req);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // --- Auth gate: require valid Bearer JWT ---
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "unauthenticated" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    let userId: string;
+    try {
+      const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const { data: { user }, error: authErr } = await anonClient.auth.getUser(
+        token,
+      );
+      if (authErr || !user) {
+        return new Response(
+          JSON.stringify({ error: "unauthenticated" }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+      userId = user.id;
+    } catch (_e) {
+      return new Response(
+        JSON.stringify({ error: "unauthenticated" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // IP hash for rate-limit table (auth'd users still get logged with IP).
+    const xff = req.headers.get("x-forwarded-for") ?? "";
+    const clientIp = xff.split(",")[0].trim() || "unknown";
+    const ipHash = await sha256Hex(clientIp);
 
     const body: SearchRequest = await req.json();
     const { query, limit = 15, mode, foodId } = body;
 
     // --- Detail mode: fetch full food with servings ---
     if (mode === "detail" && foodId) {
+      // Validate foodId shape (numeric or alphanumeric token, length-capped)
+      if (typeof foodId !== "string" || foodId.length === 0 || foodId.length > 64) {
+        return new Response(
+          JSON.stringify({ error: "Invalid foodId" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const rl = await checkRateLimit(supabase, userId, ipHash, "search", 1, corsHeaders);
+      if (rl.response) return rl.response;
+
       const detailCacheKey = `fs:food:v2:${foodId}`;
       const { data: cachedDetail } = await supabase
         .from("food_search_cache")
@@ -142,6 +318,16 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+    if (query.length > 100) {
+      return new Response(
+        JSON.stringify({ error: "Query too long (max 100 chars)" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const rl = await checkRateLimit(supabase, userId, ipHash, "search", 1, corsHeaders);
+    if (rl.response) return rl.response;
 
     const cacheKey = normalizeCacheKey(query);
 

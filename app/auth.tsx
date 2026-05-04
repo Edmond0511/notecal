@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { IBMPlexSans_700Bold, useFonts } from '@expo-google-fonts/ibm-plex-sans';
 import { Ionicons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -185,28 +186,29 @@ export default function AuthScreen() {
         const result = await WebBrowser.openAuthSessionAsync(data.url, 'notecal://auth/callback');
 
         if (result.type === 'success') {
-          const url = result.url;
-          const urlObj = new URL(url);
-          const code = urlObj.searchParams.get('code');
-
-          if (code) {
-            const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
-            if (sessionError) throw sessionError;
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          } else {
-            const hashParams = new URLSearchParams(url.split('#')[1] || '');
-            const accessToken = hashParams.get('access_token');
-            const refreshToken = hashParams.get('refresh_token');
-            if (accessToken && refreshToken) {
-              await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken,
-              });
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            } else {
-              setError('Authentication failed - please try again');
-            }
+          // PKCE flow only. Validate the redirect target before extracting the
+          // code so a co-installed app firing notecal:// with a hostile URL
+          // can't smuggle attacker tokens. The implicit-flow fragment fallback
+          // is intentionally removed — never call setSession() with URL-derived
+          // tokens.
+          const urlObj = new URL(result.url);
+          const pathname = urlObj.pathname.replace(/\/+$/, '');
+          if (
+            urlObj.protocol !== 'notecal:' ||
+            urlObj.host !== 'auth' ||
+            pathname !== '/callback'
+          ) {
+            setError('Invalid auth callback');
+            return;
           }
+          const code = urlObj.searchParams.get('code');
+          if (!code) {
+            setError('Authentication failed - please try again');
+            return;
+          }
+          const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+          if (sessionError) throw sessionError;
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
       }
     } catch (err: any) {
@@ -223,11 +225,21 @@ export default function AuthScreen() {
       setError(null);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+      // Generate a per-request nonce to defeat Apple ID-token replay. Apple
+      // signs the SHA-256 hash and embeds it in the JWT; Supabase verifies the
+      // raw nonce matches.
+      const rawNonce = Crypto.randomUUID();
+      const hashedNonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        rawNonce,
+      );
+
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
+        nonce: hashedNonce,
       });
 
       if (!credential.identityToken) {
@@ -237,6 +249,7 @@ export default function AuthScreen() {
       const { error: signInError } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: credential.identityToken,
+        nonce: rawNonce,
       });
 
       if (signInError) throw signInError;

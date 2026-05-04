@@ -189,7 +189,7 @@ class PhotoSyncService {
           if (item.retryCount < MAX_RETRIES) {
             remaining.push({ ...item, retryCount: item.retryCount + 1 });
           } else {
-            console.error(`[photoSync] Max retries reached for ${item.localUri}, dropping`);
+            console.warn(`[photoSync] Max retries reached for ${item.localUri}, dropping`);
           }
         }
       }

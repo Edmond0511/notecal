@@ -5,15 +5,79 @@ import { photoSyncService } from "@/services/photoSyncService";
 import { nutritionQueue } from "@/services/nutritionQueue";
 import { useAppStore } from "@/store/app-store";
 import { Session, User } from "@supabase/supabase-js";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 const LAST_USER_KEY = "last-signed-in-user-id";
+
+// Snapshot TTL: snapshots older than this are purged on next access.
+// 30 days strikes a balance between letting brief sign-outs preserve local state
+// and not retaining abandoned-account data indefinitely.
+const SNAPSHOT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const SNAPSHOT_PREFIX = "user-snapshot:";
+const SNAPSHOT_TS_PREFIX = "user-snapshot-ts:";
+const SNAPSHOT_DIRTY_PREFIX = "user-sync-dirty:";
+const SNAPSHOT_PULL_PREFIX = "user-sync-pull:";
+
+/** Stamp the snapshot timestamp so TTL can be evaluated later. */
+function stampSnapshotTimestamp(userId: string) {
+  mmkv.set(`${SNAPSHOT_TS_PREFIX}${userId}`, Date.now().toString());
+}
+
+/** Returns true if the snapshot for `userId` is missing or expired (>30d). */
+function isSnapshotExpired(userId: string): boolean {
+  const raw = mmkv.getString(`${SNAPSHOT_TS_PREFIX}${userId}`);
+  if (!raw) return false; // legacy snapshots without timestamps: treat as fresh
+  const ts = Number(raw);
+  if (!Number.isFinite(ts)) return true;
+  return Date.now() - ts > SNAPSHOT_TTL_MS;
+}
+
+/** Remove a single user's snapshot keys from MMKV. */
+function purgeUserSnapshot(userId: string) {
+  mmkv.remove(`${SNAPSHOT_PREFIX}${userId}`);
+  mmkv.remove(`${SNAPSHOT_TS_PREFIX}${userId}`);
+  mmkv.remove(`${SNAPSHOT_DIRTY_PREFIX}${userId}`);
+  mmkv.remove(`${SNAPSHOT_PULL_PREFIX}${userId}`);
+}
+
+/**
+ * Returns true only for genuine auth revocation errors (token expired,
+ * session revoked, 401). Network blips, 5xx, and parse errors return false
+ * so we don't sign out on transient failures.
+ */
+function isAuthRevokedError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { status?: number; code?: string; name?: string };
+  if (e.status === 401) return true;
+  if (e.code === "session_expired" || e.code === "token_expired") return true;
+  // Some Supabase errors surface as AuthApiError with status fields populated.
+  if (e.name === "AuthApiError" && e.status === 401) return true;
+  return false;
+}
+
+/** Sweep any expired snapshots across all users. Cheap, runs at app start. */
+function sweepExpiredSnapshots() {
+  try {
+    const keys = mmkv.getAllKeys();
+    for (const k of keys) {
+      if (!k.startsWith(SNAPSHOT_PREFIX)) continue;
+      const userId = k.slice(SNAPSHOT_PREFIX.length);
+      if (isSnapshotExpired(userId)) {
+        purgeUserSnapshot(userId);
+      }
+    }
+  } catch (err) {
+    console.warn("[auth] Snapshot sweep failed:", err);
+  }
+}
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  /** Sign out and additionally purge the local snapshot for the outgoing user. */
+  signOutAndPurge: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -21,6 +85,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   isLoading: true,
   isAuthenticated: false,
+  signOutAndPurge: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -29,6 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Sweep expired snapshots opportunistically at app start.
+    sweepExpiredSnapshots();
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -38,6 +106,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         syncService.setUser(session.user.id);
         photoSyncService.setUser(session.user.id);
+
+        // Defense-in-depth: a persisted session may have been server-side revoked
+        // (sign-out from another device, password change, etc). Render the cached
+        // session optimistically so UI isn't blocked, then validate against the
+        // server in the background and downgrade to unauthenticated only on a
+        // genuine auth failure (401 / token revoked). Network errors, 5xx, or
+        // parse errors leave the optimistic session in place — the next
+        // foreground/sync attempt will retry.
+        supabase.auth
+          .getUser()
+          .then(({ data, error }) => {
+            if (isAuthRevokedError(error)) {
+              console.warn(
+                "[auth] Persisted session was revoked by server, signing out:",
+                error?.message,
+              );
+              supabase.auth.signOut().catch((e) =>
+                console.warn("[auth] signOut after invalid session failed:", e?.message),
+              );
+            } else if (error) {
+              // Transient (network / 5xx / parse) — keep cached session.
+              console.warn(
+                "[auth] Background session validation inconclusive, keeping cached session:",
+                error?.message,
+              );
+            } else if (!data?.user) {
+              // No error but no user returned — treat as transient, do not
+              // sign out. A real revocation surfaces via onAuthStateChange.
+              console.warn(
+                "[auth] Background session validation returned no user, keeping cached session",
+              );
+            }
+          })
+          .catch((err) => {
+            // Thrown error (network etc) — leave optimistic session in place.
+            console.warn("[auth] Background session validation errored:", err?.message);
+          });
       }
 
       setIsLoading(false);
@@ -58,10 +163,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (lastUserId && lastUserId !== session.user.id) {
           nutritionQueue.clearAll();
           saveUserSnapshot(lastUserId);
+          stampSnapshotTimestamp(lastUserId);
           syncService.setUser(null);
           useAppStore.getState().clearUserData();
         }
-        // Restore new user's snapshot if one exists
+        // Restore new user's snapshot if one exists and isn't expired.
+        // Expired snapshots are purged so the user starts from a clean sync.
+        if (isSnapshotExpired(session.user.id)) {
+          purgeUserSnapshot(session.user.id);
+        }
         const restored = restoreUserSnapshot(session.user.id);
         if (restored) {
           useAppStore.persist.rehydrate();
@@ -76,10 +186,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
       } else if (event === "SIGNED_OUT") {
         nutritionQueue.clearAll();
-        // Archive outgoing user's data before clearing
+        // Archive outgoing user's data before clearing (default sign-out preserves
+        // the snapshot for fast re-sign-in; use signOutAndPurge to drop it).
         const outgoingUserId = mmkv.getString(LAST_USER_KEY);
         if (outgoingUserId) {
           saveUserSnapshot(outgoingUserId);
+          stampSnapshotTimestamp(outgoingUserId);
         }
         syncService.setUser(null);
         photoSyncService.setUser(null);
@@ -91,11 +203,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  /**
+   * Sign out and explicitly purge the outgoing user's local snapshot.
+   * Use when the user wants to clear their data from this device (e.g. shared
+   * device, account deletion). Default sign-out keeps the snapshot for TTL.
+   */
+  const signOutAndPurge = useCallback(async () => {
+    const outgoingUserId = mmkv.getString(LAST_USER_KEY) ?? user?.id ?? null;
+    try {
+      await supabase.auth.signOut();
+      // signOut triggers SIGNED_OUT which archives the snapshot; purge it after.
+    } finally {
+      // Purge regardless: even if signOut throws (e.g. network error), the
+      // user explicitly asked to clear local data from this device.
+      if (outgoingUserId) {
+        purgeUserSnapshot(outgoingUserId);
+      }
+    }
+  }, [user?.id]);
+
   const value = {
     user,
     session,
     isLoading,
     isAuthenticated: !!user,
+    signOutAndPurge,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -60,6 +60,31 @@ export class NutritionNotFoodError extends NutritionApiError {
   }
 }
 
+export class NutritionAuthRequiredError extends NutritionApiError {
+  constructor(message: string = 'Please sign in to log food.') {
+    super(message, 401);
+    this.name = 'NutritionAuthRequiredError';
+  }
+}
+
+export class NutritionInputTooLargeError extends NutritionApiError {
+  constructor(
+    message: string = 'That entry is too long. Try shortening it (max 500 characters).'
+  ) {
+    super(message, 413);
+    this.name = 'NutritionInputTooLargeError';
+  }
+}
+
+export class NutritionServiceUnavailableError extends NutritionApiError {
+  constructor(
+    message: string = 'Food logging is temporarily unavailable. Please try again in a moment.'
+  ) {
+    super(message, 503);
+    this.name = 'NutritionServiceUnavailableError';
+  }
+}
+
 // supabase.functions.invoke wraps non-2xx responses in FunctionsHttpError
 // where the original Response is on `error.context`. If the edge function
 // returned 429, parse the structured body and throw a typed rate-limit error.
@@ -88,6 +113,36 @@ async function throwIfRateLimited(error: unknown): Promise<void> {
     usedMinute: body.usedMinute,
     limitMinute: body.limitMinute,
   });
+}
+
+// Map 401/413/503 responses from the edge function to typed errors with
+// user-friendly messages. Mirrors the throwIfRateLimited pattern above.
+async function throwIfStatusError(error: unknown): Promise<void> {
+  const ctx = (error as any)?.context;
+  const status = ctx && typeof ctx.status === 'number' ? ctx.status : undefined;
+  if (status !== 401 && status !== 413 && status !== 503) return;
+
+  // Best-effort body parse for any custom message, but fall back to defaults.
+  let body: any = {};
+  try {
+    body = await ctx.json();
+  } catch {
+    // ignore — body may be empty/consumed
+  }
+
+  const customMessage =
+    typeof body?.message === 'string' && body.message.trim().length > 0
+      ? body.message
+      : undefined;
+
+  if (status === 401) {
+    throw new NutritionAuthRequiredError(customMessage);
+  }
+  if (status === 413) {
+    throw new NutritionInputTooLargeError(customMessage);
+  }
+  // status === 503
+  throw new NutritionServiceUnavailableError(customMessage);
 }
 
 /**
@@ -140,6 +195,7 @@ export async function resolveNutrition(
 
     if (error) {
       await throwIfRateLimited(error);
+      await throwIfStatusError(error);
       throw new NutritionApiError(
         error.message || 'Failed to resolve nutrition',
         (error as any).status
@@ -214,6 +270,7 @@ export async function resolveNutritionFromPhoto(
 
     if (error) {
       await throwIfRateLimited(error);
+      await throwIfStatusError(error);
       throw new NutritionApiError(
         error.message || 'Failed to analyze photo',
         (error as any).status
@@ -386,6 +443,7 @@ export async function correctNutrition(
 
     if (error) {
       await throwIfRateLimited(error);
+      await throwIfStatusError(error);
       throw new NutritionApiError(
         error.message || 'Failed to correct nutrition',
         (error as any).status

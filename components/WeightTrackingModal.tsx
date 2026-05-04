@@ -296,11 +296,16 @@ export function WeightTrackingModal({
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
+      exif: false,
     });
     if (!result.canceled && result.assets[0]) {
-      const persisted = photoSyncService.persistLocalPhoto(
+      const ImageManipulator = await import("expo-image-manipulator");
+      const sanitized = await ImageManipulator.manipulateAsync(
         result.assets[0].uri,
+        [{ resize: { width: 1024 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
       );
+      const persisted = photoSyncService.persistLocalPhoto(sanitized.uri);
       onPick(persisted);
     }
   }, []);
@@ -319,11 +324,16 @@ export function WeightTrackingModal({
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
+      exif: false,
     });
     if (!result.canceled && result.assets[0]) {
-      const persisted = photoSyncService.persistLocalPhoto(
+      const ImageManipulator = await import("expo-image-manipulator");
+      const sanitized = await ImageManipulator.manipulateAsync(
         result.assets[0].uri,
+        [{ resize: { width: 1024 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
       );
+      const persisted = photoSyncService.persistLocalPhoto(sanitized.uri);
       onPick(persisted);
     }
   }, []);

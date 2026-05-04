@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { mmkvSupabaseStorage } from '@/lib/mmkv';
+import { secureSupabaseStorage } from '@/lib/mmkv';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
@@ -10,10 +10,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: mmkvSupabaseStorage,
+    // Auth tokens live in expo-secure-store (Keychain / Keystore), not MMKV.
+    // PKCE flow eliminates the implicit-flow fragment-token attack surface.
+    storage: secureSupabaseStorage,
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false,
+    flowType: 'pkce',
   },
 });
 

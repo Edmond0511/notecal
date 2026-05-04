@@ -29,7 +29,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.edmond0511.notecal"
+      "package": "com.edmond0511.notecal",
+      "allowBackup": false
     },
     "web": {
       "output": "static",

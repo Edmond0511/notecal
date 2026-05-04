@@ -67,6 +67,8 @@ function entryToRow(entry: Entry, userId: string) {
     items: JSON.stringify(entry.items),
     created_at: new Date(entry.createdAt).toISOString(),
     updated_at: new Date(entry.updatedAt).toISOString(),
+    // Explicitly clear server-side tombstone on undelete (defense-in-depth)
+    deleted_at: null,
   };
 }
 
@@ -89,6 +91,8 @@ function docToRow(doc: Document, userId: string) {
     date: doc.date,
     content: doc.content,
     last_modified: new Date(doc.lastModified).toISOString(),
+    // Explicitly clear server-side tombstone on undelete (defense-in-depth)
+    deleted_at: null,
   };
 }
 
@@ -110,6 +114,8 @@ function savedEntryToRow(se: SavedEntry, userId: string) {
     usage_count: se.usageCount,
     created_at: new Date(se.createdAt).toISOString(),
     last_used_at: new Date(se.lastUsedAt).toISOString(),
+    // Explicitly clear server-side tombstone on undelete (defense-in-depth)
+    deleted_at: null,
   };
 }
 
@@ -136,6 +142,8 @@ function customMealToRow(meal: CustomMeal, userId: string) {
     created_at: new Date(meal.createdAt).toISOString(),
     updated_at: new Date(meal.updatedAt).toISOString(),
     last_used_at: new Date(meal.lastUsedAt).toISOString(),
+    // Explicitly clear server-side tombstone on undelete (defense-in-depth)
+    deleted_at: null,
   };
 }
 
@@ -163,6 +171,8 @@ function weightEntryToRow(we: WeightEntry, userId: string) {
     photo_uris: we.photoUris ? JSON.stringify(we.photoUris) : null,
     created_at: we.createdAt,
     updated_at: new Date().toISOString(),
+    // Explicitly clear server-side tombstone on undelete (defense-in-depth)
+    deleted_at: null,
   };
 }
 
@@ -268,6 +278,40 @@ class SyncService {
     }
   }
 
+  /**
+   * Verify that the active Supabase session's user matches `this.userId`.
+   * Defense-in-depth against stale `userId` references after silent sign-outs
+   * or session swaps from another device.
+   *
+   * Best-effort: only aborts on an *explicit* user-id mismatch. Network errors,
+   * 5xx, parse failures, or thrown exceptions all return `true` so transient
+   * issues don't block legitimate sync work. Called once per high-level sync
+   * entrypoint (fullSync / public flushDirty / public pullAll), not per item.
+   */
+  private async verifyActiveSession(): Promise<boolean> {
+    if (!this.userId) return false;
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data?.user) {
+        // Network error / transient failure / parse error — proceed best-effort.
+        // RLS will still gate any actual writes by user_id.
+        console.warn('[sync] Session verification inconclusive, proceeding best-effort:', error?.message);
+        return true;
+      }
+      if (data.user.id !== this.userId) {
+        console.warn(
+          `[sync] Session user (${data.user.id}) does not match sync user (${this.userId}), aborting sync`,
+        );
+        return false;
+      }
+      return true;
+    } catch (err: any) {
+      // Thrown error (network, etc) — best-effort, proceed.
+      console.warn('[sync] Session verification threw, proceeding best-effort:', err?.message);
+      return true;
+    }
+  }
+
   // --------------------------------------------------------
   // Push: local -> remote
   // --------------------------------------------------------
@@ -292,7 +336,9 @@ class SyncService {
     );
   }
 
-  /** Push a single item to Supabase */
+  /** Push a single item to Supabase. Session verification is handled once
+   * by the caller (`fullSync` / public `flushDirty`); RLS on Supabase still
+   * gates writes by user_id, so a stale local `userId` cannot leak data. */
   private async pushItem(table: SyncTable, id: string): Promise<void> {
     const userId = this.userId;
     if (!userId) return;
@@ -339,7 +385,9 @@ class SyncService {
     }
   }
 
-  /** Soft-delete a remote row (or hard-delete for tables without deleted_at) */
+  /** Soft-delete a remote row (or hard-delete for tables without deleted_at).
+   * Called per-event by syncSubscriber; we skip the per-call session verify
+   * to avoid N+1 round-trips. RLS on Supabase still enforces user_id. */
   async pushDelete(table: SyncTable, id: string) {
     if (!this.userId) return;
 
@@ -386,7 +434,16 @@ class SyncService {
 
   async flushDirty(): Promise<void> {
     if (!this.userId) return;
+    // Verify once at top for standalone callers. `fullSync` already verified
+    // before delegating; the redundant call is cheap and keeps this method
+    // safe to call directly from outside.
+    if (!(await this.verifyActiveSession())) return;
 
+    await this.flushDirtyInternal();
+  }
+
+  /** Internal flush without session verification — caller must have verified. */
+  private async flushDirtyInternal(): Promise<void> {
     const dirty = loadDirty();
     let anyFailed = false;
     const remaining: DirtySet = { ...EMPTY_DIRTY };
@@ -421,7 +478,16 @@ class SyncService {
 
   async pullAll(): Promise<void> {
     if (!this.userId) return;
+    // Verify once at top for standalone callers. `fullSync` already verified
+    // before delegating; the redundant call is cheap and keeps this method
+    // safe to call directly from outside.
+    if (!(await this.verifyActiveSession())) return;
 
+    await this.pullAllInternal();
+  }
+
+  /** Internal pull without session verification — caller must have verified. */
+  private async pullAllInternal(): Promise<void> {
     const lastPull = getLastPull();
     const pullTimestamp = new Date().toISOString();
 
@@ -736,6 +802,9 @@ class SyncService {
 
   async fullSync(): Promise<void> {
     if (!this.userId || this.syncing) return;
+    // Single session verification for the entire sync — flushDirtyInternal /
+    // pullAllInternal don't re-verify, so a 50-entry sync = 1 getUser() call.
+    if (!(await this.verifyActiveSession())) return;
 
     this.syncing = true;
     try {
@@ -749,10 +818,10 @@ class SyncService {
       }
 
       // Flush dirty items first (push local changes)
-      await this.flushDirty();
+      await this.flushDirtyInternal();
 
       // Then pull remote changes
-      await this.pullAll();
+      await this.pullAllInternal();
 
       console.log('[sync] Full sync complete');
     } catch (err: any) {

@@ -141,6 +141,7 @@ export function BarcodeScannerModal({
   const [torchEnabled, setTorchEnabled] = useState(false);
   const cameraRef = useRef<any>(null);
   const scanLockRef = useRef(false);
+  const dismissedBarcodeRef = useRef<{ barcode: string; until: number } | null>(null);
   const translateY = useSharedValue(0);
 
   // Reset state when modal opens
@@ -202,6 +203,10 @@ export function BarcodeScannerModal({
 
   const handleBarcodeScanned = useCallback(async (result: { data: string }) => {
     if (scanLockRef.current) return;
+    const dismissed = dismissedBarcodeRef.current;
+    if (dismissed && dismissed.barcode === result.data && Date.now() < dismissed.until) {
+      return;
+    }
     scanLockRef.current = true;
 
     const barcode = result.data;
@@ -281,11 +286,24 @@ export function BarcodeScannerModal({
   const handleDragDismiss = useCallback(() => {
     if (state.type === "scanning") {
       handleClose();
-    } else {
-      translateY.value = 0;
-      handleScanAgain();
+      return;
     }
-  }, [state.type, handleClose, handleScanAgain, translateY]);
+    const dismissedBarcode =
+      state.type === "found"
+        ? state.product.barcode
+        : state.type === "loading" || state.type === "not_found"
+          ? state.barcode
+          : null;
+    if (dismissedBarcode) {
+      dismissedBarcodeRef.current = {
+        barcode: dismissedBarcode,
+        until: Date.now() + 2000,
+      };
+    }
+    translateY.value = 0;
+    isScanningShared.value = 1;
+    handleScanAgain();
+  }, [state, handleClose, handleScanAgain, translateY, isScanningShared]);
 
   const panGesture = Gesture.Pan()
     .activeOffsetY(10)
@@ -299,8 +317,8 @@ export function BarcodeScannerModal({
         translateY.value = withSpring(
           SCREEN_HEIGHT,
           { damping: 20, stiffness: 200 },
-          (finished) => {
-            if (finished) runOnJS(handleDragDismiss)();
+          () => {
+            runOnJS(handleDragDismiss)();
           },
         );
       } else {

@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>NoteCal — Calorie tracking without the friction.</title>
+    <title>NoteCal · Calorie tracking without the friction.</title>
     <meta name="description" content="Write what you ate. NoteCal handles the math, macros, and goals." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
     <meta name="theme-color" content="#FAFAFA" />
-    <meta property="og:title" content="NoteCal — Calorie tracking without the friction." />
+    <meta property="og:title" content="NoteCal · Calorie tracking without the friction." />
     <meta property="og:description" content="Write what you ate. NoteCal handles the math, macros, and goals." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="assets/icon.png" />
@@ -103,7 +103,7 @@
           <div class="section__head">
             <div class="section__kicker">How it works</div>
             <h2 class="section__title">
-              Three lines. One day of food.
+              From rough notes to real numbers.
             </h2>
           </div>
 
@@ -124,7 +124,7 @@
               <div class="step__body">
                 <h3>The app does the math</h3>
                 <p>
-                  Each line is resolved against trusted nutrition databases —
+                  Each line is resolved against trusted nutrition databases,
                   with confidence scores and reasoning you can review.
                 </p>
               </div>
@@ -144,6 +144,125 @@
         </div>
       </section>
 
+      <section class="section reliability">
+        <div class="shell">
+          <div class="section__head">
+            <div class="section__kicker">Data reliability</div>
+            <h2 class="section__title">
+              The math, with the receipt.
+            </h2>
+          </div>
+
+          <div class="reliability__grid">
+            <div class="reliability__pillars">
+              <div class="pillar">
+                <div class="pillar__label">Trusted sources</div>
+                <p class="pillar__desc">
+                  Macros pull from sources dietitians trust:
+                  <strong>USDA FoodData Central</strong> for whole foods,
+                  <strong>FatSecret Platform</strong> for branded items,
+                  and the official nutrition panels chain restaurants and
+                  consumer brands publish themselves. No invented numbers,
+                  no scraped blogs.
+                </p>
+              </div>
+              <div class="pillar">
+                <div class="pillar__label">Transparent reasoning</div>
+                <p class="pillar__desc">
+                  Every estimate ships with the interpretation, assumptions,
+                  and portion notes that produced it. Tap any line to read
+                  the full trace and see exactly how the math was reached.
+                </p>
+              </div>
+              <div class="pillar">
+                <div class="pillar__label">Quantified confidence</div>
+                <p class="pillar__desc">
+                  A 0–1 confidence score sits behind every item.
+                  Low-confidence estimates are flagged with a tilde and can
+                  be corrected with one short follow-up. No manual rebuild.
+                </p>
+              </div>
+            </div>
+
+            <aside class="trace" aria-label="Example reasoning trace for grilled salmon, 200 grams">
+              <div class="trace__head">
+                <span class="trace__tag">Reasoning trace</span>
+              </div>
+
+              <div class="trace__section">
+                <div class="trace__label">Input</div>
+                <div class="trace__input">- grilled salmon, 200g</div>
+              </div>
+
+              <div class="trace__section">
+                <div class="trace__label">Interpretation</div>
+                <p class="trace__copy">
+                  Atlantic salmon fillet, dry-heat cooked, 200&nbsp;g cooked
+                  weight, edible portion.
+                </p>
+              </div>
+
+              <div class="trace__section">
+                <div class="trace__label">Assumptions</div>
+                <ul class="trace__list">
+                  <li>Cooking method: grilled, no added oil</li>
+                  <li>Skin-on, edible portion</li>
+                  <li>Wild vs. farmed unspecified, defaulted to farmed</li>
+                </ul>
+              </div>
+
+              <div class="trace__section">
+                <div class="trace__label">Resolved macros</div>
+                <div class="trace__macros">
+                  <div class="chip">
+                    <span class="chip__num">416</span>
+                    <span class="chip__u">cal</span>
+                  </div>
+                  <div class="chip">
+                    <span class="chip__num">50</span>
+                    <span class="chip__u">protein</span>
+                  </div>
+                  <div class="chip">
+                    <span class="chip__num">24</span>
+                    <span class="chip__u">fat</span>
+                  </div>
+                  <div class="chip">
+                    <span class="chip__num">0</span>
+                    <span class="chip__u">carbs</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="trace__section">
+                <div class="trace__label">Sources</div>
+                <ul class="trace__sources">
+                  <li>
+                    <a class="src__name" href="https://fdc.nal.usda.gov/" target="_blank" rel="noopener noreferrer">USDA FoodData Central</a>
+                    <span class="src__id">FDC&nbsp;175168</span>
+                  </li>
+                  <li>
+                    <a class="src__name" href="https://platform.fatsecret.com/" target="_blank" rel="noopener noreferrer">FatSecret Platform</a>
+                    <span class="src__id">id&nbsp;5128</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="trace__foot">
+                <span class="conf__label">Confidence</span>
+                <span class="conf__bar" aria-hidden="true">
+                  <span class="conf__tick is-on"></span>
+                  <span class="conf__tick is-on"></span>
+                  <span class="conf__tick is-on"></span>
+                  <span class="conf__tick is-on"></span>
+                  <span class="conf__tick"></span>
+                </span>
+                <span class="conf__num">0.92</span>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
       <section class="section">
         <div class="shell">
           <div class="section__head">
@@ -157,7 +276,7 @@
             <div class="what__row">
               <div class="what__label">Nutrition resolution</div>
               <p class="what__desc">
-                Handles brands, prep methods, and portion sizes — even when you
+                Handles brands, prep methods, and portion sizes, even when you
                 forget the grams. Each estimate ships with reasoning, sources,
                 and a confidence score.
               </p>
@@ -193,7 +312,7 @@
             <div class="what__row">
               <div class="what__label">Saved entries</div>
               <p class="what__desc">
-                Save your go-to meals once, reuse them instantly — no extra
+                Save your go-to meals once, reuse them instantly. No extra
                 lookup, no waiting.
               </p>
             </div>

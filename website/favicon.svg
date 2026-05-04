@@ -1,10 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <style>
+    .bg { fill: #FAFAFA; }
     .glyph { fill: #0B0B0C; }
     @media (prefers-color-scheme: dark) {
+      .bg { fill: #0B0B0C; }
       .glyph { fill: #FAFAFA; }
     }
   </style>
+  <circle class="bg" cx="512" cy="512" r="512"/>
   <g transform="translate(512, 512) scale(9)">
     <g transform="skewX(-14)">
       <path class="glyph" d="M -26 -14 C -26 -44, 26 -44, 26 -14 L 26 40 L 13 40 L 13 -8 C 13 -22, -13 -22, -13 -8 L -13 40 L -26 40 Z"/>

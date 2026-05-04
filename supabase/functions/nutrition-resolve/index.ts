@@ -776,7 +776,18 @@ REASONING GUIDELINES:
      b. Link to the brand's official homepage: "[Brand Name](https://www.brandname.com)". For well-known brands, use their real domain (e.g., "[Kawartha Dairy](https://www.kawarthadairy.com)", "[McDonald's](https://www.mcdonalds.com)").
      c. NEVER use google.com, wikipedia.org, or any search engine as the URL. NEVER link to a product/flavor URL that doesn't exist - link to the brand's homepage instead.
      If brand-specific nutrition data is NOT available, it is fine to fall back to USDA or other credible databases and cite them instead.
-  2. GENERIC/UNBRANDED ITEMS or BRANDED FALLBACK: Use the FDC food search URL: "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME)" - replace FOOD_NAME with the URL-encoded food label (e.g., "banana" -> "https://fdc.nal.usda.gov/food-search?query=banana", "chicken breast" -> "https://fdc.nal.usda.gov/food-search?query=chicken+breast"). Do NOT fabricate a specific food ID number.
+  2. GENERIC/UNBRANDED ITEMS or BRANDED FALLBACK: Use an FDC food search URL with a single dataType filter applied: "[USDA FoodData Central](https://fdc.nal.usda.gov/food-search?query=FOOD_NAME&type=TYPE)".
+     a. Replace FOOD_NAME with the URL-encoded food label (spaces as "+"). Examples: "banana" -> "banana", "chicken breast" -> "chicken+breast".
+     b. Replace TYPE with EXACTLY ONE of these URL-encoded values, chosen to fit the food:
+        - "Foundation" - lab-measured raw whole foods (e.g., banana, apple, raw spinach).
+        - "SR%20Legacy" - broad coverage of common foods, raw or prepared (e.g., chicken breast, oats, greek yogurt). Use as the default when unsure.
+        - "Survey%20(FNDDS)" - multi-ingredient or prepared dishes (e.g., macaroni and cheese, beef stew, chicken alfredo).
+     c. Use ONLY ONE type value. NEVER use comma-separated lists like "Foundation,SR%20Legacy".
+     d. Concrete examples to imitate:
+        - "banana" -> "https://fdc.nal.usda.gov/food-search?query=banana&type=Foundation"
+        - "chicken breast" -> "https://fdc.nal.usda.gov/food-search?query=chicken+breast&type=SR%20Legacy"
+        - "macaroni and cheese" -> "https://fdc.nal.usda.gov/food-search?query=macaroni+and+cheese&type=Survey%20(FNDDS)"
+     e. Do NOT fabricate a specific FDC food ID number.
   3. NEVER output a bare/raw URL like "https://..." or "(https://...)". URLs must be wrapped in a markdown link [Name](url).
   4. NEVER fabricate specific food ID numbers (e.g., do not guess FDC numeric IDs). Use the search URL format instead.
   5. Do NOT add bracket annotations like [snapshot], [cached], [estimated], [from database] - keep it clean.

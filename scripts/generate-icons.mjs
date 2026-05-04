@@ -87,14 +87,18 @@ async function buildSplash() {
 // Favicons live at the site root so browsers' implicit /favicon.ico request
 // resolves to the NoteCal glyph (not a gray default) during reload.
 async function buildWebsite() {
-  const faviconPng = await sharp(Buffer.from(sourceSvg))
+  // Favicon: circular white background with black glyph.
+  const faviconSvg = sourceSvg
+    .replace(/<rect[^/]*\/>/, '<circle cx="512" cy="512" r="512" fill="#FAFAFA"/>');
+
+  const faviconPng = await sharp(Buffer.from(faviconSvg))
     .resize(32, 32)
     .png()
     .toBuffer();
 
   await sharp(faviconPng).toFile(join(webRootDir, 'favicon.png'));
   await sharp(faviconPng).toFile(join(webRootDir, 'favicon.ico'));
-  console.log('✓ website/favicon.{png,ico} (32×32)');
+  console.log('✓ website/favicon.{png,ico} (32×32, circular)');
 
   await sharp(Buffer.from(sourceSvg))
     .resize(180, 180)

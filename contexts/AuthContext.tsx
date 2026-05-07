@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { mmkv, saveUserSnapshot, restoreUserSnapshot } from "@/lib/mmkv";
+import { configurePurchases, logInPurchases, logOutPurchases } from "@/lib/revenuecat";
 import { syncService } from "@/services/syncService";
 import { photoSyncService } from "@/services/photoSyncService";
 import { nutritionQueue } from "@/services/nutritionQueue";
@@ -97,6 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Sweep expired snapshots opportunistically at app start.
     sweepExpiredSnapshots();
 
+    // Initialize RevenueCat once. SubscriptionProvider also calls this — both
+    // calls are deduplicated inside the helper.
+    configurePurchases();
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -106,6 +111,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         syncService.setUser(session.user.id);
         photoSyncService.setUser(session.user.id);
+        // Identify the user in RevenueCat. logIn de-dupes if already identified.
+        logInPurchases(session.user.id);
 
         // Defense-in-depth: a persisted session may have been server-side revoked
         // (sign-out from another device, password change, etc). Render the cached
@@ -179,6 +186,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         mmkv.set(LAST_USER_KEY, session.user.id);
         syncService.setUser(session.user.id);
         photoSyncService.setUser(session.user.id);
+        // Identify the user in RevenueCat so customerInfo and the webhook
+        // join key align. Fire-and-forget; SubscriptionProvider listens for
+        // updates separately.
+        logInPurchases(session.user.id);
         syncService.fullSync();
         // Health sync runs in parallel; safe to fire-and-forget
         import('@/services/healthkit/healthSyncService').then(({ healthSyncService }) =>
@@ -186,6 +197,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
       } else if (event === "SIGNED_OUT") {
         nutritionQueue.clearAll();
+        // Clear RC identity. The next sign-in will re-identify and re-fetch
+        // entitlements from the server.
+        logOutPurchases();
         // Archive outgoing user's data before clearing (default sign-out preserves
         // the snapshot for fast re-sign-in; use signOutAndPurge to drop it).
         const outgoingUserId = mmkv.getString(LAST_USER_KEY);

@@ -82,7 +82,7 @@ export function WeightChart({ entries, range, width }: WeightChartProps) {
   }, [entries, range]);
 
   const displayWeight = (kg: number) =>
-    isImperial ? kgToLbs(kg) : Math.round(kg * 10) / 10;
+    isImperial ? Math.round(kgToLbs(kg) * 10) / 10 : Math.round(kg * 10) / 10;
 
   if (filteredEntries.length === 0) {
     return (

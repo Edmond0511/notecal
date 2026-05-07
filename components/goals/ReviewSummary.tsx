@@ -67,8 +67,8 @@ export function ReviewSummary({
         <View style={styles.mainTargetHeader}>
           <FontAwesomeIcon icon={icons.fire} size={28} color={Tokens.macroKcal} />
           <Text style={styles.mainTargetValue}>{goals.targetKcal}</Text>
-          <Text style={styles.mainTargetUnit}>cal/day</Text>
         </View>
+        <Text style={styles.mainTargetLabel}>Calories</Text>
       </View>
 
       {/* Macro tiles */}
@@ -196,6 +196,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    alignSelf: "stretch",
     gap: 12,
   },
   mainTargetValue: {
@@ -204,10 +205,11 @@ const styles = StyleSheet.create({
     color: Tokens.macroKcal,
     letterSpacing: -1,
   },
-  mainTargetUnit: {
-    fontSize: 16,
+  mainTargetLabel: {
+    fontSize: 15,
+    fontWeight: "600",
     color: "#FF8A65",
-    fontWeight: "500",
+    marginTop: 6,
   },
   macrosCard: {
     marginBottom: 16,

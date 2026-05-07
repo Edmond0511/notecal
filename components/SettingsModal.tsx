@@ -1,8 +1,10 @@
 import { Tokens } from "@/constants/theme";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { mmkv } from "@/lib/mmkv";
 import { supabase } from "@/lib/supabase";
 import { clearNutritionCache } from "@/services/nutritionCache";
 import { useAppStore } from "@/store/app-store";
+import { PaywallTrigger } from "./PaywallTrigger";
 import {
   isLiquidGlassSupported,
   LiquidGlassView,
@@ -16,6 +18,7 @@ import {
   Alert,
   Dimensions,
   Image,
+  Linking,
   Modal,
   Platform,
   StatusBar,
@@ -95,6 +98,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
   const [showAppleHealth, setShowAppleHealth] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const { isPro, restore } = useSubscription();
   const goals = useAppStore((s) => s.goals);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -731,6 +736,111 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                   </View>
                 </Animated.View>
 
+                {/* Subscription Section */}
+                <Animated.View
+                  entering={FadeInDown.delay(500).duration(400)}
+                  style={styles.section}
+                >
+                  <Text style={styles.sectionTitle}>Subscription</Text>
+                  <View style={styles.menuCardShadow}>
+                    <View style={styles.menuCard}>
+                      {!isPro && (
+                        <>
+                          <TouchableOpacity
+                            style={styles.menuItem}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              Haptics.impactAsync(
+                                Haptics.ImpactFeedbackStyle.Light,
+                              );
+                              setShowPaywall(true);
+                            }}
+                          >
+                            <Ionicons
+                              name="sparkles-outline"
+                              size={20}
+                              color={Tokens.accent}
+                              style={{ marginRight: 12 }}
+                            />
+                            <Text
+                              style={[
+                                styles.menuItemText,
+                                { color: Tokens.accent, fontWeight: "600" },
+                              ]}
+                            >
+                              Upgrade to Pro
+                            </Text>
+                            <Ionicons
+                              name="chevron-forward"
+                              size={20}
+                              color={Tokens.textTertiary}
+                            />
+                          </TouchableOpacity>
+                          <View style={styles.menuDivider} />
+                        </>
+                      )}
+
+                      <TouchableOpacity
+                        style={styles.menuItem}
+                        activeOpacity={0.7}
+                        onPress={async () => {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
+                          const restored = await restore();
+                          Alert.alert(
+                            restored ? "Pro restored" : "No purchases found",
+                            restored
+                              ? "Your Pro subscription is now active on this device."
+                              : "We couldn’t find a previous purchase on this Apple ID.",
+                          );
+                        }}
+                      >
+                        <Ionicons
+                          name="refresh-outline"
+                          size={20}
+                          color={Tokens.textPrimary}
+                          style={{ marginRight: 12 }}
+                        />
+                        <Text style={styles.menuItemText}>Restore Purchases</Text>
+                      </TouchableOpacity>
+
+                      {isPro && (
+                        <>
+                          <View style={styles.menuDivider} />
+                          <TouchableOpacity
+                            style={styles.menuItem}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              Haptics.impactAsync(
+                                Haptics.ImpactFeedbackStyle.Light,
+                              );
+                              Linking.openURL(
+                                "https://apps.apple.com/account/subscriptions",
+                              );
+                            }}
+                          >
+                            <Ionicons
+                              name="settings-outline"
+                              size={20}
+                              color={Tokens.textPrimary}
+                              style={{ marginRight: 12 }}
+                            />
+                            <Text style={styles.menuItemText}>
+                              Manage Subscription
+                            </Text>
+                            <Ionicons
+                              name="chevron-forward"
+                              size={20}
+                              color={Tokens.textTertiary}
+                            />
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                </Animated.View>
+
                 {user && (
                   <Animated.View
                     entering={FadeInDown.delay(600).duration(400)}
@@ -844,6 +954,11 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             nested
           />
         )}
+
+        <PaywallTrigger
+          visible={showPaywall}
+          onClose={() => setShowPaywall(false)}
+        />
       </Modal>
     </>
   );

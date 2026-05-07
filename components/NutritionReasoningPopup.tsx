@@ -243,8 +243,10 @@ function shortenDomain(domain: string): string {
 function ParsedText({ text, style, pillLinks }: { text: string; style: any; pillLinks?: boolean }) {
   if (!text) return <Text style={style}></Text>;
 
-  // Support both markdown and HTML style links
-  const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  // Support both markdown and HTML style links.
+  // URL group allows one level of balanced parens so links like
+  // "[X](https://example.com/q?x=apple+pie+(generic)&type=Foundation)" parse cleanly.
+  const markdownLinkRegex = /\[([^\]]+)\]\(((?:[^()]|\([^)]*\))*)\)/g;
   const htmlLinkRegex = /<a\s+href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/gi;
 
   const parts: Array<{ type: "text" | "link"; content: string; url?: string }> =

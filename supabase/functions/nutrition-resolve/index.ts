@@ -227,6 +227,48 @@ async function checkRateLimit(
   }
 }
 
+// Pro-entitlement gate. Runs ahead of the rate-limit RPC so non-paying users
+// can never burn quota. The `BYPASS_ENTITLEMENT` env var lets dev builds bypass
+// the check while RevenueCat is still being wired up (Phase 1) — must be unset
+// before public launch.
+async function checkEntitlement(
+  supabase: any,
+  userId: string,
+  cors: Record<string, string>,
+): Promise<Response | null> {
+  if (Deno.env.get("BYPASS_ENTITLEMENT") === "true") return null;
+
+  try {
+    const { data, error } = await supabase.rpc("has_active_entitlement", {
+      p_user_id: userId,
+      p_entitlement: "pro",
+    });
+    if (error) {
+      // Fail closed on any infrastructure error — a paywalled feature should
+      // never silently open up because the entitlement DB is unavailable.
+      console.error("[Entitlement] RPC error, failing closed:", error);
+      return new Response(
+        JSON.stringify({ error: "entitlement_check_unavailable" }),
+        { status: 503, headers: { ...cors, "Content-Type": "application/json" } },
+      );
+    }
+    if (data === true) return null;
+    return new Response(
+      JSON.stringify({
+        error: "entitlement_required",
+        reason: "no_active_subscription",
+      }),
+      { status: 403, headers: { ...cors, "Content-Type": "application/json" } },
+    );
+  } catch (e) {
+    console.error("[Entitlement] Unexpected error, failing closed:", e);
+    return new Response(
+      JSON.stringify({ error: "entitlement_check_unavailable" }),
+      { status: 503, headers: { ...cors, "Content-Type": "application/json" } },
+    );
+  }
+}
+
 interface NutritionReasoning {
   interpretation: string;
   assumptions: string[];
@@ -430,6 +472,8 @@ serve(async (req) => {
 
     // Handle correction mode
     if (correctionMode) {
+      const ent = await checkEntitlement(supabase, userId, cors);
+      if (ent) return ent;
       const rl = await checkRateLimit(
         supabase,
         userId,
@@ -464,6 +508,8 @@ serve(async (req) => {
           },
         );
       }
+      const ent = await checkEntitlement(supabase, userId, cors);
+      if (ent) return ent;
       const rl = await checkRateLimit(
         supabase,
         userId,
@@ -495,6 +541,8 @@ serve(async (req) => {
       );
     }
 
+    const ent = await checkEntitlement(supabase, userId, cors);
+    if (ent) return ent;
     const rl = await checkRateLimit(
       supabase,
       userId,

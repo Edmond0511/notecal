@@ -93,7 +93,7 @@ export function PersonalInfoModal({
       setEditHeightFeet(String(feet));
       setEditHeightInches(String(inches));
       setEditWeightKg(String(goals.weightKg));
-      setEditWeightLbs(String(kgToLbs(goals.weightKg)));
+      setEditWeightLbs(String(Math.round(kgToLbs(goals.weightKg) * 10) / 10));
       setHeightUnit(preferredUnits);
       setWeightUnit(preferredUnits);
     }
@@ -172,6 +172,19 @@ export function PersonalInfoModal({
     Math.abs(currentHeightCm - goals.heightCm) > 0.1 ||
     Math.abs(currentWeightKg - goals.weightKg) > 0.05;
 
+  const validationError: string | null = (() => {
+    if (currentAge < 13 || currentAge > 100) {
+      return "Age must be between 13 and 100";
+    }
+    if (currentHeightCm <= 0) {
+      return "Height must be greater than 0";
+    }
+    if (currentWeightKg <= 0) {
+      return "Weight must be greater than 0";
+    }
+    return null;
+  })();
+
   const handleTapField = (field: EditingField) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditingField(editingField === field ? null : field);
@@ -180,17 +193,17 @@ export function PersonalInfoModal({
   const handleSave = () => {
     if (!goals || !hasChanges) return;
 
-    // Validate
-    if (currentAge < 13 || currentAge > 100) return;
-    if (currentHeightCm < 100 || currentHeightCm > 275) return;
-    if (currentWeightKg < 30 || currentWeightKg > 300) return;
+    if (validationError) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    }
 
     setGoals({
       ...goals,
       sex: editSex,
       age: currentAge,
       heightCm: Math.round(currentHeightCm * 10) / 10,
-      weightKg: Math.round(currentWeightKg * 10) / 10,
+      weightKg: Math.round(currentWeightKg * 100) / 100,
     });
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -226,7 +239,7 @@ export function PersonalInfoModal({
     if (weightUnit === "metric") {
       // Convert kg → lbs
       const kg = parseFloat(editWeightKg) || 0;
-      if (kg > 0) setEditWeightLbs(String(kgToLbs(kg)));
+      if (kg > 0) setEditWeightLbs(String(Math.round(kgToLbs(kg) * 10) / 10));
       setWeightUnit("imperial");
     } else {
       // Convert lbs → kg
@@ -347,7 +360,7 @@ export function PersonalInfoModal({
                   ]}
                 >
                   {displayWeightUnit === "imperial"
-                    ? editWeightLbs || kgToLbs(goals.weightKg)
+                    ? editWeightLbs || Math.round(kgToLbs(goals.weightKg) * 10) / 10
                     : editWeightKg || goals.weightKg}
                 </Text>
                 <Text style={styles.metricUnit}>
@@ -520,7 +533,7 @@ export function PersonalInfoModal({
                     onChangeText={(v) => {
                       setEditWeightKg(v);
                       const kg = parseFloat(v) || 0;
-                      if (kg > 0) setEditWeightLbs(String(kgToLbs(kg)));
+                      if (kg > 0) setEditWeightLbs(String(Math.round(kgToLbs(kg) * 10) / 10));
                     }}
                     keyboardType="decimal-pad"
                     autoFocus
@@ -637,8 +650,14 @@ export function PersonalInfoModal({
                   { paddingBottom: insets.bottom + 12 },
                 ]}
               >
+                {validationError && (
+                  <Text style={styles.errorText}>{validationError}</Text>
+                )}
                 <TouchableOpacity
-                  style={styles.saveButton}
+                  style={[
+                    styles.saveButton,
+                    validationError && styles.saveButtonDisabled,
+                  ]}
                   onPress={handleSave}
                   activeOpacity={0.8}
                 >
@@ -882,9 +901,20 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
   },
+  saveButtonDisabled: {
+    backgroundColor: Tokens.textTertiary,
+    opacity: 0.6,
+  },
   saveButtonText: {
     fontSize: 17,
     fontWeight: "600",
     color: "#fff",
+  },
+  errorText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: Tokens.error,
+    textAlign: "center",
+    marginBottom: 10,
   },
 });

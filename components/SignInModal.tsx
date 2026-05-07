@@ -33,6 +33,7 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -40,7 +41,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 WebBrowser.maybeCompleteAuthSession();
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-const DISMISS_THRESHOLD = 120;
+const DISMISS_THRESHOLD = 150;
 
 interface Props {
   visible: boolean;
@@ -65,6 +66,7 @@ export function SignInModal({ visible, onClose }: Props) {
   useEffect(() => {
     if (visible) {
       setError(null);
+      translateY.value = SCREEN_HEIGHT;
       translateY.value = withTiming(0, {
         duration: 280,
         easing: Easing.out(Easing.cubic),
@@ -72,19 +74,9 @@ export function SignInModal({ visible, onClose }: Props) {
     }
   }, [visible, translateY]);
 
-  const closeWithAnimation = () => {
-    translateY.value = withTiming(
-      SCREEN_HEIGHT,
-      { duration: 220 },
-      (finished) => {
-        if (finished) runOnJS(onClose)();
-      },
-    );
-  };
-
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    closeWithAnimation();
+    onClose();
   };
 
   const panGesture = Gesture.Pan()
@@ -95,17 +87,15 @@ export function SignInModal({ visible, onClose }: Props) {
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withTiming(
-          SCREEN_HEIGHT,
-          { duration: 220 },
-          (finished) => {
-            if (finished) runOnJS(onClose)();
-          },
-        );
+        translateY.value = withSpring(SCREEN_HEIGHT, {
+          damping: 20,
+          stiffness: 200,
+        });
+        runOnJS(handleClose)();
       } else {
-        translateY.value = withTiming(0, {
-          duration: 220,
-          easing: Easing.out(Easing.cubic),
+        translateY.value = withSpring(0, {
+          damping: 20,
+          stiffness: 400,
         });
       }
     });
@@ -117,7 +107,7 @@ export function SignInModal({ visible, onClose }: Props) {
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.6],
+      [0, SCREEN_HEIGHT * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -220,7 +210,7 @@ export function SignInModal({ visible, onClose }: Props) {
   return (
     <Modal
       visible={visible}
-      animationType="none"
+      animationType="fade"
       transparent
       onRequestClose={handleClose}
       statusBarTranslucent

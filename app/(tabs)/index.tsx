@@ -8,6 +8,7 @@ import { FoodPhotoModal } from "@/components/FoodPhotoModal";
 import { GoalsWizard } from "@/components/goals/GoalsWizard";
 import { GoalsPopup } from "@/components/GoalsPopup";
 import { NutritionGoalsModal } from "@/components/NutritionGoalsModal";
+import { PaywallTrigger } from "@/components/PaywallTrigger";
 import {
   PhotoProcessingToast,
   type PhotoToastState,
@@ -17,6 +18,7 @@ import { SettingsModal } from "@/components/SettingsModal";
 import { TotalsBar } from "@/components/TotalsBar";
 import { WeightTrackingModal } from "@/components/WeightTrackingModal";
 import { Tokens } from "@/constants/theme";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { supabase } from "@/lib/supabase";
 import {
@@ -34,7 +36,7 @@ import {
 } from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Keyboard,
   StatusBar,
@@ -102,6 +104,23 @@ export default function HomeScreen() {
   const [showGoalsModal, setShowGoalsModal] = useState(false);
 
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [paywallVisible, setPaywallVisible] = useState(false);
+  const { isPro } = useSubscription();
+  const pendingPaywallAfterAuth = useAppStore(
+    (s) => s.pendingPaywallAfterAuth,
+  );
+  const setPendingPaywallAfterAuth = useAppStore(
+    (s) => s.setPendingPaywallAfterAuth,
+  );
+
+  // Fire the post-onboarding paywall once the user lands here from /auth.
+  // OnboardingWizard sets the flag instead of opening the paywall when the
+  // user finished onboarding while signed-out; we consume it on first mount.
+  useEffect(() => {
+    if (!pendingPaywallAfterAuth) return;
+    if (!isPro) setPaywallVisible(true);
+    setPendingPaywallAfterAuth(false);
+  }, [pendingPaywallAfterAuth, isPro, setPendingPaywallAfterAuth]);
   const [showSavedEntriesPopup, setShowSavedEntriesPopup] = useState(false);
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
@@ -199,8 +218,12 @@ export default function HomeScreen() {
 
   // Stable callbacks for TotalsBar
   const handleAddSavedPress = useCallback(() => {
+    if (!isPro) {
+      setPaywallVisible(true);
+      return;
+    }
     setShowAddMenu(true);
-  }, []);
+  }, [isPro]);
   const handleTotalsPress = useCallback(() => setShowGoalsPopup(true), []);
 
   const handleMenuSavedEntries = useCallback(() => {
@@ -553,6 +576,13 @@ export default function HomeScreen() {
         onLogWeightPress={handleMenuLogWeight}
         onSnapFoodPress={handleMenuSnapFood}
         onSearchDatabasePress={handleMenuSearchDatabase}
+      />
+
+      {/* Paywall — gates the + add button for non-Pro users */}
+      <PaywallTrigger
+        visible={paywallVisible}
+        onClose={() => setPaywallVisible(false)}
+        onSuccess={() => setPaywallVisible(false)}
       />
 
       {/* Saved Entries Popup */}

@@ -1,5 +1,7 @@
 import { Tokens } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { PaywallTrigger } from "@/components/PaywallTrigger";
 import { useAppStore } from "@/store/app-store";
 import { UserGoals } from "@/types";
 import {
@@ -113,10 +115,15 @@ const initialData: OnboardingData = {
 export function OnboardingWizard() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const { isPro } = useSubscription();
   const setGoals = useAppStore((s) => s.setGoals);
   const setPreferredUnits = useAppStore((s) => s.setPreferredUnits);
   const preferredUnits = useAppStore((s) => s.preferredUnits);
+  const setPendingPaywallAfterAuth = useAppStore(
+    (s) => s.setPendingPaywallAfterAuth,
+  );
   const reducedMotion = useReducedMotion();
+  const [paywallVisible, setPaywallVisible] = useState(false);
   const [fontsLoaded] = useFonts({
     IBMPlexSans_400Regular,
     IBMPlexSans_700Bold,
@@ -171,6 +178,12 @@ export function OnboardingWizard() {
     }
   }, [step, isAuthenticated, router, skipsWeightTarget, skipsHealth]);
 
+  const finalizeAndNavigate = useCallback(() => {
+    // User is guaranteed authenticated here — the onboarding screen is gated
+    // behind /auth (see app/_layout.tsx isPreAuth + redirect logic).
+    router.replace("/");
+  }, [router]);
+
   const handleComplete = useCallback(() => {
     const goals = computedGoalsRef.current;
     if (!goals) return;
@@ -179,18 +192,33 @@ export function OnboardingWizard() {
     setPreferredUnits(useImperial ? "imperial" : "metric");
     setGoals(goals);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (isAuthenticated) {
-      router.replace("/");
-    } else {
-      router.push("/auth");
+
+    // Hard paywall at the peak investment moment — user has just seen their
+    // personalized plan. Existing Pro users skip straight to the home tab.
+    if (!isPro) {
+      // Auth must happen before the paywall so the RC purchase is bound to a
+      // real userId (no anonymous → identified alias chain). After /auth the
+      // user lands on home, which reads pendingPaywallAfterAuth and fires the
+      // paywall there.
+      if (!isAuthenticated) {
+        setPendingPaywallAfterAuth(true);
+        router.push("/auth");
+        return;
+      }
+      setPaywallVisible(true);
+      return;
     }
+    finalizeAndNavigate();
   }, [
     data.heightUnit,
     data.weightUnit,
     setGoals,
     setPreferredUnits,
-    router,
+    isPro,
     isAuthenticated,
+    router,
+    setPendingPaywallAfterAuth,
+    finalizeAndNavigate,
   ]);
 
   const onPrimary = useCallback(() => {
@@ -384,6 +412,20 @@ export function OnboardingWizard() {
           disabled={!canAdvance(step, data)}
         />
       </View>
+      <PaywallTrigger
+        visible={paywallVisible}
+        onClose={() => {
+          // Dismissing without purchasing still completes the flow — the
+          // user keeps the goals they just configured. They'll hit the inline
+          // paywall once they exhaust their free AI taste in NotesEditor.
+          setPaywallVisible(false);
+          finalizeAndNavigate();
+        }}
+        onSuccess={() => {
+          setPaywallVisible(false);
+          finalizeAndNavigate();
+        }}
+      />
     </SafeAreaView>
   );
 }

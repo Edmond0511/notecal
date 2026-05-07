@@ -53,6 +53,22 @@ export class NutritionQuotaExceededError extends NutritionApiError {
   }
 }
 
+// Thrown when the edge function returns 403 with `error: 'entitlement_required'`,
+// meaning the user has no active Pro subscription. Distinct from the Gemini-side
+// `NutritionQuotaExceededError` (which signals a billing/quota problem on our
+// side, not a paywall on the user's side).
+export class NutritionEntitlementRequiredError extends NutritionApiError {
+  reason: string;
+  constructor(
+    message: string = 'Upgrade to Pro to use AI food logging.',
+    reason: string = 'no_active_subscription',
+  ) {
+    super(message, 403);
+    this.name = 'NutritionEntitlementRequiredError';
+    this.reason = reason;
+  }
+}
+
 export class NutritionNotFoodError extends NutritionApiError {
   constructor() {
     super('No food items identified in photo', 422);
@@ -113,6 +129,26 @@ async function throwIfRateLimited(error: unknown): Promise<void> {
     usedMinute: body.usedMinute,
     limitMinute: body.limitMinute,
   });
+}
+
+// Map a 403 with `{ error: 'entitlement_required' }` to the typed paywall
+// error. Other 403s (Gemini quota, etc.) fall through to the generic handler.
+async function throwIfEntitlementRequired(error: unknown): Promise<void> {
+  const ctx = (error as any)?.context;
+  if (!ctx || typeof ctx.status !== 'number' || ctx.status !== 403) return;
+
+  let body: any = {};
+  try {
+    body = await ctx.json();
+  } catch {
+    // ignore
+  }
+  if (body?.error !== 'entitlement_required') return;
+
+  throw new NutritionEntitlementRequiredError(
+    typeof body?.message === 'string' ? body.message : undefined,
+    typeof body?.reason === 'string' ? body.reason : 'no_active_subscription',
+  );
 }
 
 // Map 401/413/503 responses from the edge function to typed errors with
@@ -195,6 +231,7 @@ export async function resolveNutrition(
 
     if (error) {
       await throwIfRateLimited(error);
+      await throwIfEntitlementRequired(error);
       await throwIfStatusError(error);
       throw new NutritionApiError(
         error.message || 'Failed to resolve nutrition',
@@ -270,6 +307,7 @@ export async function resolveNutritionFromPhoto(
 
     if (error) {
       await throwIfRateLimited(error);
+      await throwIfEntitlementRequired(error);
       await throwIfStatusError(error);
       throw new NutritionApiError(
         error.message || 'Failed to analyze photo',
@@ -443,6 +481,7 @@ export async function correctNutrition(
 
     if (error) {
       await throwIfRateLimited(error);
+      await throwIfEntitlementRequired(error);
       await throwIfStatusError(error);
       throw new NutritionApiError(
         error.message || 'Failed to correct nutrition',

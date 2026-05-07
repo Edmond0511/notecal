@@ -1,4 +1,5 @@
 import { Tokens } from "@/constants/theme";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useAppStore } from "@/store/app-store";
 import { Entry } from "@/types";
 import { truncateNumber } from "@/utils/formatNumber";
@@ -24,6 +25,7 @@ import {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 import { NutritionReasoningPopup } from "./NutritionReasoningPopup";
+import { PaywallTrigger } from "./PaywallTrigger";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
 // Constants
@@ -556,10 +558,12 @@ const WaterBadge = React.memo<{ amountL: number }>(({ amountL }) => (
 ));
 WaterBadge.displayName = "WaterBadge";
 
-// Memoized error badge - tap to retry resolution
+// Memoized error badge - tap to retry resolution (or open paywall when the
+// failure is an entitlement_required gate; the paywall handler is wired up in
+// Phase 2 — for now tap retry will simply 403 again, which is fine).
 const ErrorBadge = React.memo<{
   onPress: () => void;
-  reason?: 'rate_limit' | 'unknown';
+  reason?: 'rate_limit' | 'entitlement_required' | 'unknown';
 }>(({ onPress, reason }) => (
   <TouchableOpacity
     style={styles.inlineError}
@@ -567,7 +571,11 @@ const ErrorBadge = React.memo<{
     activeOpacity={0.7}
   >
     <Text style={styles.errorText}>
-      {reason === 'rate_limit' ? 'limit reached' : 'error'}
+      {reason === 'rate_limit'
+        ? 'limit reached'
+        : reason === 'entitlement_required'
+        ? 'upgrade required'
+        : 'error'}
     </Text>
   </TouchableOpacity>
 ));
@@ -735,6 +743,8 @@ export function NotesEditor({
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showReasoningPopup, setShowReasoningPopup] = useState(false);
+  const [paywallVisible, setPaywallVisible] = useState(false);
+  const { isPro } = useSubscription();
   // Map of entry text prefix -> y position (for entries starting with "-" or "—")
   const [entryYMap, setEntryYMap] = useState<Map<string, number[]>>(new Map());
   // Track the text that was measured, so we know if positions are stale
@@ -880,6 +890,16 @@ export function NotesEditor({
   const wasFocusedRef = useRef(false);
 
   const handleFocus = useCallback(() => {
+    // Defensive: paywall any focus path that bypasses doFocusAtPosition
+    // (a11y, hardware keyboard, auto-correct re-focus). Editor stays read-only
+    // for non-Pro users.
+    if (!isPro) {
+      textInputRef.current?.blur();
+      setIsFocused(false);
+      wasFocusedRef.current = false;
+      setPaywallVisible(true);
+      return;
+    }
     if (!(isPagerSettledRef?.current ?? true)) {
       textInputRef.current?.blur();
       setIsFocused(false);
@@ -895,7 +915,7 @@ export function NotesEditor({
         setTimeout(() => setSelection(undefined), 50);
       });
     }
-  }, [isPagerSettledRef]);
+  }, [isPagerSettledRef, isPro]);
 
   const handleBlur = useCallback(() => {
     wasFocusedRef.current = false;
@@ -915,20 +935,30 @@ export function NotesEditor({
   // pointerEvents="auto" when the native focus command is processed.
   // Calling focus() while pointerEvents="none" causes iOS/Fabric to
   // re-evaluate the responder chain on the prop transition, revoking focus.
-  const doFocusAtPosition = useCallback((x: number, y: number) => {
-    const lines = linesLayoutRef.current;
-    const textLength = documentTextRef.current.length;
-    if (lines.length > 0) {
-      const pos = calculateCursorPosition(x, y, lines, textLength);
-      setSelection({ start: pos, end: pos });
-    } else {
-      const fallback = textLength === 0 ? 0 : textLength;
-      setSelection({ start: fallback, end: fallback });
-    }
-    // Overlay only shown when not focused — wait for pointerEvents="auto" render commit
-    pendingFocusRef.current = true;
-    setIsFocused(true);
-  }, []);
+  const doFocusAtPosition = useCallback(
+    (x: number, y: number) => {
+      // Non-Pro users hit the paywall before the editor focuses — they can
+      // see entries that already exist but cannot add new ones until they
+      // subscribe.
+      if (!isPro) {
+        setPaywallVisible(true);
+        return;
+      }
+      const lines = linesLayoutRef.current;
+      const textLength = documentTextRef.current.length;
+      if (lines.length > 0) {
+        const pos = calculateCursorPosition(x, y, lines, textLength);
+        setSelection({ start: pos, end: pos });
+      } else {
+        const fallback = textLength === 0 ? 0 : textLength;
+        setSelection({ start: fallback, end: fallback });
+      }
+      // Overlay only shown when not focused — wait for pointerEvents="auto" render commit
+      pendingFocusRef.current = true;
+      setIsFocused(true);
+    },
+    [isPro],
+  );
 
   const tapToFocusGesture = useMemo(
     () =>
@@ -1131,10 +1161,15 @@ export function NotesEditor({
     ],
   );
 
-  // Handle indicator tap - retry on error, show reasoning on ok
+  // Handle indicator tap - retry on error, show reasoning on ok, paywall on
+  // entitlement_required (retrying a paywalled entry just 403s again).
   const handleIndicatorTap = useCallback(
     (entry: Entry) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (entry.status === "error" && entry.errorReason === "entitlement_required") {
+        setPaywallVisible(true);
+        return;
+      }
       if (entry.status === "error" && onUpdateEntry) {
         onUpdateEntry(entry.id, entry.rawText);
         return;
@@ -1345,6 +1380,19 @@ export function NotesEditor({
         visible={showReasoningPopup}
         onClose={handleClosePopup}
         entry={selectedEntry}
+      />
+
+      {/* Inline paywall — shown when a non-Pro user taps an entitlement_required pill */}
+      <PaywallTrigger
+        visible={paywallVisible}
+        onClose={() => setPaywallVisible(false)}
+        onSuccess={() => {
+          // After purchase, retry any paywall-blocked entries that are still
+          // in the document. Their state will flip from error → pending as
+          // the queue re-enqueues them — handled by the Pro flip in
+          // SubscriptionContext clearing the queue's entitlement block.
+          setPaywallVisible(false);
+        }}
       />
     </View>
   );

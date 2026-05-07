@@ -1,9 +1,17 @@
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 
 import { offlineReconnectService } from '@/services/offlineReconnectService';
 import { syncService } from '@/services/syncService';
 import { startSyncSubscriber, stopSyncSubscriber } from '@/services/syncSubscriber';
 import { useAppStore } from '@/store/app-store';
+import {
+  IBMPlexSans_400Regular,
+  IBMPlexSans_500Medium,
+  IBMPlexSans_600SemiBold,
+  IBMPlexSans_700Bold,
+  useFonts,
+} from '@expo-google-fonts/ibm-plex-sans';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -19,6 +27,12 @@ function RootLayoutNav() {
   const router = useRouter();
   const goals = useAppStore((s) => s.goals);
   const [firstSyncDone, setFirstSyncDone] = useState(false);
+  const [fontsLoaded] = useFonts({
+    IBMPlexSans_400Regular,
+    IBMPlexSans_500Medium,
+    IBMPlexSans_600SemiBold,
+    IBMPlexSans_700Bold,
+  });
 
   useEffect(() => {
     if (isLoading) return;
@@ -92,7 +106,7 @@ function RootLayoutNav() {
 
   // Show loading screen while checking auth — mirrors the native SplashScreen
   // (200×200 NoteCal glyph on white) so reload doesn't flash a gray spinner.
-  if (isLoading) {
+  if (isLoading || !fontsLoaded) {
     return (
       <View style={styles.loadingContainer}>
         <Image
@@ -123,7 +137,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardProvider>
         <AuthProvider>
-          <RootLayoutNav />
+          <SubscriptionProvider>
+            <RootLayoutNav />
+          </SubscriptionProvider>
         </AuthProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>

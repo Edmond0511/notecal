@@ -95,3 +95,38 @@ export function restoreUserSnapshot(userId: string): boolean {
   }
   return true;
 }
+
+// ============================================================================
+// Free AI-call quota (3 lifetime entries before paywall)
+// ============================================================================
+
+/** Lifetime free AI-resolution cap for non-Pro users. Crossing this triggers
+ *  the inline paywall. Lifetime, not daily — daily would be exploitable. */
+export const FREE_CALL_CAP = 3;
+
+const FREE_CALLS_PREFIX = 'free-ai-calls:';
+// Anonymous (signed-out) users get a single shared bucket so they can't burn
+// the whole quota by toggling sign-in state.
+const FREE_CALLS_ANON_KEY = `${FREE_CALLS_PREFIX}anon`;
+
+function freeCallsKey(userId: string | null | undefined): string {
+  return userId ? `${FREE_CALLS_PREFIX}${userId}` : FREE_CALLS_ANON_KEY;
+}
+
+/** How many of the FREE_CALL_CAP free calls this user has consumed. */
+export function getFreeCallsUsed(userId: string | null | undefined): number {
+  const raw = mmkv.getNumber(freeCallsKey(userId));
+  return typeof raw === 'number' && raw > 0 ? raw : 0;
+}
+
+/** True when the user still has at least one free AI call remaining. */
+export function hasFreeCallsRemaining(userId: string | null | undefined): boolean {
+  return getFreeCallsUsed(userId) < FREE_CALL_CAP;
+}
+
+/** Atomically bump the counter. Returns the new total. */
+export function incrementFreeCallsUsed(userId: string | null | undefined): number {
+  const next = getFreeCallsUsed(userId) + 1;
+  mmkv.set(freeCallsKey(userId), next);
+  return next;
+}

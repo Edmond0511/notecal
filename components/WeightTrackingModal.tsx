@@ -440,7 +440,7 @@ export function WeightTrackingModal({
   ]);
 
   const displayWeight = (kg: number) =>
-    isImperial ? kgToLbs(kg) : Math.round(kg * 10) / 10;
+    isImperial ? Math.round(kgToLbs(kg) * 10) / 10 : Math.round(kg * 10) / 10;
 
   const formatDate = (dateStr: string) => {
     const y = parseInt(dateStr.substring(0, 4), 10);

@@ -56,6 +56,7 @@ export function StepAge({ value, onChange }: Props) {
         value={birthDate}
         mode="date"
         display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+        themeVariant="light"
         minimumDate={minDate}
         maximumDate={maxDate}
         onChange={handleChange}

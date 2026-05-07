@@ -1,8 +1,12 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { mmkvStateStorage } from '@/lib/mmkv';
+import {
+  mmkvStateStorage,
+  hasFreeCallsRemaining,
+  incrementFreeCallsUsed,
+} from '@/lib/mmkv';
 import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, EntryMode, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct, DatabaseSearchResult, PendingInsertion, MealReminder, FatSecretServing, CustomMeal, CustomMealItem } from '@/types';
-import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError } from '@/services/nutritionApi';
+import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError, NutritionEntitlementRequiredError } from '@/services/nutritionApi';
 import { barcodeProductToFoodItem } from '@/services/barcodeService';
 import { nutritionQueue } from '@/services/nutritionQueue';
 import { photoSyncService } from '@/services/photoSyncService';
@@ -74,6 +78,8 @@ export const useAppStore = create<AppState>()(
       customMeals: [],
       weightEntries: [],
       pendingInsertion: null,
+      isPro: false,
+      pendingPaywallAfterAuth: false,
       notificationsEnabled: false,
       mealReminders: [
         { id: 'breakfast', name: 'Breakfast', time: '08:00', enabled: true, isDefault: true },
@@ -171,6 +177,34 @@ export const useAppStore = create<AppState>()(
         // Guard: entry may have been deleted while awaiting network/auth
         if (!get().entries.some((e: Entry) => e.id === entryId)) return;
 
+        // Free-tier gate: non-Pro users get a hard cap on lifetime AI calls.
+        // We mark the entry as entitlement_required and skip the queue
+        // entirely so the inline paywall fires without a server roundtrip.
+        // Server-side check still runs as defense-in-depth.
+        if (!get().isPro && !hasFreeCallsRemaining(user?.id)) {
+          set((state: AppState) => ({
+            entries: state.entries.map((entry: Entry) =>
+              entry.id === entryId
+                ? {
+                    ...entry,
+                    status: 'error' as const,
+                    errorReason: 'entitlement_required' as const,
+                    updatedAt: new Date(),
+                  }
+                : entry
+            ),
+          }));
+          return;
+        }
+
+        // Increment the free-call counter for non-Pro users on every accepted
+        // enqueue. Pro users skip the counter. Counter persists across the
+        // user's installs because RC handles entitlement state separately —
+        // no MMKV reset on sign-out.
+        if (!get().isPro) {
+          incrementFreeCallsUsed(user?.id);
+        }
+
         // Enqueue the API call — queue handles concurrency (max 3)
         nutritionQueue.enqueue({
           entryId,
@@ -195,7 +229,10 @@ export const useAppStore = create<AppState>()(
           },
           onError: (error) => {
             console.error('Error resolving entry:', error);
-            const errorReason = error instanceof NutritionRateLimitError ? 'rate_limit' as const : 'unknown' as const;
+            const errorReason: 'rate_limit' | 'entitlement_required' | 'unknown' =
+              error instanceof NutritionRateLimitError ? 'rate_limit'
+              : error instanceof NutritionEntitlementRequiredError ? 'entitlement_required'
+              : 'unknown';
             set((state: AppState) => ({
               entries: state.entries.map((entry: Entry) =>
                 entry.id === entryId
@@ -292,7 +329,10 @@ export const useAppStore = create<AppState>()(
       },
       onError: (error) => {
         console.error('Error resolving updated entry:', error);
-        const errorReason = error instanceof NutritionRateLimitError ? 'rate_limit' as const : 'unknown' as const;
+        const errorReason: 'rate_limit' | 'entitlement_required' | 'unknown' =
+          error instanceof NutritionRateLimitError ? 'rate_limit'
+          : error instanceof NutritionEntitlementRequiredError ? 'entitlement_required'
+          : 'unknown';
         set((state: AppState) => ({
           entries: state.entries.map((entry: Entry) =>
             entry.id === id
@@ -820,7 +860,9 @@ export const useAppStore = create<AppState>()(
       return { success: true };
     } catch (error) {
       console.error('Error creating saved entry:', error);
-      if (error instanceof NutritionQuotaExceededError) {
+      if (error instanceof NutritionEntitlementRequiredError) {
+        return { success: false, error: 'Upgrade to Pro to save entries.' };
+      } else if (error instanceof NutritionQuotaExceededError) {
         return { success: false, error: 'Quota exceeded' };
       } else if (error instanceof NutritionRateLimitError) {
         return { success: false, error: 'Too many requests' };
@@ -1309,7 +1351,10 @@ export const useAppStore = create<AppState>()(
             },
             onError: (error) => {
               console.error('[enqueuePendingEntries] Error resolving entry:', error);
-              const errorReason = error instanceof NutritionRateLimitError ? 'rate_limit' as const : 'unknown' as const;
+              const errorReason: 'rate_limit' | 'entitlement_required' | 'unknown' =
+              error instanceof NutritionRateLimitError ? 'rate_limit'
+              : error instanceof NutritionEntitlementRequiredError ? 'entitlement_required'
+              : 'unknown';
               set((state: AppState) => ({
                 entries: state.entries.map((e: Entry) =>
                   e.id === entry.id
@@ -1449,6 +1494,14 @@ export const useAppStore = create<AppState>()(
   clearPendingInsertion: () => {
     set({ pendingInsertion: null });
   },
+
+  setIsPro: (isPro: boolean) => {
+    set({ isPro });
+  },
+
+  setPendingPaywallAfterAuth: (pending: boolean) => {
+    set({ pendingPaywallAfterAuth: pending });
+  },
 }),
     {
       name: 'note-cal-storage', // unique name for the storage
@@ -1466,6 +1519,7 @@ export const useAppStore = create<AppState>()(
         weightEntries: state.weightEntries,
         notificationsEnabled: state.notificationsEnabled,
         mealReminders: state.mealReminders,
+        pendingPaywallAfterAuth: state.pendingPaywallAfterAuth,
       }),
       // Handle version migrations
       version: 7,

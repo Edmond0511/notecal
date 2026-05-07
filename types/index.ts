@@ -117,8 +117,9 @@ export interface Entry {
   inlineKcal?: number | null;
   status: 'pending' | 'ok' | 'error';
   // Set when status === 'error' so the UI can render a specific badge
-  // ('rate_limit' renders "limit reached" instead of generic "error').
-  errorReason?: 'rate_limit' | 'unknown';
+  // ('rate_limit' renders "limit reached", 'entitlement_required' renders
+  // "Upgrade required" instead of generic "error').
+  errorReason?: 'rate_limit' | 'entitlement_required' | 'unknown';
   items: FoodItem[];
   createdAt: Date;
   updatedAt: Date;
@@ -295,6 +296,14 @@ export interface AppState {
   mealReminders: MealReminder[];
   // Pending insertion for cross-component communication (pager ↔ DatePage)
   pendingInsertion: PendingInsertion | null;
+  // Subscription state — mirrored from SubscriptionContext so the store can
+  // gate AI calls synchronously inside addEntry without a context lookup.
+  isPro: boolean;
+  // Set to true when the user finishes onboarding while unauthenticated; the
+  // home tab consumes this on first mount to fire the paywall after auth has
+  // landed them there. Persisted so it survives an app kill between auth and
+  // home redirect.
+  pendingPaywallAfterAuth: boolean;
   // Actions
   addEntry: (rawText: string) => void;
   updateEntry: (id: string, rawText: string) => Promise<void>;
@@ -362,4 +371,7 @@ export interface AppState {
   // Pending insertion actions
   setPendingInsertion: (insertion: PendingInsertion) => void;
   clearPendingInsertion: () => void;
+  // Subscription action — called by SubscriptionContext on isPro changes.
+  setIsPro: (isPro: boolean) => void;
+  setPendingPaywallAfterAuth: (pending: boolean) => void;
 }

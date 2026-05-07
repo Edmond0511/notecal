@@ -1,4 +1,8 @@
-import { resolveNutrition, NutritionRateLimitError } from '@/services/nutritionApi';
+import {
+  resolveNutrition,
+  NutritionRateLimitError,
+  NutritionEntitlementRequiredError,
+} from '@/services/nutritionApi';
 import { NutritionResolveResponse } from '@/types';
 
 const MAX_CONCURRENT = 3;
@@ -21,6 +25,11 @@ class NutritionQueue {
   // window with retries for queued items the server will just reject anyway.
   private pausedUntil = 0;
   private resumeTimer: ReturnType<typeof setTimeout> | null = null;
+  // Set when the edge function returns 403 entitlement_required. Stays sticky
+  // until the SubscriptionContext clears it on a Pro purchase / restore,
+  // because re-hitting the server every entry while the user is non-Pro is
+  // wasted load. `clearEntitlementBlock()` flips this back off.
+  private entitlementBlocked = false;
 
   enqueue(item: QueueItem) {
     // Already in cooldown? Don't bother hitting the server — fail immediately
@@ -40,8 +49,18 @@ class NutritionQueue {
       );
       return;
     }
+    if (this.entitlementBlocked) {
+      item.onError(new NutritionEntitlementRequiredError());
+      return;
+    }
     this.queue.push(item);
     this.drain();
+  }
+
+  /** Called by SubscriptionContext when the user's Pro entitlement is granted
+   * (on purchase, restore, or cold-start hydration). Re-opens the queue. */
+  clearEntitlementBlock() {
+    this.entitlementBlocked = false;
   }
 
   /** Check if a rawText is already queued or in-flight */
@@ -114,6 +133,17 @@ class NutritionQueue {
         // Fail every item already queued behind us with the same error so
         // they show the limit badge immediately instead of being stuck in
         // 'pending' for the entire cooldown window.
+        const queued = this.queue.splice(0);
+        for (const q of queued) {
+          if (!q.isEntryDeleted()) q.onError(err);
+        }
+      } else if (err instanceof NutritionEntitlementRequiredError) {
+        // No active Pro subscription — block further server hits until
+        // SubscriptionContext clears the flag on purchase/restore. Drain the
+        // queue with the same error so every pending entry shows
+        // "Upgrade required" right away.
+        this.entitlementBlocked = true;
+        console.warn('[queue] entitlement required, blocking until upgrade');
         const queued = this.queue.splice(0);
         for (const q of queued) {
           if (!q.isEntryDeleted()) q.onError(err);

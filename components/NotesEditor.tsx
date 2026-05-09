@@ -960,15 +960,29 @@ export function NotesEditor({
     [isPro],
   );
 
+  const showPaywall = useCallback(() => setPaywallVisible(true), []);
+
   const tapToFocusGesture = useMemo(
-    () =>
-      Gesture.Tap()
+    () => {
+      if (!isPro) {
+        // Fire on touch-down so the paywall appears the instant the finger
+        // lands, not on release. No focus path is taken so there's no caret
+        // flicker.
+        return Gesture.Tap()
+          .maxDistance(10)
+          .onTouchesDown(() => {
+            "worklet";
+            runOnJS(showPaywall)();
+          });
+      }
+      return Gesture.Tap()
         .maxDistance(10)
         .onEnd((e) => {
           "worklet";
           runOnJS(doFocusAtPosition)(e.x, e.y);
-        }),
-    [doFocusAtPosition],
+        });
+    },
+    [doFocusAtPosition, isPro, showPaywall],
   );
 
   // Parse document text to find food entry lines
@@ -1343,7 +1357,9 @@ export function NotesEditor({
         {/* Bottom spacer — tap below text focuses at end of document */}
         <Pressable
           style={styles.bottomTapArea}
+          onPressIn={!isPro ? () => setPaywallVisible(true) : undefined}
           onPress={() => {
+            if (!isPro) return;
             const len = documentTextRef.current.length;
             setSelection({ start: len, end: len });
             if (!isFocused) {

@@ -2,7 +2,7 @@ import type { PurchasesPackage } from 'react-native-purchases';
 
 /** Pulls intro free-trial period out of a package's product. RC normalizes the
  *  Apple/Google subscription-period strings, but the field shape varies — we
- *  read defensively. Returns a label like "1 week free" or null. */
+ *  read defensively. Returns a label like "3 days free" or null. */
 export function getTrialLabel(
   pkg: PurchasesPackage | null | undefined,
 ): string | null {

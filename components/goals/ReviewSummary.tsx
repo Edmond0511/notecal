@@ -65,8 +65,11 @@ export function ReviewSummary({
       {/* Main calorie target */}
       <View style={styles.mainTargetCard}>
         <View style={styles.mainTargetHeader}>
-          <FontAwesomeIcon icon={icons.fire} size={28} color={Tokens.macroKcal} />
+          <View style={styles.mainTargetIconSlot}>
+            <FontAwesomeIcon icon={icons.fire} size={28} color={Tokens.macroKcal} />
+          </View>
           <Text style={styles.mainTargetValue}>{goals.targetKcal}</Text>
+          <View style={styles.mainTargetIconSlot} />
         </View>
         <Text style={styles.mainTargetLabel}>Calories</Text>
       </View>
@@ -195,9 +198,14 @@ const styles = StyleSheet.create({
   mainTargetHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     alignSelf: "stretch",
-    gap: 12,
+  },
+  mainTargetIconSlot: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingHorizontal: 12,
   },
   mainTargetValue: {
     fontSize: 48,

@@ -335,6 +335,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                       style={styles.backButton}
                       interactive
                       effect="regular"
+                      colorScheme="light"
                       tintColor="rgba(250, 250, 247, 0.3)"
                     >
                       <Ionicons name="close" size={20} color={Tokens.textPrimary} />
@@ -418,7 +419,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                                   style={styles.accountProvider}
                                   numberOfLines={1}
                                 >
-                                  {user.email}
+                                  Signed in with {user.email}
                                 </Text>
                               </>
                             ) : (

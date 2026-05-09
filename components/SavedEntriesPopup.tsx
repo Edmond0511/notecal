@@ -393,6 +393,7 @@ export function SavedEntriesPopup({
               style={styles.backButton}
               interactive
               effect="regular"
+              colorScheme="light"
               tintColor="rgba(250, 250, 247, 0.3)"
             >
               <Ionicons name="close" size={20} color={Tokens.textPrimary} />
@@ -415,10 +416,11 @@ export function SavedEntriesPopup({
               <LiquidGlassView
                 style={[
                   styles.backButton,
-                  { backgroundColor: Tokens.accent },
+                  { backgroundColor: Tokens.accentTint },
                 ]}
                 interactive
                 effect="regular"
+                colorScheme="light"
                 tintColor={Tokens.tintColor}
               >
                 <Ionicons
@@ -431,7 +433,7 @@ export function SavedEntriesPopup({
               <View
                 style={[
                   styles.backButton,
-                  { backgroundColor: Tokens.accent },
+                  { backgroundColor: Tokens.accentTint },
                 ]}
               >
                 <Ionicons
@@ -455,6 +457,7 @@ export function SavedEntriesPopup({
               style={styles.searchGlass}
               interactive
               effect="regular"
+              colorScheme="light"
               tintColor="rgba(250, 250, 247, 0.3)"
             >
               {searchContent}

@@ -1,5 +1,6 @@
 import { Tokens } from '@/constants/theme';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { getTrialLabel } from '@/utils/trialLabel';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -31,31 +32,6 @@ const LEGAL_URLS = {
 
 const PLEX_SEMIBOLD = 'IBMPlexSans_600SemiBold';
 const PLEX_BOLD = 'IBMPlexSans_700Bold';
-
-/** Pulls intro free-trial period out of a package's product. RC normalizes the
- *  Apple/Google subscription-period strings, but the field shape varies — we
- *  read defensively. Returns a label like "1 week free" or null. */
-function getTrialLabel(pkg: PurchasesPackage | null | undefined): string | null {
-  if (!pkg) return null;
-  const intro: any = (pkg.product as any)?.introPrice;
-  if (!intro) return null;
-  if (typeof intro.priceString === 'string' && intro.price === 0) {
-    const periodNum = intro.periodNumberOfUnits ?? intro.periodUnit ?? 0;
-    const periodUnit = intro.periodUnit ?? '';
-    if (typeof periodNum === 'number' && periodNum > 0) {
-      const noun =
-        periodUnit === 'DAY' || periodUnit === 'day'
-          ? 'day'
-          : periodUnit === 'WEEK' || periodUnit === 'week'
-          ? 'week'
-          : periodUnit === 'MONTH' || periodUnit === 'month'
-          ? 'month'
-          : 'day';
-      return `${periodNum} ${noun}${periodNum === 1 ? '' : 's'} free`;
-    }
-  }
-  return null;
-}
 
 /** Best-effort "$X.XX/mo" derivation from a yearly priceString. */
 function yearlyEffectiveMonthly(priceString: string): string {
@@ -193,9 +169,9 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
   const summaryLine =
     selectedId === 'yearly'
       ? trialLabel
-        ? `${trialLabel}, then ${yearlyPriceString}/year · cancel anytime`
-        : `${yearlyPriceString}/year · cancel anytime`
-      : `${monthlyPriceString}/month · cancel anytime`;
+        ? `${trialLabel}, then ${yearlyPriceString}/year`
+        : `${yearlyPriceString}/year`
+      : `${monthlyPriceString}/month`;
 
   const ctaLabel =
     selectedId === 'yearly'
@@ -228,7 +204,7 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
         <Text style={styles.title}>NoteCal Pro</Text>
         <Text style={styles.description}>
           Unlimited AI logging, saved meals, multi-device sync, and personalised
-          macro corrections.
+          macro goals.
         </Text>
 
         {offering ? (
@@ -242,7 +218,7 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
                     ? `${trialLabel}, then ${yearlyMonthlyEquivalent}`
                     : yearlyMonthlyEquivalent
                 }
-                badge="Save 67%"
+                badge="Best Deal"
                 selected={selectedId === 'yearly'}
                 onPress={() => setSelectedId('yearly')}
               />
@@ -269,10 +245,12 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
         <View style={styles.summaryBlock}>
           {selectedId === 'yearly' && trialLabel && (
             <Text style={styles.reassuranceLine}>
-              No payment due now. We&apos;ll remind you before your trial ends.
+              No payment today. Cancel anytime.
             </Text>
           )}
-          <Text style={styles.summaryLine}>{summaryLine}</Text>
+          {selectedId === 'yearly' && (
+            <Text style={styles.summaryLine}>{summaryLine}</Text>
+          )}
         </View>
         <Pressable
           style={[

@@ -166,6 +166,7 @@ export function GoalsPopup({
                         style={styles.editButton}
                         interactive
                         effect="regular"
+                        colorScheme="light"
                         tintColor="rgba(250, 250, 247, 0.3)"
                       >
                         <Ionicons name="pencil" size={16} color={Tokens.textPrimary} />

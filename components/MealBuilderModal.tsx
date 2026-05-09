@@ -464,6 +464,7 @@ export function MealBuilderModal({
                       style={styles.backButton}
                       interactive
                       effect="regular"
+                      colorScheme="light"
                       tintColor="rgba(250, 250, 247, 0.3)"
                     >
                       <Ionicons name="close" size={20} color={Tokens.textPrimary} />
@@ -485,16 +486,17 @@ export function MealBuilderModal({
                   {canSave ? (
                     isLiquidGlassSupported ? (
                       <LiquidGlassView
-                        style={[styles.backButton, { backgroundColor: Tokens.accent }]}
+                        style={[styles.backButton, { backgroundColor: Tokens.accentTint }]}
                         interactive
                         effect="regular"
+                        colorScheme="light"
                         tintColor={Tokens.tintColor}
                       >
                         <Ionicons name="checkmark" size={20} color={Tokens.accent} />
                       </LiquidGlassView>
                     ) : (
-                      <View style={[styles.backButton, { backgroundColor: Tokens.accent }]}>
-                        <Ionicons name="checkmark" size={20} color="#fff" />
+                      <View style={[styles.backButton, { backgroundColor: Tokens.accentTint }]}>
+                        <Ionicons name="checkmark" size={20} color={Tokens.accent} />
                       </View>
                     )
                   ) : (

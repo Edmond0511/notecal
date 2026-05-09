@@ -660,6 +660,7 @@ export function WeightTrackingModal({
                         style={styles.backButton}
                         interactive
                         effect="regular"
+                        colorScheme="light"
                         tintColor="rgba(250, 250, 247, 0.3)"
                       >
                         <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
@@ -701,6 +702,7 @@ export function WeightTrackingModal({
                     style={styles.headerBackButton}
                     interactive
                     effect="regular"
+                    colorScheme="light"
                     tintColor="rgba(250, 250, 247, 0.3)"
                   >
                     <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
@@ -925,6 +927,7 @@ export function WeightTrackingModal({
                         style={styles.backButton}
                         interactive
                         effect="regular"
+                        colorScheme="light"
                         tintColor="rgba(250, 250, 247, 0.3)"
                       >
                         <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
@@ -998,6 +1001,7 @@ export function WeightTrackingModal({
                         style={styles.backButton}
                         interactive
                         effect="regular"
+                        colorScheme="light"
                         tintColor="rgba(250, 250, 247, 0.3)"
                       >
                         <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
@@ -1033,6 +1037,7 @@ export function WeightTrackingModal({
                         style={styles.backButton}
                         interactive
                         effect="regular"
+                        colorScheme="light"
                         tintColor="rgba(250, 250, 247, 0.3)"
                       >
                         <Ionicons name="trash-outline" size={18} color="#EF4444" />
@@ -1285,15 +1290,17 @@ const styles = StyleSheet.create({
     paddingTop: 14,
   },
   logButton: {
+    height: 56,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    borderRadius: 25,
+    paddingHorizontal: 20,
+    borderRadius: 9999,
     backgroundColor: Tokens.textPrimary,
   },
   logButtonText: {
-    fontSize: 15,
-    fontWeight: "400",
+    fontSize: 16,
+    fontWeight: "500",
+    letterSpacing: -0.2,
     color: "#fff",
   },
   // Popup overlay (full-height sheet)
@@ -1447,9 +1454,10 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flexDirection: "row",
+    height: 56,
     backgroundColor: Tokens.textPrimary,
-    paddingVertical: 15,
-    borderRadius: 25,
+    paddingHorizontal: 20,
+    borderRadius: 9999,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: Tokens.textPrimary,
@@ -1464,7 +1472,8 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "500",
+    letterSpacing: -0.2,
   },
   saveButtonTextDisabled: {
     color: Tokens.textTertiary,

@@ -676,6 +676,7 @@ export function PersonalInfoModal({
                     style={styles.backButton}
                     interactive
                     effect="regular"
+                    colorScheme="light"
                     tintColor="rgba(250, 250, 247, 0.3)"
                   >
                     <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
@@ -1003,18 +1004,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#FCFCFB",
   },
   saveButton: {
+    height: 56,
     backgroundColor: Tokens.textPrimary,
-    borderRadius: 999,
-    paddingVertical: 16,
+    borderRadius: 9999,
+    paddingHorizontal: 20,
     alignItems: "center",
+    justifyContent: "center",
   },
   saveButtonDisabled: {
     backgroundColor: Tokens.textTertiary,
     opacity: 0.6,
   },
   saveButtonText: {
-    fontSize: 17,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "500",
+    letterSpacing: -0.2,
     color: "#fff",
   },
   errorText: {

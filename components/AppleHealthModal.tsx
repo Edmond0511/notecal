@@ -198,6 +198,7 @@ export function AppleHealthModal({ visible, onClose, nested }: AppleHealthModalP
                     style={styles.backButton}
                     interactive
                     effect="regular"
+                    colorScheme="light"
                     tintColor="rgba(250, 250, 247, 0.3)"
                   >
                     <Ionicons

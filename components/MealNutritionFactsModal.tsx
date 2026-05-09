@@ -194,6 +194,7 @@ export function MealNutritionFactsModal({ visible, items, onClose }: Props) {
                     style={styles.closeButton}
                     interactive
                     effect="regular"
+                    colorScheme="light"
                     tintColor="rgba(250, 250, 247, 0.3)"
                   >
                     <Ionicons name="close" size={20} color={Tokens.textPrimary} />

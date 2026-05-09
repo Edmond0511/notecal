@@ -628,6 +628,7 @@ export function NutritionGoalsModal({
                     style={styles.backButton}
                     interactive
                     effect="regular"
+                    colorScheme="light"
                     tintColor="rgba(250, 250, 247, 0.3)"
                   >
                     <Ionicons name="chevron-back" size={20} color={Tokens.textPrimary} />
@@ -1056,16 +1057,17 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 1,
+    height: 56,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 25,
+    paddingHorizontal: 20,
+    borderRadius: 9999,
     backgroundColor: Tokens.textPrimary,
   },
   saveButtonText: {
-    fontSize: 15,
-    fontWeight: "400",
+    fontSize: 16,
+    fontWeight: "500",
+    letterSpacing: -0.2,
     color: "#fff",
   },
   waterTipShadow: {

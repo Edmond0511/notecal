@@ -203,6 +203,8 @@ function ReminderRow({
               onChange={(_, date) => {
                 if (date) onDraftTimeChange(dateToTime(date));
               }}
+              themeVariant="light"
+              textColor={Tokens.textPrimary}
               style={styles.timePicker}
             />
           </View>
@@ -347,6 +349,7 @@ function AddReminderPopup({
                     style={styles.backButton}
                     interactive
                     effect="regular"
+                    colorScheme="light"
                     tintColor={Tokens.tintColor}
                   >
                     <Ionicons
@@ -376,6 +379,7 @@ function AddReminderPopup({
                     ]}
                     interactive
                     effect="regular"
+                    colorScheme="light"
                     tintColor={Tokens.tintColor}
                   >
                     <Ionicons
@@ -430,6 +434,8 @@ function AddReminderPopup({
                   onChange={(_, date) => {
                     if (date) onTimeChange(dateToTime(date));
                   }}
+                  themeVariant="light"
+                  textColor={Tokens.textPrimary}
                   style={styles.popupTimePicker}
                 />
               </View>
@@ -622,6 +628,7 @@ export function NotificationsModal({
                       style={styles.backButton}
                       interactive
                       effect="regular"
+                      colorScheme="light"
                       tintColor={Tokens.tintColor}
                     >
                       <Ionicons
@@ -649,9 +656,10 @@ export function NotificationsModal({
                   >
                     {isLiquidGlassSupported ? (
                       <LiquidGlassView
-                        style={[styles.backButton, { backgroundColor: Tokens.accent }]}
+                        style={[styles.backButton, { backgroundColor: Tokens.accentTint }]}
                         interactive
                         effect="regular"
+                        colorScheme="light"
                         tintColor={Tokens.tintColor}
                       >
                         <Ionicons
@@ -662,9 +670,9 @@ export function NotificationsModal({
                       </LiquidGlassView>
                     ) : (
                       <View
-                        style={[styles.backButton, { backgroundColor: Tokens.accent }]}
+                        style={[styles.backButton, { backgroundColor: Tokens.accentTint }]}
                       >
-                        <Ionicons name="add-sharp" size={20} color="#1A6872" />
+                        <Ionicons name="add-sharp" size={20} color={Tokens.accent} />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -914,10 +922,10 @@ const styles = StyleSheet.create({
   },
   reminderName: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "400",
     color: Tokens.textPrimary,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   timePill: {
     backgroundColor: "rgba(120, 120, 128, 0.12)",
@@ -945,14 +953,17 @@ const styles = StyleSheet.create({
     height: 150,
   },
   doneButton: {
+    height: 56,
     alignItems: "center",
-    paddingVertical: 12,
-    borderRadius: 100,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    borderRadius: 9999,
     backgroundColor: Tokens.textPrimary,
   },
   doneButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "500",
+    letterSpacing: -0.2,
     color: "#fff",
   },
   popupGestureRoot: {

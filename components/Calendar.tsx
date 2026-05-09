@@ -393,6 +393,7 @@ export function Calendar({
                 onChange={(_event, date) => {
                   if (date) setWheelDate(date);
                 }}
+                themeVariant="light"
                 textColor={Tokens.textPrimary}
                 style={styles.wheelPicker}
               />

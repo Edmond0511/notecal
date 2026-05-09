@@ -47,7 +47,7 @@ const SubscriptionContext = createContext<SubscriptionContextType>({
 });
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
   // Track previous isPro so we only fire side effects (clearing the queue
@@ -109,23 +109,42 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   // is subscribed. We call logIn here ourselves and use its returned
   // customerInfo as the authoritative source, which closes the race and
   // is idempotent (RC dedupes when the userId is unchanged).
+  // Wait for AuthContext to resolve the persisted session first so we
+  // don't do a wasteful logOut→logIn cycle while user is still null.
   useEffect(() => {
+    if (authLoading) return;
     let cancelled = false;
     (async () => {
       const userId = user?.id ?? null;
-      const info = userId
+      let info = userId
         ? await logInPurchases(userId)
         : await (async () => {
             await logOutPurchases();
             return getCustomerInfo();
           })();
+
+      // Defensive receipt resync. RC's logIn returns server-cached
+      // customerInfo, which can lag behind StoreKit on cold start (most
+      // visibly in the sandbox: the receipt sits on the device but RC's
+      // server cache hasn't been refreshed via webhook). Calling restore
+      // forces RC to re-validate the StoreKit receipt with Apple and
+      // updates the entitlement record, fixing the "paywall shows for a
+      // subscribed user until they tap purchase again" bug. Only run when
+      // we have a userId (anonymous restore can't bind to anyone) and
+      // when the cached info reports no Pro entitlement (skip the cost
+      // for users who are already correctly identified as Pro).
+      if (userId && info && !customerInfoIsPro(info)) {
+        const restored = await rcRestorePurchases();
+        if (restored) info = restored;
+      }
+
       if (cancelled) return;
       if (info) setCustomerInfo(info);
     })();
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, authLoading]);
 
   const refresh = useCallback(async () => {
     const info = await getCustomerInfo();

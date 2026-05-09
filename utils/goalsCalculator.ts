@@ -247,18 +247,20 @@ export function cmToFeetInches(cm: number): { feet: number; inches: number } {
   return { feet, inches: inches === 12 ? 0 : inches };
 }
 
+const LBS_PER_KG = 1 / 0.45359237;
+
 /**
  * Convert weight from pounds to kilograms
  */
 export function lbsToKg(lbs: number): number {
-  return Math.round(lbs * 0.453592 * 100) / 100;
+  return lbs * 0.45359237;
 }
 
 /**
  * Convert weight from kilograms to pounds
  */
 export function kgToLbs(kg: number): number {
-  return Math.round(kg * 2.20462 * 100) / 100;
+  return kg * LBS_PER_KG;
 }
 
 /**

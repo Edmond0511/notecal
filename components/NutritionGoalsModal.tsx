@@ -904,10 +904,11 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: "500",
+    fontSize: 17,
+    fontWeight: "600",
     color: "#6B6B6B",
     textTransform: "capitalize",
+    letterSpacing: -0.3,
     marginBottom: 6,
     marginLeft: 0,
   },
@@ -963,10 +964,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   targetLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "400",
     color: Tokens.textPrimary,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   targetValueContainer: {
     flexDirection: "row",
@@ -974,9 +975,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   targetValue: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     color: Tokens.textPrimary,
+    letterSpacing: -0.3,
   },
   targetUnit: {
     fontSize: 14,
@@ -997,7 +999,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   targetInput: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     color: Tokens.textPrimary,
     textAlign: "right",
@@ -1037,9 +1039,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   toggleLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "400",
     color: Tokens.textPrimary,
+    letterSpacing: -0.3,
   },
   toggleUnit: {
     fontSize: 13,

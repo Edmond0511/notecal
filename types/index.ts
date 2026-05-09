@@ -237,6 +237,11 @@ export interface ManualTargets {
   water?: number;
 }
 
+export interface UserProfile {
+  firstName: string;
+  lastName: string;
+}
+
 export interface UserGoals extends UserGoalsInput {
   // Calculated targets
   bmr: number;
@@ -285,6 +290,8 @@ export interface AppState {
   preferredUnits: UnitSystem;
   entryMode: EntryMode;
   enterOnlyMode: boolean;
+  // User profile (name)
+  profile: UserProfile | null;
   // Saved entries state
   savedEntries: SavedEntry[];
   // Custom meals state
@@ -326,6 +333,8 @@ export interface AppState {
   setEntryMode: (mode: EntryMode) => void;
   setEnterOnlyMode: (enabled: boolean) => void;
   setManualTargets: (targets: ManualTargets | null) => void;
+  // Profile actions
+  setProfile: (profile: UserProfile | null) => void;
   // Saved entries actions
   saveEntry: (entry: Entry) => void;
   deleteSavedEntry: (id: string) => void;

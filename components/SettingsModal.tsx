@@ -101,6 +101,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [showPaywall, setShowPaywall] = useState(false);
   const { isPro, restore } = useSubscription();
   const goals = useAppStore((s) => s.goals);
+  const profile = useAppStore((s) => s.profile);
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -381,17 +382,73 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                               />
                             ) : (
                               <Text style={styles.avatarText}>
-                                {user.email.charAt(0).toUpperCase()}
+                                {(profile?.firstName || user.email)
+                                  .charAt(0)
+                                  .toUpperCase()}
                               </Text>
                             )}
                           </View>
                           <View style={styles.accountDetails}>
-                            <Text style={styles.accountEmail} numberOfLines={1}>
-                              {user.email}
-                            </Text>
-                            <Text style={styles.accountProvider}>
-                              Signed in with {user.provider}
-                            </Text>
+                            {profile?.firstName || profile?.lastName ? (
+                              <>
+                                <View style={styles.nameRow}>
+                                  <Text
+                                    style={styles.accountName}
+                                    numberOfLines={1}
+                                  >
+                                    {[profile.firstName, profile.lastName]
+                                      .filter(Boolean)
+                                      .join(" ")}
+                                  </Text>
+                                  {isPro && (
+                                    <View style={styles.inlineProPill}>
+                                      <Ionicons
+                                        name="sparkles"
+                                        size={9}
+                                        color={Tokens.accent}
+                                        style={styles.inlineProPillIcon}
+                                      />
+                                      <Text style={styles.inlineProPillText}>
+                                        Pro
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
+                                <Text
+                                  style={styles.accountProvider}
+                                  numberOfLines={1}
+                                >
+                                  {user.email}
+                                </Text>
+                              </>
+                            ) : (
+                              <>
+                                <View style={styles.nameRow}>
+                                  <Text
+                                    style={styles.accountEmail}
+                                    numberOfLines={1}
+                                  >
+                                    {user.email}
+                                  </Text>
+                                  {isPro && (
+                                    <View style={styles.inlineProPill}>
+                                      <Ionicons
+                                        name="sparkles"
+                                        size={9}
+                                        color={Tokens.accent}
+                                        style={styles.inlineProPillIcon}
+                                      />
+                                      <Text style={styles.inlineProPillText}>
+                                        Pro
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
+                                <Text style={styles.accountProvider}>
+                                  Signed in with {user.provider}
+                                </Text>
+                              </>
+                            )}
                           </View>
                         </View>
                       </View>
@@ -1035,10 +1092,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: "500",
+    fontSize: 17,
+    fontWeight: "600",
     color: "#6B6B6B",
     textTransform: "capitalize",
+    letterSpacing: -0.3,
     marginBottom: 6,
     marginLeft: 0,
   },
@@ -1053,6 +1111,33 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(0, 0, 0, 0.07)",
     ...Tokens.shadowLight,
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  inlineProPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: Tokens.accentTint,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(26, 104, 114, 0.18)",
+    flexShrink: 0,
+  },
+  inlineProPillIcon: {
+    marginRight: 3,
+  },
+  inlineProPillText: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    color: Tokens.accent,
+    textTransform: "uppercase",
   },
   accountInfo: {
     flexDirection: "row",
@@ -1080,11 +1165,17 @@ const styles = StyleSheet.create({
   accountDetails: {
     flex: 1,
   },
+  accountName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Tokens.textPrimary,
+    flexShrink: 1,
+  },
   accountEmail: {
     fontSize: 16,
     fontWeight: "600",
     color: Tokens.textPrimary,
-    marginBottom: 2,
+    flexShrink: 1,
   },
   accountProvider: {
     fontSize: 13,
@@ -1100,10 +1191,10 @@ const styles = StyleSheet.create({
     ...Tokens.shadowLight,
   },
   signOutText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "500",
     color: Tokens.textPrimary,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   deleteAccountButton: {
     alignItems: "center",
@@ -1116,10 +1207,10 @@ const styles = StyleSheet.create({
     ...Tokens.shadowLight,
   },
   deleteAccountText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "500",
     color: Tokens.error,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   menuCardShadow: {
     ...Tokens.shadowLight,
@@ -1141,13 +1232,13 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
     color: Tokens.textPrimary,
     fontWeight: "500",
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   menuItemValue: {
-    fontSize: 14,
+    fontSize: 16,
     color: Tokens.textSecondary,
     fontWeight: "600",
   },

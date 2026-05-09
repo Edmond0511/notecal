@@ -47,7 +47,14 @@ import { BmiNumberLine } from "./BmiNumberLine";
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
-type EditingField = "age" | "sex" | "height" | "weight" | null;
+type EditingField =
+  | "firstName"
+  | "lastName"
+  | "age"
+  | "sex"
+  | "height"
+  | "weight"
+  | null;
 
 interface PersonalInfoModalProps {
   visible: boolean;
@@ -66,9 +73,13 @@ export function PersonalInfoModal({
   const goals = useAppStore((s) => s.goals);
   const preferredUnits = useAppStore((s) => s.preferredUnits);
   const setGoals = useAppStore((s) => s.setGoals);
+  const profile = useAppStore((s) => s.profile);
+  const setProfile = useAppStore((s) => s.setProfile);
 
   // Editing state
   const [editingField, setEditingField] = useState<EditingField>(null);
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
   const [editAge, setEditAge] = useState("");
   const [editSex, setEditSex] = useState<Sex>("male");
   const [editHeightCm, setEditHeightCm] = useState("");
@@ -86,6 +97,8 @@ export function PersonalInfoModal({
       translateY.value = 0;
       isScrolledToTop.value = true;
       setEditingField(null);
+      setEditFirstName(profile?.firstName ?? "");
+      setEditLastName(profile?.lastName ?? "");
       setEditAge(String(goals.age));
       setEditSex(goals.sex);
       setEditHeightCm(String(goals.heightCm));
@@ -165,8 +178,15 @@ export function PersonalInfoModal({
       ? calculateBMI(currentWeightKg, currentHeightCm)
       : calculateBMI(goals.weightKg, goals.heightCm);
 
+  const trimmedFirstName = editFirstName.trim();
+  const trimmedLastName = editLastName.trim();
+  const profileChanged =
+    trimmedFirstName !== (profile?.firstName ?? "") ||
+    trimmedLastName !== (profile?.lastName ?? "");
+
   // Check if values have changed
   const hasChanges =
+    profileChanged ||
     currentAge !== goals.age ||
     editSex !== goals.sex ||
     Math.abs(currentHeightCm - goals.heightCm) > 0.1 ||
@@ -203,8 +223,19 @@ export function PersonalInfoModal({
       sex: editSex,
       age: currentAge,
       heightCm: Math.round(currentHeightCm * 10) / 10,
-      weightKg: Math.round(currentWeightKg * 100) / 100,
+      weightKg: Math.round(currentWeightKg * 10000) / 10000,
     });
+
+    if (profileChanged) {
+      if (!trimmedFirstName && !trimmedLastName) {
+        setProfile(null);
+      } else {
+        setProfile({
+          firstName: trimmedFirstName,
+          lastName: trimmedLastName,
+        });
+      }
+    }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setEditingField(null);
@@ -314,6 +345,30 @@ export function PersonalInfoModal({
         >
           <Text style={styles.metricLabel}>{label}</Text>
           <View style={styles.metricValueContainer}>
+            {field === "firstName" && (
+              <Text
+                style={[
+                  styles.metricValue,
+                  isEditing && styles.metricValueEditing,
+                  !editFirstName && styles.metricValuePlaceholder,
+                ]}
+                numberOfLines={1}
+              >
+                {editFirstName || "Add"}
+              </Text>
+            )}
+            {field === "lastName" && (
+              <Text
+                style={[
+                  styles.metricValue,
+                  isEditing && styles.metricValueEditing,
+                  !editLastName && styles.metricValuePlaceholder,
+                ]}
+                numberOfLines={1}
+              >
+                {editLastName || "Add"}
+              </Text>
+            )}
             {field === "age" && (
               <Text
                 style={[
@@ -378,6 +433,40 @@ export function PersonalInfoModal({
         </TouchableOpacity>
 
         {/* Inline editor */}
+        {isEditing && field === "firstName" && (
+          <View style={styles.editRow}>
+            <TextInput
+              style={[styles.editInput, { flex: 1 }]}
+              value={editFirstName}
+              onChangeText={setEditFirstName}
+              autoFocus
+              selectTextOnFocus
+              autoCapitalize="words"
+              autoCorrect={false}
+              maxLength={40}
+              placeholder="First name"
+              placeholderTextColor={Tokens.textTertiary}
+              returnKeyType="done"
+            />
+          </View>
+        )}
+        {isEditing && field === "lastName" && (
+          <View style={styles.editRow}>
+            <TextInput
+              style={[styles.editInput, { flex: 1 }]}
+              value={editLastName}
+              onChangeText={setEditLastName}
+              autoFocus
+              selectTextOnFocus
+              autoCapitalize="words"
+              autoCorrect={false}
+              maxLength={40}
+              placeholder="Last name"
+              placeholderTextColor={Tokens.textTertiary}
+              returnKeyType="done"
+            />
+          </View>
+        )}
         {isEditing && field === "age" && (
           <View style={styles.editRow}>
             <TextInput
@@ -614,6 +703,18 @@ export function PersonalInfoModal({
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"
             >
+              {/* Profile */}
+              <Animated.View
+                entering={FadeInDown.delay(50).duration(400)}
+                style={styles.section}
+              >
+                <Text style={styles.sectionTitle}>Profile</Text>
+                <View style={styles.card}>
+                  {renderMetricRow("firstName", "First Name", false)}
+                  {renderMetricRow("lastName", "Last Name", true)}
+                </View>
+              </Animated.View>
+
               {/* Metrics */}
               <Animated.View
                 entering={FadeInDown.delay(100).duration(400)}
@@ -745,10 +846,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: "500",
+    fontSize: 17,
+    fontWeight: "600",
     color: "#6B6B6B",
     textTransform: "capitalize",
+    letterSpacing: -0.3,
     marginBottom: 6,
     marginLeft: 0,
   },
@@ -783,10 +885,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   metricLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "400",
     color: Tokens.textPrimary,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   metricValueContainer: {
     flexDirection: "row",
@@ -794,12 +896,17 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   metricValue: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     color: Tokens.textPrimary,
+    letterSpacing: -0.3,
   },
   metricValueEditing: {
     color: Tokens.textPrimary,
+  },
+  metricValuePlaceholder: {
+    color: Tokens.textTertiary,
+    fontWeight: "400",
   },
   metricUnit: {
     fontSize: 13,

@@ -316,10 +316,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: "500",
+    fontSize: 17,
+    fontWeight: "600",
     color: "#6B6B6B",
     textTransform: "capitalize",
+    letterSpacing: -0.3,
     marginBottom: 6,
     marginLeft: 0,
   },
@@ -360,10 +361,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowTitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: Tokens.textPrimary,
     fontWeight: "400",
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   rowSubtitle: {
     fontSize: 14,

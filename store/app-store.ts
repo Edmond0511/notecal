@@ -5,7 +5,7 @@ import {
   hasFreeCallsRemaining,
   incrementFreeCallsUsed,
 } from '@/lib/mmkv';
-import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, EntryMode, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct, DatabaseSearchResult, PendingInsertion, MealReminder, FatSecretServing, CustomMeal, CustomMealItem } from '@/types';
+import { AppState, Entry, DailyTotals, NutritionResolveResponse, Document, UserGoals, UnitSystem, EntryMode, ManualTargets, SavedEntry, Macros, WeightEntry, BarcodeProduct, DatabaseSearchResult, PendingInsertion, MealReminder, FatSecretServing, CustomMeal, CustomMealItem, UserProfile } from '@/types';
 import { resolveNutrition, correctNutrition, NutritionApiError, NutritionRateLimitError, NutritionQuotaExceededError, NutritionEntitlementRequiredError } from '@/services/nutritionApi';
 import { barcodeProductToFoodItem } from '@/services/barcodeService';
 import { nutritionQueue } from '@/services/nutritionQueue';
@@ -74,6 +74,7 @@ export const useAppStore = create<AppState>()(
       preferredUnits: 'metric' as UnitSystem,
       entryMode: 'freeform' as EntryMode,
       enterOnlyMode: false,
+      profile: null,
       savedEntries: [],
       customMeals: [],
       weightEntries: [],
@@ -489,6 +490,7 @@ export const useAppStore = create<AppState>()(
       savedEntries: [],
       customMeals: [],
       weightEntries: [],
+      profile: null,
     });
   },
 
@@ -502,6 +504,10 @@ export const useAppStore = create<AppState>()(
 
   setEnterOnlyMode: (enabled: boolean) => {
     set({ enterOnlyMode: enabled });
+  },
+
+  setProfile: (profile: UserProfile | null) => {
+    set({ profile });
   },
 
   setManualTargets: (targets: ManualTargets | null) => {
@@ -1520,9 +1526,10 @@ export const useAppStore = create<AppState>()(
         notificationsEnabled: state.notificationsEnabled,
         mealReminders: state.mealReminders,
         pendingPaywallAfterAuth: state.pendingPaywallAfterAuth,
+        profile: state.profile,
       }),
       // Handle version migrations
-      version: 7,
+      version: 8,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           persistedState = {
@@ -1563,6 +1570,12 @@ export const useAppStore = create<AppState>()(
           persistedState = {
             ...persistedState,
             customMeals: persistedState.customMeals || [],
+          };
+        }
+        if (version < 8) {
+          persistedState = {
+            ...persistedState,
+            profile: persistedState.profile ?? null,
           };
         }
         return persistedState;

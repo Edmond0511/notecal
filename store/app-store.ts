@@ -525,7 +525,7 @@ export const useAppStore = create<AppState>()(
 
   // Saved entries management
   saveEntry: (entry: Entry) => {
-    console.log('📌 saveEntry called with:', {
+    console.log('saveEntry called with:', {
       status: entry.status,
       itemsCount: entry.items?.length,
       rawText: entry.rawText
@@ -533,12 +533,12 @@ export const useAppStore = create<AppState>()(
 
     // Only save entries that are resolved with items
     if (entry.status !== 'ok' || !entry.items.length) {
-      console.log('📌 saveEntry skipped - not ok or no items');
+      console.log('saveEntry skipped - not ok or no items');
       return;
     }
 
     const { savedEntries } = get();
-    console.log('📌 Current savedEntries count:', savedEntries.length);
+    console.log('Current savedEntries count:', savedEntries.length);
 
     // Normalize rawText for duplicate check (lowercase, trim)
     const normalizedText = entry.rawText.toLowerCase().trim();
@@ -550,7 +550,7 @@ export const useAppStore = create<AppState>()(
 
     if (existingIndex !== -1) {
       // Update existing: increment usage count and update lastUsedAt
-      console.log('📌 Updating existing saved entry at index:', existingIndex);
+      console.log('Updating existing saved entry at index:', existingIndex);
       set((state) => ({
         savedEntries: state.savedEntries.map((se, idx) =>
           idx === existingIndex
@@ -577,11 +577,11 @@ export const useAppStore = create<AppState>()(
         usageCount: 1,
       };
 
-      console.log('📌 Creating new saved entry:', newSavedEntry.rawText);
+      console.log('Creating new saved entry:', newSavedEntry.rawText);
       set((state) => ({
         savedEntries: [...state.savedEntries, newSavedEntry],
       }));
-      console.log('📌 New savedEntries count:', get().savedEntries.length);
+      console.log('New savedEntries count:', get().savedEntries.length);
     }
   },
 

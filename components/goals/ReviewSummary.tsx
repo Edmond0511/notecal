@@ -34,10 +34,34 @@ const icons = {
 };
 
 const OTHER_NUTRIENTS = [
-  { key: "fiber" as const, label: "Fiber", unit: "g", color: "#B08C5A", icon: icons.seedling },
-  { key: "sugar" as const, label: "Sugar", unit: "g", color: "#D4687E", icon: icons.cubesStacked },
-  { key: "sodium" as const, label: "Sodium", unit: "mg", color: "#6898BE", icon: icons.tint },
-  { key: "potassium" as const, label: "Potassium", unit: "mg", color: "#72A868", icon: icons.bolt },
+  {
+    key: "fiber" as const,
+    label: "Fiber",
+    unit: "g",
+    color: "#B08C5A",
+    icon: icons.seedling,
+  },
+  {
+    key: "sugar" as const,
+    label: "Sugar",
+    unit: "g",
+    color: "#D4687E",
+    icon: icons.cubesStacked,
+  },
+  {
+    key: "sodium" as const,
+    label: "Sodium",
+    unit: "mg",
+    color: "#6898BE",
+    icon: icons.tint,
+  },
+  {
+    key: "potassium" as const,
+    label: "Potassium",
+    unit: "mg",
+    color: "#72A868",
+    icon: icons.bolt,
+  },
 ];
 
 interface ReviewSummaryProps {
@@ -66,7 +90,11 @@ export function ReviewSummary({
       <View style={styles.mainTargetCard}>
         <View style={styles.mainTargetHeader}>
           <View style={styles.mainTargetIconSlot}>
-            <FontAwesomeIcon icon={icons.fire} size={28} color={Tokens.macroKcal} />
+            <FontAwesomeIcon
+              icon={icons.fire}
+              size={28}
+              color={Tokens.macroKcal}
+            />
           </View>
           <Text style={styles.mainTargetValue}>{goals.targetKcal}</Text>
           <View style={styles.mainTargetIconSlot} />
@@ -78,21 +106,35 @@ export function ReviewSummary({
       <View style={styles.macrosCard}>
         <View style={styles.macrosGrid}>
           <View style={[styles.macroItem, { backgroundColor: "#E3F2FD" }]}>
-            <FontAwesomeIcon icon={icons.drumstickBite} size={20} color={Tokens.macroProtein} />
+            <FontAwesomeIcon
+              icon={icons.drumstickBite}
+              size={20}
+              color={Tokens.macroProtein}
+            />
             <Text style={[styles.macroValue, { color: Tokens.macroProtein }]}>
               {goals.targetProtein}g
             </Text>
-            <Text style={[styles.macroLabel, { color: "#7AB3E8" }]}>Protein</Text>
+            <Text style={[styles.macroLabel, { color: "#7AB3E8" }]}>
+              Protein
+            </Text>
           </View>
           <View style={[styles.macroItem, { backgroundColor: "#FFF8E7" }]}>
-            <FontAwesomeIcon icon={icons.droplet} size={20} color={Tokens.macroFat} />
+            <FontAwesomeIcon
+              icon={icons.droplet}
+              size={20}
+              color={Tokens.macroFat}
+            />
             <Text style={[styles.macroValue, { color: Tokens.macroFat }]}>
               {goals.targetFat}g
             </Text>
             <Text style={[styles.macroLabel, { color: "#F7BE5E" }]}>Fat</Text>
           </View>
           <View style={[styles.macroItem, { backgroundColor: "#F3E5F5" }]}>
-            <FontAwesomeIcon icon={icons.wheatAwn} size={20} color={Tokens.macroCarbs} />
+            <FontAwesomeIcon
+              icon={icons.wheatAwn}
+              size={20}
+              color={Tokens.macroCarbs}
+            />
             <Text style={[styles.macroValue, { color: Tokens.macroCarbs }]}>
               {goals.targetCarbs}g
             </Text>
@@ -110,11 +152,20 @@ export function ReviewSummary({
               const value = goals.manualTargets?.[nutrient.key];
               return (
                 <View key={nutrient.key} style={styles.otherNutrientItem}>
-                  <FontAwesomeIcon icon={nutrient.icon} size={16} color={nutrient.color} />
-                  <Text style={styles.otherNutrientLabel}>{nutrient.label}</Text>
+                  <FontAwesomeIcon
+                    icon={nutrient.icon}
+                    size={16}
+                    color={nutrient.color}
+                  />
+                  <Text style={styles.otherNutrientLabel}>
+                    {nutrient.label}
+                  </Text>
                   <Text style={styles.otherNutrientValue}>
                     {value}
-                    <Text style={styles.otherNutrientUnit}> {nutrient.unit}</Text>
+                    <Text style={styles.otherNutrientUnit}>
+                      {" "}
+                      {nutrient.unit}
+                    </Text>
                   </Text>
                 </View>
               );
@@ -133,7 +184,11 @@ export function ReviewSummary({
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>Sex</Text>
             <Text style={styles.summaryValue}>
-              {goals.sex === "male" ? "Male" : goals.sex === "female" ? "Female" : "Other"}
+              {goals.sex === "male"
+                ? "Male"
+                : goals.sex === "female"
+                  ? "Female"
+                  : "Other"}
             </Text>
           </View>
           <View style={styles.summaryItem}>
@@ -168,7 +223,11 @@ export function ReviewSummary({
               <Text style={styles.weightTargetLabel}>Current</Text>
               <Text style={styles.weightTargetValue}>{weightDisplay}</Text>
             </View>
-            <Ionicons name="arrow-forward" size={16} color={Tokens.textTertiary} />
+            <Ionicons
+              name="arrow-forward"
+              size={16}
+              color={Tokens.textTertiary}
+            />
             <View style={styles.weightTargetItem}>
               <Text style={styles.weightTargetLabel}>Target</Text>
               <Text style={styles.weightTargetValue}>
@@ -180,7 +239,6 @@ export function ReviewSummary({
           </View>
         </View>
       )}
-
     </View>
   );
 }
@@ -217,7 +275,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#FF8A65",
-    marginTop: 6,
+    marginTop: -4,
   },
   macrosCard: {
     marginBottom: 16,

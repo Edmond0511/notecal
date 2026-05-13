@@ -49,10 +49,13 @@ export function canAdvance(step: number, data: OnboardingData): boolean {
       // Apple Health step — optional, always advanceable on iOS; auto-skipped on Android
       return true;
     case 8:
+      // Ready-to-generate bridge — single Continue CTA, always advanceable.
+      return true;
+    case 9:
       // Generating step — auto-advances on a timer; the CTA is hidden so this
       // value never gates a user tap, but `true` keeps debug overlays sensible.
       return true;
-    case 9:
+    case 10:
       // Targets review — always advanceable
       return true;
     default:

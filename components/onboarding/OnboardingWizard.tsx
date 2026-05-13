@@ -7,6 +7,7 @@ import { UserGoals } from "@/types";
 import { calculateBMR, calculateTDEE } from "@/utils/goalsCalculator";
 import {
   IBMPlexSans_400Regular,
+  IBMPlexSans_600SemiBold,
   IBMPlexSans_700Bold,
   useFonts,
 } from "@expo-google-fonts/ibm-plex-sans";
@@ -40,16 +41,18 @@ import { StepGeneratingPlan } from "./steps/StepGeneratingPlan";
 import { StepGoal } from "./steps/StepGoal";
 import { StepHealthConnect } from "./steps/StepHealthConnect";
 import { StepMacros } from "./steps/StepMacros";
+import { StepReadyToGenerate } from "./steps/StepReadyToGenerate";
 import { StepSex } from "./steps/StepSex";
 import { StepTargets } from "./steps/StepTargets";
 import { StepWeightTarget } from "./steps/StepWeightTarget";
 
-const TOTAL_STEPS = 10;
+const TOTAL_STEPS = 11;
 const WEIGHT_TARGET_STEP = 5;
 const MACROS_STEP = 6;
 const HEALTH_STEP = 7;
-const GENERATING_STEP = 8;
-const TARGETS_STEP = 9;
+const READY_STEP = 8;
+const GENERATING_STEP = 9;
+const TARGETS_STEP = 10;
 const SLIDE_DURATION = 280;
 
 interface StepCopy {
@@ -100,6 +103,11 @@ const COPY: StepCopy[] = [
     cta: "Continue",
   },
   {
+    title: "",
+    subtitle: "",
+    cta: "Continue",
+  },
+  {
     title: "Generating your plan",
     subtitle: "Personalizing your nutrition targets",
     cta: "",
@@ -140,6 +148,7 @@ export function OnboardingWizard() {
   const [paywallVisible, setPaywallVisible] = useState(false);
   const [fontsLoaded] = useFonts({
     IBMPlexSans_400Regular,
+    IBMPlexSans_600SemiBold,
     IBMPlexSans_700Bold,
   });
 
@@ -151,6 +160,10 @@ export function OnboardingWizard() {
     weightUnit: preferredUnits === "imperial" ? "imperial" : "metric",
   }));
   const computedGoalsRef = useRef<UserGoals | null>(null);
+  // True after the generating screen has played once. Used to skip the
+  // animation on subsequent forward navigations (e.g. user reaches review,
+  // taps back, and continues again — they shouldn't sit through it twice).
+  const hasGeneratedRef = useRef(false);
 
   const update = useCallback(
     <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
@@ -165,11 +178,16 @@ export function OnboardingWizard() {
   const goNext = useCallback(() => {
     if (step >= TOTAL_STEPS - 1) return;
     setDirection("next");
+    // If the generating animation has already played, jump straight to
+    // review — no need to replay it when the user is just stepping back and
+    // forth between the review page and prior steps.
+    const skipGeneratingForward = hasGeneratedRef.current;
     if (step === WEIGHT_TARGET_STEP - 1 && skipsWeightTarget) {
       setStep(MACROS_STEP);
     } else if (step === MACROS_STEP && skipsHealth) {
-      // Android skips Apple Health and lands on the generating screen.
-      setStep(GENERATING_STEP);
+      setStep(skipGeneratingForward ? TARGETS_STEP : READY_STEP);
+    } else if (step === HEALTH_STEP && skipGeneratingForward) {
+      setStep(TARGETS_STEP);
     } else {
       setStep((s) => s + 1);
     }
@@ -188,8 +206,10 @@ export function OnboardingWizard() {
     setDirection("back");
     if (step === MACROS_STEP && skipsWeightTarget) {
       setStep(WEIGHT_TARGET_STEP - 1);
+    } else if (step === READY_STEP && skipsHealth) {
+      setStep(MACROS_STEP);
     } else if (step === TARGETS_STEP) {
-      // Skip the generating step on the way back; on Android also skip Health.
+      // Skip the generating + ready bridges on the way back; on Android also skip Health.
       setStep(skipsHealth ? MACROS_STEP : HEALTH_STEP);
     } else {
       setStep((s) => s - 1);
@@ -352,8 +372,56 @@ export function OnboardingWizard() {
       case 7:
         return <StepHealthConnect />;
       case 8:
-        return <StepGeneratingPlan onComplete={goNext} />;
-      case 9:
+        return (
+          <StepReadyToGenerate
+            headlineFontFamily={
+              fontsLoaded ? "IBMPlexSans_700Bold" : undefined
+            }
+            subtitleFontFamily={
+              fontsLoaded ? "IBMPlexSans_400Regular" : undefined
+            }
+          />
+        );
+      case 9: {
+        if (
+          data.sex == null ||
+          data.age == null ||
+          data.heightCm == null ||
+          data.weightKg == null ||
+          data.activity == null ||
+          data.goal == null
+        ) {
+          return null;
+        }
+        return (
+          <StepGeneratingPlan
+            onComplete={() => {
+              hasGeneratedRef.current = true;
+              goNext();
+            }}
+            sex={data.sex}
+            age={data.age}
+            heightCm={data.heightCm}
+            weightKg={data.weightKg}
+            activity={data.activity}
+            goal={data.goal}
+            targetWeightKg={data.targetWeightKg}
+            timelineWeeks={data.timelineWeeks}
+            proteinPreference={data.proteinPreference}
+            carbPreference={data.carbPreference}
+            headlineFontFamily={
+              fontsLoaded ? "IBMPlexSans_600SemiBold" : undefined
+            }
+            boldNumericFontFamily={
+              fontsLoaded ? "IBMPlexSans_700Bold" : undefined
+            }
+            semiBoldFontFamily={
+              fontsLoaded ? "IBMPlexSans_600SemiBold" : undefined
+            }
+          />
+        );
+      }
+      case 10:
         if (
           data.sex == null ||
           data.age == null ||
@@ -418,12 +486,16 @@ export function OnboardingWizard() {
           exiting={exitingAnim}
           style={styles.slideTrack}
         >
-          <View style={styles.heroBlock}>
-            <Text style={[styles.heroTitle, heroFont]}>{COPY[step].title}</Text>
-            <Text style={[styles.heroSubtitle, subtitleFont]}>
-              {COPY[step].subtitle}
-            </Text>
-          </View>
+          {step !== GENERATING_STEP && step !== READY_STEP && (
+            <View style={styles.heroBlock}>
+              <Text style={[styles.heroTitle, heroFont]}>
+                {COPY[step].title}
+              </Text>
+              <Text style={[styles.heroSubtitle, subtitleFont]}>
+                {COPY[step].subtitle}
+              </Text>
+            </View>
+          )}
           <View style={styles.body}>{renderStep()}</View>
         </Animated.View>
       </KeyboardAwareScrollView>

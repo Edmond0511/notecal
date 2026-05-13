@@ -1406,7 +1406,7 @@ export function NutritionReasoningPopup({
   const isEntrySaved = savedEntryMatch !== null;
 
   const handleSaveEntry = useCallback(() => {
-    console.log("🔘 Save button pressed, entry:", {
+    console.log("Save button pressed, entry:", {
       status: displayEntry?.status,
       itemsCount: displayEntry?.items?.length,
       rawText: displayEntry?.rawText,
@@ -1417,7 +1417,7 @@ export function NutritionReasoningPopup({
       displayEntry.status !== "ok" ||
       !displayEntry.items.length
     ) {
-      console.log("🔘 Save aborted - entry not valid");
+      console.log("Save aborted - entry not valid");
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

@@ -215,12 +215,6 @@ export function StepHealthConnect() {
           )}
         </>
       )}
-
-      {!hs.healthEnabled && (
-        <Text style={styles.skipHint}>
-          You can skip this — connect later from Settings.
-        </Text>
-      )}
     </View>
   );
 }

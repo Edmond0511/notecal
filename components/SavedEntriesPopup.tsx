@@ -1,5 +1,5 @@
 import { useAppStore } from "@/store/app-store";
-import { Tokens } from "@/constants/theme";
+import { SystemFont, Tokens } from "@/constants/theme";
 import { SavedEntry } from "@/types";
 import {
   isLiquidGlassSupported,
@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     textAlign: "center",
@@ -687,7 +687,7 @@ const styles = StyleSheet.create({
   },
   countText: {
     fontSize: 13,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "700",
     color: Tokens.accent,
   },
@@ -718,7 +718,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     padding: 0,
@@ -756,7 +756,7 @@ const styles = StyleSheet.create({
   },
   entryLabel: {
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     marginBottom: 8,
@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
   },
   macroValue: {
     fontSize: 13,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     color: Tokens.textSecondary,
   },
@@ -843,7 +843,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     marginBottom: 8,
@@ -852,7 +852,7 @@ const styles = StyleSheet.create({
   },
   emptyDescription: {
     fontSize: 15,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: Tokens.textSecondary,
     textAlign: "center",

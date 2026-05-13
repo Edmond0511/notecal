@@ -1,7 +1,7 @@
 import { AnimatedDigits } from "@/components/AnimatedDigits";
 import { MealNutritionFactsModal } from "@/components/MealNutritionFactsModal";
 import { EditNutrientPopup } from "@/components/NutritionReasoningPopup";
-import { Tokens } from "@/constants/theme";
+import { SystemFont, Tokens } from "@/constants/theme";
 import {
   BarcodeLookupError,
   BarcodeNotFoundError,
@@ -1235,7 +1235,7 @@ const styles = StyleSheet.create({
   },
   permissionTitle: {
     fontSize: 22,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#1a1a1a",
     marginBottom: 12,
@@ -1243,7 +1243,7 @@ const styles = StyleSheet.create({
   },
   permissionDescription: {
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: "#666",
     textAlign: "center",
@@ -1259,7 +1259,7 @@ const styles = StyleSheet.create({
   },
   permissionButtonText: {
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: "#fff",
   },
@@ -1269,7 +1269,7 @@ const styles = StyleSheet.create({
   },
   permissionCancelText: {
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: "#666",
   },
@@ -1379,7 +1379,7 @@ const styles = StyleSheet.create({
   },
   hintText: {
     fontSize: 15,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     color: "#fff",
   },
@@ -1417,7 +1417,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: "#666",
   },
@@ -1624,7 +1624,7 @@ const styles = StyleSheet.create({
   },
   scanAgainText: {
     fontSize: 15,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: "#666",
   },
@@ -1646,7 +1646,7 @@ const styles = StyleSheet.create({
   },
   attribution: {
     fontSize: 11,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: "#bbb",
     textAlign: "center",
@@ -1662,14 +1662,14 @@ const styles = StyleSheet.create({
   },
   notFoundTitle: {
     fontSize: 18,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#1a1a1a",
     letterSpacing: -0.2,
   },
   notFoundDescription: {
     fontSize: 14,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: "#666",
     lineHeight: 22,
@@ -1683,7 +1683,7 @@ const styles = StyleSheet.create({
   manualInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: "#1a1a1a",
     backgroundColor: "#ffffff",

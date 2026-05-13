@@ -1,4 +1,4 @@
-import { Tokens } from "@/constants/theme";
+import { SystemFont, Tokens } from "@/constants/theme";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useAppStore } from "@/store/app-store";
 import { Entry } from "@/types";
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     paddingLeft: 20,
     paddingRight: 90,
     color: "transparent",
-    fontFamily: "System",
+    fontFamily: SystemFont,
     includeFontPadding: false,
     left: 0,
     right: 0,
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     paddingRight: 90,
     paddingTop: 12,
     color: Tokens.textPrimary,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     includeFontPadding: false,
   },
   headerFade: {
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     fontSize: Tokens.fontSize.sm,
     lineHeight: 16,
     color: Tokens.accent,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     includeFontPadding: false,
   },
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     fontSize: Tokens.fontSize.sm,
     lineHeight: 16,
     color: Tokens.accent,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     includeFontPadding: false,
   },
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     fontSize: Tokens.fontSize.sm,
     lineHeight: 16,
     color: Tokens.error,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     includeFontPadding: false,
   },
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
     fontSize: Tokens.fontSize.sm,
     lineHeight: 16,
     color: Tokens.textSecondary,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     includeFontPadding: false,
   },

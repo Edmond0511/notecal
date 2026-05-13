@@ -1,3 +1,4 @@
+import { SystemFont } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -408,7 +409,7 @@ const styles = StyleSheet.create({
   },
   permissionTitle: {
     fontSize: 22,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#1a1a1a",
     marginBottom: 12,
@@ -416,7 +417,7 @@ const styles = StyleSheet.create({
   },
   permissionDescription: {
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: "#666",
     textAlign: "center",
@@ -432,7 +433,7 @@ const styles = StyleSheet.create({
   },
   permissionButtonText: {
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: "#fff",
   },
@@ -442,7 +443,7 @@ const styles = StyleSheet.create({
   },
   permissionCancelText: {
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: "#666",
   },
@@ -490,7 +491,7 @@ const styles = StyleSheet.create({
   },
   zoomLabel: {
     fontSize: 13,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     color: "rgba(255,255,255,0.5)",
   },
@@ -517,7 +518,7 @@ const styles = StyleSheet.create({
   },
   hintText: {
     fontSize: 15,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     color: "#fff",
   },

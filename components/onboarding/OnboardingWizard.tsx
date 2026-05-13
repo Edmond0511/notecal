@@ -1,9 +1,10 @@
+import { PaywallTrigger } from "@/components/PaywallTrigger";
 import { Tokens } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { PaywallTrigger } from "@/components/PaywallTrigger";
 import { useAppStore } from "@/store/app-store";
 import { UserGoals } from "@/types";
+import { calculateBMR, calculateTDEE } from "@/utils/goalsCalculator";
 import {
   IBMPlexSans_400Regular,
   IBMPlexSans_700Bold,
@@ -12,7 +13,14 @@ import {
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { BackHandler, Platform, StatusBar, StyleSheet, Text, View } from "react-native";
+import {
+  BackHandler,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import Animated, {
   SlideInLeft,
@@ -28,19 +36,20 @@ import { StepHeader } from "./StepHeader";
 import { StepActivity } from "./steps/StepActivity";
 import { StepAge } from "./steps/StepAge";
 import { StepBody } from "./steps/StepBody";
+import { StepGeneratingPlan } from "./steps/StepGeneratingPlan";
 import { StepGoal } from "./steps/StepGoal";
+import { StepHealthConnect } from "./steps/StepHealthConnect";
 import { StepMacros } from "./steps/StepMacros";
 import { StepSex } from "./steps/StepSex";
 import { StepTargets } from "./steps/StepTargets";
 import { StepWeightTarget } from "./steps/StepWeightTarget";
-import { StepHealthConnect } from "./steps/StepHealthConnect";
-import { calculateBMR, calculateTDEE } from "@/utils/goalsCalculator";
 
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 10;
 const WEIGHT_TARGET_STEP = 5;
 const MACROS_STEP = 6;
 const HEALTH_STEP = 7;
-const TARGETS_STEP = 8;
+const GENERATING_STEP = 8;
+const TARGETS_STEP = 9;
 const SLIDE_DURATION = 280;
 
 interface StepCopy {
@@ -76,7 +85,7 @@ const COPY: StepCopy[] = [
     cta: "Continue",
   },
   {
-    title: "Pick your\ntarget weight",
+    title: "Pick your target \nweight",
     subtitle: "And when you want to reach it",
     cta: "Continue",
   },
@@ -86,9 +95,14 @@ const COPY: StepCopy[] = [
     cta: "See my targets",
   },
   {
-    title: "Connect Apple\nHealth",
+    title: "Connect to Apple\nHealth",
     subtitle: "Sync meals and weight with the Health app",
     cta: "Continue",
+  },
+  {
+    title: "Generating your plan",
+    subtitle: "Personalizing your nutrition targets",
+    cta: "",
   },
   {
     title: "Your daily targets",
@@ -154,7 +168,8 @@ export function OnboardingWizard() {
     if (step === WEIGHT_TARGET_STEP - 1 && skipsWeightTarget) {
       setStep(MACROS_STEP);
     } else if (step === MACROS_STEP && skipsHealth) {
-      setStep(TARGETS_STEP);
+      // Android skips Apple Health and lands on the generating screen.
+      setStep(GENERATING_STEP);
     } else {
       setStep((s) => s + 1);
     }
@@ -168,11 +183,14 @@ export function OnboardingWizard() {
       }
       return;
     }
+    // Generating is auto-advancing — back is a no-op so the animation can complete.
+    if (step === GENERATING_STEP) return;
     setDirection("back");
     if (step === MACROS_STEP && skipsWeightTarget) {
       setStep(WEIGHT_TARGET_STEP - 1);
-    } else if (step === TARGETS_STEP && skipsHealth) {
-      setStep(MACROS_STEP);
+    } else if (step === TARGETS_STEP) {
+      // Skip the generating step on the way back; on Android also skip Health.
+      setStep(skipsHealth ? MACROS_STEP : HEALTH_STEP);
     } else {
       setStep((s) => s - 1);
     }
@@ -334,6 +352,8 @@ export function OnboardingWizard() {
       case 7:
         return <StepHealthConnect />;
       case 8:
+        return <StepGeneratingPlan onComplete={goNext} />;
+      case 9:
         if (
           data.sex == null ||
           data.age == null ||
@@ -383,7 +403,7 @@ export function OnboardingWizard() {
           step={visibleStep}
           total={visibleTotal}
           onBack={goBack}
-          showBack={step > 0 || !isAuthenticated}
+          showBack={step !== GENERATING_STEP && (step > 0 || !isAuthenticated)}
         />
       </View>
       <KeyboardAwareScrollView
@@ -400,12 +420,17 @@ export function OnboardingWizard() {
         >
           <View style={styles.heroBlock}>
             <Text style={[styles.heroTitle, heroFont]}>{COPY[step].title}</Text>
-            <Text style={[styles.heroSubtitle, subtitleFont]}>{COPY[step].subtitle}</Text>
+            <Text style={[styles.heroSubtitle, subtitleFont]}>
+              {COPY[step].subtitle}
+            </Text>
           </View>
           <View style={styles.body}>{renderStep()}</View>
         </Animated.View>
       </KeyboardAwareScrollView>
-      <View style={styles.footer}>
+      <View
+        style={[styles.footer, step === GENERATING_STEP && styles.footerHidden]}
+        pointerEvents={step === GENERATING_STEP ? "none" : "auto"}
+      >
         <PrimaryButton
           label={COPY[step].cta}
           onPress={onPrimary}
@@ -469,5 +494,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 40,
+  },
+  footerHidden: {
+    opacity: 0,
   },
 });

@@ -2,12 +2,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   configurePurchases,
   customerInfoIsPro,
-  getCurrentOffering,
   getCustomerInfo,
   logInPurchases,
   logOutPurchases,
   purchasePackage as rcPurchasePackage,
   restorePurchases as rcRestorePurchases,
+  tryGetCurrentOffering,
 } from '@/lib/revenuecat';
 import { nutritionQueue } from '@/services/nutritionQueue';
 import { useAppStore } from '@/store/app-store';
@@ -19,6 +19,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { AppState as RNAppState, AppStateStatus } from 'react-native';
 import Purchases, {
   CustomerInfo,
   PurchasesOffering,
@@ -29,8 +30,14 @@ interface SubscriptionContextType {
   isPro: boolean;
   customerInfo: CustomerInfo | null;
   offering: PurchasesOffering | null;
+  /** True when the most recent offering fetch failed (network down, RC
+   *  unreachable, etc). Paywall uses this to render a Retry state instead of
+   *  a spinner. */
+  offeringError: boolean;
   /** Force a refresh of customerInfo from the RC servers. */
   refresh: () => Promise<void>;
+  /** Re-attempt the offering fetch. Called from the paywall's Retry button. */
+  refreshOffering: () => Promise<void>;
   /** Restore prior purchases (Apple ID-bound). */
   restore: () => Promise<boolean>;
   /** Purchase a package; returns true on success, false on user cancel. */
@@ -41,7 +48,9 @@ const SubscriptionContext = createContext<SubscriptionContextType>({
   isPro: false,
   customerInfo: null,
   offering: null,
+  offeringError: false,
   refresh: async () => {},
+  refreshOffering: async () => {},
   restore: async () => false,
   purchase: async () => false,
 });
@@ -50,6 +59,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const { user, isLoading: authLoading } = useAuth();
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
+  // True iff the most recent offering fetch attempt threw. Lets the paywall
+  // distinguish "still loading" from "failed to load."
+  const [offeringError, setOfferingError] = useState(false);
   // Track previous isPro so we only fire side effects (clearing the queue
   // entitlement block) on the false→true transition, not every customerInfo
   // update.
@@ -82,9 +94,18 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     useAppStore.getState().setIsPro(isPro);
     if (isPro && !wasProRef.current) {
       nutritionQueue.clearEntitlementBlock();
+      useAppStore.getState().retryEntitlementBlockedEntries();
     }
     wasProRef.current = isPro;
   }, [isPro]);
+
+  // Reset the prior-isPro tracker on user switch. Without this, if user A
+  // (Pro) signs out and user B (free) signs in, `wasProRef.current` stays
+  // `true` from A's session — and if B is also Pro, the false→true edge that
+  // triggers `retryEntitlementBlockedEntries` never fires for B.
+  useEffect(() => {
+    wasProRef.current = false;
+  }, [user?.id]);
 
   // Cold-start hydration: pull the current offering + cached customerInfo so
   // the paywall has data on first render and we don't briefly flash isPro=false
@@ -92,15 +113,38 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [info, off] = await Promise.all([getCustomerInfo(), getCurrentOffering()]);
+      const [info, offResult] = await Promise.all([
+        getCustomerInfo(),
+        tryGetCurrentOffering(),
+      ]);
       if (cancelled) return;
       if (info) setCustomerInfo(info);
-      if (off) setOffering(off);
+      if (offResult.offering) setOffering(offResult.offering);
+      setOfferingError(offResult.error);
     })();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // Retry the offering fetch when the app returns to the foreground if the
+  // previous attempt errored and we still don't have an offering. Covers the
+  // "user opened the app offline, then turned the network back on" path
+  // without making them tap Retry themselves.
+  useEffect(() => {
+    const onChange = (status: AppStateStatus) => {
+      if (status !== 'active') return;
+      if (!offeringError) return;
+      if (offering) return;
+      (async () => {
+        const result = await tryGetCurrentOffering();
+        if (result.offering) setOffering(result.offering);
+        setOfferingError(result.error);
+      })();
+    };
+    const sub = RNAppState.addEventListener('change', onChange);
+    return () => sub.remove();
+  }, [offeringError, offering]);
 
   // Sync RC identity to the auth user. AuthContext also calls logIn after
   // SIGNED_IN, but its call races with our cold-start getCustomerInfo —
@@ -129,13 +173,18 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       // server cache hasn't been refreshed via webhook). Calling restore
       // forces RC to re-validate the StoreKit receipt with Apple and
       // updates the entitlement record, fixing the "paywall shows for a
-      // subscribed user until they tap purchase again" bug. Only run when
+      // subscribed user until they tap purchase again" bug. Also covers
+      // the RC-unreachable case: logIn returns null on network failure,
+      // so a Pro user would otherwise stay stranded on the paywall —
+      // restore retries, and as a last resort we fall back to
+      // getCustomerInfo() which reads RC's local cache. Only run when
       // we have a userId (anonymous restore can't bind to anyone) and
-      // when the cached info reports no Pro entitlement (skip the cost
+      // when info is null or reports no Pro entitlement (skip the cost
       // for users who are already correctly identified as Pro).
-      if (userId && info && !customerInfoIsPro(info)) {
+      if (userId && (!info || !customerInfoIsPro(info))) {
         const restored = await rcRestorePurchases();
         if (restored) info = restored;
+        else if (!info) info = await getCustomerInfo();
       }
 
       if (cancelled) return;
@@ -149,6 +198,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const refresh = useCallback(async () => {
     const info = await getCustomerInfo();
     if (info) setCustomerInfo(info);
+  }, []);
+
+  const refreshOffering = useCallback(async () => {
+    const result = await tryGetCurrentOffering();
+    if (result.offering) setOffering(result.offering);
+    setOfferingError(result.error);
   }, []);
 
   const restore = useCallback(async () => {
@@ -171,7 +226,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     isPro,
     customerInfo,
     offering,
+    offeringError,
     refresh,
+    refreshOffering,
     restore,
     purchase,
   };

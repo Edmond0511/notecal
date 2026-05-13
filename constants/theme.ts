@@ -85,6 +85,12 @@ export const Colors = {
   },
 };
 
+/** App-wide system font. iOS uses SF Pro Display; other platforms fall back to their system font. */
+export const SystemFont = Platform.select({
+  ios: 'SF Pro Display',
+  default: 'System',
+}) as string;
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

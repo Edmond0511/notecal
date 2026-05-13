@@ -1,10 +1,10 @@
-import { Tokens } from '@/constants/theme';
-import { StepWeightTarget as OnboardingStepWeightTarget } from '@/components/onboarding/steps/StepWeightTarget';
-import { GoalType } from '@/types';
-import { calculateBMR, calculateTDEE, kgToLbs } from '@/utils/goalsCalculator';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { WizardFormData } from '../GoalsWizard';
+import { StepWeightTarget as OnboardingStepWeightTarget } from "@/components/onboarding/steps/StepWeightTarget";
+import { Tokens } from "@/constants/theme";
+import { GoalType } from "@/types";
+import { calculateBMR, calculateTDEE, kgToLbs } from "@/utils/goalsCalculator";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { WizardFormData } from "../GoalsWizard";
 
 const WEEKS_PER_MONTH = 52 / 12;
 
@@ -18,7 +18,7 @@ export function StepWeightTarget({
   updateFormData,
 }: StepWeightTargetProps) {
   const useImperial = formData.weightUseImperial;
-  const weightUnit: 'metric' | 'imperial' = useImperial ? 'imperial' : 'metric';
+  const weightUnit: "metric" | "imperial" = useImperial ? "imperial" : "metric";
 
   const currentWeightKg = useImperial
     ? (parseFloat(formData.weightLbs) || 0) * 0.453592
@@ -29,10 +29,11 @@ export function StepWeightTarget({
     : parseFloat(formData.targetWeightKg) || 0;
 
   const timelineMonths = parseInt(formData.timelineMonths, 10) || 0;
-  const timelineWeeks = timelineMonths > 0 ? timelineMonths * WEEKS_PER_MONTH : null;
+  const timelineWeeks =
+    timelineMonths > 0 ? timelineMonths * WEEKS_PER_MONTH : null;
 
   // Goal must be lose|gain here (goals wizard only renders this step then)
-  const goal = (formData.goalType ?? 'lose') as Exclude<GoalType, 'maintain'>;
+  const goal = (formData.goalType ?? "lose") as Exclude<GoalType, "maintain">;
 
   const heightCm = formData.heightUseImperial
     ? ((parseFloat(formData.heightFeet) || 0) * 12 +
@@ -55,7 +56,7 @@ export function StepWeightTarget({
 
   const handleTargetChange = (kg: number | null) => {
     if (kg == null) {
-      updateFormData({ targetWeightKg: '', targetWeightLbs: '' });
+      updateFormData({ targetWeightKg: "", targetWeightLbs: "" });
       return;
     }
     if (useImperial) {
@@ -67,7 +68,7 @@ export function StepWeightTarget({
 
   const handleTimelineChange = (weeks: number | null) => {
     if (weeks == null) {
-      updateFormData({ timelineMonths: '' });
+      updateFormData({ timelineMonths: "" });
       return;
     }
     const months = Math.max(1, Math.round(weeks / WEEKS_PER_MONTH));
@@ -86,7 +87,7 @@ export function StepWeightTarget({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Pick your{`\n`}target weight</Text>
+      <Text style={styles.title}>Pick your target {`\n`}weight</Text>
       <Text style={styles.subtitle}>And when you want to reach it</Text>
 
       <View style={styles.body}>
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   title: {
-    fontFamily: 'IBMPlexSans_700Bold',
+    fontFamily: "IBMPlexSans_700Bold",
     fontSize: 28,
     letterSpacing: -0.8,
     lineHeight: 32,
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    fontFamily: 'IBMPlexSans_400Regular',
+    fontFamily: "IBMPlexSans_400Regular",
     fontSize: 15,
     color: Tokens.textSecondary,
     lineHeight: 20,

@@ -1,4 +1,4 @@
-import { Tokens } from "@/constants/theme";
+import { SystemFont, Tokens } from "@/constants/theme";
 import { useAppStore } from "@/store/app-store";
 import {
   isLiquidGlassSupported,
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     textAlign: "center",

@@ -1,6 +1,6 @@
 import { AnimatedDigits } from "@/components/AnimatedDigits";
 import { OfflinePill } from "@/components/OfflinePill";
-import { Tokens } from "@/constants/theme";
+import { SystemFont, Tokens } from "@/constants/theme";
 import { useAppStore } from "@/store/app-store";
 import { useEntriesForDate } from "@/store/selectors";
 import {
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   },
   totalValue: {
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     letterSpacing: -0.3,

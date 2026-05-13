@@ -1,7 +1,13 @@
-import { Tokens } from "@/constants/theme";
-import { getHealthSettings, setHealthSettings } from "@/services/healthkit/healthSettings";
+import { SystemFont, Tokens } from "@/constants/theme";
+import {
+  getHealthSettings,
+  setHealthSettings,
+} from "@/services/healthkit/healthSettings";
+import {
+  startHealthSubscriber,
+  stopHealthSubscriber,
+} from "@/services/healthkit/healthSubscriber";
 import { healthSyncService } from "@/services/healthkit/healthSyncService";
-import { startHealthSubscriber, stopHealthSubscriber } from "@/services/healthkit/healthSubscriber";
 import * as healthkitClient from "@/services/healthkit/healthkitClient";
 import {
   isLiquidGlassSupported,
@@ -48,9 +54,13 @@ interface AppleHealthModalProps {
   nested?: boolean;
 }
 
-export function AppleHealthModal({ visible, onClose, nested }: AppleHealthModalProps) {
+export function AppleHealthModal({
+  visible,
+  onClose,
+  nested,
+}: AppleHealthModalProps) {
   // Android: return null (modal does nothing)
-  if (Platform.OS !== 'ios') return null;
+  if (Platform.OS !== "ios") return null;
 
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
@@ -117,8 +127,8 @@ export function AppleHealthModal({ visible, onClose, nested }: AppleHealthModalP
       setAuthorizing(false);
       if (!auth.ok) {
         Alert.alert(
-          'Apple Health',
-          'Authorization was denied. You can enable it later in Settings → Privacy & Security → Health.',
+          "Apple Health",
+          "Authorization was denied. You can enable it later in Settings → Privacy & Security → Health.",
         );
         return;
       }
@@ -130,13 +140,13 @@ export function AppleHealthModal({ visible, onClose, nested }: AppleHealthModalP
     } else {
       // Disconnect flow with confirm
       Alert.alert(
-        'Disconnect from Apple Health?',
-        'Existing data in Health stays put. NoteCal will stop reading and writing.',
+        "Disconnect from Apple Health?",
+        "Existing data in Health stays put. NoteCal will stop reading and writing.",
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: "Cancel", style: "cancel" },
           {
-            text: 'Disconnect',
-            style: 'destructive',
+            text: "Disconnect",
+            style: "destructive",
             onPress: () => {
               stopHealthSubscriber();
               healthSyncService.stopWeightObserver();
@@ -150,7 +160,9 @@ export function AppleHealthModal({ visible, onClose, nested }: AppleHealthModalP
     }
   };
 
-  const handleSubToggle = (key: 'pushNutritionEnabled' | 'weightSyncEnabled') => {
+  const handleSubToggle = (
+    key: "pushNutritionEnabled" | "weightSyncEnabled",
+  ) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setHealthSettings({ [key]: !hs[key] });
     refresh();
@@ -158,8 +170,8 @@ export function AppleHealthModal({ visible, onClose, nested }: AppleHealthModalP
 
   const handleOpenHealthApp = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Linking.openURL('x-apple-health://').catch(() => {
-      Alert.alert('Could not open Health', 'Open the Health app manually.');
+    Linking.openURL("x-apple-health://").catch(() => {
+      Alert.alert("Could not open Health", "Open the Health app manually.");
     });
   };
 
@@ -208,9 +220,7 @@ export function AppleHealthModal({ visible, onClose, nested }: AppleHealthModalP
                     />
                   </LiquidGlassView>
                 ) : (
-                  <View
-                    style={[styles.backButton, styles.backButtonFallback]}
-                  >
+                  <View style={[styles.backButton, styles.backButtonFallback]}>
                     <Ionicons
                       name="chevron-back"
                       size={20}
@@ -233,14 +243,13 @@ export function AppleHealthModal({ visible, onClose, nested }: AppleHealthModalP
               scrollEventThrottle={16}
               bounces={true}
             >
-              <Animated.View
-                entering={FadeInDown.delay(100).duration(400)}
-              >
+              <Animated.View entering={FadeInDown.delay(100).duration(400)}>
                 {hs.healthAuthRevoked && (
                   <>
                     <View style={styles.warningBanner}>
                       <Text style={styles.warningText}>
-                        Apple Health permission was revoked. Re-enable it in iOS Settings → Privacy & Security → Health → NoteCal.
+                        Apple Health permission was revoked. Re-enable it in iOS
+                        Settings → Privacy & Security → Health → NoteCal.
                       </Text>
                     </View>
                     <View style={styles.divider} />
@@ -255,19 +264,28 @@ export function AppleHealthModal({ visible, onClose, nested }: AppleHealthModalP
                 >
                   <View style={styles.preferenceInfo}>
                     <View style={styles.preferenceHeader}>
-                      <Ionicons name="heart-outline" size={20} color={Tokens.textPrimary} style={{ marginRight: 12 }} />
-                      <Text style={styles.preferenceLabel}>Connect Apple Health</Text>
+                      <Ionicons
+                        name="heart-outline"
+                        size={20}
+                        color={Tokens.textPrimary}
+                        style={{ marginRight: 12 }}
+                      />
+                      <Text style={styles.preferenceLabel}>
+                        Connect to Apple Health
+                      </Text>
                     </View>
                     <Text style={styles.preferenceDescription}>
                       {hs.healthEnabled
-                        ? 'NoteCal is reading and writing weight & nutrition data with Apple Health.'
-                        : 'Sync your meals, water, and weight bidirectionally with the Health app.'}
+                        ? "NoteCal is reading and writing weight & nutrition data with Apple Health."
+                        : "Sync your meals, water, and weight bidirectionally with the Health app."}
                     </Text>
                   </View>
                   {authorizing ? (
                     <ActivityIndicator size="small" />
                   ) : (
-                    <Text style={styles.preferenceValue}>{hs.healthEnabled ? 'On' : 'Off'}</Text>
+                    <Text style={styles.preferenceValue}>
+                      {hs.healthEnabled ? "On" : "Off"}
+                    </Text>
                   )}
                 </TouchableOpacity>
 
@@ -277,20 +295,29 @@ export function AppleHealthModal({ visible, onClose, nested }: AppleHealthModalP
                     <TouchableOpacity
                       style={styles.preferenceRow}
                       activeOpacity={0.7}
-                      onPress={() => handleSubToggle('pushNutritionEnabled')}
+                      onPress={() => handleSubToggle("pushNutritionEnabled")}
                     >
                       <View style={styles.preferenceInfo}>
                         <View style={styles.preferenceHeader}>
-                          <Ionicons name="restaurant-outline" size={20} color={Tokens.textPrimary} style={{ marginRight: 12 }} />
-                          <Text style={styles.preferenceLabel}>Push Nutrition</Text>
+                          <Ionicons
+                            name="restaurant-outline"
+                            size={20}
+                            color={Tokens.textPrimary}
+                            style={{ marginRight: 12 }}
+                          />
+                          <Text style={styles.preferenceLabel}>
+                            Push Nutrition
+                          </Text>
                         </View>
                         <Text style={styles.preferenceDescription}>
                           {hs.pushNutritionEnabled
-                            ? 'Logged meals are written to Health: calories, protein, fat, carbs, fiber, sugar, sodium, potassium, water.'
-                            : 'Nutrition data stays inside NoteCal.'}
+                            ? "Logged meals are written to Health: calories, protein, fat, carbs, fiber, sugar, sodium, potassium, water."
+                            : "Nutrition data stays inside NoteCal."}
                         </Text>
                       </View>
-                      <Text style={styles.preferenceValue}>{hs.pushNutritionEnabled ? 'On' : 'Off'}</Text>
+                      <Text style={styles.preferenceValue}>
+                        {hs.pushNutritionEnabled ? "On" : "Off"}
+                      </Text>
                     </TouchableOpacity>
 
                     <View style={styles.divider} />
@@ -298,20 +325,29 @@ export function AppleHealthModal({ visible, onClose, nested }: AppleHealthModalP
                     <TouchableOpacity
                       style={styles.preferenceRow}
                       activeOpacity={0.7}
-                      onPress={() => handleSubToggle('weightSyncEnabled')}
+                      onPress={() => handleSubToggle("weightSyncEnabled")}
                     >
                       <View style={styles.preferenceInfo}>
                         <View style={styles.preferenceHeader}>
-                          <Ionicons name="scale-outline" size={20} color={Tokens.textPrimary} style={{ marginRight: 12 }} />
-                          <Text style={styles.preferenceLabel}>Sync Weight</Text>
+                          <Ionicons
+                            name="scale-outline"
+                            size={20}
+                            color={Tokens.textPrimary}
+                            style={{ marginRight: 12 }}
+                          />
+                          <Text style={styles.preferenceLabel}>
+                            Sync Weight
+                          </Text>
                         </View>
                         <Text style={styles.preferenceDescription}>
                           {hs.weightSyncEnabled
-                            ? 'Weights flow both directions. Tap Open Health below to set NoteCal as the default source.'
-                            : 'Weight is local to NoteCal.'}
+                            ? "Weights flow both directions. Tap Open Health below to set NoteCal as the default source."
+                            : "Weight is local to NoteCal."}
                         </Text>
                       </View>
-                      <Text style={styles.preferenceValue}>{hs.weightSyncEnabled ? 'On' : 'Off'}</Text>
+                      <Text style={styles.preferenceValue}>
+                        {hs.weightSyncEnabled ? "On" : "Off"}
+                      </Text>
                     </TouchableOpacity>
 
                     {hs.weightSyncEnabled && (
@@ -324,14 +360,26 @@ export function AppleHealthModal({ visible, onClose, nested }: AppleHealthModalP
                         >
                           <View style={styles.preferenceInfo}>
                             <View style={styles.preferenceHeader}>
-                              <Ionicons name="open-outline" size={20} color={Tokens.textPrimary} style={{ marginRight: 12 }} />
-                              <Text style={styles.preferenceLabel}>Open Health App</Text>
+                              <Ionicons
+                                name="open-outline"
+                                size={20}
+                                color={Tokens.textPrimary}
+                                style={{ marginRight: 12 }}
+                              />
+                              <Text style={styles.preferenceLabel}>
+                                Open Health App
+                              </Text>
                             </View>
                             <Text style={styles.preferenceDescription}>
-                              Set NoteCal as the default weight source under Browse → Body Measurements → Weight.
+                              Set NoteCal as the default weight source under
+                              Browse → Body Measurements → Weight.
                             </Text>
                           </View>
-                          <Ionicons name="chevron-forward" size={20} color={Tokens.textTertiary} />
+                          <Ionicons
+                            name="chevron-forward"
+                            size={20}
+                            color={Tokens.textTertiary}
+                          />
                         </TouchableOpacity>
                       </>
                     )}
@@ -407,7 +455,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     textAlign: "center",
@@ -458,19 +506,19 @@ const styles = StyleSheet.create({
   },
   warningBanner: {
     padding: 12,
-    backgroundColor: '#FFE5E5',
+    backgroundColor: "#FFE5E5",
     borderRadius: 8,
     marginBottom: 8,
   },
   warningText: {
-    color: '#900',
+    color: "#900",
     fontSize: 13,
     lineHeight: 18,
   },
   lastSyncedText: {
     fontSize: 12,
     color: Tokens.textTertiary,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 16,
   },
 });

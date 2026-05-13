@@ -1,4 +1,4 @@
-import { Tokens } from "@/constants/theme";
+import { SystemFont, Tokens } from "@/constants/theme";
 import {
   cancelAllReminders,
   requestPermissions,
@@ -839,7 +839,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     textAlign: "center",
@@ -1007,7 +1007,7 @@ const styles = StyleSheet.create({
   },
   popupTitle: {
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     textAlign: "center",

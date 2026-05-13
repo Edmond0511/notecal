@@ -1,4 +1,4 @@
-import { Tokens } from "@/constants/theme";
+import { SystemFont, Tokens } from "@/constants/theme";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef } from "react";
 import { Animated, Easing, StyleSheet, Text } from "react-native";
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   baseText: {
     fontSize: Tokens.fontSize.sm,
     lineHeight: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     letterSpacing: 0.3,
     color: Tokens.accent,

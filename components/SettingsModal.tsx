@@ -1,4 +1,5 @@
-import { Tokens } from "@/constants/theme";
+import { SystemFont, Tokens } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { mmkv } from "@/lib/mmkv";
 import { supabase } from "@/lib/supabase";
@@ -80,12 +81,6 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-interface UserInfo {
-  email: string;
-  provider: string;
-  avatarUrl?: string;
-}
-
 export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
@@ -102,8 +97,24 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const { isPro, restore } = useSubscription();
   const goals = useAppStore((s) => s.goals);
   const profile = useAppStore((s) => s.profile);
-  const [user, setUser] = useState<UserInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user: authUser } = useAuth();
+  // Derive display info from the local auth session (source of truth for
+  // "is this device signed in"), not from a server fetch. A revoked session
+  // elsewhere can make a server-side getUser() return null while the local
+  // session still exists — gating the sign-out UI on that would trap the user.
+  const user = authUser
+    ? {
+        email: authUser.email || "",
+        provider: (() => {
+          const p = authUser.app_metadata?.provider || "email";
+          return p.charAt(0).toUpperCase() + p.slice(1);
+        })(),
+        avatarUrl:
+          authUser.user_metadata?.avatar_url ||
+          authUser.user_metadata?.picture ||
+          undefined,
+      }
+    : null;
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
@@ -158,42 +169,13 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
     isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
   };
 
-  // Fetch user on mount and when visible changes
   useEffect(() => {
     if (visible) {
       translateY.value = 0;
       isScrolledToTop.value = true;
-      fetchUser();
       setLastSynced(mmkv.getString("sync-last-pull") ?? null);
     }
   }, [visible]);
-
-  const fetchUser = async () => {
-    setIsLoading(true);
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const provider = user.app_metadata?.provider || "email";
-        const avatarUrl =
-          user.user_metadata?.avatar_url ||
-          user.user_metadata?.picture ||
-          undefined;
-        setUser({
-          email: user.email || "",
-          provider: provider.charAt(0).toUpperCase() + provider.slice(1),
-          avatarUrl,
-        });
-      } else {
-        setUser(null);
-      }
-    } catch (error) {
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleClearCache = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -225,8 +207,10 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
     setIsSigningOut(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      await supabase.auth.signOut();
-      setUser(null);
+      // Local scope: only revoke this device's session. Global scope would
+      // invalidate the user's session on every other device, leaving them
+      // with a zombie session until next access-token expiry.
+      await supabase.auth.signOut({ scope: "local" });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -278,9 +262,10 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
         throw new Error(data.error);
       }
       // Sign out locally — triggers AuthContext SIGNED_OUT handler
-      // which runs clearUserData(), stops sync services, clears queues
-      await supabase.auth.signOut();
-      setUser(null);
+      // which runs clearUserData(), stops sync services, clears queues.
+      // Account is already deleted server-side, so scope doesn't matter
+      // for revocation; using local for consistency with handleSignOut.
+      await supabase.auth.signOut({ scope: "local" });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onClose();
     } catch (error) {
@@ -367,11 +352,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                   entering={FadeInDown.delay(100).duration(400)}
                   style={styles.section}
                 >
-                  {isLoading ? (
-                    <View style={styles.loadingContainer}>
-                      <ActivityIndicator size="small" color={Tokens.textSecondary} />
-                    </View>
-                  ) : user && (
+                  {user && (
                     <>
                       <View style={styles.accountCard}>
                         <View style={styles.accountInfo}>
@@ -1077,7 +1058,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     textAlign: "center",
@@ -1100,10 +1081,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     marginBottom: 6,
     marginLeft: 0,
-  },
-  loadingContainer: {
-    padding: 24,
-    alignItems: "center",
   },
   accountCard: {
     backgroundColor: Tokens.surfaceRaised,

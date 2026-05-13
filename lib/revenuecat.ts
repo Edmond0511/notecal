@@ -45,7 +45,14 @@ export function configurePurchases() {
 export function customerInfoIsPro(info: CustomerInfo | null | undefined): boolean {
   if (!info) return false;
   const ent = info.entitlements.active[PRO_ENTITLEMENT];
-  return ent !== undefined && ent !== null;
+  if (!ent) return false;
+  // Family-shared entitlements never trigger RC webhooks (only the original
+  // purchaser does), so our `subscriptions` table won't have a row for family
+  // members. Treating them as Pro client-side would make the UI say Pro while
+  // every server call 403s on entitlement_required. Deny on client too so
+  // gating is consistent.
+  if (ent.ownershipType === 'FAMILY_SHARED') return false;
+  return true;
 }
 
 /** Pulls the current offering. Returns null if RC isn't configured or there's
@@ -58,6 +65,26 @@ export async function getCurrentOffering(): Promise<PurchasesOffering | null> {
   } catch (e) {
     console.error('[revenuecat] getOfferings failed', e);
     return null;
+  }
+}
+
+/** Like `getCurrentOffering` but distinguishes a fetch failure (network down,
+ *  RC unreachable, etc) from a successful fetch that returned no current
+ *  offering. Lets callers render a "couldn't load plans" state with a Retry
+ *  button instead of an indefinite spinner. `error: false` + `offering: null`
+ *  means RC is configured-but-no-current. `error: false` + `offering: null`
+ *  with RC not configured (dev bypass) is also covered. */
+export async function tryGetCurrentOffering(): Promise<{
+  offering: PurchasesOffering | null;
+  error: boolean;
+}> {
+  if (!configured) return { offering: null, error: false };
+  try {
+    const offerings = await Purchases.getOfferings();
+    return { offering: offerings.current ?? null, error: false };
+  } catch (e) {
+    console.error('[revenuecat] getOfferings failed', e);
+    return { offering: null, error: true };
   }
 }
 

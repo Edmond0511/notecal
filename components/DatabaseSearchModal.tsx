@@ -1,7 +1,7 @@
 import { AnimatedDigits } from "@/components/AnimatedDigits";
 import { MealNutritionFactsModal } from "@/components/MealNutritionFactsModal";
 import { EditNutrientPopup } from "@/components/NutritionReasoningPopup";
-import { Tokens } from "@/constants/theme";
+import { SystemFont, Tokens } from "@/constants/theme";
 // barcodeService imports removed — FS items use native servings
 import {
   fetchFoodDetail,
@@ -2352,7 +2352,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     letterSpacing: -0.3,
@@ -2385,7 +2385,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     padding: 0,
@@ -2443,7 +2443,7 @@ const styles = StyleSheet.create({
   },
   idleTitle: {
     fontSize: 20,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     marginBottom: 8,
@@ -2452,7 +2452,7 @@ const styles = StyleSheet.create({
   },
   idleDescription: {
     fontSize: 15,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: Tokens.textSecondary,
     textAlign: "center",
@@ -2507,7 +2507,7 @@ const styles = StyleSheet.create({
   },
   resultName: {
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     lineHeight: 21,
@@ -2515,7 +2515,7 @@ const styles = StyleSheet.create({
   },
   resultBrand: {
     fontSize: 14,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: Tokens.textSecondary,
     letterSpacing: -0.1,
@@ -2532,7 +2532,7 @@ const styles = StyleSheet.create({
   },
   macroValue: {
     fontSize: 13,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     color: Tokens.textSecondary,
   },
@@ -2850,7 +2850,7 @@ const styles = StyleSheet.create({
   },
   attribution: {
     fontSize: 11,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: "#bbb",
     textAlign: "center",
@@ -2915,7 +2915,7 @@ const styles = StyleSheet.create({
   },
   mealName: {
     fontSize: 15,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     lineHeight: 21,
@@ -2923,7 +2923,7 @@ const styles = StyleSheet.create({
   },
   mealMetaInline: {
     fontSize: 14,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: Tokens.textSecondary,
     letterSpacing: -0.1,

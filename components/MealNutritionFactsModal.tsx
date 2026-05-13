@@ -1,4 +1,4 @@
-import { Tokens } from "@/constants/theme";
+import { SystemFont, Tokens } from "@/constants/theme";
 import { CustomMealItem } from "@/types";
 import {
   isLiquidGlassSupported,
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     letterSpacing: -0.3,
@@ -333,14 +333,14 @@ const styles = StyleSheet.create({
   },
   caloriesLabel: {
     fontSize: 22,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "700",
     color: Tokens.textPrimary,
     letterSpacing: -0.5,
   },
   caloriesValue: {
     fontSize: 28,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "700",
     color: Tokens.textPrimary,
     letterSpacing: -0.8,
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: Tokens.textPrimary,
     letterSpacing: -0.2,
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: 14,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: Tokens.textPrimary,
     letterSpacing: -0.2,

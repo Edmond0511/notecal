@@ -1508,6 +1508,26 @@ export const useAppStore = create<AppState>()(
   setPendingPaywallAfterAuth: (pending: boolean) => {
     set({ pendingPaywallAfterAuth: pending });
   },
+
+  retryEntitlementBlockedEntries: () => {
+    const blocked = get().entries.filter(
+      (e: Entry) => e.errorReason === 'entitlement_required',
+    );
+    if (blocked.length === 0) return;
+    set((state: AppState) => ({
+      entries: state.entries.map((entry: Entry) =>
+        entry.errorReason === 'entitlement_required'
+          ? {
+              ...entry,
+              status: 'pending' as const,
+              errorReason: undefined,
+              updatedAt: new Date(),
+            }
+          : entry,
+      ),
+    }));
+    get().enqueuePendingEntries();
+  },
 }),
     {
       name: 'note-cal-storage', // unique name for the storage

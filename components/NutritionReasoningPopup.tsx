@@ -1,4 +1,4 @@
-import { Tokens } from "@/constants/theme";
+import { SystemFont, Tokens } from "@/constants/theme";
 import { useAppStore } from "@/store/app-store";
 import { CommonPortion, Entry, FatSecretServing, Macros } from "@/types";
 import {
@@ -2495,7 +2495,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#1a1a1a",
     textAlign: "center",
@@ -2513,7 +2513,7 @@ const styles = StyleSheet.create({
   },
   entryTimeText: {
     fontSize: 12,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
   },
   content: {
@@ -2525,7 +2525,7 @@ const styles = StyleSheet.create({
   inputText: {
     fontSize: 24,
     color: "#1a1a1a",
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     lineHeight: 32,
     marginBottom: 12,
@@ -2551,7 +2551,7 @@ const styles = StyleSheet.create({
   },
   itemLabel: {
     fontSize: 20,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#1a1a1a",
     lineHeight: 26,
@@ -2574,7 +2574,7 @@ const styles = StyleSheet.create({
   },
   quantityText: {
     fontSize: 13,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     color: "#6B7280",
   },
@@ -2590,7 +2590,7 @@ const styles = StyleSheet.create({
   },
   confidenceText: {
     fontSize: 13,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     letterSpacing: 0.5,
   },
@@ -2621,7 +2621,7 @@ const styles = StyleSheet.create({
   },
   macroValue: {
     fontSize: 18,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "700",
     color: "#333",
   },
@@ -2634,7 +2634,7 @@ const styles = StyleSheet.create({
   },
   macroLabel: {
     fontSize: 11,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     textTransform: "capitalize",
     letterSpacing: 0.3,
@@ -2740,13 +2740,13 @@ const styles = StyleSheet.create({
   },
   totalsLabel: {
     fontSize: 15,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#1a1a1a",
   },
   totalsValue: {
     fontSize: 15,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "700",
     color: "#1a1a1a",
   },
@@ -2773,13 +2773,13 @@ const styles = StyleSheet.create({
   },
   totalsNutrientLabel: {
     fontSize: 13,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     color: "#333",
   },
   totalsNutrientValue: {
     fontSize: 13,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#333",
   },
@@ -2816,13 +2816,13 @@ const styles = StyleSheet.create({
   },
   popupConfidenceValue: {
     fontSize: 15,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "700",
     letterSpacing: 0.3,
   },
   popupTitle: {
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#1a1a1a",
     letterSpacing: -0.2,
@@ -2830,7 +2830,7 @@ const styles = StyleSheet.create({
   },
   popupSectionLabel: {
     fontSize: 12,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#000000",
     letterSpacing: 0.5,
@@ -2839,7 +2839,7 @@ const styles = StyleSheet.create({
   },
   popupExplanation: {
     fontSize: 15,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: "#333",
     lineHeight: 24,
@@ -2851,7 +2851,7 @@ const styles = StyleSheet.create({
   },
   popupHint: {
     fontSize: 12,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     color: "#999",
     textAlign: "center",
@@ -2896,7 +2896,7 @@ const styles = StyleSheet.create({
   },
   editNutrientTitle: {
     fontSize: 18,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#1a1a1a",
     textAlign: "center",
@@ -2918,7 +2918,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 18,
     fontSize: 24,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#1a1a1a",
     backgroundColor: "#ffffff",
@@ -2931,7 +2931,7 @@ const styles = StyleSheet.create({
   },
   editNutrientUnitText: {
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     letterSpacing: 0.3,
   },
@@ -2953,7 +2953,7 @@ const styles = StyleSheet.create({
   },
   editNutrientRevertText: {
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: "#666",
   },
@@ -2969,7 +2969,7 @@ const styles = StyleSheet.create({
   },
   editNutrientSaveText: {
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#ffffff",
   },
@@ -2988,7 +2988,7 @@ const styles = StyleSheet.create({
   },
   revertAllText: {
     fontSize: 13,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     color: "#8B5CF6",
   },
@@ -3003,7 +3003,7 @@ const styles = StyleSheet.create({
   },
   somethingOffButtonText: {
     fontSize: 13,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     color: "#888",
   },
@@ -3038,7 +3038,7 @@ const styles = StyleSheet.create({
   },
   somethingOffTitle: {
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: Tokens.textPrimary,
     textAlign: "center",
@@ -3068,7 +3068,7 @@ const styles = StyleSheet.create({
   somethingOffItemLabel: {
     flex: 1,
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     color: Tokens.textPrimary,
     lineHeight: 22,
@@ -3080,7 +3080,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 14,
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "400",
     color: Tokens.textPrimary,
     backgroundColor: Tokens.surfaceRaised,
@@ -3104,7 +3104,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 14,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     color: Tokens.textSecondary,
   },
@@ -3123,7 +3123,7 @@ const styles = StyleSheet.create({
   },
   somethingOffSubmitText: {
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#ffffff",
   },
@@ -3133,7 +3133,7 @@ const styles = StyleSheet.create({
   },
   somethingOffCancelText: {
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     color: Tokens.textSecondary,
     paddingVertical: 14,
@@ -3170,7 +3170,7 @@ const styles = StyleSheet.create({
   },
   editQuantityTitle: {
     fontSize: 17,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#1a1a1a",
     textAlign: "center",
@@ -3233,7 +3233,7 @@ const styles = StyleSheet.create({
   },
   unitPillText: {
     fontSize: 13,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#666",
   },
@@ -3254,7 +3254,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 24,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#1a1a1a",
     backgroundColor: "#fff",
@@ -3269,7 +3269,7 @@ const styles = StyleSheet.create({
   },
   editQuantitySaveText: {
     fontSize: 16,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "600",
     color: "#ffffff",
   },

@@ -33,20 +33,37 @@ const LEGAL_URLS = {
 const PLEX_SEMIBOLD = 'IBMPlexSans_600SemiBold';
 const PLEX_BOLD = 'IBMPlexSans_700Bold';
 
-/** Best-effort "$X.XX/mo" derivation from a yearly priceString. */
-function yearlyEffectiveMonthly(priceString: string): string {
-  const num = Number(priceString.replace(/[^0-9.]/g, ''));
-  if (!Number.isFinite(num) || num <= 0) return priceString;
-  const monthly = num / 12;
-  const symbolMatch = priceString.match(/^[^0-9]+/);
-  const symbol = symbolMatch ? symbolMatch[0] : '$';
-  return `${symbol}${monthly.toFixed(2)}/mo`;
+/**
+ * Locale-aware "/mo" derivation from a yearly package. Uses the RC SDK's
+ * canonical numeric `price` + ISO `currencyCode` and formats via Intl so we
+ * don't get tripped up by comma-decimal locales (Germany: "€39,99") or
+ * suffix-currency locales (Sweden: "399,00 kr"). Falls back to the original
+ * priceString when either field is missing.
+ */
+function yearlyEffectiveMonthly(pkg: PurchasesPackage): string {
+  const price = pkg.product.price;
+  const currencyCode = pkg.product.currencyCode;
+  const fallback = pkg.product.priceString;
+  if (!Number.isFinite(price) || price <= 0 || !currencyCode) {
+    return fallback;
+  }
+  try {
+    const formatted = new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currencyCode,
+    }).format(price / 12);
+    return `${formatted}/mo`;
+  } catch {
+    return fallback;
+  }
 }
 
 export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
-  const { offering, purchase, restore, isPro } = useSubscription();
+  const { offering, offeringError, refreshOffering, purchase, restore, isPro } =
+    useSubscription();
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const insets = useSafeAreaInsets();
   // Always reserve at least 12px top / 16px bottom so the X never hugs the
   // status bar and the bottom bar never hugs the home indicator on devices
@@ -163,7 +180,7 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
   const yearlyPriceString = yearly?.product.priceString ?? '$39.99';
   const monthlyPriceString = monthly?.product.priceString ?? '$9.99';
   const yearlyMonthlyEquivalent = yearly
-    ? yearlyEffectiveMonthly(yearlyPriceString)
+    ? yearlyEffectiveMonthly(yearly)
     : '$3.33/mo';
 
   const summaryLine =
@@ -179,6 +196,26 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
         ? `Try free for ${trialLabel.replace(' free', '')}`
         : 'Subscribe'
       : 'Continue';
+
+  // Three plan-section branches:
+  //   loading: offering hasn't resolved yet and no error reported
+  //   errorOrEmpty: fetch failed, OR fetch returned an offering with no usable
+  //                 packages (region restriction / dashboard misconfig / both
+  //                 yearly+monthly identifiers missed our filters)
+  //   ready: at least one usable package
+  const showErrorOrEmpty =
+    offeringError || (!!offering && !yearly && !monthly);
+  const showLoading = !offering && !offeringError;
+
+  const handleRetryOffering = async () => {
+    if (retrying) return;
+    setRetrying(true);
+    try {
+      await refreshOffering();
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -207,7 +244,30 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
           macro goals.
         </Text>
 
-        {offering ? (
+        {showErrorOrEmpty ? (
+          <View style={styles.errorBlock}>
+            <Text style={styles.errorTitle}>Couldn&apos;t load plans</Text>
+            <Text style={styles.errorSubtitle}>
+              Check your connection and try again.
+            </Text>
+            <Pressable
+              onPress={handleRetryOffering}
+              disabled={retrying}
+              style={[styles.retryButton, retrying && styles.ctaDisabled]}
+              accessibilityRole="button"
+            >
+              {retrying ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.retryButtonText}>Retry</Text>
+              )}
+            </Pressable>
+          </View>
+        ) : showLoading ? (
+          <View style={styles.plansLoading}>
+            <ActivityIndicator color={Tokens.accent} />
+          </View>
+        ) : (
           <View style={styles.plans}>
             {yearly && (
               <PlanRow
@@ -233,40 +293,43 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
               />
             )}
           </View>
-        ) : (
-          <View style={styles.plansLoading}>
-            <ActivityIndicator color={Tokens.accent} />
-          </View>
         )}
       </ScrollView>
 
-      {/* Sticky bottom bar — CTA always visible, doesn't scroll away. */}
+      {/* Sticky bottom bar — CTA always visible, doesn't scroll away.
+       *  Hidden entirely in the error/empty state since there's nothing to
+       *  purchase. Restore + Terms + Privacy stay so the user can still
+       *  recover a prior purchase or read legal copy. */}
       <View style={[styles.bottomBar, { paddingBottom: bottomPad }]}>
-        <View style={styles.summaryBlock}>
-          {selectedId === 'yearly' && trialLabel && (
-            <Text style={styles.reassuranceLine}>
-              No payment today. Cancel anytime.
-            </Text>
-          )}
-          {selectedId === 'yearly' && (
-            <Text style={styles.summaryLine}>{summaryLine}</Text>
-          )}
-        </View>
-        <Pressable
-          style={[
-            styles.cta,
-            (!selectedPackage || purchasing) && styles.ctaDisabled,
-          ]}
-          onPress={handlePurchase}
-          disabled={!selectedPackage || purchasing}
-          accessibilityRole="button"
-        >
-          {purchasing ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.ctaText}>{ctaLabel}</Text>
-          )}
-        </Pressable>
+        {!showErrorOrEmpty && (
+          <>
+            <View style={styles.summaryBlock}>
+              {selectedId === 'yearly' && trialLabel && (
+                <Text style={styles.reassuranceLine}>
+                  No payment today. Cancel anytime.
+                </Text>
+              )}
+              {selectedId === 'yearly' && (
+                <Text style={styles.summaryLine}>{summaryLine}</Text>
+              )}
+            </View>
+            <Pressable
+              style={[
+                styles.cta,
+                (!selectedPackage || purchasing) && styles.ctaDisabled,
+              ]}
+              onPress={handlePurchase}
+              disabled={!selectedPackage || purchasing}
+              accessibilityRole="button"
+            >
+              {purchasing ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.ctaText}>{ctaLabel}</Text>
+              )}
+            </Pressable>
+          </>
+        )}
         <View style={styles.legalRow}>
           <Pressable
             onPress={handleRestore}
@@ -399,6 +462,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  errorBlock: {
+    marginTop: 28,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    borderRadius: 18,
+    backgroundColor: Tokens.surfaceRaised,
+    borderWidth: 1,
+    borderColor: Tokens.border,
+    alignItems: 'center',
+    gap: 8,
+  },
+  errorTitle: {
+    fontFamily: PLEX_BOLD,
+    fontSize: 18,
+    lineHeight: 22,
+    letterSpacing: -0.3,
+    color: Tokens.textPrimary,
+    textAlign: 'center',
+  },
+  errorSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: Tokens.textSecondary,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  retryButton: {
+    minWidth: 140,
+    height: 44,
+    paddingHorizontal: 24,
+    borderRadius: 999,
+    backgroundColor: Tokens.textPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
   planRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -480,8 +584,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     gap: 14,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Tokens.border,
     backgroundColor: Tokens.background,
   },
   summaryBlock: {

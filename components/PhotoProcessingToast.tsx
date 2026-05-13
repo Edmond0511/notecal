@@ -1,3 +1,4 @@
+import { SystemFont } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef } from "react";
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 14,
-    fontFamily: "System",
+    fontFamily: SystemFont,
     fontWeight: "500",
     color: "#333",
     flex: 1,

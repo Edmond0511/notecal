@@ -383,4 +383,9 @@ export interface AppState {
   // Subscription action — called by SubscriptionContext on isPro changes.
   setIsPro: (isPro: boolean) => void;
   setPendingPaywallAfterAuth: (pending: boolean) => void;
+  // Retry all entries currently parked with errorReason === 'entitlement_required'.
+  // Called by SubscriptionContext on the false→true isPro transition so a pile
+  // of pending meal-log entries doesn't need to be tapped one-by-one after a
+  // user purchases Pro.
+  retryEntitlementBlockedEntries: () => void;
 }

@@ -691,7 +691,8 @@ export function NutritionGoalsModal({
                             <Switch
                               value={enabled}
                               onValueChange={() => toggleNutrient(nutrient.key)}
-                              trackColor={{ true: Tokens.accent }}
+                              trackColor={{ true: Tokens.accent, false: Tokens.textTertiary }}
+                              ios_backgroundColor={Tokens.textTertiary}
                               style={{ transform: [{ scale: 0.85 }] }}
                             />
                           </View>

@@ -7,6 +7,7 @@ import { nutritionQueue } from "@/services/nutritionQueue";
 import { useAppStore } from "@/store/app-store";
 import { Session, User } from "@supabase/supabase-js";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { AppState } from "react-native";
 
 const LAST_USER_KEY = "last-signed-in-user-id";
 
@@ -129,7 +130,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 "[auth] Persisted session was revoked by server, signing out:",
                 error?.message,
               );
-              supabase.auth.signOut().catch((e) =>
+              // Local scope: only clean up this device's session. The server
+              // has already revoked it; a global call would needlessly nuke
+              // sessions on other devices the user may still want.
+              supabase.auth.signOut({ scope: "local" }).catch((e) =>
                 console.warn("[auth] signOut after invalid session failed:", e?.message),
               );
             } else if (error) {
@@ -169,6 +173,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // If a different user was active, archive their data first
         if (lastUserId && lastUserId !== session.user.id) {
           nutritionQueue.clearAll();
+          // Drop the outgoing user's Pro flag before snapshotting so the
+          // snapshot for the incoming user (or the very brief gap before RC
+          // re-identifies them) doesn't have a stale `isPro: true` carried
+          // over from the previous account. SubscriptionContext will re-set
+          // this from CustomerInfo once RC's logIn resolves.
+          useAppStore.getState().setIsPro(false);
+          useAppStore.getState().setPendingPaywallAfterAuth(false);
           saveUserSnapshot(lastUserId);
           stampSnapshotTimestamp(lastUserId);
           syncService.setUser(null);
@@ -196,6 +207,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           healthSyncService.fullHealthSync(),
         );
       } else if (event === "SIGNED_OUT") {
+        // Drop the Pro flag immediately so the SIGNED_OUT → SIGNED_IN gap
+        // doesn't let the incoming free user briefly bypass the free-call
+        // gate that reads `isPro` synchronously in addEntry. Also clear any
+        // pending-paywall flag so it doesn't leak across accounts. Place this
+        // *before* the snapshot save so the outgoing user's snapshot doesn't
+        // capture the stale Pro state either.
+        useAppStore.getState().setIsPro(false);
+        useAppStore.getState().setPendingPaywallAfterAuth(false);
         nutritionQueue.clearAll();
         // Clear RC identity. The next sign-in will re-identify and re-fetch
         // entitlements from the server.
@@ -217,6 +236,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Drive Supabase's auto-refresh from app foreground state. This is the
+  // canonical React Native pattern: in background, JS timers are throttled
+  // and the auto-refresh loop can't reliably renew tokens. On foreground we
+  // resume it, which also surfaces a server-side revocation promptly (the
+  // refresh attempt fails → supabase-js fires SIGNED_OUT → AuthContext
+  // cleans up). Without this, a session revoked while the app was in the
+  // background can linger as a zombie until something forces a refresh.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        supabase.auth.startAutoRefresh();
+      } else {
+        supabase.auth.stopAutoRefresh();
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   /**
    * Sign out and explicitly purge the outgoing user's local snapshot.
    * Use when the user wants to clear their data from this device (e.g. shared
@@ -225,7 +262,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOutAndPurge = useCallback(async () => {
     const outgoingUserId = mmkv.getString(LAST_USER_KEY) ?? user?.id ?? null;
     try {
-      await supabase.auth.signOut();
+      // Local scope: only sign out this device. Global scope (the supabase-js
+      // default) would revoke sessions on every other device, leaving them
+      // with a zombie session until next refresh — causing the SettingsModal
+      // "trapped without sign-out button" bug.
+      await supabase.auth.signOut({ scope: "local" });
       // signOut triggers SIGNED_OUT which archives the snapshot; purge it after.
     } finally {
       // Purge regardless: even if signOut throws (e.g. network error), the

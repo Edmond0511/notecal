@@ -8,6 +8,11 @@ import * as Crypto from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -172,47 +177,29 @@ export default function AuthScreen() {
       setError(null);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: 'notecal://auth/callback',
-          skipBrowserRedirect: true,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.url) {
-        const result = await WebBrowser.openAuthSessionAsync(data.url, 'notecal://auth/callback');
-
-        if (result.type === 'success') {
-          // PKCE flow only. Validate the redirect target before extracting the
-          // code so a co-installed app firing notecal:// with a hostile URL
-          // can't smuggle attacker tokens. The implicit-flow fragment fallback
-          // is intentionally removed — never call setSession() with URL-derived
-          // tokens.
-          const urlObj = new URL(result.url);
-          const pathname = urlObj.pathname.replace(/\/+$/, '');
-          if (
-            urlObj.protocol !== 'notecal:' ||
-            urlObj.host !== 'auth' ||
-            pathname !== '/callback'
-          ) {
-            setError('Invalid auth callback');
-            return;
-          }
-          const code = urlObj.searchParams.get('code');
-          if (!code) {
-            setError('Authentication failed - please try again');
-            return;
-          }
-          const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
-          if (sessionError) throw sessionError;
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
+      // Native Google Sign-In. iOS shows the account-picker sheet (or falls
+      // back to ASWebAuthenticationSession on google.com if no Google account
+      // is configured on the device) — no Supabase domain appears in any
+      // prompt. The returned ID token is exchanged with Supabase via
+      // signInWithIdToken, matching the Apple flow below.
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const result = await GoogleSignin.signIn();
+      const idToken = result.data?.idToken ?? null;
+      if (!idToken) {
+        throw new Error('No identity token received from Google');
       }
+
+      const { error: signInError } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+      if (signInError) throw signInError;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google');
+      if (isErrorWithCode(err) && err.code === statusCodes.SIGN_IN_CANCELLED) {
+        return;
+      }
+      setError(err?.message || 'Failed to sign in with Google');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsLoading(null);

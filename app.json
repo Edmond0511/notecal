@@ -72,6 +72,12 @@
           "NSHealthShareUsageDescription": "NoteCal reads your body weight from Apple Health so you can see your full weight history without re-entering it.",
           "NSHealthUpdateUsageDescription": "NoteCal writes your logged meals (calories, macros, water) and weight entries to Apple Health so they appear alongside your other health data."
         }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.164114630017-79hc0k64crk25d7e0jgtnomg8efnl3fa"
+        }
       ]
     ],
     "experiments": {

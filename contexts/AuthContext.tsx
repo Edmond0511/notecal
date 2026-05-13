@@ -6,8 +6,19 @@ import { photoSyncService } from "@/services/photoSyncService";
 import { nutritionQueue } from "@/services/nutritionQueue";
 import { useAppStore } from "@/store/app-store";
 import { Session, User } from "@supabase/supabase-js";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { AppState } from "react-native";
+
+// Configure native Google Sign-In once at module load. webClientId is the
+// OAuth 2.0 *Web* client ID from Google Cloud — its value must match the one
+// configured on the Supabase Google provider so the ID-token `aud` claim
+// validates server-side. The iOS client ID is wired via the Expo config
+// plugin's reversed URL scheme in app.json, so it isn't passed here.
+const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+if (googleWebClientId) {
+  GoogleSignin.configure({ webClientId: googleWebClientId });
+}
 
 const LAST_USER_KEY = "last-signed-in-user-id";
 
@@ -216,6 +227,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         useAppStore.getState().setIsPro(false);
         useAppStore.getState().setPendingPaywallAfterAuth(false);
         nutritionQueue.clearAll();
+        // Clear the cached Google account so the next Continue-with-Google
+        // press shows the account picker instead of silently reusing the
+        // previous account. Best-effort — failure here doesn't block sign-out.
+        GoogleSignin.signOut().catch(() => {});
         // Clear RC identity. The next sign-in will re-identify and re-fetch
         // entitlements from the server.
         logOutPurchases();

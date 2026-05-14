@@ -20,6 +20,7 @@ import React, {
 import {
   Alert,
   Dimensions,
+  Linking,
   Modal,
   ScrollView,
   StatusBar,
@@ -312,12 +313,23 @@ export function WeightTrackingModal({
 
   const pickFromCamera = useCallback(async (onPick: (uri: string) => void) => {
     const ImagePicker = await import("expo-image-picker");
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    const { status, canAskAgain } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert(
-        "Permission needed",
-        "Camera access is required to take a photo.",
-      );
+      if (canAskAgain) {
+        Alert.alert(
+          "Camera access needed",
+          "Allow camera access to take a progress photo.",
+        );
+      } else {
+        Alert.alert(
+          "Camera access disabled",
+          "Enable camera access in Settings to take a progress photo.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Open Settings", onPress: () => Linking.openSettings() },
+          ],
+        );
+      }
       return;
     }
     const result = await ImagePicker.launchCameraAsync({

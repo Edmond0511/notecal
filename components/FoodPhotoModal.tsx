@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
+  Linking,
   Modal,
   StatusBar,
   StyleSheet,
@@ -93,12 +94,27 @@ export function FoodPhotoModal({
     captureLockRef.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.5,
-        base64: true,
-      });
-      if (photo?.base64) {
-        onPhotoCaptured(photo.base64, "image/jpeg");
+      // Capture without base64, then resize+compress on-device. A 12MP source
+      // at quality 0.5 yields ~2-4MB base64 — on cellular this is slow and
+      // sometimes hits the edge function's 8MB body limit. Matching the
+      // WeightTrackingModal pattern keeps payloads under ~300KB base64.
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.5 });
+      if (!photo?.uri) {
+        onClose();
+        return;
+      }
+      const ImageManipulator = await import("expo-image-manipulator");
+      const sanitized = await ImageManipulator.manipulateAsync(
+        photo.uri,
+        [{ resize: { width: 1024 } }],
+        {
+          compress: 0.6,
+          format: ImageManipulator.SaveFormat.JPEG,
+          base64: true,
+        },
+      );
+      if (sanitized.base64) {
+        onPhotoCaptured(sanitized.base64, "image/jpeg");
       }
     } catch (e) {
       console.error("[FoodPhotoModal] Capture error:", e);
@@ -216,16 +232,21 @@ export function FoodPhotoModal({
                   </View>
                   <Text style={styles.permissionTitle}>Camera Access</Text>
                   <Text style={styles.permissionDescription}>
-                    NoteCal needs camera access to photograph food and calculate
-                    nutrition
+                    {permission.canAskAgain
+                      ? "NoteCal needs camera access to photograph food and calculate nutrition"
+                      : "Camera access is disabled. Enable it in Settings to photograph food."}
                   </Text>
                   <TouchableOpacity
                     style={styles.permissionButton}
-                    onPress={requestPermission}
+                    onPress={
+                      permission.canAskAgain
+                        ? requestPermission
+                        : () => Linking.openSettings()
+                    }
                     activeOpacity={0.8}
                   >
                     <Text style={styles.permissionButtonText}>
-                      Allow Camera
+                      {permission.canAskAgain ? "Allow Camera" : "Open Settings"}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity

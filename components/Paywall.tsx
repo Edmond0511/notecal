@@ -2,11 +2,11 @@ import { Tokens } from '@/constants/theme';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { getTrialLabel } from '@/utils/trialLabel';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -196,18 +196,22 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
     ? yearlyEffectiveMonthly(yearly)
     : '$3.33/mo';
 
+  // Subscription disclosure rendered near the CTA. Both yearly and monthly
+  // must include price, period, auto-renewal and cancellation per App Store
+  // Review Guideline 3.1.2(a). Trial messaging is handled by the reassurance
+  // line above for the yearly+trial case.
   const summaryLine =
     selectedId === 'yearly'
       ? trialLabel
-        ? `${trialLabel}, then ${yearlyPriceString}/year`
-        : `${yearlyPriceString}/year`
-      : `${monthlyPriceString}/month`;
+        ? `${trialLabel}, then ${yearlyPriceString}/year. Auto-renews. Cancel anytime.`
+        : `${yearlyPriceString}/year. Auto-renews. Cancel anytime.`
+      : `${monthlyPriceString}/month. Auto-renews. Cancel anytime.`;
 
   const ctaLabel =
     selectedId === 'yearly'
       ? trialLabel
         ? `Try free for ${trialLabel.replace(' free', '')}`
-        : 'Subscribe'
+        : 'Continue'
       : 'Continue';
 
   // Three plan-section branches:
@@ -319,12 +323,10 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
             <View style={styles.summaryBlock}>
               {selectedId === 'yearly' && trialLabel && (
                 <Text style={styles.reassuranceLine}>
-                  No payment today. Cancel anytime.
+                  No payment today.
                 </Text>
               )}
-              {selectedId === 'yearly' && (
-                <Text style={styles.summaryLine}>{summaryLine}</Text>
-              )}
+              <Text style={styles.summaryLine}>{summaryLine}</Text>
             </View>
             <Pressable
               style={[
@@ -348,7 +350,7 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
             onPress={handleRestore}
             disabled={restoring}
             accessibilityRole="button"
-            hitSlop={8}
+            hitSlop={{ top: 14, bottom: 14, left: 12, right: 12 }}
           >
             <Text style={styles.legalLink}>
               {restoring ? 'Restoring…' : 'Restore'}
@@ -356,17 +358,17 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
           </Pressable>
           <View style={styles.legalDot} />
           <Pressable
-            onPress={() => Linking.openURL(LEGAL_URLS.terms)}
+            onPress={() => WebBrowser.openBrowserAsync(LEGAL_URLS.terms)}
             accessibilityRole="link"
-            hitSlop={8}
+            hitSlop={{ top: 14, bottom: 14, left: 12, right: 12 }}
           >
             <Text style={styles.legalLink}>Terms</Text>
           </Pressable>
           <View style={styles.legalDot} />
           <Pressable
-            onPress={() => Linking.openURL(LEGAL_URLS.privacy)}
+            onPress={() => WebBrowser.openBrowserAsync(LEGAL_URLS.privacy)}
             accessibilityRole="link"
-            hitSlop={8}
+            hitSlop={{ top: 14, bottom: 14, left: 12, right: 12 }}
           >
             <Text style={styles.legalLink}>Privacy</Text>
           </Pressable>

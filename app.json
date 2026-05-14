@@ -15,7 +15,10 @@
       "usesHealthKit": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Allow NoteCal to scan barcodes on food products",
+        "NSCameraUsageDescription": "NoteCal uses the camera to scan barcodes on food products and take photos of meals or weight-tracking progress.",
+        "NSPhotoLibraryUsageDescription": "NoteCal accesses your photo library so you can attach progress photos to weight entries and analyze meals from existing photos.",
+        "NSPhotoLibraryAddUsageDescription": "NoteCal saves photos you take inside the app to your photo library.",
+        "NSMicrophoneUsageDescription": "Microphone access is requested by the camera framework. NoteCal only takes still photos and barcode scans, and does not record audio.",
         "NSHealthShareUsageDescription": "NoteCal reads your body weight from Apple Health so you can see your full weight history without re-entering it.",
         "NSHealthUpdateUsageDescription": "NoteCal writes your logged meals (calories, macros, water) and weight entries to Apple Health so they appear alongside your other health data."
       }

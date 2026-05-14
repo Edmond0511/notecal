@@ -101,6 +101,44 @@ export class NutritionServiceUnavailableError extends NutritionApiError {
   }
 }
 
+// Thrown when the edge function call exceeds INVOKE_TIMEOUT_MS. Surfaces as a
+// user-facing "took too long" so queued entries can be retried rather than
+// hanging forever (supabase-js does not enforce its own timeout).
+export class NutritionTimeoutError extends NutritionApiError {
+  constructor(
+    message: string = 'That request took too long. Check your connection and try again.'
+  ) {
+    super(message, 408);
+    this.name = 'NutritionTimeoutError';
+  }
+}
+
+// 15s is enough for Gemini cold-starts but short enough that a stuck request
+// won't pin a queue slot for minutes. Mirror this on photo + correction paths.
+const INVOKE_TIMEOUT_MS = 15_000;
+
+async function invokeWithTimeout<T>(
+  fnName: string,
+  body: unknown,
+): Promise<{ data: T | null; error: any }> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new NutritionTimeoutError()),
+      INVOKE_TIMEOUT_MS,
+    );
+  });
+  try {
+    const result = await Promise.race([
+      supabase.functions.invoke<T>(fnName, { body: body as any }),
+      timeoutPromise,
+    ]);
+    return result as { data: T | null; error: any };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 // supabase.functions.invoke wraps non-2xx responses in FunctionsHttpError
 // where the original Response is on `error.context`. If the edge function
 // returned 429, parse the structured body and throw a typed rate-limit error.
@@ -217,9 +255,10 @@ export async function resolveNutrition(
       console.log('[nutritionApi] REQ:', JSON.stringify(requestBody));
     }
 
-    const { data, error } = await supabase.functions.invoke<NutritionResolveResponse>('nutrition-resolve', {
-      body: requestBody,
-    });
+    const { data, error } = await invokeWithTimeout<NutritionResolveResponse>(
+      'nutrition-resolve',
+      requestBody,
+    );
 
     if (__DEV__) {
       if (error) {
@@ -293,9 +332,10 @@ export async function resolveNutritionFromPhoto(
       console.log('[nutritionApi] PHOTO REQ: base64 length=', base64Image.length);
     }
 
-    const { data, error } = await supabase.functions.invoke<NutritionResolveResponse>('nutrition-resolve', {
-      body: requestBody,
-    });
+    const { data, error } = await invokeWithTimeout<NutritionResolveResponse>(
+      'nutrition-resolve',
+      requestBody,
+    );
 
     if (__DEV__) {
       if (error) {
@@ -467,9 +507,10 @@ export async function correctNutrition(
       console.log('[nutritionApi] CORRECTION REQ:', JSON.stringify(correctionBody));
     }
 
-    const { data, error } = await supabase.functions.invoke<CorrectionResponse>('nutrition-resolve', {
-      body: correctionBody,
-    });
+    const { data, error } = await invokeWithTimeout<CorrectionResponse>(
+      'nutrition-resolve',
+      correctionBody,
+    );
 
     if (__DEV__) {
       if (error) {

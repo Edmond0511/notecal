@@ -482,7 +482,8 @@ export function BarcodeScannerModal({
                 </View>
               </View>
             ) : !permission.granted ? (
-              // Permission denied / not yet granted
+              // Permission denied / not yet granted. If the system will no
+              // longer prompt (canAskAgain=false), route the user to Settings.
               <View style={styles.permissionContainer}>
                 <View style={styles.permissionContent}>
                   <View style={styles.permissionIconCircle}>
@@ -490,16 +491,21 @@ export function BarcodeScannerModal({
                   </View>
                   <Text style={styles.permissionTitle}>Camera Access</Text>
                   <Text style={styles.permissionDescription}>
-                    NoteCal needs camera access to scan barcodes on food
-                    products
+                    {permission.canAskAgain
+                      ? "NoteCal needs camera access to scan barcodes on food products"
+                      : "Camera access is disabled. Enable it in Settings to scan barcodes."}
                   </Text>
                   <TouchableOpacity
                     style={styles.permissionButton}
-                    onPress={requestPermission}
+                    onPress={
+                      permission.canAskAgain
+                        ? requestPermission
+                        : () => Linking.openSettings()
+                    }
                     activeOpacity={0.8}
                   >
                     <Text style={styles.permissionButtonText}>
-                      Allow Camera
+                      {permission.canAskAgain ? "Allow Camera" : "Open Settings"}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity

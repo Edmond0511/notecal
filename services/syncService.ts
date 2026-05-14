@@ -72,6 +72,20 @@ function entryToRow(entry: Entry, userId: string) {
   };
 }
 
+// Safely parse a JSON column that may arrive as a string (older rows / driver
+// quirks) or an already-decoded object. Never throws — corrupt data falls back
+// to the provided default so a single bad row can't crash sync.
+function safeParseJson<T>(value: unknown, fallback: T, context: string): T {
+  if (value == null) return fallback;
+  if (typeof value !== 'string') return value as T;
+  try {
+    return JSON.parse(value);
+  } catch (err: any) {
+    console.error(`[sync] JSON parse failed for ${context}:`, err?.message);
+    return fallback;
+  }
+}
+
 function rowToEntry(row: any): Entry {
   return {
     id: row.id,
@@ -79,7 +93,7 @@ function rowToEntry(row: any): Entry {
     rawText: row.raw_text,
     inlineKcal: row.inline_kcal != null ? Number(row.inline_kcal) : null,
     status: row.status,
-    items: typeof row.items === 'string' ? JSON.parse(row.items) : (row.items ?? []),
+    items: safeParseJson(row.items, [], `food_entries.items id=${row.id}`),
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
@@ -123,7 +137,7 @@ function rowToSavedEntry(row: any): SavedEntry {
   return {
     id: row.id,
     rawText: row.raw_text,
-    items: typeof row.items === 'string' ? JSON.parse(row.items) : (row.items ?? []),
+    items: safeParseJson(row.items, [], `saved_entries.items id=${row.id}`),
     totalKcal: Number(row.total_kcal),
     usageCount: row.usage_count,
     createdAt: new Date(row.created_at),
@@ -151,8 +165,12 @@ function rowToCustomMeal(row: any): CustomMeal {
   return {
     id: row.id,
     name: row.name,
-    items: typeof row.items === 'string' ? JSON.parse(row.items) : (row.items ?? []),
-    totalMacros: typeof row.total_macros === 'string' ? JSON.parse(row.total_macros) : (row.total_macros ?? { kcal: 0, protein: 0, fat: 0, carbs: 0 }),
+    items: safeParseJson(row.items, [], `custom_meals.items id=${row.id}`),
+    totalMacros: safeParseJson(
+      row.total_macros,
+      { kcal: 0, protein: 0, fat: 0, carbs: 0 },
+      `custom_meals.total_macros id=${row.id}`,
+    ),
     usageCount: row.usage_count,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
@@ -179,7 +197,12 @@ function weightEntryToRow(we: WeightEntry, userId: string) {
 function rowToWeightEntry(row: any): WeightEntry {
   let photoUris: string[] | undefined;
   if (row.photo_uris) {
-    photoUris = typeof row.photo_uris === 'string' ? JSON.parse(row.photo_uris) : row.photo_uris;
+    const parsed = safeParseJson<string[] | undefined>(
+      row.photo_uris,
+      undefined,
+      `weight_entries.photo_uris id=${row.id}`,
+    );
+    photoUris = parsed;
   }
 
   return {
@@ -221,12 +244,13 @@ function goalsToRow(goals: UserGoals, preferredUnits: UnitSystem, userId: string
 }
 
 function rowToGoals(row: any): { goals: UserGoals; preferredUnits: UnitSystem } {
-  let manualTargets: ManualTargets | null = null;
-  if (row.manual_targets) {
-    manualTargets = typeof row.manual_targets === 'string'
-      ? JSON.parse(row.manual_targets)
-      : row.manual_targets;
-  }
+  const manualTargets = row.manual_targets
+    ? safeParseJson<ManualTargets | null>(
+        row.manual_targets,
+        null,
+        `user_goals.manual_targets user_id=${row.user_id}`,
+      )
+    : null;
 
   return {
     goals: {

@@ -15,8 +15,6 @@
   "dependencies": {
     "@callstack/liquid-glass": "^0.7.0",
     "@expo-google-fonts/ibm-plex-sans": "^0.4.1",
-    "@expo-google-fonts/inter": "^0.4.2",
-    "@expo-google-fonts/poppins": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-regular-svg-icons": "^7.1.0",

@@ -205,7 +205,7 @@ export function NutritionGoalsModal({
   const potassiumInputRef = React.useRef<TextInput>(null);
   const waterInputRef = React.useRef<TextInput>(null);
 
-  const inputRefs: Record<NutrientField, React.RefObject<TextInput>> = {
+  const inputRefs: Record<NutrientField, React.RefObject<TextInput | null>> = {
     kcal: kcalInputRef,
     protein: proteinInputRef,
     fat: fatInputRef,

@@ -228,16 +228,12 @@ async function checkRateLimit(
 }
 
 // Pro-entitlement gate. Runs ahead of the rate-limit RPC so non-paying users
-// can never burn quota. The `BYPASS_ENTITLEMENT` env var lets dev builds bypass
-// the check while RevenueCat is still being wired up (Phase 1) — must be unset
-// before public launch.
+// can never burn quota. Fails closed on any infrastructure error.
 async function checkEntitlement(
   supabase: any,
   userId: string,
   cors: Record<string, string>,
 ): Promise<Response | null> {
-  if (Deno.env.get("BYPASS_ENTITLEMENT") === "true") return null;
-
   try {
     const { data, error } = await supabase.rpc("has_active_entitlement", {
       p_user_id: userId,

@@ -7,6 +7,7 @@ import {
 } from "@expo-google-fonts/ibm-plex-sans";
 import { Ionicons } from "@expo/vector-icons";
 import * as AppleAuthentication from "expo-apple-authentication";
+import * as Crypto from "expo-crypto";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
 import {
@@ -155,11 +156,21 @@ export function SignInModal({ visible, onClose }: Props) {
       setError(null);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+      // Per-request nonce binds Apple's identity token to this single login
+      // attempt, preventing replay of intercepted tokens. Apple receives the
+      // SHA-256 hash; Supabase verifies against the raw value.
+      const rawNonce = Crypto.randomUUID();
+      const hashedNonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        rawNonce,
+      );
+
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
+        nonce: hashedNonce,
       });
 
       if (!credential.identityToken) {
@@ -169,6 +180,7 @@ export function SignInModal({ visible, onClose }: Props) {
       const { error: signInError } = await supabase.auth.signInWithIdToken({
         provider: "apple",
         token: credential.identityToken,
+        nonce: rawNonce,
       });
 
       if (signInError) throw signInError;

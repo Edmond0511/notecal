@@ -119,6 +119,21 @@ const MICRO_ICONS = {
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
+// Identifies an item that should only contribute to the daily water tally
+// and not render its own card in this popup. Catches local-parser entries
+// (sourceId='water') and AI-resolved water items (kcal=0 + water>0).
+function isWaterItem(item: { sourceId?: string; macros: Macros }): boolean {
+  if (item.sourceId === 'water') return true;
+  const m = item.macros;
+  return (
+    (m.water ?? 0) > 0 &&
+    m.kcal === 0 &&
+    m.protein === 0 &&
+    m.fat === 0 &&
+    m.carbs === 0
+  );
+}
+
 // Confidence color helper
 function getConfidenceColors(confidence: number): {
   background: string;
@@ -1658,6 +1673,9 @@ export function NutritionReasoningPopup({
 
   if (!displayEntry) return null;
 
+  // Hide water-only items (they contribute to the water tally elsewhere).
+  const visibleItems = displayEntry.items.filter((it) => !isWaterItem(it));
+
   return (
     <Modal
       visible={visible}
@@ -1765,7 +1783,7 @@ export function NutritionReasoningPopup({
               </Animated.View>
 
               {/* Items */}
-              {displayEntry.items.map((item, index) => (
+              {visibleItems.map((item, index) => (
                 <Animated.View
                   key={item.id || index}
                   entering={FadeInDown.delay(150 + index * 100).duration(400)}
@@ -1981,23 +1999,6 @@ export function NutritionReasoningPopup({
                         )
                       }
                     />
-                    {item.sourceId === 'water' &&
-                      item.macros.water !== undefined && (
-                        <MicroItem
-                          label="water"
-                          value={item.macros.water}
-                          unit="ml"
-                          type="water"
-                          onPress={() =>
-                            handleNutrientPress(
-                              item.id,
-                              "water",
-                              item.macros.water!,
-                              item.originalMacros?.water,
-                            )
-                          }
-                        />
-                      )}
                   </View>
 
                   {/* Revert All - shows when any macro has been edited */}
@@ -2110,7 +2111,7 @@ export function NutritionReasoningPopup({
               {/* Totals */}
               <Animated.View
                 entering={FadeInDown.delay(
-                  150 + displayEntry.items.length * 100,
+                  150 + visibleItems.length * 100,
                 ).duration(400)}
                 style={styles.totalsSection}
               >

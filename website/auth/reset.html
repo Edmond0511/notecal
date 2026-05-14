@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reset password · NoteCal</title>
+    <meta name="description" content="Reset your NoteCal account password." />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+    <meta name="theme-color" content="#FAFAFA" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      /* Auth-flow-specific tokens, scoped to this page */
+      .auth {
+        padding-block: clamp(40px, 6vw, 88px) clamp(72px, 10vw, 128px);
+        min-height: calc(100svh - var(--nav-h) - 200px);
+      }
+      .auth__card {
+        max-width: 460px;
+        margin-inline: auto;
+        background: #FFFFFF;
+        border: 1px solid var(--rule);
+        padding: clamp(28px, 4vw, 40px);
+      }
+      .auth__title {
+        font-family: var(--sans);
+        font-weight: 700;
+        font-size: clamp(28px, 3.6vw, 36px);
+        line-height: 1.1;
+        letter-spacing: -0.025em;
+        margin: 0 0 12px;
+        color: var(--ink);
+      }
+      .auth__lead {
+        font-size: 15px;
+        line-height: 1.55;
+        color: var(--ink-2);
+        margin: 0 0 24px;
+      }
+      .auth__lead--final {
+        margin: 0;
+      }
+      .auth__lead + .auth__lead {
+        margin-top: 14px;
+      }
+      .auth__form {
+        display: grid;
+        gap: 14px;
+      }
+      .auth__field {
+        display: grid;
+        gap: 6px;
+      }
+      .auth__label {
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--ink-2);
+      }
+      .auth__input {
+        font-family: var(--sans);
+        font-size: 16px;
+        color: var(--ink);
+        padding: 14px 16px;
+        background: var(--bg);
+        border: 1px solid var(--rule-strong);
+        border-radius: 10px;
+        outline: none;
+        transition: border-color 160ms ease, background-color 160ms ease;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+      .auth__input:focus {
+        border-color: var(--ink);
+        background: #FFFFFF;
+      }
+      .auth__input[disabled] {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+      .auth__error {
+        font-family: var(--sans);
+        font-size: 13px;
+        color: #C62828;
+        margin: -4px 0 4px;
+        min-height: 18px;
+      }
+      .auth__btn {
+        font-family: var(--sans);
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: #FFFFFF;
+        background: var(--ink);
+        border: 0;
+        border-radius: 999px;
+        padding: 14px 24px;
+        cursor: pointer;
+        transition: background-color 160ms ease, opacity 160ms ease;
+        margin-top: 8px;
+      }
+      .auth__btn:hover { background: #232326; }
+      .auth__btn[disabled] {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+      .auth__btn--ghost {
+        background: transparent;
+        color: var(--ink);
+        border: 1px solid var(--rule-strong);
+      }
+      .auth__btn--ghost:hover {
+        background: color-mix(in srgb, var(--ink) 4%, transparent);
+      }
+      .auth__success {
+        text-align: center;
+      }
+      .auth__success-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: color-mix(in srgb, #1A6872 12%, transparent);
+        color: #1A6872;
+        margin: 0 auto 20px;
+      }
+      .auth__hint {
+        font-size: 13px;
+        color: var(--ink-2);
+        margin: 16px 0 0;
+        text-align: center;
+      }
+      .auth__hint a { color: var(--ink); border-bottom: 1px solid var(--rule-strong); }
+      .auth__hint a:hover { border-color: var(--ink); }
+      .auth__hidden { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <div class="shell nav__inner">
+        <a href="/" class="wordmark">
+          <svg class="wordmark__icon" viewBox="0 0 1024 1024" aria-hidden="true">
+            <g transform="translate(512, 512) scale(9)">
+              <g transform="skewX(-14)">
+                <path d="M -26 -14 C -26 -44, 26 -44, 26 -14 L 26 40 L 13 40 L 13 -8 C 13 -22, -13 -22, -13 -8 L -13 40 L -26 40 Z" fill="currentColor"/>
+              </g>
+              <circle cx="24" cy="36" r="6" fill="currentColor"/>
+            </g>
+          </svg>
+          <span>NoteCal</span>
+        </a>
+        <nav class="nav__links" aria-label="Primary">
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="auth">
+      <div class="shell shell--narrow">
+        <div class="auth__card">
+          <!-- Loading state — checking session validity -->
+          <div id="state-loading">
+            <h1 class="auth__title">Checking link…</h1>
+            <p class="auth__lead">One moment.</p>
+          </div>
+
+          <!-- Form state — set new password -->
+          <div id="state-form" class="auth__hidden">
+            <h1 class="auth__title">Set a new password</h1>
+            <p class="auth__lead">Choose a password at least 8 characters long.</p>
+            <form id="form" class="auth__form" autocomplete="off" novalidate>
+              <div class="auth__field">
+                <label class="auth__label" for="password">New password</label>
+                <input
+                  id="password"
+                  class="auth__input"
+                  type="password"
+                  autocomplete="new-password"
+                  minlength="8"
+                  required
+                  spellcheck="false"
+                />
+              </div>
+              <div class="auth__field">
+                <label class="auth__label" for="confirm">Confirm password</label>
+                <input
+                  id="confirm"
+                  class="auth__input"
+                  type="password"
+                  autocomplete="new-password"
+                  minlength="8"
+                  required
+                  spellcheck="false"
+                />
+              </div>
+              <p id="form-error" class="auth__error" role="alert" aria-live="polite"></p>
+              <button id="submit" class="auth__btn" type="submit">Update password</button>
+            </form>
+          </div>
+
+          <!-- Success state — password updated -->
+          <div id="state-success" class="auth__hidden">
+            <div class="auth__success">
+              <div class="auth__success-icon" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <h1 class="auth__title">Password updated</h1>
+              <p class="auth__lead auth__lead--final">
+                Open NoteCal on your phone and sign in with your new password.
+              </p>
+            </div>
+          </div>
+
+          <!-- Invalid / expired link state -->
+          <div id="state-invalid" class="auth__hidden">
+            <h1 class="auth__title">Link expired</h1>
+            <p class="auth__lead auth__lead--final">
+              This password reset link is no longer valid. It may have expired,
+              already been used, or been replaced by a newer request.
+            </p>
+            <p class="auth__lead auth__lead--final">
+              Open NoteCal and tap <strong>Forgot password?</strong> to send a
+              new one.
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="foot">
+      <div class="shell foot__inner">
+        <span class="foot__copy">© 2026 NoteCal</span>
+        <span class="foot__attribution">
+          <a href="https://platform.fatsecret.com">Powered by fatsecret Platform API</a>
+        </span>
+        <nav class="foot__links" aria-label="Footer">
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+          <a href="mailto:edmondyang11@gmail.com">Contact</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script type="module">
+      import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+
+      const SUPABASE_URL = "https://jfvmhxhzpaoauwsuxrep.supabase.co";
+      const SUPABASE_ANON_KEY =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impmdm1oeGh6cGFvYXV3c3V4cmVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5ODQ2MTcsImV4cCI6MjA3ODU2MDYxN30.0zFPXUI3uYRyFyiZNbI4HdGtwfmjQUYWC365p_xU7QM";
+
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          // Auto-detect tokens from URL fragment / query so the recovery
+          // session is loaded into the client by the time we call updateUser.
+          detectSessionInUrl: true,
+          persistSession: false, // session is short-lived, no need to persist
+        },
+      });
+
+      const states = {
+        loading: document.getElementById("state-loading"),
+        form: document.getElementById("state-form"),
+        success: document.getElementById("state-success"),
+        invalid: document.getElementById("state-invalid"),
+      };
+
+      function show(name) {
+        Object.entries(states).forEach(([k, el]) =>
+          el.classList.toggle("auth__hidden", k !== name),
+        );
+      }
+
+      // Wait briefly for the SDK to parse the URL fragment / query param,
+      // then check whether we have an active session. If we don't, the link
+      // is invalid or already consumed.
+      (async () => {
+        // Give detectSessionInUrl a tick to do its work.
+        await new Promise((r) => setTimeout(r, 50));
+        const { data, error } = await supabase.auth.getSession();
+        if (error || !data.session) {
+          show("invalid");
+          return;
+        }
+        show("form");
+      })();
+
+      const form = document.getElementById("form");
+      const passwordInput = document.getElementById("password");
+      const confirmInput = document.getElementById("confirm");
+      const errorEl = document.getElementById("form-error");
+      const submitBtn = document.getElementById("submit");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorEl.textContent = "";
+        const password = passwordInput.value;
+        const confirm = confirmInput.value;
+
+        if (password.length < 8) {
+          errorEl.textContent = "Password must be at least 8 characters.";
+          return;
+        }
+        if (password !== confirm) {
+          errorEl.textContent = "Passwords don't match.";
+          return;
+        }
+
+        submitBtn.disabled = true;
+        passwordInput.disabled = true;
+        confirmInput.disabled = true;
+        submitBtn.textContent = "Updating…";
+
+        try {
+          const { error } = await supabase.auth.updateUser({ password });
+          if (error) {
+            errorEl.textContent =
+              error.message || "Couldn't update password. Try again.";
+            submitBtn.disabled = false;
+            passwordInput.disabled = false;
+            confirmInput.disabled = false;
+            submitBtn.textContent = "Update password";
+            return;
+          }
+          // Sign out the recovery session so the password update is final
+          // and not paired with an active web session on this device.
+          await supabase.auth.signOut();
+          show("success");
+        } catch (err) {
+          errorEl.textContent =
+            (err && err.message) || "Couldn't update password. Try again.";
+          submitBtn.disabled = false;
+          passwordInput.disabled = false;
+          confirmInput.disabled = false;
+          submitBtn.textContent = "Update password";
+        }
+      });
+    </script>
+  </body>
+</html>

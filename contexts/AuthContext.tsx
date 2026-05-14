@@ -93,6 +93,13 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  /**
+   * True when the user's email is confirmed. OAuth users (Google/Apple) are
+   * auto-confirmed by Supabase, so this is always true for them. Email-auth
+   * users start unverified after sign-up; the verification banner and Pro
+   * purchase gate read this. Refreshes on app foreground via getUser().
+   */
+  isEmailVerified: boolean;
   /** Sign out and additionally purge the local snapshot for the outgoing user. */
   signOutAndPurge: () => Promise<void>;
 }
@@ -102,6 +109,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   isLoading: true,
   isAuthenticated: false,
+  isEmailVerified: false,
   signOutAndPurge: async () => {},
 });
 
@@ -264,6 +272,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         supabase.auth.startAutoRefresh();
+        // Refresh user record so email_confirmed_at flips visibly when the
+        // user comes back from clicking the verification link in the browser.
+        // Cheap (single HTTPS round-trip) and harmless if no user. Errors are
+        // intentionally swallowed — they're handled by the existing
+        // background validation path on cold start.
+        supabase.auth
+          .getUser()
+          .then(({ data, error }) => {
+            if (!error && data?.user) setUser(data.user);
+          })
+          .catch(() => {});
       } else {
         supabase.auth.stopAutoRefresh();
       }
@@ -299,6 +318,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     isLoading,
     isAuthenticated: !!user,
+    isEmailVerified: !!user?.email_confirmed_at,
     signOutAndPurge,
   };
 

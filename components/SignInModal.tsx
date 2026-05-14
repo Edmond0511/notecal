@@ -9,6 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
 import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import {
   GoogleSignin,
@@ -55,6 +56,7 @@ interface Props {
 }
 
 export function SignInModal({ visible, onClose }: Props) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [fontsLoaded] = useFonts({ IBMPlexSans_700Bold });
   const [isLoading, setIsLoading] = useState<"google" | "apple" | null>(null);
@@ -289,6 +291,33 @@ export function SignInModal({ visible, onClose }: Props) {
                 )}
               </TouchableOpacity>
 
+              <TouchableOpacity
+                onPress={() => {
+                  if (disabled) return;
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onClose();
+                  router.push("/sign-in-email");
+                }}
+                disabled={disabled}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Continue with email"
+                style={[
+                  styles.btn,
+                  styles.emailBtn,
+                  disabled && styles.btnDisabled,
+                ]}
+              >
+                <Ionicons
+                  name="mail-outline"
+                  size={18}
+                  color={Tokens.textPrimary}
+                />
+                <Text style={[styles.btnLabel, styles.emailBtnLabel]}>
+                  Continue with email
+                </Text>
+              </TouchableOpacity>
+
               {error && (
                 <Animated.View
                   entering={FadeIn.duration(200)}
@@ -424,6 +453,12 @@ const styles = StyleSheet.create({
   },
   appleBtnLabel: { color: "#fff" },
   googleBtnLabel: { color: Tokens.textPrimary },
+  emailBtn: {
+    backgroundColor: Tokens.surfaceRaised,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Tokens.border,
+  },
+  emailBtnLabel: { color: Tokens.textPrimary },
   errorPill: {
     flexDirection: "row",
     alignItems: "center",

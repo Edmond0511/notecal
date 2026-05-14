@@ -2,6 +2,7 @@ import { SystemFont, Tokens } from "@/constants/theme";
 import { PrimaryButton } from "@/components/onboarding/PrimaryButton";
 import { useAppStore } from "@/store/app-store";
 import { CommonPortion, Entry, FatSecretServing, Macros } from "@/types";
+import { formatWater } from "@/utils/formatNumber";
 import {
   isLiquidGlassSupported,
   LiquidGlassView,
@@ -487,7 +488,7 @@ const NUTRIENT_UNITS: Record<NutrientKey, string> = {
   sugar: "g",
   sodium: "mg",
   potassium: "mg",
-  water: "L",
+  water: "ml",
 };
 
 // Map display type to macro key
@@ -767,9 +768,8 @@ export function EditNutrientPopup({
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
 
-  // Format initial value - water to 1 decimal, others as integers
-  const formatValue = (val: number) =>
-    nutrientKey === "water" ? val.toFixed(1) : Math.round(val).toString();
+  // Format initial value - all stored as integers (water is in ml).
+  const formatValue = (val: number) => Math.round(val).toString();
 
   const [inputValue, setInputValue] = useState(formatValue(currentValue));
 
@@ -1986,7 +1986,7 @@ export function NutritionReasoningPopup({
                         <MicroItem
                           label="water"
                           value={item.macros.water}
-                          unit="L"
+                          unit="ml"
                           type="water"
                           onPress={() =>
                             handleNutrientPress(
@@ -2421,9 +2421,17 @@ function MicroItem({
   const colors = MICRO_COLORS[type];
   const icon = MICRO_ICONS[type];
 
-  // Format value based on type
-  const displayValue =
-    type === "water" ? value.toFixed(1) : Math.round(value).toString();
+  // Water values are stored in ml; switch to L formatting for readability when >= 1000ml.
+  let displayValue: string;
+  let displayUnit: string;
+  if (type === "water") {
+    const fmt = formatWater(value);
+    displayValue = fmt.value;
+    displayUnit = fmt.unit;
+  } else {
+    displayValue = Math.round(value).toString();
+    displayUnit = unit;
+  }
 
   return (
     <View style={styles.microItem}>
@@ -2438,7 +2446,7 @@ function MicroItem({
         <View style={styles.macroValueEditable}>
           <Text style={styles.macroValue}>
             {displayValue}
-            <Text style={styles.macroValueUnit}>{unit}</Text>
+            <Text style={styles.macroValueUnit}>{displayUnit}</Text>
           </Text>
         </View>
         <Text style={styles.macroLabel}>{label}</Text>

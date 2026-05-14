@@ -109,7 +109,7 @@ const DEFAULT_MICRONUTRIENTS = {
   potassium: 3500, // 3500mg - universal recommendation
 };
 
-// Sex-based water intake recommendations (in liters)
+// Sex-based water intake recommendations (UI shows liters; stored as milliliters).
 const DEFAULT_WATER = {
   male: 3.7,
   female: 2.7,
@@ -249,7 +249,8 @@ export function NutritionGoalsModal({
         setManualSugar(sugar?.toString() ?? DEFAULT_MICRONUTRIENTS.sugar.toString());
         setManualSodium(sodium?.toString() ?? DEFAULT_MICRONUTRIENTS.sodium.toString());
         setManualPotassium(potassium?.toString() ?? DEFAULT_MICRONUTRIENTS.potassium.toString());
-        setManualWater(water?.toString() ?? defaultWater.toString());
+        // Stored water is ml; input displays liters with one decimal.
+        setManualWater(water !== undefined ? (water / 1000).toString() : defaultWater.toString());
 
         setFiberEnabled(fiber !== undefined);
         setSugarEnabled(sugar !== undefined);
@@ -346,7 +347,7 @@ export function NutritionGoalsModal({
       ...(potassiumEnabled && {
         potassium: parseInt(manualPotassium, 10) || DEFAULT_MICRONUTRIENTS.potassium,
       }),
-      ...(waterEnabled && { water: parseFloat(manualWater) || defaultWater }),
+      ...(waterEnabled && { water: Math.round((parseFloat(manualWater) || defaultWater) * 1000) }),
     };
 
     const updatedGoals = goals

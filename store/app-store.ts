@@ -24,31 +24,31 @@ const WATER_FIRST_REGEX = /^((?:sparkling|mineral|soda|fizzy|still)\s+)?(water|a
 // Pattern 2: "500ml water" or "1l sparkling water" (quantity first)
 const QTY_FIRST_REGEX = /^(\d+(?:\.\d+)?)\s*(ml|l|oz)?\s*(?:of\s+)?((?:sparkling|mineral|soda|fizzy|still)\s+)?(water|agua|h2o)$/i;
 
-// Conversions to liters
-const WATER_CONVERSIONS: Record<string, number> = {
-  ml: 0.001,
-  l: 1,
-  oz: 0.02957,
+// Conversions to milliliters (canonical storage unit for water)
+const WATER_CONVERSIONS_TO_ML: Record<string, number> = {
+  ml: 1,
+  l: 1000,
+  oz: 29.5735,
 };
 
-function parseWaterEntry(text: string): { isWater: boolean; amountL: number } {
+function parseWaterEntry(text: string): { isWater: boolean; amountMl: number } {
   // Try water-first pattern: "water 500ml", "sparkling water 1l"
   let match = text.match(WATER_FIRST_REGEX);
   if (match) {
     const amount = parseFloat(match[3]);
-    const unit = (match[4] || 'l').toLowerCase();
-    return { isWater: true, amountL: Math.round(amount * (WATER_CONVERSIONS[unit] || 1) * 100) / 100 };
+    const unit = (match[4] || 'ml').toLowerCase();
+    return { isWater: true, amountMl: Math.round(amount * (WATER_CONVERSIONS_TO_ML[unit] || 1)) };
   }
 
   // Try quantity-first pattern: "500ml water", "1l sparkling water"
   match = text.match(QTY_FIRST_REGEX);
   if (match) {
     const amount = parseFloat(match[1]);
-    const unit = (match[2] || 'l').toLowerCase();
-    return { isWater: true, amountL: Math.round(amount * (WATER_CONVERSIONS[unit] || 1) * 100) / 100 };
+    const unit = (match[2] || 'ml').toLowerCase();
+    return { isWater: true, amountMl: Math.round(amount * (WATER_CONVERSIONS_TO_ML[unit] || 1)) };
   }
 
-  return { isWater: false, amountL: 0 };
+  return { isWater: false, amountMl: 0 };
 }
 
 // Helper to assign unique IDs to items received from the API
@@ -125,11 +125,11 @@ export const useAppStore = create<AppState>()(
           id: `${entryId}-water`,
           entryId,
           label: 'Water',
-          qty: waterResult.amountL,
-          unit: 'L',
+          qty: waterResult.amountMl,
+          unit: 'mL',
           source: 'local',
           sourceId: 'water',
-          macros: { kcal: 0, protein: 0, fat: 0, carbs: 0, water: waterResult.amountL },
+          macros: { kcal: 0, protein: 0, fat: 0, carbs: 0, water: waterResult.amountMl },
           confidence: 1.0,
           citations: [],
         }],
@@ -1188,7 +1188,7 @@ export const useAppStore = create<AppState>()(
               potassium: Math.round(item.macros.potassium * scaleFactor),
             }),
             ...(item.macros.water !== undefined && {
-              water: Math.round(item.macros.water * scaleFactor * 100) / 100,
+              water: Math.round(item.macros.water * scaleFactor),
             }),
           };
 
@@ -1573,7 +1573,7 @@ export const useAppStore = create<AppState>()(
         profile: state.profile,
       }),
       // Handle version migrations
-      version: 8,
+      version: 9,
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           persistedState = {
@@ -1621,6 +1621,27 @@ export const useAppStore = create<AppState>()(
             ...persistedState,
             profile: persistedState.profile ?? null,
           };
+        }
+        if (version < 9) {
+          // Water canonical unit changed from mixed (L for sourceId==='water',
+          // ml for AI items) to ml everywhere. Multiply locally-parsed water
+          // items by 1000; AI-resolved items were already ml and stay as-is.
+          const entries = persistedState.entries ?? [];
+          for (const entry of entries) {
+            for (const item of entry?.items ?? []) {
+              if (item?.sourceId === 'water' && typeof item?.macros?.water === 'number') {
+                item.macros.water = Math.round(item.macros.water * 1000);
+                if (item.unit === 'L') item.unit = 'mL';
+                item.qty = item.macros.water;
+              }
+            }
+          }
+          // Migrate manualTargets.water from L to ml.
+          const t = persistedState.goals?.manualTargets;
+          if (t && typeof t.water === 'number') {
+            t.water = Math.round(t.water * 1000);
+          }
+          persistedState = { ...persistedState };
         }
         return persistedState;
       },

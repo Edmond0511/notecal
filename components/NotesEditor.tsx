@@ -2,7 +2,7 @@ import { SystemFont, Tokens } from "@/constants/theme";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useAppStore } from "@/store/app-store";
 import { Entry } from "@/types";
-import { truncateNumber } from "@/utils/formatNumber";
+import { truncateNumber, formatWater } from "@/utils/formatNumber";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import React, {
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: 12,
     gap: 3,
-    marginLeft: 4,
+    marginRight: 4,
   },
   waterText: {
     fontSize: Tokens.fontSize.sm,
@@ -550,12 +550,17 @@ const CaloriesBadge = React.memo<{
 ));
 CaloriesBadge.displayName = "CaloriesBadge";
 
-// Memoized water badge - only re-renders when amount changes
-const WaterBadge = React.memo<{ amountL: number }>(({ amountL }) => (
-  <View style={styles.inlineWater}>
-    <Text style={styles.waterText}>{amountL}L</Text>
-  </View>
-));
+// Memoized water badge - only re-renders when amount changes.
+// Intentionally non-clickable: tapping the pill should not open the detail
+// popup. The pill is purely a visual readout of the water counter.
+const WaterBadge = React.memo<{ amountMl: number }>(({ amountMl }) => {
+  const { value, unit } = formatWater(amountMl);
+  return (
+    <View style={styles.inlineWater} pointerEvents="none">
+      <Text style={styles.waterText}>{value}{unit}</Text>
+    </View>
+  );
+});
 WaterBadge.displayName = "WaterBadge";
 
 // Memoized error badge - tap to retry resolution (or open paywall when the
@@ -616,16 +621,18 @@ const IndicatorRow = React.memo<{
     const prevEntryStatusRef = useRef(entry.status);
     const contentOpacity = useRef(new RNAnimated.Value(1)).current;
 
-    // Calculate water amount from pure water items only (sourceId === 'water')
-    const waterAmount = useMemo(() => {
+    // Sum water (ml) across all items so AI-resolved water (e.g. typos like
+    // "watter 500ml" or mixed entries like "apples, bananas, 50ml water")
+    // also lights up the water badge.
+    const waterAmountMl = useMemo(() => {
       return entry.items.reduce(
-        (sum, item) => sum + (item.sourceId === 'water' ? (item.macros.water ?? 0) : 0),
+        (sum, item) => sum + (item.macros.water ?? 0),
         0,
       );
     }, [entry.items]);
 
     const hasCalories = entry.inlineKcal != null;
-    const hasWater = waterTrackingEnabled && waterAmount > 0;
+    const hasWater = waterTrackingEnabled && waterAmountMl > 0;
     const isWaterOnly = hasWater && !entry.inlineKcal;
 
     useEffect(() => {
@@ -671,10 +678,10 @@ const IndicatorRow = React.memo<{
             )
           ) : displayedStatus === "ok" ? (
             <>
+              {hasWater && <WaterBadge amountMl={waterAmountMl} />}
               {hasCalories && !isWaterOnly && (
                 <CaloriesBadge kcal={entry.inlineKcal!} onPress={handlePress} />
               )}
-              {hasWater && <WaterBadge amountL={waterAmount} />}
             </>
           ) : displayedStatus === "error" ? (
             <ErrorBadge onPress={handlePress} reason={entry.errorReason} />

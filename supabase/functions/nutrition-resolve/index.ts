@@ -807,8 +807,22 @@ ADDITIONAL NUTRIENTS:
 - sugar: Total sugars in grams (g)
 - sodium: Sodium in milligrams (mg)
 - potassium: Potassium in milligrams (mg)
-- water: Water/liquid amount in milliliters (ml). If the entry includes plain water, sparkling water, mineral water, or soda water, return the amount in ml. These have 0 calories. For food items without explicit water mention, omit this field.
-Always include fiber, sugar, sodium, potassium in the macros object. Use 0 if data is unavailable. Only include water when explicitly mentioned.
+- water: Amount of plain drinking water in milliliters (ml). See WATER DETECTION RULES below.
+Always include fiber, sugar, sodium, potassium in the macros object. Use 0 if data is unavailable. Only include water on items where the WATER DETECTION RULES below apply.
+
+WATER DETECTION RULES (STRICT):
+- An item counts as water if its label is one of these terms (case-insensitive), including obvious typos and misspellings:
+  - water, watter, watr, wter, wtr, h2o, h20, hto, agua, aqua
+  - sparkling water, mineral water, still water, soda water, seltzer, club soda, carbonated water, fizzy water
+- For a water item:
+  - Set macros.kcal = 0, macros.protein = 0, macros.fat = 0, macros.carbs = 0.
+  - Set macros.water = the quantity in ml. If the user wrote a unit (ml, l, oz, cup, glass, bottle), convert it: 1 L = 1000 ml, 1 fl oz ≈ 29.5735 ml, 1 cup ≈ 240 ml, 1 standard glass ≈ 250 ml, 1 standard bottle ≈ 500 ml. If no quantity is given, assume 250 ml (one glass) and note the assumption in reasoning.
+  - Set source = "ai-estimate" (or "USDA" if appropriate), confidence 0.9+ when the label clearly refers to water.
+- Do NOT set the water field on items that are NOT plain water. The following are explicitly NOT water and must be handled as normal food/drink items (return their full macros and OMIT the water field):
+  - Coconut water, watermelon, water chestnut(s), rose water, flavored water (e.g. "lemon water" with added sugar, vitamin water, "infused water" containing fruit/sweeteners are food items — only return macros.water if there is no caloric content)
+  - Juice (apple juice, orange juice, etc.), milk (any kind), soda/cola/pop (Coca-Cola, Pepsi, Sprite, Dr Pepper, etc.), tea, coffee, kombucha, beer, wine, spirits, cocktails, sports drinks, energy drinks, protein shakes, smoothies
+- MIXED ENTRIES: When a single input contains multiple comma- or "and"-separated items (e.g. "apples, bananas, 50ml water" or "chicken and 1L water"), split each item into its own entry in the items array. Apply the WATER DETECTION RULES per item — the water item gets kcal=0 and macros.water=ml; the other items get normal nutrition with no water field.
+- Plain water with no added sugar or calories (lemon water that is just water + a squeeze of lemon, cucumber water with no sweetener) MAY be treated as water if the user clearly means hydration; default to water tracking when uncertain about a "water"-named item with no sweetener. Otherwise, treat as a food.
 
 REASONING GUIDELINES:
 - interpretation: How you identified/interpreted this food item

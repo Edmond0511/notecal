@@ -58,7 +58,7 @@ interface AggregatedMacros {
   sodium: number;
   /** In grams — same as sodium. */
   potassium: number;
-  /** In mL */
+  /** Water in milliliters (ml). Canonical unit across the app — Macros.water is also ml. */
   water: number;
 }
 

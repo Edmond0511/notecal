@@ -32,3 +32,17 @@ export function truncateNumber(value: number, maxDigits: number = 5): string {
   }
   return str.slice(0, maxDigits);
 }
+
+/**
+ * Formats a water amount (in milliliters) for display. Values under 1000ml
+ * render in ml; values >= 1000ml render in liters with one decimal (trimmed
+ * if whole). Returned separately so callers can style the unit.
+ */
+export function formatWater(ml: number): { value: string; unit: "ml" | "L" } {
+  if (!Number.isFinite(ml) || ml < 0) return { value: "0", unit: "ml" };
+  if (ml < 1000) return { value: String(Math.round(ml)), unit: "ml" };
+  const liters = ml / 1000;
+  const rounded = Math.round(liters * 10) / 10;
+  const value = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  return { value, unit: "L" };
+}

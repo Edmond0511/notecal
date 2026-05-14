@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { Dimensions, StyleSheet, Text, View } from "react-native";
 import { Tokens } from "@/constants/theme";
-import { truncateNumber } from "@/utils/formatNumber";
+import { truncateNumber, formatWater } from "@/utils/formatNumber";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
   faFireFlameCurved,
@@ -316,11 +316,15 @@ interface NutrientBarProps {
   color: string;
   unit: string;
   delay: number;
+  /** Optional value→{value,unit} formatter (e.g. formatWater for ml↔L). */
+  formatter?: (value: number) => { value: string; unit: string };
 }
 
-const NutrientBar = React.memo(function NutrientBar({ label, current, target, color, unit, delay }: NutrientBarProps) {
+const NutrientBar = React.memo(function NutrientBar({ label, current, target, color, unit, delay, formatter }: NutrientBarProps) {
   const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0;
   const isOver = current > target;
+  const currentFmt = formatter ? formatter(current) : { value: truncateNumber(current, 5), unit };
+  const targetFmt = formatter ? formatter(target) : { value: truncateNumber(target, 5), unit };
 
   const fadeIn = useSharedValue(0);
   const barWidth = useSharedValue(0);
@@ -360,9 +364,9 @@ const NutrientBar = React.memo(function NutrientBar({ label, current, target, co
       <View style={styles.nutrientBarHeader}>
         <Text style={styles.nutrientBarLabel}>{label}</Text>
         <Text style={[styles.nutrientBarValue, isOver && styles.nutrientBarValueOver]}>
-          <Text style={styles.nutrientBarConsumed}>{truncateNumber(current, 5)}<Text style={styles.nutrientBarUnit}>{unit}</Text></Text>
+          <Text style={styles.nutrientBarConsumed}>{currentFmt.value}<Text style={styles.nutrientBarUnit}>{currentFmt.unit}</Text></Text>
           <Text style={styles.nutrientBarDivider}> / </Text>
-          <Text style={styles.nutrientBarTotal}>{truncateNumber(target, 5)}<Text style={styles.nutrientBarUnit}>{unit}</Text></Text>
+          <Text style={styles.nutrientBarTotal}>{targetFmt.value}<Text style={styles.nutrientBarUnit}>{targetFmt.unit}</Text></Text>
         </Text>
       </View>
       <View style={styles.nutrientBarTrack}>
@@ -486,6 +490,7 @@ export const ProgressRings = React.memo(function ProgressRings({ consumed, targe
                 color={nutrient.color}
                 unit={nutrient.unit}
                 delay={450 + index * 100}
+                formatter={nutrient.key === 'water' ? formatWater : undefined}
               />
             ))}
           </View>

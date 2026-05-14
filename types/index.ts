@@ -16,6 +16,7 @@ export interface Macros {
   sugar?: number;
   sodium?: number;
   potassium?: number;
+  /** Water in milliliters (ml). Displayed via formatWater() which switches to L at >= 1000ml. */
   water?: number;
 }
 

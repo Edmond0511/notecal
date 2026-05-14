@@ -1,13 +1,9 @@
-import { useAuth } from '@/contexts/AuthContext';
 import { Tokens } from '@/constants/theme';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import { supabase } from '@/lib/supabase';
-import { maskEmail } from '@/utils/auth/passwordValidation';
 import { getTrialLabel } from '@/utils/trialLabel';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -62,8 +58,6 @@ function yearlyEffectiveMonthly(pkg: PurchasesPackage): string {
   }
 }
 
-const RESEND_COOLDOWN_S = 60;
-
 export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
   const {
     offering,
@@ -74,19 +68,9 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
     isPro,
     yearlyTrialEligible,
   } = useSubscription();
-  const { isEmailVerified, user } = useAuth();
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [retrying, setRetrying] = useState(false);
-  // Verification gate state. When the user taps purchase without a verified
-  // email, swap the purchase area with a verify-first card. Auto-clears when
-  // isEmailVerified flips true (user came back from clicking the link).
-  const [showVerifyGate, setShowVerifyGate] = useState(false);
-  const [resending, setResending] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
-  const [resendFeedback, setResendFeedback] = useState<'sent' | 'error' | null>(
-    null,
-  );
   const insets = useSafeAreaInsets();
   // Always reserve at least 12px top / 16px bottom so the X never hugs the
   // status bar and the bottom bar never hugs the home indicator on devices
@@ -169,16 +153,6 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
 
   const handlePurchase = async () => {
     if (!selectedPackage || purchasing) return;
-    // Soft-verify gate: email-auth users must confirm their address before
-    // they can start a trial / purchase. OAuth users are always verified
-    // (Supabase auto-confirms them) so they pass straight through. Swapping
-    // to a verify-first card instead of just disabling the button gives the
-    // user the recovery action (Resend) inline.
-    if (!isEmailVerified) {
-      setShowVerifyGate(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      return;
-    }
     setPurchasing(true);
     try {
       const ok = await purchase(selectedPackage);
@@ -192,56 +166,6 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
       setPurchasing(false);
     }
   };
-
-  // Auto-dismiss the verify gate when the user comes back verified. Mirrors
-  // the PaywallTrigger pattern of reacting to async state flips.
-  useEffect(() => {
-    if (isEmailVerified && showVerifyGate) {
-      setShowVerifyGate(false);
-    }
-  }, [isEmailVerified, showVerifyGate]);
-
-  // Cooldown ticker for the Resend button. Starts at 60s and counts down each
-  // second; button re-enables at 0.
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const interval = setInterval(() => {
-      setCooldown((c) => Math.max(0, c - 1));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [cooldown]);
-
-  // Auto-clear the "Sent ✓" / "Try again" feedback after a few seconds.
-  useEffect(() => {
-    if (!resendFeedback) return;
-    const t = setTimeout(() => setResendFeedback(null), 3000);
-    return () => clearTimeout(t);
-  }, [resendFeedback]);
-
-  const handleResendVerification = useCallback(async () => {
-    if (!user?.email || resending || cooldown > 0) return;
-    setResending(true);
-    Haptics.selectionAsync();
-    try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: user.email,
-      });
-      if (error) {
-        setResendFeedback('error');
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        return;
-      }
-      setResendFeedback('sent');
-      setCooldown(RESEND_COOLDOWN_S);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
-      setResendFeedback('error');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setResending(false);
-    }
-  }, [user?.email, resending, cooldown]);
 
   const handleRestore = async () => {
     if (restoring) return;
@@ -394,7 +318,7 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
        *  purchase. Restore + Terms + Privacy stay so the user can still
        *  recover a prior purchase or read legal copy. */}
       <View style={[styles.bottomBar, { paddingBottom: bottomPad }]}>
-        {!showErrorOrEmpty && !showVerifyGate && (
+        {!showErrorOrEmpty && (
           <>
             <View style={styles.summaryBlock}>
               {selectedId === 'yearly' && trialLabel && (
@@ -420,49 +344,6 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
               )}
             </Pressable>
           </>
-        )}
-        {!showErrorOrEmpty && showVerifyGate && (
-          <View style={styles.verifyBlock}>
-            <Text style={styles.verifyTitle}>Verify your email first</Text>
-            <Text style={styles.verifySubtitle}>
-              We sent a link to{' '}
-              <Text style={styles.verifyEmail}>
-                {user?.email ? maskEmail(user.email) : 'your inbox'}
-              </Text>
-              . Confirm it to start your free trial.
-            </Text>
-            <Pressable
-              onPress={handleResendVerification}
-              disabled={resending || cooldown > 0}
-              style={[
-                styles.cta,
-                (resending || cooldown > 0) && styles.ctaDisabled,
-              ]}
-              accessibilityRole="button"
-            >
-              {resending ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.ctaText}>
-                  {resendFeedback === 'sent'
-                    ? 'Sent ✓'
-                    : resendFeedback === 'error'
-                      ? 'Try again'
-                      : cooldown > 0
-                        ? `Resend in ${cooldown}s`
-                        : 'Resend link'}
-                </Text>
-              )}
-            </Pressable>
-            <Pressable
-              onPress={() => setShowVerifyGate(false)}
-              hitSlop={12}
-              style={styles.verifyBackLink}
-              accessibilityRole="button"
-            >
-              <Text style={styles.verifyBackText}>Back to plans</Text>
-            </Pressable>
-          </View>
         )}
         <View style={styles.legalRow}>
           <Pressable
@@ -779,40 +660,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Tokens.textPrimary,
     textAlign: 'center',
-  },
-  verifyBlock: {
-    gap: 12,
-    paddingTop: 4,
-    paddingBottom: 4,
-  },
-  verifyTitle: {
-    fontFamily: PLEX_BOLD,
-    fontSize: 18,
-    lineHeight: 22,
-    letterSpacing: -0.3,
-    color: Tokens.textPrimary,
-    textAlign: 'center',
-  },
-  verifySubtitle: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: Tokens.textSecondary,
-    textAlign: 'center',
-    marginBottom: 4,
-    paddingHorizontal: 8,
-  },
-  verifyEmail: {
-    color: Tokens.textPrimary,
-    fontWeight: '600',
-  },
-  verifyBackLink: {
-    alignSelf: 'center',
-    paddingVertical: 8,
-    marginTop: 4,
-  },
-  verifyBackText: {
-    fontSize: 13,
-    color: Tokens.textSecondary,
-    fontWeight: '500',
   },
 });

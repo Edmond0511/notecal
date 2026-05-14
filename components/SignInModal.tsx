@@ -259,12 +259,14 @@ export function SignInModal({ visible, onClose }: Props) {
                   {isLoading === "apple" ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <>
-                      <Ionicons name="logo-apple" size={18} color="#fff" />
+                    <View style={styles.btnContent}>
+                      <View style={styles.iconSlot}>
+                        <Ionicons name="logo-apple" size={18} color="#fff" />
+                      </View>
                       <Text style={[styles.btnLabel, styles.appleBtnLabel]}>
                         Continue with Apple
                       </Text>
-                    </>
+                    </View>
                   )}
                 </TouchableOpacity>
               )}
@@ -284,12 +286,14 @@ export function SignInModal({ visible, onClose }: Props) {
                 {isLoading === "google" ? (
                   <ActivityIndicator color={Tokens.textSecondary} />
                 ) : (
-                  <>
-                    <GoogleG size={18} />
+                  <View style={styles.btnContent}>
+                    <View style={styles.iconSlot}>
+                      <GoogleG size={18} />
+                    </View>
                     <Text style={[styles.btnLabel, styles.googleBtnLabel]}>
                       Continue with Google
                     </Text>
-                  </>
+                  </View>
                 )}
               </TouchableOpacity>
 
@@ -310,14 +314,18 @@ export function SignInModal({ visible, onClose }: Props) {
                   disabled && styles.btnDisabled,
                 ]}
               >
-                <Ionicons
-                  name="mail-outline"
-                  size={18}
-                  color={Tokens.textPrimary}
-                />
-                <Text style={[styles.btnLabel, styles.emailBtnLabel]}>
-                  Continue with email
-                </Text>
+                <View style={styles.btnContent}>
+                  <View style={styles.iconSlot}>
+                    <Ionicons
+                      name="mail-outline"
+                      size={18}
+                      color={Tokens.textPrimary}
+                    />
+                  </View>
+                  <Text style={[styles.btnLabel, styles.emailBtnLabel]}>
+                    Continue with email
+                  </Text>
+                </View>
               </TouchableOpacity>
 
               {error && (
@@ -425,13 +433,22 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   btn: {
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     height: 56,
     borderRadius: 30,
     paddingHorizontal: 22,
-    gap: 12,
+  },
+  btnContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    width: 220,
+  },
+  iconSlot: {
+    width: 22,
+    alignItems: "center",
+    justifyContent: "center",
   },
   btnDisabled: {
     opacity: 0.6,

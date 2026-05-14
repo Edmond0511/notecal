@@ -17,16 +17,16 @@ import {
   useFonts,
 } from "@expo-google-fonts/ibm-plex-sans";
 import { Ionicons } from "@expo/vector-icons";
-import * as AppleAuthentication from "expo-apple-authentication";
-import * as Crypto from "expo-crypto";
-import * as Haptics from "expo-haptics";
-import { useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import {
   GoogleSignin,
   isErrorWithCode,
   statusCodes,
 } from "@react-native-google-signin/google-signin";
+import * as AppleAuthentication from "expo-apple-authentication";
+import * as Crypto from "expo-crypto";
+import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -159,7 +159,6 @@ export default function SignInEmailScreen() {
         password,
         options: {
           data: { display_name: deriveDisplayName(email) },
-          emailRedirectTo: "https://notecal.app/auth/confirm",
         },
       });
       if (signUpError) {
@@ -281,13 +280,6 @@ export default function SignInEmailScreen() {
         </TouchableOpacity>
 
         <ScrollView contentContainerStyle={styles.redirectContent}>
-          <View style={styles.redirectIconBubble}>
-            <Ionicons
-              name={isGoogle ? "logo-google" : "logo-apple"}
-              size={40}
-              color={Tokens.accent}
-            />
-          </View>
           <Text style={[styles.redirectTitle, headlineFont]}>
             You already have an account
           </Text>
@@ -307,7 +299,9 @@ export default function SignInEmailScreen() {
             ]}
           >
             {oauthLoading === redirectProvider ? (
-              <ActivityIndicator color={isGoogle ? Tokens.textSecondary : "#fff"} />
+              <ActivityIndicator
+                color={isGoogle ? Tokens.textSecondary : "#fff"}
+              />
             ) : (
               <>
                 <Ionicons
@@ -376,7 +370,7 @@ export default function SignInEmailScreen() {
           <Text style={styles.subtitle}>
             {mode === "signin"
               ? "Sign in to continue tracking."
-              : "Track every meal, every day."}
+              : "Start tracking today."}
           </Text>
 
           <View style={styles.tabs}>
@@ -437,9 +431,7 @@ export default function SignInEmailScreen() {
               mode={mode}
               error={passwordFieldError}
               editable={!submitting}
-              placeholder={
-                mode === "signup" ? "Choose a password" : "Password"
-              }
+              placeholder={mode === "signup" ? "Choose a password" : "Password"}
             />
           </View>
 

@@ -240,6 +240,8 @@ function goalsToRow(goals: UserGoals, preferredUnits: UnitSystem, userId: string
     timeline_weeks: goals.timelineWeeks ?? null,
     created_at: new Date(goals.createdAt).toISOString(),
     updated_at: new Date(goals.updatedAt).toISOString(),
+    // Explicitly clear server-side tombstone on undelete (defense-in-depth)
+    deleted_at: null,
   };
 }
 
@@ -409,18 +411,21 @@ class SyncService {
     }
   }
 
-  /** Soft-delete a remote row (or hard-delete for tables without deleted_at).
-   * Called per-event by syncSubscriber; we skip the per-call session verify
-   * to avoid N+1 round-trips. RLS on Supabase still enforces user_id. */
+  /** Soft-delete a remote row by setting `deleted_at = NOW()`. Called per-event
+   * by syncSubscriber; we skip the per-call session verify to avoid N+1
+   * round-trips. RLS on Supabase still enforces user_id. */
   async pushDelete(table: SyncTable, id: string) {
     if (!this.userId) return;
 
     try {
       if (table === 'user_goals') {
-        // user_goals has no deleted_at column — hard delete by user_id
+        // Tombstone the row so other devices (and a future re-sign-in)
+        // see deleted_at on pull and clear local goals. The row itself is
+        // preserved — re-onboarding upserts with deleted_at: null to
+        // resurrect it in place (see goalsToRow).
         await supabase
           .from('user_goals')
-          .delete()
+          .update({ deleted_at: new Date().toISOString() })
           .eq('user_id', this.userId);
       } else if (table === 'documents') {
         await supabase
@@ -792,10 +797,6 @@ class SyncService {
       .eq('user_id', userId);
     if (error) { console.error('[sync] Pull user_goals failed:', error.message); return; }
 
-    const dirty = loadDirty();
-    // If local goals are dirty, skip pull (local wins)
-    if (dirty.user_goals.includes('current')) return;
-
     if (!data?.length) {
       // Row genuinely doesn't exist on server. Clear local only after the first
       // sync — on cold start before any sync has run, local goals may simply not
@@ -813,6 +814,24 @@ class SyncService {
 
     const row = data[0]; // One row per user
     const state = useAppStore.getState();
+
+    // Tombstoned remote — clear local regardless of dirty state. Account
+    // deletion (and a future explicit "reset goals" flow) is authoritative
+    // server-side intent; signing back in with the same account, or a
+    // second device coming online, must drop local goals so the onboarding
+    // gate reopens. Mirrors the deleted_at branch in pullEntries /
+    // pullDocuments / pullSavedEntries / pullCustomMeals / pullWeightEntries.
+    if (row.deleted_at) {
+      if (state.goals) {
+        useAppStore.setState({ goals: null });
+      }
+      return;
+    }
+
+    const dirty = loadDirty();
+    // If local goals are dirty, skip pull (local wins for non-deletes).
+    if (dirty.user_goals.includes('current')) return;
+
     const remoteUpdated = new Date(row.updated_at).getTime();
     const localUpdated = state.goals ? new Date(state.goals.updatedAt).getTime() : 0;
 

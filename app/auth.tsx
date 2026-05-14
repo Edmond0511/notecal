@@ -309,18 +309,17 @@ export default function AuthScreen() {
             accessibilityLabel="Continue with Apple"
             style={[styles.btn, styles.appleBtn]}
           >
-            <View style={styles.btnLeft}>
-              {isLoading === 'apple' ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <>
+            {isLoading === 'apple' ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <View style={styles.btnContent}>
+                <View style={styles.iconSlot}>
                   <Ionicons name="logo-apple" size={18} color="#fff" />
-                  <Text style={[styles.btnLabel, styles.appleBtnLabel]}>Continue with Apple</Text>
-                </>
-              )}
-            </View>
-            {isLoading !== 'apple' && (
-              <Ionicons name="arrow-forward" size={16} color="#fff" />
+                </View>
+                <Text style={[styles.btnLabel, styles.appleBtnLabel]}>
+                  Continue with Apple
+                </Text>
+              </View>
             )}
           </TouchableOpacity>
         )}
@@ -333,19 +332,40 @@ export default function AuthScreen() {
           accessibilityLabel="Continue with Google"
           style={[styles.btn, styles.googleBtn]}
         >
-          <View style={styles.btnLeft}>
-            {isLoading === 'google' ? (
-              <ActivityIndicator color={Tokens.textSecondary} />
-            ) : (
-              <>
+          {isLoading === 'google' ? (
+            <ActivityIndicator color={Tokens.textSecondary} />
+          ) : (
+            <View style={styles.btnContent}>
+              <View style={styles.iconSlot}>
                 <GoogleG size={18} />
-                <Text style={[styles.btnLabel, styles.googleBtnLabel]}>Continue with Google</Text>
-              </>
-            )}
-          </View>
-          {isLoading !== 'google' && (
-            <Ionicons name="arrow-forward" size={16} color={Tokens.textPrimary} />
+              </View>
+              <Text style={[styles.btnLabel, styles.googleBtnLabel]}>
+                Continue with Google
+              </Text>
+            </View>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => {
+            if (isLoading !== null) return;
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push('/sign-in-email');
+          }}
+          disabled={isLoading !== null}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Continue with email"
+          style={[styles.btn, styles.emailBtn]}
+        >
+          <View style={styles.btnContent}>
+            <View style={styles.iconSlot}>
+              <Ionicons name="mail-outline" size={18} color={Tokens.textPrimary} />
+            </View>
+            <Text style={[styles.btnLabel, styles.emailBtnLabel]}>
+              Continue with email
+            </Text>
+          </View>
         </TouchableOpacity>
 
         {error && (
@@ -449,34 +469,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
     justifyContent: 'center',
-    marginTop: 16,
-    marginBottom: 24,
+    marginTop: 8,
+    marginBottom: 10,
   },
   dot: {
     height: 6,
     borderRadius: 3,
   },
   bottom: {
-    paddingBottom: 40,
-    gap: 10,
+    paddingBottom: 8,
+    gap: 6,
   },
   btn: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     height: 56,
     borderRadius: 30,
     paddingHorizontal: 22,
   },
-  btnLeft: {
+  btnContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
+    width: 220,
+  },
+  iconSlot: {
+    width: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   appleBtn: {
     backgroundColor: '#000',
   },
   googleBtn: {
+    backgroundColor: Tokens.surfaceRaised,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Tokens.border,
+  },
+  emailBtn: {
     backgroundColor: Tokens.surfaceRaised,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Tokens.border,
@@ -488,6 +518,7 @@ const styles = StyleSheet.create({
   },
   appleBtnLabel: { color: '#fff' },
   googleBtnLabel: { color: Tokens.textPrimary },
+  emailBtnLabel: { color: Tokens.textPrimary },
   errorPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -507,7 +538,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Tokens.textTertiary,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 2,
   },
   legalEmph: {
     color: Tokens.textSecondary,
@@ -516,6 +547,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Tokens.textTertiary,
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: -2,
   },
 });

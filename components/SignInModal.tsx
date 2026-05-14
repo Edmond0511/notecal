@@ -139,6 +139,7 @@ export function SignInModal({ visible, onClose }: Props) {
       });
       if (signInError) throw signInError;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onClose();
     } catch (err: any) {
       if (isErrorWithCode(err) && err.code === statusCodes.SIGN_IN_CANCELLED) {
         return;
@@ -185,6 +186,7 @@ export function SignInModal({ visible, onClose }: Props) {
 
       if (signInError) throw signInError;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onClose();
     } catch (err: any) {
       if (err?.code === "ERR_REQUEST_CANCELED") return;
       setError(err?.message || "Failed to sign in with Apple");

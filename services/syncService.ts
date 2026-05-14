@@ -781,7 +781,7 @@ class SyncService {
     }
   }
 
-  private async pullGoals(_since: string | null) {
+  private async pullGoals(since: string | null) {
     const userId = this.userId!;
     // user_goals is one row per user — always fetch it (no time filter).
     // Filtering by updated_at would conflate "no row" with "row not updated since",
@@ -799,8 +799,10 @@ class SyncService {
     if (!data?.length) {
       // Row genuinely doesn't exist on server. Clear local only after the first
       // sync — on cold start before any sync has run, local goals may simply not
-      // have been pushed yet.
-      if (getLastPull()) {
+      // have been pushed yet. Use the `since` snapshot captured by the caller
+      // so a concurrent sync's setLastPull write can't flip this decision
+      // mid-pull (which would corrupt local goals on race-y first sign-ins).
+      if (since) {
         const state = useAppStore.getState();
         if (state.goals) {
           useAppStore.setState({ goals: null });

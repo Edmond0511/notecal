@@ -216,11 +216,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // join key align. Fire-and-forget; SubscriptionProvider listens for
         // updates separately.
         logInPurchases(session.user.id);
-        syncService.fullSync();
-        // Health sync runs in parallel; safe to fire-and-forget
-        import('@/services/healthkit/healthSyncService').then(({ healthSyncService }) =>
-          healthSyncService.fullHealthSync(),
-        );
+        // Sync is kicked off by RootLayoutNav's effect on isAuthenticated
+        // change — calling it here too would race with that caller and
+        // corrupt local goals via concurrent pullAllInternal interleaving.
       } else if (event === "SIGNED_OUT") {
         // Drop the Pro flag immediately so the SIGNED_OUT → SIGNED_IN gap
         // doesn't let the incoming free user briefly bypass the free-call

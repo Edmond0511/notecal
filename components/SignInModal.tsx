@@ -6,16 +6,16 @@ import {
   useFonts,
 } from "@expo-google-fonts/ibm-plex-sans";
 import { Ionicons } from "@expo/vector-icons";
-import * as AppleAuthentication from "expo-apple-authentication";
-import * as Crypto from "expo-crypto";
-import * as Haptics from "expo-haptics";
-import { useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import {
   GoogleSignin,
   isErrorWithCode,
   statusCodes,
 } from "@react-native-google-signin/google-signin";
+import * as AppleAuthentication from "expo-apple-authentication";
+import * as Crypto from "expo-crypto";
+import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -128,7 +128,9 @@ export function SignInModal({ visible, onClose }: Props) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       // Native Google Sign-In — see app/auth.tsx for the rationale.
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
       const result = await GoogleSignin.signIn();
       const idToken = result.data?.idToken ?? null;
       if (!idToken) {
@@ -235,7 +237,7 @@ export function SignInModal({ visible, onClose }: Props) {
 
             <View style={styles.headerBlock}>
               <Text style={[styles.title, heroFont]}>
-                Good to see <Text style={styles.titleAccent}>you.</Text>
+                Welcome <Text style={styles.titleAccent}>Back.</Text>
               </Text>
               <Text style={styles.subtitle}>Sign in to continue tracking.</Text>
             </View>
@@ -337,9 +339,7 @@ export function SignInModal({ visible, onClose }: Props) {
                 <Text
                   style={styles.legalEmph}
                   onPress={() =>
-                    WebBrowser.openBrowserAsync(
-                      "https://notecal.app/terms"
-                    )
+                    WebBrowser.openBrowserAsync("https://notecal.app/terms")
                   }
                 >
                   Terms
@@ -348,9 +348,7 @@ export function SignInModal({ visible, onClose }: Props) {
                 <Text
                   style={styles.legalEmph}
                   onPress={() =>
-                    WebBrowser.openBrowserAsync(
-                      "https://notecal.app/privacy"
-                    )
+                    WebBrowser.openBrowserAsync("https://notecal.app/privacy")
                   }
                 >
                   Privacy

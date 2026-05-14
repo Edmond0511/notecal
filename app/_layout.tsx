@@ -39,7 +39,12 @@ function RootLayoutNav() {
 
     const seg = segments[0];
     const onOnboarding = seg === 'onboarding';
-    const isPreAuth = seg === 'get-started' || seg === 'auth' || onOnboarding;
+    const isPreAuth =
+      seg === 'get-started' ||
+      seg === 'auth' ||
+      seg === 'sign-in-email' ||
+      seg === 'forgot-password' ||
+      onOnboarding;
 
     if (!isAuthenticated) {
       if (!isPreAuth) router.replace('/get-started');
@@ -125,6 +130,8 @@ function RootLayoutNav() {
         <Stack.Screen name="get-started" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="sign-in-email" options={{ headerShown: false }} />
+        <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="dark" />

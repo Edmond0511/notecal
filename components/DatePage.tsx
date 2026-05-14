@@ -30,7 +30,6 @@ export const DatePage = React.memo(function DatePage({
     deleteEntry,
     deleteEntries,
     saveDocument,
-    getDocument,
     waterTrackingEnabled,
     pendingInsertion,
     clearPendingInsertion,
@@ -41,7 +40,6 @@ export const DatePage = React.memo(function DatePage({
       deleteEntry: s.deleteEntry,
       deleteEntries: s.deleteEntries,
       saveDocument: s.saveDocument,
-      getDocument: s.getDocument,
       waterTrackingEnabled: s.goals?.manualTargets?.water !== undefined,
       pendingInsertion:
         s.pendingInsertion?.date === dateString ? s.pendingInsertion : null,
@@ -49,18 +47,34 @@ export const DatePage = React.memo(function DatePage({
     })),
   );
 
-  // Local document text state
-  const [documentText, setDocumentText] = useState(() => {
-    const doc = getDocument(dateString);
-    return doc?.content ?? '';
-  });
+  // Subscribe to the document for this date so background sync (cold start
+  // after a fresh install) propagates into the editor instead of being
+  // shadowed by stale local state.
+  const storedContent = useAppStore(
+    (s) => s.documents.find((d) => d.date === dateString)?.content ?? '',
+  );
+  const [documentText, setDocumentText] = useState(storedContent);
   const documentTextRef = useRef(documentText);
   documentTextRef.current = documentText;
 
-  // Save document on unmount so text isn't lost when swiped away
+  // Mirror the store's value into local state when it changes externally
+  // (e.g. sync pull just populated this date for the first time).
+  useEffect(() => {
+    if (storedContent !== documentTextRef.current) {
+      setDocumentText(storedContent);
+    }
+  }, [storedContent]);
+
+  // Save document on unmount so text isn't lost when swiped away. Guard
+  // against the cold-start race: don't overwrite a non-empty stored doc
+  // with the empty initial seed before sync has populated it.
   useEffect(() => {
     return () => {
       const text = documentTextRef.current.trim();
+      const stored = useAppStore
+        .getState()
+        .documents.find((d) => d.date === dateString)?.content ?? '';
+      if (text === '' && stored !== '') return;
       saveDocument(dateString, text);
     };
   }, [dateString, saveDocument]);

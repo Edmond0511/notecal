@@ -1325,6 +1325,7 @@ export function DatabaseSearchModal({
                             style={styles.searchIcon}
                           />
                           <TextInput
+                            keyboardAppearance="light"
                             ref={searchInputRef}
                             style={styles.searchInput}
                             placeholder="Search"
@@ -1368,6 +1369,7 @@ export function DatabaseSearchModal({
                             style={styles.searchIcon}
                           />
                           <TextInput
+                            keyboardAppearance="light"
                             ref={searchInputRef}
                             style={styles.searchInput}
                             placeholder="Search"
@@ -1483,6 +1485,7 @@ export function DatabaseSearchModal({
                                   style={styles.searchIcon}
                                 />
                                 <TextInput
+                                  keyboardAppearance="light"
                                   ref={mealsSearchInputRef}
                                   style={styles.searchInput}
                                   placeholder="Search"
@@ -1514,6 +1517,7 @@ export function DatabaseSearchModal({
                                   style={styles.searchIcon}
                                 />
                                 <TextInput
+                                  keyboardAppearance="light"
                                   ref={mealsSearchInputRef}
                                   style={styles.searchInput}
                                   placeholder="Search"
@@ -1879,6 +1883,7 @@ export function DatabaseSearchModal({
                               </TouchableOpacity>
                               <View style={styles.servingInputWrapper}>
                                 <TextInput
+                                  keyboardAppearance="light"
                                   style={styles.servingInput}
                                   value={servingGrams}
                                   onChangeText={(text) => {
@@ -1988,6 +1993,7 @@ export function DatabaseSearchModal({
                               </TouchableOpacity>
                               <View style={styles.servingInputWrapper}>
                                 <TextInput
+                                  keyboardAppearance="light"
                                   style={styles.servingInput}
                                   value={servingGrams}
                                   onChangeText={(text) => {
@@ -2281,6 +2287,7 @@ export function DatabaseSearchModal({
             setEditMacroPopup(null);
           }}
           onClose={() => setEditMacroPopup(null)}
+          nested
         />
       )}
 

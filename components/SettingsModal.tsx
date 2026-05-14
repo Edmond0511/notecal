@@ -1,11 +1,12 @@
 import { SystemFont, Tokens } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { mmkv } from "@/lib/mmkv";
+import { mmkv, purgeAllLocalData } from "@/lib/mmkv";
 import { supabase } from "@/lib/supabase";
 import { clearNutritionCache } from "@/services/nutritionCache";
+import { nutritionQueue } from "@/services/nutritionQueue";
 import { useAppStore } from "@/store/app-store";
-import { PaywallTrigger } from "./PaywallTrigger";
+import Purchases from "react-native-purchases";
 import {
   isLiquidGlassSupported,
   LiquidGlassView,
@@ -93,8 +94,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
   const [showAppleHealth, setShowAppleHealth] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false);
-  const { isPro, restore } = useSubscription();
+  const { isPro, customerInfo } = useSubscription();
   const goals = useAppStore((s) => s.goals);
   const profile = useAppStore((s) => s.profile);
   const { user: authUser } = useAuth();
@@ -219,8 +219,60 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
     }
   };
 
+  const showFinalDeleteConfirmation = () => {
+    Alert.alert(
+      "Are you sure?",
+      "All your food entries, saved entries, weight data, goals, and nutrition history will be permanently deleted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Yes, Delete Everything",
+          style: "destructive",
+          onPress: performAccountDeletion,
+        },
+      ],
+    );
+  };
+
   const handleDeleteAccount = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // Apple/Google IAPs are managed by the platform store, not by us. If the
+    // user has a recurring subscription, deleting their NoteCal account will
+    // NOT cancel it — they'll keep getting billed until they cancel via the
+    // platform's Subscriptions UI. Warn explicitly and offer a deep link to
+    // that UI. Lifetime purchases (in `nonSubscriptionTransactions`) aren't
+    // recurring so this warning doesn't apply to them.
+    const hasRecurringSubscription =
+      (customerInfo?.activeSubscriptions?.length ?? 0) > 0;
+
+    if (hasRecurringSubscription) {
+      Alert.alert(
+        "Your subscription will continue",
+        "Deleting your account won't cancel your subscription — it's managed by Apple and will keep billing until you cancel it in Settings → Apple ID → Subscriptions.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Manage Subscription",
+            onPress: () => {
+              Purchases.showManageSubscriptions().catch((err) => {
+                console.warn("[delete-account] showManageSubscriptions failed:", err);
+                Linking.openURL("https://apps.apple.com/account/subscriptions").catch(
+                  () => {},
+                );
+              });
+            },
+          },
+          {
+            text: "Delete Anyway",
+            style: "destructive",
+            onPress: showFinalDeleteConfirmation,
+          },
+        ],
+      );
+      return;
+    }
+
     Alert.alert(
       "Delete Account?",
       "This will permanently delete your account and all associated data. This action cannot be undone.",
@@ -229,20 +281,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
         {
           text: "Delete Account",
           style: "destructive",
-          onPress: () => {
-            Alert.alert(
-              "Are you sure?",
-              "All your food entries, saved entries, weight data, goals, and nutrition history will be permanently deleted.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Yes, Delete Everything",
-                  style: "destructive",
-                  onPress: performAccountDeletion,
-                },
-              ],
-            );
-          },
+          onPress: showFinalDeleteConfirmation,
         },
       ],
     );
@@ -266,6 +305,29 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       // Account is already deleted server-side, so scope doesn't matter
       // for revocation; using local for consistency with handleSignOut.
       await supabase.auth.signOut({ scope: "local" });
+
+      // SIGNED_OUT runs `clearUserData()` (only entries / docs / goals /
+      // savedEntries / customMeals / weightEntries / profile) and clears
+      // `sync-dirty` + `sync-last-pull`. It also archives a fresh snapshot
+      // for the just-deleted user under `user-snapshot:${id}`. For account
+      // deletion we want EVERY trace of this user removed — including:
+      //   - The freshly-created snapshot for the deleted user
+      //   - Persisted preferences / meal reminders (not cleared by SIGNED_OUT)
+      //   - nutrition-cache:* (keyed by user id; no longer relevant)
+      //   - photo-upload-queue, photo-cache-map (point at deleted entries)
+      //   - health-dirty, health-dirty-deletes, health-failure-counts, health-settings
+      //   - free-ai-calls:* (counter would leak between accounts)
+      // mmkv.clearAll() wipes them all in one shot. The MMKV encryption key
+      // lives in SecureStore so the next session can still decrypt MMKV.
+      purgeAllLocalData();
+      // Bring the in-memory Zustand store back to first-launch defaults so
+      // any cached state (mealReminders, preferredUnits, etc.) doesn't carry
+      // over to the next sign-in within this app session.
+      useAppStore.getState().resetAllState();
+      // Reset rate-limit / entitlement cooldown so the next user isn't
+      // inheriting a "paused until X" timer.
+      nutritionQueue.clearAll();
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onClose();
     } catch (error) {
@@ -775,111 +837,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                   </View>
                 </Animated.View>
 
-                {/* Subscription Section */}
-                <Animated.View
-                  entering={FadeInDown.delay(500).duration(400)}
-                  style={styles.section}
-                >
-                  <Text style={styles.sectionTitle}>Subscription</Text>
-                  <View style={styles.menuCardShadow}>
-                    <View style={styles.menuCard}>
-                      {!isPro && (
-                        <>
-                          <TouchableOpacity
-                            style={styles.menuItem}
-                            activeOpacity={0.7}
-                            onPress={() => {
-                              Haptics.impactAsync(
-                                Haptics.ImpactFeedbackStyle.Light,
-                              );
-                              setShowPaywall(true);
-                            }}
-                          >
-                            <Ionicons
-                              name="sparkles-outline"
-                              size={20}
-                              color={Tokens.accent}
-                              style={{ marginRight: 12 }}
-                            />
-                            <Text
-                              style={[
-                                styles.menuItemText,
-                                { color: Tokens.accent, fontWeight: "600" },
-                              ]}
-                            >
-                              Upgrade to Pro
-                            </Text>
-                            <Ionicons
-                              name="chevron-forward"
-                              size={20}
-                              color={Tokens.textTertiary}
-                            />
-                          </TouchableOpacity>
-                          <View style={styles.menuDivider} />
-                        </>
-                      )}
-
-                      <TouchableOpacity
-                        style={styles.menuItem}
-                        activeOpacity={0.7}
-                        onPress={async () => {
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light,
-                          );
-                          const restored = await restore();
-                          Alert.alert(
-                            restored ? "Pro restored" : "No purchases found",
-                            restored
-                              ? "Your Pro subscription is now active on this device."
-                              : "We couldn’t find a previous purchase on this Apple ID.",
-                          );
-                        }}
-                      >
-                        <Ionicons
-                          name="refresh-outline"
-                          size={20}
-                          color={Tokens.textPrimary}
-                          style={{ marginRight: 12 }}
-                        />
-                        <Text style={styles.menuItemText}>Restore Purchases</Text>
-                      </TouchableOpacity>
-
-                      {isPro && (
-                        <>
-                          <View style={styles.menuDivider} />
-                          <TouchableOpacity
-                            style={styles.menuItem}
-                            activeOpacity={0.7}
-                            onPress={() => {
-                              Haptics.impactAsync(
-                                Haptics.ImpactFeedbackStyle.Light,
-                              );
-                              Linking.openURL(
-                                "https://apps.apple.com/account/subscriptions",
-                              );
-                            }}
-                          >
-                            <Ionicons
-                              name="settings-outline"
-                              size={20}
-                              color={Tokens.textPrimary}
-                              style={{ marginRight: 12 }}
-                            />
-                            <Text style={styles.menuItemText}>
-                              Manage Subscription
-                            </Text>
-                            <Ionicons
-                              name="chevron-forward"
-                              size={20}
-                              color={Tokens.textTertiary}
-                            />
-                          </TouchableOpacity>
-                        </>
-                      )}
-                    </View>
-                  </View>
-                </Animated.View>
-
                 {user && (
                   <Animated.View
                     entering={FadeInDown.delay(600).duration(400)}
@@ -993,11 +950,6 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             nested
           />
         )}
-
-        <PaywallTrigger
-          visible={showPaywall}
-          onClose={() => setShowPaywall(false)}
-        />
       </Modal>
     </>
   );
@@ -1044,9 +996,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FCFCFB",
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },

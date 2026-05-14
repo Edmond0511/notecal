@@ -59,8 +59,15 @@ function yearlyEffectiveMonthly(pkg: PurchasesPackage): string {
 }
 
 export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
-  const { offering, offeringError, refreshOffering, purchase, restore, isPro } =
-    useSubscription();
+  const {
+    offering,
+    offeringError,
+    refreshOffering,
+    purchase,
+    restore,
+    isPro,
+    yearlyTrialEligible,
+  } = useSubscription();
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -100,10 +107,16 @@ export const Paywall: React.FC<PaywallProps> = ({ onSuccess, onDismiss }) => {
   const selectedPackage =
     selectedId === 'yearly' ? yearly ?? monthly : monthly ?? yearly;
 
-  // Null when RC reports no intro offer (e.g. user already consumed their
-  // trial, or trial isn't offered in their region). UI must not promise
-  // "free" copy in that case.
-  const trialLabel = getTrialLabel(yearly);
+  // Null when either:
+  //   1. RC's offering has no intro offer configured on the yearly product, OR
+  //   2. The current Apple ID isn't eligible for the trial (already redeemed,
+  //      region restriction, etc.)
+  // RC's offering always carries `introPrice` when one is configured on the
+  // product — eligibility is a SEPARATE API call. We gate on
+  // `yearlyTrialEligible` here so the UI doesn't promise "Try free for 3
+  // days" to a user Apple will refuse at purchase time. While eligibility
+  // is loading (null), we also hide the trial copy — fail closed.
+  const trialLabel = yearlyTrialEligible ? getTrialLabel(yearly) : null;
 
   // Already-Pro short-circuit (e.g. opened paywall by mistake).
   if (isPro) {

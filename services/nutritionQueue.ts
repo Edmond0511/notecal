@@ -83,9 +83,17 @@ class NutritionQueue {
     this.queue = this.queue.filter((q) => q.entryId !== entryId);
   }
 
-  /** Clear all queued items (in-flight requests are safe — isEntryDeleted() handles them) */
+  /** Clear all queued items and reset rate-limit / entitlement state. In-flight
+   *  requests are safe — isEntryDeleted() handles them. Called on sign-out and
+   *  account deletion so the next signed-in user starts with a clean slate. */
   clearAll() {
     this.queue = [];
+    this.pausedUntil = 0;
+    this.entitlementBlocked = false;
+    if (this.resumeTimer) {
+      clearTimeout(this.resumeTimer);
+      this.resumeTimer = null;
+    }
   }
 
   private drain() {

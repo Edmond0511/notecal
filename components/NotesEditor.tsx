@@ -1298,6 +1298,7 @@ export function NotesEditor({
           {/* TextInput: only receives touches when focused */}
           <View pointerEvents={isFocused ? "auto" : "none"}>
             <TextInput
+              keyboardAppearance="light"
               ref={textInputRef}
               style={styles.documentInput}
               value={documentText}

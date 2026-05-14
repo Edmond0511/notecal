@@ -78,7 +78,8 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.164114630017-79hc0k64crk25d7e0jgtnomg8efnl3fa"
         }
-      ]
+      ],
+      "./plugins/withForceLightUIWindow"
     ],
     "experiments": {
       "typedRoutes": true,

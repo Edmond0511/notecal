@@ -515,6 +515,7 @@ export function WeightTrackingModal({
             style={styles.heroWeightSection}
           >
             <TextInput
+              keyboardAppearance="light"
               style={styles.heroWeightInput}
               value={weightValue}
               onChangeText={(text) =>
@@ -1139,9 +1140,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FCFCFB",
   },
   headerBackButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1333,9 +1334,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1406,14 +1407,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 10,
-    marginLeft: 4,
+    marginBottom: 6,
+    marginLeft: 0,
   },
   photosSectionLabel: {
-    fontSize: 15,
-    fontWeight: "500",
+    fontSize: 17,
+    fontWeight: "600",
     color: "#6B6B6B",
-    letterSpacing: -0.2,
+    textTransform: "capitalize",
+    letterSpacing: -0.3,
   },
   photoStrip: {
     flexDirection: "row",

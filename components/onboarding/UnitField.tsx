@@ -69,6 +69,7 @@ export function UnitField(props: UnitFieldProps) {
         {props.kind === 'single' ? (
           <View style={styles.inputGroup}>
             <TextInput
+              keyboardAppearance="light"
               value={props.value}
               onChangeText={props.onChangeValue}
               keyboardType="number-pad"
@@ -81,6 +82,7 @@ export function UnitField(props: UnitFieldProps) {
         ) : (
           <View style={styles.inputGroup}>
             <TextInput
+              keyboardAppearance="light"
               value={props.primary}
               onChangeText={props.primaryOnChange}
               keyboardType="number-pad"
@@ -90,6 +92,7 @@ export function UnitField(props: UnitFieldProps) {
             />
             <Text style={styles.unit}>{props.primaryUnit}</Text>
             <TextInput
+              keyboardAppearance="light"
               value={props.secondary}
               onChangeText={props.secondaryOnChange}
               keyboardType="number-pad"

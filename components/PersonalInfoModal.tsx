@@ -436,6 +436,7 @@ export function PersonalInfoModal({
         {isEditing && field === "firstName" && (
           <View style={styles.editRow}>
             <TextInput
+              keyboardAppearance="light"
               style={[styles.editInput, { flex: 1 }]}
               value={editFirstName}
               onChangeText={setEditFirstName}
@@ -453,6 +454,7 @@ export function PersonalInfoModal({
         {isEditing && field === "lastName" && (
           <View style={styles.editRow}>
             <TextInput
+              keyboardAppearance="light"
               style={[styles.editInput, { flex: 1 }]}
               value={editLastName}
               onChangeText={setEditLastName}
@@ -470,6 +472,7 @@ export function PersonalInfoModal({
         {isEditing && field === "age" && (
           <View style={styles.editRow}>
             <TextInput
+              keyboardAppearance="light"
               style={styles.editInput}
               value={editAge}
               onChangeText={setEditAge}
@@ -531,6 +534,7 @@ export function PersonalInfoModal({
               {heightUnit === "imperial" ? (
                 <>
                   <TextInput
+                    keyboardAppearance="light"
                     style={[styles.editInput, { flex: 1 }]}
                     value={editHeightFeet}
                     onChangeText={(v) => {
@@ -549,6 +553,7 @@ export function PersonalInfoModal({
                   />
                   <Text style={styles.editUnit}>ft</Text>
                   <TextInput
+                    keyboardAppearance="light"
                     style={[styles.editInput, { flex: 1, marginLeft: 12 }]}
                     value={editHeightInches}
                     onChangeText={(v) => {
@@ -569,6 +574,7 @@ export function PersonalInfoModal({
               ) : (
                 <>
                   <TextInput
+                    keyboardAppearance="light"
                     style={styles.editInput}
                     value={editHeightCm}
                     onChangeText={(v) => {
@@ -599,6 +605,7 @@ export function PersonalInfoModal({
               {weightUnit === "imperial" ? (
                 <>
                   <TextInput
+                    keyboardAppearance="light"
                     style={styles.editInput}
                     value={editWeightLbs}
                     onChangeText={(v) => {
@@ -617,6 +624,7 @@ export function PersonalInfoModal({
               ) : (
                 <>
                   <TextInput
+                    keyboardAppearance="light"
                     style={styles.editInput}
                     value={editWeightKg}
                     onChangeText={(v) => {
@@ -818,9 +826,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FCFCFB",
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },

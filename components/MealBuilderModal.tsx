@@ -515,6 +515,7 @@ export function MealBuilderModal({
               >
                 <View style={styles.nameInputRow}>
                   <TextInput
+                    keyboardAppearance="light"
                     style={styles.nameInput}
                     placeholder="New Meal"
                     placeholderTextColor={Tokens.textTertiary}
@@ -836,9 +837,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },

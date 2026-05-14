@@ -494,6 +494,30 @@ export const useAppStore = create<AppState>()(
     });
   },
 
+  resetAllState: () => {
+    set({
+      entries: [],
+      documents: [],
+      goals: null,
+      savedEntries: [],
+      customMeals: [],
+      weightEntries: [],
+      profile: null,
+      preferredUnits: 'metric' as UnitSystem,
+      entryMode: 'freeform' as EntryMode,
+      enterOnlyMode: false,
+      notificationsEnabled: false,
+      mealReminders: [
+        { id: 'breakfast', name: 'Breakfast', time: '08:00', enabled: true, isDefault: true },
+        { id: 'lunch', name: 'Lunch', time: '12:00', enabled: true, isDefault: true },
+        { id: 'dinner', name: 'Dinner', time: '18:00', enabled: true, isDefault: true },
+      ],
+      pendingPaywallAfterAuth: false,
+      isPro: false,
+      pendingInsertion: null,
+    });
+  },
+
   setPreferredUnits: (units: UnitSystem) => {
     set({ preferredUnits: units });
   },

@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import Purchases, {
   CustomerInfo,
+  INTRO_ELIGIBILITY_STATUS,
   PurchasesOffering,
   PurchasesPackage,
 } from 'react-native-purchases';
@@ -52,6 +53,13 @@ export function customerInfoIsPro(info: CustomerInfo | null | undefined): boolea
   // every server call 403s on entitlement_required. Deny on client too so
   // gating is consistent.
   if (ent.ownershipType === 'FAMILY_SHARED') return false;
+  // RC keeps an entitlement in `active` until its cached customerInfo refreshes
+  // past expirationDate, so a cancelled-but-expired trial can briefly appear
+  // Pro between SDK polling cycles. Fail closed when we already know it expired.
+  if (ent.expirationDate) {
+    const expiresMs = Date.parse(ent.expirationDate);
+    if (Number.isFinite(expiresMs) && expiresMs <= Date.now()) return false;
+  }
   return true;
 }
 
@@ -142,5 +150,28 @@ export async function getCustomerInfo(): Promise<CustomerInfo | null> {
   } catch (e) {
     console.error('[revenuecat] getCustomerInfo failed', e);
     return null;
+  }
+}
+
+/** Checks whether THIS Apple ID is eligible for the yearly product's intro
+ *  (free trial) offer. RC's offering packages always include `introPrice` if
+ *  one is configured on the product in App Store Connect — they are NOT
+ *  pre-filtered by user eligibility. We must call this API explicitly to
+ *  know whether Apple will actually grant the trial at purchase time.
+ *
+ *  Returns true only on explicit `ELIGIBLE`. Treats UNKNOWN / NO_INTRO_OFFER
+ *  / INELIGIBLE / errors as "do not promise a trial" — failing closed avoids
+ *  the UI promising "Try free for 3 days" when Apple will charge full price. */
+export async function checkYearlyTrialEligibility(): Promise<boolean> {
+  if (!configured) return false;
+  try {
+    const result = await Purchases.checkTrialOrIntroductoryPriceEligibility([
+      PRODUCT_IDS.yearly,
+    ]);
+    const status = result[PRODUCT_IDS.yearly]?.status;
+    return status === INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE;
+  } catch (e) {
+    console.error('[revenuecat] checkTrialOrIntroductoryPriceEligibility failed', e);
+    return false;
   }
 }

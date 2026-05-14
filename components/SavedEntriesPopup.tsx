@@ -355,6 +355,7 @@ export function SavedEntriesPopup({
         style={styles.searchIcon}
       />
       <TextInput
+        keyboardAppearance="light"
         style={styles.searchInput}
         placeholder="Search"
         placeholderTextColor="#636366"

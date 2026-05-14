@@ -560,6 +560,7 @@ export function NutritionGoalsModal({
         {editingField === field ? (
           <View style={styles.targetInputContainer}>
             <TextInput
+              keyboardAppearance="light"
               ref={inputRefs[field]}
               style={styles.targetInput}
               value={value}
@@ -691,8 +692,7 @@ export function NutritionGoalsModal({
                             <Switch
                               value={enabled}
                               onValueChange={() => toggleNutrient(nutrient.key)}
-                              trackColor={{ true: Tokens.accent, false: Tokens.textTertiary }}
-                              ios_backgroundColor={Tokens.textTertiary}
+                              trackColor={{ true: Tokens.accent }}
                               style={{ transform: [{ scale: 0.85 }] }}
                             />
                           </View>
@@ -866,9 +866,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FCFCFB",
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },

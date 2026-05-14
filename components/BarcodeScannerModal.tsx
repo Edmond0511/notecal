@@ -766,6 +766,7 @@ export function BarcodeScannerModal({
                           </TouchableOpacity>
                           <View style={styles.servingInputWrapper}>
                             <TextInput
+                              keyboardAppearance="light"
                               style={styles.servingInput}
                               value={servingGrams}
                               onChangeText={(text) => {
@@ -1049,6 +1050,7 @@ export function BarcodeScannerModal({
                     </Text>
                     <View style={styles.manualInputRow}>
                       <TextInput
+                        keyboardAppearance="light"
                         style={styles.manualInput}
                         placeholder="Search"
                         placeholderTextColor="#999"
@@ -1107,6 +1109,7 @@ export function BarcodeScannerModal({
                     </Text>
                     <View style={styles.manualInputRow}>
                       <TextInput
+                        keyboardAppearance="light"
                         style={styles.manualInput}
                         placeholder="Search"
                         placeholderTextColor="#999"
@@ -1168,6 +1171,7 @@ export function BarcodeScannerModal({
             setEditMacroPopup(null);
           }}
           onClose={() => setEditMacroPopup(null)}
+          nested
         />
       )}
       {/* Nutrition facts (FDA-style label) — same component as MealBuilderModal */}

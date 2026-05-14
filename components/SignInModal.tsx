@@ -9,6 +9,11 @@ import { Ionicons } from "@expo/vector-icons";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -119,48 +124,24 @@ export function SignInModal({ visible, onClose }: Props) {
       setError(null);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: "notecal://auth/callback",
-          skipBrowserRedirect: true,
-        },
-      });
-
-      if (oauthError) throw oauthError;
-
-      if (data?.url) {
-        const result = await WebBrowser.openAuthSessionAsync(
-          data.url,
-          "notecal://auth/callback",
-        );
-        if (result.type !== "success") return;
-
-        const url = result.url;
-        const urlObj = new URL(url);
-        const code = urlObj.searchParams.get("code");
-
-        if (code) {
-          const { error: sessionError } =
-            await supabase.auth.exchangeCodeForSession(code);
-          if (sessionError) throw sessionError;
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        } else {
-          const hashParams = new URLSearchParams(url.split("#")[1] || "");
-          const accessToken = hashParams.get("access_token");
-          const refreshToken = hashParams.get("refresh_token");
-          if (accessToken && refreshToken) {
-            await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          } else {
-            setError("Authentication failed - please try again");
-          }
-        }
+      // Native Google Sign-In — see app/auth.tsx for the rationale.
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const result = await GoogleSignin.signIn();
+      const idToken = result.data?.idToken ?? null;
+      if (!idToken) {
+        throw new Error("No identity token received from Google");
       }
+
+      const { error: signInError } = await supabase.auth.signInWithIdToken({
+        provider: "google",
+        token: idToken,
+      });
+      if (signInError) throw signInError;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
+      if (isErrorWithCode(err) && err.code === statusCodes.SIGN_IN_CANCELLED) {
+        return;
+      }
       setError(err?.message || "Failed to sign in with Google");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {

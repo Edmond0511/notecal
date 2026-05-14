@@ -329,6 +329,7 @@ export interface AppState {
   setGoals: (goals: UserGoals) => void;
   clearGoals: () => void;
   clearUserData: () => void;
+  resetAllState: () => void;
   setPreferredUnits: (units: UnitSystem) => void;
   setEntryMode: (mode: EntryMode) => void;
   setEnterOnlyMode: (enabled: boolean) => void;

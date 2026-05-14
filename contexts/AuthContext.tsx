@@ -13,11 +13,15 @@ import { AppState } from "react-native";
 // Configure native Google Sign-In once at module load. webClientId is the
 // OAuth 2.0 *Web* client ID from Google Cloud — its value must match the one
 // configured on the Supabase Google provider so the ID-token `aud` claim
-// validates server-side. The iOS client ID is wired via the Expo config
-// plugin's reversed URL scheme in app.json, so it isn't passed here.
+// validates server-side. iosClientId is required so the native SDK can
+// initiate the OAuth request without a GoogleService-Info.plist.
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 if (googleWebClientId) {
-  GoogleSignin.configure({ webClientId: googleWebClientId });
+  GoogleSignin.configure({
+    webClientId: googleWebClientId,
+    iosClientId: googleIosClientId,
+  });
 }
 
 const LAST_USER_KEY = "last-signed-in-user-id";

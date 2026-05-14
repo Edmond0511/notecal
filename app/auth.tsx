@@ -182,6 +182,9 @@ export default function AuthScreen() {
       // is configured on the device) — no Supabase domain appears in any
       // prompt. The returned ID token is exchanged with Supabase via
       // signInWithIdToken, matching the Apple flow below.
+      //
+      // The library is pinned to v14.x (GoogleSignIn iOS 7.x) because newer
+      // versions auto-embed an opaque nonce that Supabase rejects.
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       const result = await GoogleSignin.signIn();
       const idToken = result.data?.idToken ?? null;

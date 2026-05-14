@@ -25,7 +25,7 @@
     "@kingstinct/react-native-healthkit": "^14.0.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-community/netinfo": "11.4.1",
-    "@react-native-google-signin/google-signin": "^16.1.2",
+    "@react-native-google-signin/google-signin": "^14.0.2",
     "@react-native-masked-view/masked-view": "0.3.2",
     "@react-native-menu/menu": "^2.0.0",
     "@react-native-segmented-control/segmented-control": "2.5.7",

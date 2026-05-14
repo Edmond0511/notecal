@@ -1,4 +1,5 @@
 import { SystemFont, Tokens } from "@/constants/theme";
+import { PrimaryButton } from "@/components/onboarding/PrimaryButton";
 import { useAppStore } from "@/store/app-store";
 import { CommonPortion, Entry, FatSecretServing, Macros } from "@/types";
 import {
@@ -506,11 +507,13 @@ function SomethingOffPopup({
   onSubmit,
   onClose,
   isLoading,
+  nested,
 }: {
   item: { id: string; label: string; macros: Macros };
   onSubmit: (feedback: string) => void;
   onClose: () => void;
   isLoading: boolean;
+  nested?: boolean;
 }) {
   const [feedback, setFeedback] = useState("");
   const inputRef = useRef<TextInput>(null);
@@ -588,7 +591,7 @@ function SomethingOffPopup({
         <Animated.View
           style={[
             styles.somethingOffContainer,
-            { marginTop: insets.top },
+            { marginTop: insets.top + (nested ? 16 : 0) },
             animatedStyle,
           ]}
         >
@@ -637,6 +640,7 @@ function SomethingOffPopup({
             {/* Feedback Section */}
             <Text style={styles.sectionLabel}>what's wrong?</Text>
             <TextInput
+              keyboardAppearance="light"
               ref={inputRef}
               style={styles.somethingOffInput}
               value={feedback}
@@ -738,6 +742,7 @@ export function EditNutrientPopup({
   onSave,
   onRevert,
   onClose,
+  nested,
 }: {
   nutrientKey: NutrientKey;
   currentValue: number;
@@ -745,6 +750,7 @@ export function EditNutrientPopup({
   onSave: (value: number) => void;
   onRevert: () => void;
   onClose: () => void;
+  nested?: boolean;
 }) {
   // Get colors based on whether it's a macro or micro
   const isMacro = ["kcal", "protein", "fat", "carbs"].includes(nutrientKey);
@@ -840,7 +846,7 @@ export function EditNutrientPopup({
         <Animated.View
           style={[
             styles.editNutrientContainer,
-            { marginTop: insets.top },
+            { marginTop: insets.top + (nested ? 16 : 0) },
             animatedStyle,
           ]}
         >
@@ -881,6 +887,7 @@ export function EditNutrientPopup({
             {/* Input field */}
             <View style={styles.editNutrientInputContainer}>
               <TextInput
+                keyboardAppearance="light"
                 ref={inputRef}
                 style={[
                   styles.editNutrientInput,
@@ -1012,6 +1019,7 @@ function EditQuantityPopup({
   fsServings,
   selectedServingId,
   onSelectServing,
+  nested,
 }: {
   currentServings: number;
   itemQty: number;
@@ -1022,6 +1030,7 @@ function EditQuantityPopup({
   fsServings?: FatSecretServing[];
   selectedServingId?: string;
   onSelectServing?: (servingId: string) => void;
+  nested?: boolean;
 }) {
   // Convert FS servings to CommonPortion format for the existing portion picker
   const fsPortions: CommonPortion[] | undefined = fsServings?.length
@@ -1188,7 +1197,7 @@ function EditQuantityPopup({
         <Animated.View
           style={[
             styles.editQuantityContainer,
-            { marginTop: insets.top },
+            { marginTop: insets.top + (nested ? 16 : 0) },
             animatedStyle,
           ]}
         >
@@ -1226,6 +1235,7 @@ function EditQuantityPopup({
             {/* Quantity Input */}
             <View style={styles.editQuantityInputContainer}>
               <TextInput
+                keyboardAppearance="light"
                 ref={inputRef}
                 style={styles.editQuantityInput}
                 value={inputValue}
@@ -1306,13 +1316,7 @@ function EditQuantityPopup({
             </View>
 
             {/* Save Button */}
-            <TouchableOpacity
-              style={styles.editQuantitySaveButton}
-              onPress={handleSave}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.editQuantitySaveText}>Save</Text>
-            </TouchableOpacity>
+            <PrimaryButton label="Save" onPress={handleSave} />
           </View>
         </Animated.View>
       </GestureDetector>
@@ -2324,6 +2328,7 @@ export function NutritionReasoningPopup({
             onSave={handleSaveNutrient}
             onRevert={handleRevertNutrient}
             onClose={() => setEditNutrientPopup(null)}
+            nested
           />
         )}
 
@@ -2334,6 +2339,7 @@ export function NutritionReasoningPopup({
             onSubmit={handleSomethingOffSubmit}
             onClose={() => setSomethingOffItem(null)}
             isLoading={isCorrecting}
+            nested
           />
         )}
 
@@ -2353,6 +2359,7 @@ export function NutritionReasoningPopup({
                 useAppStore.getState().setFoodItemServing(displayEntry.id, editQuantityPopup.itemId, servingId);
               }
             }}
+            nested
           />
         )}
       </GestureHandlerRootView>
@@ -3259,18 +3266,5 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
     backgroundColor: "#fff",
     letterSpacing: -0.5,
-  },
-  editQuantitySaveButton: {
-    height: 52,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#1A6872",
-  },
-  editQuantitySaveText: {
-    fontSize: 16,
-    fontFamily: SystemFont,
-    fontWeight: "600",
-    color: "#ffffff",
   },
 });

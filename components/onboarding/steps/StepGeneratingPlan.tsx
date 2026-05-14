@@ -46,20 +46,26 @@ const ROTATE_MS = 900;
 const FINAL_PAUSE_MS = 500;
 const TICK_MS = 80;
 
-const STEP_KEYS = ["calories", "carbs", "protein", "fats", "health"] as const;
+const STEP_KEYS = [
+  "calories",
+  "carbs",
+  "protein",
+  "fats",
+  "metabolism",
+] as const;
 type StepKey = (typeof STEP_KEYS)[number];
 
 // Variable durations so step transitions match the perceived deceleration —
 // every step takes a distinct, monotonically-increasing amount of time so the
-// gradient bar visibly slows as it approaches 100%. The Health step holds the
-// 80→100% range the longest for a deliberate, premium-feeling finish.
-// Cumulative ≈ 8.0s.
+// gradient bar visibly slows as it approaches 100%. The Metabolism step holds
+// the 80→100% range the longest for a deliberate, premium-feeling finish.
+// Cumulative ≈ 7.9s.
 const STEP_DURATIONS_MS: Record<StepKey, number> = {
   calories: 700,
   carbs: 1050,
   protein: 1450,
   fats: 1900,
-  health: 2900,
+  metabolism: 2800,
 };
 const STEP_OFFSETS_MS: number[] = (() => {
   let acc = 0;
@@ -76,7 +82,7 @@ const MACRO: Record<StepKey, string> = {
   carbs: Tokens.macroCarbs,
   protein: Tokens.macroProtein,
   fats: Tokens.macroFat,
-  health: "#72A868",
+  metabolism: Tokens.accent,
 };
 
 const MESSAGES: Record<StepKey, string[]> = {
@@ -100,10 +106,10 @@ const MESSAGES: Record<StepKey, string[]> = {
     "Balancing essential fatty acids…",
     "Allocating remaining caloric budget…",
   ],
-  health: [
-    "Synthesizing your nutritional profile…",
-    "Indexing against age cohort…",
-    "Generating your starting Health Score…",
+  metabolism: [
+    "Estimating your basal metabolic rate…",
+    "Applying activity multiplier…",
+    "Calculating total daily energy needs…",
   ],
 };
 
@@ -160,7 +166,7 @@ export function StepGeneratingPlan({
       carbs: `${goals.targetCarbs} g`,
       protein: `${goals.targetProtein} g`,
       fats: `${goals.targetFat} g`,
-      health: "82 / 100",
+      metabolism: `${goals.bmr.toLocaleString("en-US")} → ${goals.tdee.toLocaleString("en-US")} cal`,
     }),
     [goals],
   );
@@ -320,7 +326,7 @@ const LABELS: Record<StepKey, string> = {
   carbs: "Carbs",
   protein: "Protein",
   fats: "Fats",
-  health: "Health Score",
+  metabolism: "Metabolism",
 };
 
 type TimelineState = "done" | "active" | "pending";

@@ -9,6 +9,17 @@ const SECURE_OPTS: SecureStore.SecureStoreOptions = {
 };
 
 /**
+ * Nuclear wipe of all MMKV data. Used for account deletion to remove every
+ * trace of the user from this device. The MMKV encryption key lives in
+ * SecureStore (not MMKV itself) and survives. Caller is responsible for
+ * triggering a Zustand state reset afterwards — clearing MMKV does not
+ * touch the in-memory store.
+ */
+export function purgeAllLocalData(): void {
+  mmkv.clearAll();
+}
+
+/**
  * Returns a 16-byte ASCII-safe encryption key for MMKV, persisted in the device
  * keychain (`expo-secure-store`). MMKV's max key length is 16 bytes, so we
  * encode 16 random bytes via base64 and slice to 16 ASCII characters (still

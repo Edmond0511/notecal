@@ -14,11 +14,12 @@ import { calculateGoals } from '@/utils/goalsCalculator';
 import { Ionicons } from '@expo/vector-icons';
 import {
   IBMPlexSans_400Regular,
+  IBMPlexSans_600SemiBold,
   IBMPlexSans_700Bold,
   useFonts,
 } from '@expo-google-fonts/ibm-plex-sans';
 import * as Haptics from 'expo-haptics';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
   Modal,
@@ -45,6 +46,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/onboarding/PrimaryButton';
 import { ProgressDots } from '@/components/onboarding/ProgressDots';
+import { StepGeneratingPlan } from '@/components/onboarding/steps/StepGeneratingPlan';
 import { Step1Sex } from './WizardSteps/Step1Sex';
 import { Step2Age } from './WizardSteps/Step2Age';
 import { Step3Body } from './WizardSteps/Step3Body';
@@ -114,17 +116,22 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
 
   useFonts({
     IBMPlexSans_400Regular,
+    IBMPlexSans_600SemiBold,
     IBMPlexSans_700Bold,
   });
 
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<WizardFormData>(initialFormData);
+  // Tracks whether the generating animation has already played in this modal
+  // session, so going back from Review and continuing again skips the replay.
+  const hasGeneratedRef = useRef(false);
 
   // Initialize form with existing goals or defaults
   useEffect(() => {
     if (visible) {
       translateY.value = 0;
       isScrolledToTop.value = true;
+      hasGeneratedRef.current = false;
       if (existingGoals) {
         const isImperial = preferredUnits === 'imperial';
         // Backward compatibility: map removed goal types
@@ -179,17 +186,17 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
 
   // Whether the weight target step should be shown
   const hasWeightTargetStep = formData.goalType === 'lose' || formData.goalType === 'gain';
-  const totalSteps = hasWeightTargetStep ? 8 : 7;
+  const totalSteps = hasWeightTargetStep ? 9 : 8;
 
   // Map logical step to content:
-  // With weight target: 1-Sex, 2-Age, 3-Body, 4-Activity, 5-Goal, 6-WeightTarget, 7-Macros, 8-Review
-  // Without:            1-Sex, 2-Age, 3-Body, 4-Activity, 5-Goal, 6-Macros, 7-Review
+  // With weight target: 1-Sex, 2-Age, 3-Body, 4-Activity, 5-Goal, 6-WeightTarget, 7-Macros, 8-Generating, 9-Review
+  // Without:            1-Sex, 2-Age, 3-Body, 4-Activity, 5-Goal, 6-Macros, 7-Generating, 8-Review
   const getStepContent = (step: number): string => {
     if (step <= 5) return ['sex', 'age', 'body', 'activity', 'goal'][step - 1];
     if (hasWeightTargetStep) {
-      return ['weight_target', 'macros', 'review'][step - 6];
+      return ['weight_target', 'macros', 'generating', 'review'][step - 6];
     }
-    return ['macros', 'review'][step - 6];
+    return ['macros', 'generating', 'review'][step - 6];
   };
 
   const canProceed = (): boolean => {
@@ -240,6 +247,8 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
       }
       case 'macros':
         return true; // Optional step
+      case 'generating':
+        return false; // Auto-advances via the animation's onComplete
       case 'review':
         return true;
       default:
@@ -250,6 +259,12 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
   const goToNextStep = () => {
     if (currentStep < totalSteps && canProceed()) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // If the generating animation has already played, jump straight from
+      // Macros to Review on subsequent forward passes — no replay.
+      if (getStepContent(currentStep) === 'macros' && hasGeneratedRef.current) {
+        setCurrentStep((prev) => prev + 2);
+        return;
+      }
       setCurrentStep((prev) => prev + 1);
     }
   };
@@ -257,6 +272,12 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
   const goToPreviousStep = () => {
     if (currentStep > 1) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // Skip the generating bridge on the way back so the user lands on the
+      // last editable step (Macros) instead of replaying the animation.
+      if (getStepContent(currentStep) === 'review') {
+        setCurrentStep((prev) => prev - 2);
+        return;
+      }
       setCurrentStep((prev) => prev - 1);
     }
   };
@@ -443,6 +464,40 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
             onCarbChange={(pref) => updateFormData({ carbPreference: pref })}
           />
         );
+      case 'generating': {
+        const { heightCm, weightKg, targetWeightKg, timelineWeeks } = buildInput();
+        if (
+          !formData.sex ||
+          !formData.age ||
+          !heightCm ||
+          !weightKg ||
+          !formData.activityLevel ||
+          !formData.goalType
+        ) {
+          return null;
+        }
+        return (
+          <StepGeneratingPlan
+            onComplete={() => {
+              hasGeneratedRef.current = true;
+              setCurrentStep((prev) => prev + 1);
+            }}
+            sex={formData.sex}
+            age={parseInt(formData.age, 10)}
+            heightCm={heightCm}
+            weightKg={weightKg}
+            activity={formData.activityLevel}
+            goal={formData.goalType}
+            targetWeightKg={targetWeightKg ?? null}
+            timelineWeeks={timelineWeeks ?? null}
+            proteinPreference={formData.proteinPreference}
+            carbPreference={formData.carbPreference}
+            headlineFontFamily="IBMPlexSans_600SemiBold"
+            boldNumericFontFamily="IBMPlexSans_700Bold"
+            semiBoldFontFamily="IBMPlexSans_600SemiBold"
+          />
+        );
+      }
       case 'review':
         return (
           <Step5Review
@@ -488,19 +543,21 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
             {/* Header — onboarding-style: back chevron + progress dots */}
             <View style={styles.header}>
               <View style={styles.headerSide}>
-                <TouchableOpacity
-                  onPress={currentStep > 1 ? goToPreviousStep : handleClose}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel={currentStep > 1 ? 'Back' : 'Close'}
-                  style={styles.chevronBtn}
-                >
-                  <Ionicons
-                    name={currentStep > 1 ? 'chevron-back' : 'close'}
-                    size={24}
-                    color={Tokens.textPrimary}
-                  />
-                </TouchableOpacity>
+                {getStepContent(currentStep) !== 'generating' && (
+                  <TouchableOpacity
+                    onPress={currentStep > 1 ? goToPreviousStep : handleClose}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={currentStep > 1 ? 'Back' : 'Close'}
+                    style={styles.chevronBtn}
+                  >
+                    <Ionicons
+                      name={currentStep > 1 ? 'chevron-back' : 'close'}
+                      size={24}
+                      color={Tokens.textPrimary}
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
               <ProgressDots total={totalSteps} current={currentStep - 1} />
               <View style={styles.headerSide} />
@@ -524,24 +581,26 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
             </KeyboardAwareScrollView>
 
             {/* Navigation button — onboarding-style PrimaryButton */}
-            <View
-              style={[
-                styles.navigationContainer,
-                { paddingBottom: insets.bottom + 16 },
-              ]}
-            >
-              <PrimaryButton
-                label={
-                  currentStep < totalSteps
-                    ? currentStep === totalSteps - 1
-                      ? 'See my targets'
-                      : 'Continue'
-                    : 'Save Goals'
-                }
-                onPress={currentStep < totalSteps ? goToNextStep : handleSave}
-                disabled={currentStep < totalSteps && !canProceed()}
-              />
-            </View>
+            {getStepContent(currentStep) !== 'generating' && (
+              <View
+                style={[
+                  styles.navigationContainer,
+                  { paddingBottom: insets.bottom + 16 },
+                ]}
+              >
+                <PrimaryButton
+                  label={
+                    currentStep < totalSteps
+                      ? getStepContent(currentStep) === 'macros'
+                        ? 'See my targets'
+                        : 'Continue'
+                      : 'Save Goals'
+                  }
+                  onPress={currentStep < totalSteps ? goToNextStep : handleSave}
+                  disabled={currentStep < totalSteps && !canProceed()}
+                />
+              </View>
+            )}
           </Animated.View>
         </GestureDetector>
       </GestureHandlerRootView>

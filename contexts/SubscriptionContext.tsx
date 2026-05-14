@@ -1,14 +1,17 @@
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  checkYearlyTrialEligibility,
   configurePurchases,
   customerInfoIsPro,
   getCustomerInfo,
   logInPurchases,
   logOutPurchases,
+  PRO_ENTITLEMENT,
   purchasePackage as rcPurchasePackage,
   restorePurchases as rcRestorePurchases,
   tryGetCurrentOffering,
 } from '@/lib/revenuecat';
+import { supabase } from '@/lib/supabase';
 import { nutritionQueue } from '@/services/nutritionQueue';
 import { useAppStore } from '@/store/app-store';
 import React, {
@@ -34,6 +37,12 @@ interface SubscriptionContextType {
    *  unreachable, etc). Paywall uses this to render a Retry state instead of
    *  a spinner. */
   offeringError: boolean;
+  /** Whether THIS Apple ID is eligible for the yearly product's free trial.
+   *  `null` while the check is in-flight or before it has run; the paywall
+   *  treats null as "do not promise a trial" (fail closed). RC's offering
+   *  always includes `introPrice` when the product has one configured, so
+   *  this explicit check is the only source of truth for eligibility. */
+  yearlyTrialEligible: boolean | null;
   /** Force a refresh of customerInfo from the RC servers. */
   refresh: () => Promise<void>;
   /** Re-attempt the offering fetch. Called from the paywall's Retry button. */
@@ -49,6 +58,7 @@ const SubscriptionContext = createContext<SubscriptionContextType>({
   customerInfo: null,
   offering: null,
   offeringError: false,
+  yearlyTrialEligible: null,
   refresh: async () => {},
   refreshOffering: async () => {},
   restore: async () => false,
@@ -62,6 +72,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   // True iff the most recent offering fetch attempt threw. Lets the paywall
   // distinguish "still loading" from "failed to load."
   const [offeringError, setOfferingError] = useState(false);
+  // Apple-level trial eligibility for the yearly product. Null while we
+  // haven't checked yet or the check is in-flight; the paywall must treat
+  // null as "do not promise a trial." See SubscriptionContextType for why
+  // this can't be derived from the offering alone.
+  const [yearlyTrialEligible, setYearlyTrialEligible] = useState<boolean | null>(
+    null,
+  );
   // Track previous isPro so we only fire side effects (clearing the queue
   // entitlement block) on the false→true transition, not every customerInfo
   // update.
@@ -127,20 +144,50 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     };
   }, []);
 
-  // Retry the offering fetch when the app returns to the foreground if the
-  // previous attempt errored and we still don't have an offering. Covers the
-  // "user opened the app offline, then turned the network back on" path
-  // without making them tap Retry themselves.
+  // Re-check trial eligibility whenever the offering changes. We refetch the
+  // offering after login/restore/purchase, so this effect transitively keeps
+  // eligibility in sync with the current Apple ID's intro-offer history. Set
+  // back to null while a fresh check is pending so the paywall doesn't show a
+  // stale "Try free" CTA mid-recompute.
+  useEffect(() => {
+    if (!offering) {
+      setYearlyTrialEligible(null);
+      return;
+    }
+    let cancelled = false;
+    setYearlyTrialEligible(null);
+    (async () => {
+      const eligible = await checkYearlyTrialEligibility();
+      if (cancelled) return;
+      setYearlyTrialEligible(eligible);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [offering]);
+
+  // On foreground:
+  // 1. Always refresh customerInfo. Catches the "trial/sub expired while the
+  //    app was backgrounded" path so isPro flips before the user taps anything,
+  //    and absorbs cases where the scheduled-refresh timer was killed by the OS
+  //    suspending the JS runtime.
+  // 2. Retry the offering fetch if the previous attempt errored and we still
+  //    don't have an offering. Covers the "opened offline, then turned network
+  //    back on" path without making them tap Retry themselves.
   useEffect(() => {
     const onChange = (status: AppStateStatus) => {
       if (status !== 'active') return;
-      if (!offeringError) return;
-      if (offering) return;
       (async () => {
-        const result = await tryGetCurrentOffering();
-        if (result.offering) setOffering(result.offering);
-        setOfferingError(result.error);
+        const info = await getCustomerInfo();
+        if (info) setCustomerInfo(info);
       })();
+      if (offeringError && !offering) {
+        (async () => {
+          const result = await tryGetCurrentOffering();
+          if (result.offering) setOffering(result.offering);
+          setOfferingError(result.error);
+        })();
+      }
     };
     const sub = RNAppState.addEventListener('change', onChange);
     return () => sub.remove();
@@ -189,6 +236,37 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
       if (cancelled) return;
       if (info) setCustomerInfo(info);
+
+      // RC computes `introPrice` (trial eligibility) per App User ID. The
+      // cold-start hydration fetched the offering against the anonymous RC
+      // identity — which is always trial-eligible. After `logInPurchases`
+      // switches identity to the real user, that cached offering is stale:
+      // a returning user who already redeemed their trial would briefly see
+      // "Try free for 3 days" until the next AppState=active retry. Refetch
+      // here so the paywall reflects this user's true eligibility.
+      const offResult = await tryGetCurrentOffering();
+      if (cancelled) return;
+      if (offResult.offering) setOffering(offResult.offering);
+      setOfferingError(offResult.error);
+
+      // Reconcile-on-login safety net: if RC says we're Pro but the
+      // `subscriptions` row hasn't been written yet (webhook failure, signup
+      // race, cross-device edge case), server-side AI calls will 403 even
+      // though the client UI shows Pro. The `subscription-reconcile` edge
+      // function queries RC's REST API server-side as truth and upserts the
+      // row if missing — fully idempotent, so safe to fire blindly. Only
+      // runs when the client believes the user is Pro AND is signed in;
+      // there's no point reconciling for free users or anonymous identities.
+      // Fire-and-forget: this is a nudge, not a hot path — the webhook and
+      // server-side entitlement check remain the source of truth.
+      if (userId && customerInfoIsPro(info)) {
+        if (cancelled) return;
+        supabase.functions
+          .invoke('subscription-reconcile', { method: 'POST', body: {} })
+          .catch((err) => {
+            console.error('[subscription] reconcile failed', err);
+          });
+      }
     })();
     return () => {
       cancelled = true;
@@ -200,6 +278,31 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     if (info) setCustomerInfo(info);
   }, []);
 
+  // Force a customerInfo refresh ~5s after the active 'pro' entitlement's
+  // expirationDate. RC's SDK polls customerInfo on its own cadence, so without
+  // this nudge the app can sit on stale "Pro" state for minutes after a
+  // trial/sub actually ends. Reschedules whenever customerInfo changes.
+  // Skipped when the expiration is more than ~7 days out: setTimeout becomes
+  // unreliable past ~24 days (Int32 wrap), and the foreground refresh handles
+  // long-lived subs reliably anyway.
+  useEffect(() => {
+    const ent = customerInfo?.entitlements.active[PRO_ENTITLEMENT];
+    if (!ent?.expirationDate) return;
+    const expiresMs = Date.parse(ent.expirationDate);
+    if (!Number.isFinite(expiresMs)) return;
+    const delay = expiresMs - Date.now() + 5_000;
+    if (delay <= 0) {
+      void refresh();
+      return;
+    }
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    if (delay > SEVEN_DAYS_MS) return;
+    const timer = setTimeout(() => {
+      void refresh();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [customerInfo, refresh]);
+
   const refreshOffering = useCallback(async () => {
     const result = await tryGetCurrentOffering();
     if (result.offering) setOffering(result.offering);
@@ -210,6 +313,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     const info = await rcRestorePurchases();
     if (info) {
       setCustomerInfo(info);
+      // Restore may have changed RC's view of trial eligibility (e.g. user
+      // restored an account that already consumed its trial). Refresh the
+      // offering so a subsequent paywall view doesn't promise a free trial.
+      const offResult = await tryGetCurrentOffering();
+      if (offResult.offering) setOffering(offResult.offering);
+      setOfferingError(offResult.error);
       return customerInfoIsPro(info);
     }
     return false;
@@ -219,6 +328,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     const info = await rcPurchasePackage(pkg);
     if (!info) return false; // user cancelled
     setCustomerInfo(info);
+    // A successful purchase that doesn't grant Pro (edge case: tier change,
+    // promo) still consumes any trial offer. Refresh offering so paywall
+    // re-renders without stale "free trial" copy.
+    const offResult = await tryGetCurrentOffering();
+    if (offResult.offering) setOffering(offResult.offering);
+    setOfferingError(offResult.error);
     return customerInfoIsPro(info);
   }, []);
 
@@ -227,6 +342,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     customerInfo,
     offering,
     offeringError,
+    yearlyTrialEligible,
     refresh,
     refreshOffering,
     restore,

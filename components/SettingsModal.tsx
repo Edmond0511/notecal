@@ -462,7 +462,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                                   style={styles.accountProvider}
                                   numberOfLines={1}
                                 >
-                                  Signed in with {user.email}
+                                  Signed in with {user.provider}
                                 </Text>
                               </>
                             ) : (

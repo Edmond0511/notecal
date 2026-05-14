@@ -42,6 +42,35 @@ export function configurePurchases() {
   configured = true;
 }
 
+export type RefreshSchedule =
+  | { kind: 'now' }
+  | { kind: 'later'; delayMs: number }
+  | { kind: 'skip' };
+
+/** Decide when to schedule a customerInfo refresh based on an entitlement's
+ *  expirationDate. Pure function so SubscriptionContext's effect stays
+ *  declarative and the decision is unit-testable.
+ *
+ *  - `skip`: no expiration, malformed date, or expiration > 7 days out
+ *    (long-lived subs are caught by the foreground refresh; setTimeout is
+ *    unreliable past ~24 days due to Int32 wrap)
+ *  - `now`: expiration is already past (refresh immediately to flip isPro)
+ *  - `later`: expiration is within 7 days; delayMs adds a 5-second buffer so
+ *    we don't race the server's expiration grace window */
+export function scheduleRefreshAtExpiration(
+  expirationDate: string | null | undefined,
+  now: number = Date.now(),
+): RefreshSchedule {
+  if (!expirationDate) return { kind: 'skip' };
+  const expiresMs = Date.parse(expirationDate);
+  if (!Number.isFinite(expiresMs)) return { kind: 'skip' };
+  const delay = expiresMs - now + 5_000;
+  if (delay <= 0) return { kind: 'now' };
+  const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+  if (delay > SEVEN_DAYS_MS) return { kind: 'skip' };
+  return { kind: 'later', delayMs: delay };
+}
+
 /** Convenience: returns true when the user holds an active 'pro' entitlement. */
 export function customerInfoIsPro(info: CustomerInfo | null | undefined): boolean {
   if (!info) return false;

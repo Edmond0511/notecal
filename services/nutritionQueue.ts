@@ -3,9 +3,20 @@ import {
   NutritionRateLimitError,
   NutritionEntitlementRequiredError,
 } from '@/services/nutritionApi';
+import { triggerSubscriptionReconcile } from '@/services/subscriptionReconcile';
 import { NutritionResolveResponse } from '@/types';
 
 const MAX_CONCURRENT = 3;
+
+// Injected by SubscriptionContext on mount. Lets the queue distinguish a
+// genuine non-Pro 403 ("show the paywall, stop trying") from a race-window
+// 403 ("client says Pro, server hasn't caught up yet — try reconcile") without
+// importing the app-store (which would create a circular dep, since the store
+// imports nutritionQueue).
+let isProGetter: (() => boolean) | null = null;
+export function setIsProGetter(fn: (() => boolean) | null): void {
+  isProGetter = fn;
+}
 
 export interface QueueItem {
   entryId: string;
@@ -146,10 +157,22 @@ class NutritionQueue {
           if (!q.isEntryDeleted()) q.onError(err);
         }
       } else if (err instanceof NutritionEntitlementRequiredError) {
-        // No active Pro subscription — block further server hits until
-        // SubscriptionContext clears the flag on purchase/restore. Drain the
-        // queue with the same error so every pending entry shows
-        // "Upgrade required" right away.
+        // Race recovery path: the client may know the user just purchased Pro
+        // even though the server's `subscriptions` row hasn't landed yet
+        // (webhook delay or delivery failure). If clientIsPro=true we push
+        // the row server-side via reconcile and retry the entry. Only when
+        // the user is genuinely non-Pro (or recovery itself returns 403) do
+        // we fall through to the sticky block.
+        const clientIsPro = isProGetter ? isProGetter() : false;
+        if (clientIsPro) {
+          const recovered = await this.tryReconcileAndRetry(item);
+          if (recovered) return; // success — skip onError + sticky-block
+        }
+
+        // Confirmed non-Pro (or recovery couldn't restore Pro). Block further
+        // server hits until SubscriptionContext clears the flag on
+        // purchase/restore. Drain the queue with the same error so every
+        // pending entry shows "Upgrade required" right away.
         this.entitlementBlocked = true;
         console.warn('[queue] entitlement required, blocking until upgrade');
         const queued = this.queue.splice(0);
@@ -165,6 +188,28 @@ class NutritionQueue {
       this.active.delete(item.entryId);
       console.log(`[queue] DONE "${item.textLine}" | active=${this.active.size} queued=${this.queue.length}`);
       this.drain();
+    }
+  }
+
+  /** Race recovery: client says Pro but server returned 403. Push the row
+   *  server-side via reconcile, then retry the entry. Returns true if the
+   *  retry succeeded (caller should skip its onError). On any failure
+   *  (reconcile error, retry 403, retry network error) returns false so the
+   *  caller falls through to the sticky-block + onError path. */
+  private async tryReconcileAndRetry(item: QueueItem): Promise<boolean> {
+    console.warn('[queue] entitlement race — reconciling and retrying once');
+    const reconciled = await triggerSubscriptionReconcile();
+    if (!reconciled) return false;
+    if (item.isEntryDeleted()) return true; // entry gone, nothing to retry
+    try {
+      const data = await resolveNutrition(item.textLine, {
+        userId: item.userId,
+      });
+      if (!item.isEntryDeleted()) item.onResolved(data);
+      return true;
+    } catch (e) {
+      console.warn('[queue] retry after reconcile failed', e);
+      return false;
     }
   }
 }

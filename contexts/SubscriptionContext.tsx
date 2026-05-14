@@ -9,10 +9,11 @@ import {
   PRO_ENTITLEMENT,
   purchasePackage as rcPurchasePackage,
   restorePurchases as rcRestorePurchases,
+  scheduleRefreshAtExpiration,
   tryGetCurrentOffering,
 } from '@/lib/revenuecat';
-import { supabase } from '@/lib/supabase';
-import { nutritionQueue } from '@/services/nutritionQueue';
+import { nutritionQueue, setIsProGetter } from '@/services/nutritionQueue';
+import { triggerSubscriptionReconcile } from '@/services/subscriptionReconcile';
 import { useAppStore } from '@/store/app-store';
 import React, {
   createContext,
@@ -252,20 +253,15 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       // Reconcile-on-login safety net: if RC says we're Pro but the
       // `subscriptions` row hasn't been written yet (webhook failure, signup
       // race, cross-device edge case), server-side AI calls will 403 even
-      // though the client UI shows Pro. The `subscription-reconcile` edge
-      // function queries RC's REST API server-side as truth and upserts the
-      // row if missing — fully idempotent, so safe to fire blindly. Only
-      // runs when the client believes the user is Pro AND is signed in;
-      // there's no point reconciling for free users or anonymous identities.
-      // Fire-and-forget: this is a nudge, not a hot path — the webhook and
-      // server-side entitlement check remain the source of truth.
+      // though the client UI shows Pro. Reconcile queries RC's REST API
+      // server-side as truth and upserts the row if missing — fully
+      // idempotent, so safe to fire blindly. Only runs when we believe the
+      // user is Pro AND is signed in; no point reconciling free users or
+      // anonymous identities. Fire-and-forget: webhook + server-side
+      // entitlement check remain the source of truth, this is just a nudge.
       if (userId && customerInfoIsPro(info)) {
         if (cancelled) return;
-        supabase.functions
-          .invoke('subscription-reconcile', { method: 'POST', body: {} })
-          .catch((err) => {
-            console.error('[subscription] reconcile failed', err);
-          });
+        void triggerSubscriptionReconcile();
       }
     })();
     return () => {
@@ -273,33 +269,36 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     };
   }, [user?.id, authLoading]);
 
+  // Inject the isPro getter into nutritionQueue so its 403 handler can
+  // distinguish a true non-Pro user (sticky block) from the post-purchase
+  // race where the client knows the user is Pro but the server's row hasn't
+  // landed yet (try reconcile + retry instead of blocking).
+  useEffect(() => {
+    setIsProGetter(() => useAppStore.getState().isPro);
+    return () => setIsProGetter(null);
+  }, []);
+
   const refresh = useCallback(async () => {
     const info = await getCustomerInfo();
     if (info) setCustomerInfo(info);
   }, []);
 
-  // Force a customerInfo refresh ~5s after the active 'pro' entitlement's
+  // Force a customerInfo refresh shortly after the active 'pro' entitlement's
   // expirationDate. RC's SDK polls customerInfo on its own cadence, so without
   // this nudge the app can sit on stale "Pro" state for minutes after a
-  // trial/sub actually ends. Reschedules whenever customerInfo changes.
-  // Skipped when the expiration is more than ~7 days out: setTimeout becomes
-  // unreliable past ~24 days (Int32 wrap), and the foreground refresh handles
-  // long-lived subs reliably anyway.
+  // trial/sub actually ends. Decision logic lives in scheduleRefreshAtExpiration
+  // so it's unit-testable.
   useEffect(() => {
     const ent = customerInfo?.entitlements.active[PRO_ENTITLEMENT];
-    if (!ent?.expirationDate) return;
-    const expiresMs = Date.parse(ent.expirationDate);
-    if (!Number.isFinite(expiresMs)) return;
-    const delay = expiresMs - Date.now() + 5_000;
-    if (delay <= 0) {
+    const decision = scheduleRefreshAtExpiration(ent?.expirationDate);
+    if (decision.kind === 'skip') return;
+    if (decision.kind === 'now') {
       void refresh();
       return;
     }
-    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-    if (delay > SEVEN_DAYS_MS) return;
     const timer = setTimeout(() => {
       void refresh();
-    }, delay);
+    }, decision.delayMs);
     return () => clearTimeout(timer);
   }, [customerInfo, refresh]);
 
@@ -311,23 +310,39 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   const restore = useCallback(async () => {
     const info = await rcRestorePurchases();
-    if (info) {
-      setCustomerInfo(info);
-      // Restore may have changed RC's view of trial eligibility (e.g. user
-      // restored an account that already consumed its trial). Refresh the
-      // offering so a subsequent paywall view doesn't promise a free trial.
-      const offResult = await tryGetCurrentOffering();
-      if (offResult.offering) setOffering(offResult.offering);
-      setOfferingError(offResult.error);
-      return customerInfoIsPro(info);
+    if (!info) return false;
+    setCustomerInfo(info);
+    // If restore granted Pro, push the row server-side BEFORE returning. The
+    // RC webhook may not fire for restores (no new transaction), so without
+    // this the server can stay 403-ing even though the client now knows the
+    // user is Pro.
+    if (customerInfoIsPro(info)) {
+      await triggerSubscriptionReconcile();
     }
-    return false;
+    // Restore may have changed RC's view of trial eligibility (e.g. user
+    // restored an account that already consumed its trial). Refresh the
+    // offering so a subsequent paywall view doesn't promise a free trial.
+    const offResult = await tryGetCurrentOffering();
+    if (offResult.offering) setOffering(offResult.offering);
+    setOfferingError(offResult.error);
+    return customerInfoIsPro(info);
   }, []);
 
   const purchase = useCallback(async (pkg: PurchasesPackage) => {
     const info = await rcPurchasePackage(pkg);
     if (!info) return false; // user cancelled
     setCustomerInfo(info);
+    // CRITICAL: push the subscription row to the server BEFORE returning. The
+    // RC webhook can take seconds-to-minutes to deliver in sandbox (and can
+    // fail in production), and during that window the user's first AI tap
+    // would 403 and trip the sticky entitlement block in nutritionQueue,
+    // showing "Upgrade required" to a paying user. Reconcile uses RC's REST
+    // API as truth, which is consistent with the SDK that just confirmed
+    // the purchase. Awaiting this means the paywall stays open ~half a
+    // second longer in exchange for never showing this bug.
+    if (customerInfoIsPro(info)) {
+      await triggerSubscriptionReconcile();
+    }
     // A successful purchase that doesn't grant Pro (edge case: tier change,
     // promo) still consumes any trial offer. Refresh offering so paywall
     // re-renders without stale "free trial" copy.

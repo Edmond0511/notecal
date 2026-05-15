@@ -17,11 +17,15 @@ import { AppState } from "react-native";
 // initiate the OAuth request without a GoogleService-Info.plist.
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-if (googleWebClientId) {
+if (googleWebClientId && googleIosClientId) {
   GoogleSignin.configure({
     webClientId: googleWebClientId,
     iosClientId: googleIosClientId,
   });
+} else {
+  console.error(
+    '[auth] EXPO_PUBLIC_GOOGLE_*_CLIENT_ID missing — Google Sign-In will fail',
+  );
 }
 
 const LAST_USER_KEY = "last-signed-in-user-id";

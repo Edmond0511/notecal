@@ -12,7 +12,6 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.edmond0511.notecal",
       "usesAppleSignIn": true,
-      "usesHealthKit": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "NoteCal uses the camera to scan barcodes on food products and take photos of meals or weight-tracking progress.",

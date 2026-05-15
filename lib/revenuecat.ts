@@ -31,11 +31,9 @@ export function configurePurchases() {
     return;
   }
   if (!API_KEY) {
-    if (__DEV__) {
-      console.warn(
-        '[revenuecat] EXPO_PUBLIC_REVENUECAT_IOS_KEY missing — paywall is in dev-bypass mode',
-      );
-    }
+    console.error(
+      '[revenuecat] EXPO_PUBLIC_REVENUECAT_IOS_KEY missing — paywall will not load',
+    );
     return;
   }
   Purchases.configure({ apiKey: API_KEY });

@@ -2,6 +2,7 @@ import { SystemFont, Tokens } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { mmkv, purgeAllLocalData } from "@/lib/mmkv";
+import { logOutPurchases } from "@/lib/revenuecat";
 import { supabase } from "@/lib/supabase";
 import { clearNutritionCache } from "@/services/nutritionCache";
 import { nutritionQueue } from "@/services/nutritionQueue";
@@ -300,6 +301,13 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
         console.error("[delete-account] function returned error:", data.error);
         throw new Error(data.error);
       }
+      // Log the customer out of the RevenueCat SDK explicitly. The
+      // SIGNED_OUT handler in AuthContext also calls logOutPurchases, but
+      // doing it here-and-awaited matches RC's explicit guidance: "Make
+      // sure that the customer is also logged out through the RevenueCat
+      // SDK in addition to being deleted or they'll get recreated on the
+      // next app launch." Idempotent — no-op if already anonymous.
+      await logOutPurchases();
       // Sign out locally — triggers AuthContext SIGNED_OUT handler
       // which runs clearUserData(), stops sync services, clears queues.
       // Account is already deleted server-side, so scope doesn't matter

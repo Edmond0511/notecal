@@ -129,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Set sync user for cold start (onAuthStateChange SIGNED_IN doesn't fire for persisted sessions)
       if (session?.user) {
+        console.log('[diag][auth] cold-start setUser', { userId: session.user.id, email: session.user.email });
         syncService.setUser(session.user.id);
         photoSyncService.setUser(session.user.id);
         // Identify the user in RevenueCat. logIn de-dupes if already identified.
@@ -183,6 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("Auth state changed:", event, !!session);
+      console.log('[diag][auth] onAuthStateChange', { event, userId: session?.user?.id, email: session?.user?.email });
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);

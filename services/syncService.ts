@@ -373,16 +373,18 @@ class SyncService {
 
     if (table === 'food_entries') {
       const entry = state.entries.find((e) => e.id === id);
-      if (!entry) return; // deleted locally, handled by pushDelete
-      if (entry.status === 'pending') return; // mid-resolution, skip
+      if (!entry) { console.log('[diag][sync] push food_entries skip — not in state', { id }); return; } // deleted locally, handled by pushDelete
+      if (entry.status === 'pending') { console.log('[diag][sync] push food_entries skip — pending', { id }); return; } // mid-resolution, skip
       const row = entryToRow(entry, userId);
       const { error } = await supabase.from('food_entries').upsert(row, { onConflict: 'id' });
+      console.log('[diag][sync] push food_entries', { id, userId, date: entry.date, status: entry.status, error: error?.message });
       if (error) throw error;
     } else if (table === 'documents') {
       const doc = state.documents.find((d) => d.date === id);
-      if (!doc) return;
+      if (!doc) { console.log('[diag][sync] push documents skip — not in state', { date: id }); return; }
       const row = docToRow(doc, userId);
       const { error } = await supabase.from('documents').upsert(row, { onConflict: 'user_id,date' });
+      console.log('[diag][sync] push documents', { date: id, userId, len: doc.content?.length ?? 0, error: error?.message });
       if (error) throw error;
     } else if (table === 'saved_entries') {
       const se = state.savedEntries.find((s) => s.id === id);
@@ -519,6 +521,7 @@ class SyncService {
   private async pullAllInternal(): Promise<void> {
     const lastPull = getLastPull();
     const pullTimestamp = new Date().toISOString();
+    console.log('[diag][sync] pullAllInternal start', { userId: this.userId, lastPull });
 
     await Promise.all([
       this.pullEntries(lastPull),
@@ -529,6 +532,13 @@ class SyncService {
       this.pullGoals(lastPull),
     ]);
 
+    const s = useAppStore.getState();
+    console.log('[diag][sync] pullAllInternal done', {
+      entriesLen: s.entries.length,
+      documentsLen: s.documents.length,
+      weightEntriesLen: s.weightEntries.length,
+      hasGoals: !!s.goals,
+    });
     setLastPull(pullTimestamp);
   }
 
@@ -543,6 +553,7 @@ class SyncService {
 
     const { data, error } = await query;
     if (error) { console.error('[sync] Pull food_entries failed:', error.message); return; }
+    console.log('[diag][sync] pullEntries', { userId, since, rows: data?.length ?? 0 });
     if (!data?.length) return;
 
     const state = useAppStore.getState();
@@ -594,6 +605,7 @@ class SyncService {
 
     const { data, error } = await query;
     if (error) { console.error('[sync] Pull documents failed:', error.message); return; }
+    console.log('[diag][sync] pullDocuments', { userId, since, rows: data?.length ?? 0 });
     if (!data?.length) return;
 
     const state = useAppStore.getState();
@@ -616,7 +628,9 @@ class SyncService {
         if (dirty.documents.includes(row.date)) continue;
         const localModified = new Date(localDocs[localIdx].lastModified).getTime();
         const remoteModified = new Date(row.last_modified).getTime();
-        if (remoteModified > localModified) {
+        const localEmpty = !localDocs[localIdx].content;
+        const remoteHasContent = (row.content?.length ?? 0) > 0;
+        if (remoteModified > localModified || (localEmpty && remoteHasContent)) {
           localDocs[localIdx] = rowToDoc(row);
           changed = true;
         }
@@ -846,10 +860,14 @@ class SyncService {
   // --------------------------------------------------------
 
   async fullSync(): Promise<void> {
+    console.log('[diag][sync] fullSync called', { userId: this.userId, alreadySyncing: this.syncing });
     if (!this.userId || this.syncing) return;
     // Single session verification for the entire sync — flushDirtyInternal /
     // pullAllInternal don't re-verify, so a 50-entry sync = 1 getUser() call.
-    if (!(await this.verifyActiveSession())) return;
+    if (!(await this.verifyActiveSession())) {
+      console.log('[diag][sync] fullSync aborted — session verification failed');
+      return;
+    }
 
     this.syncing = true;
     try {
@@ -857,6 +875,16 @@ class SyncService {
 
       // First sync ever? Mark all local data as dirty so it gets pushed
       const lastPull = getLastPull();
+      const dirtyBefore = loadDirty();
+      console.log('[diag][sync] fullSync state before flush', {
+        lastPull,
+        dirtyFoodEntries: dirtyBefore.food_entries.length,
+        dirtyDocuments: dirtyBefore.documents.length,
+        dirtyWeights: dirtyBefore.weight_entries.length,
+        dirtyGoals: dirtyBefore.user_goals.length,
+        localEntries: useAppStore.getState().entries.length,
+        localDocuments: useAppStore.getState().documents.length,
+      });
       if (!lastPull) {
         console.log('[sync] First sync — marking all local data dirty');
         this.markAllLocalDirty();

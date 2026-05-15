@@ -1012,6 +1012,15 @@ export function NotesEditor({
     (newText: string) => {
       const foodLines = parseDocumentForFoodEntries(newText);
 
+      // Guard: if the document has zero parsed food lines while we have entries
+      // for this date, treat it as "document not yet hydrated" rather than
+      // "user erased everything." Without this, a not-yet-pulled document on a
+      // second device would cause cross-device entry deletion via reconciliation
+      // → syncSubscriber.pushDelete, propagating the loss to the server.
+      if (foodLines.length === 0 && entries.length > 0) {
+        return;
+      }
+
       // Count occurrences of each line in the document
       const docLineCounts = new Map<string, number>();
       for (const line of foodLines) {

@@ -71,9 +71,10 @@ export const DatePage = React.memo(function DatePage({
   useEffect(() => {
     return () => {
       const text = documentTextRef.current.trim();
-      const stored = useAppStore
+      const stored = (useAppStore
         .getState()
-        .documents.find((d) => d.date === dateString)?.content ?? '';
+        .documents.find((d) => d.date === dateString)?.content ?? '').trim();
+      if (text === stored) return;
       if (text === '' && stored !== '') return;
       saveDocument(dateString, text);
     };

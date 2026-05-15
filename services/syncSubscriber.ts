@@ -28,6 +28,7 @@ export function startSyncSubscriber() {
       for (const entry of state.entries) {
         const prev = prevState.entries.find((e: Entry) => e.id === entry.id);
         if (!prev || entry.updatedAt !== prev.updatedAt) {
+          console.log('[diag][sub] enqueue food_entries push', { id: entry.id, status: entry.status, isNew: !prev });
           syncService.debouncedPush('food_entries', entry.id);
         }
       }
@@ -35,6 +36,7 @@ export function startSyncSubscriber() {
       // Detect deletes
       for (const id of prevIds) {
         if (!currIds.has(id)) {
+          console.log('[diag][sub] enqueue food_entries delete', { id });
           syncService.pushDelete('food_entries', id);
         }
       }
@@ -48,12 +50,14 @@ export function startSyncSubscriber() {
       for (const doc of state.documents) {
         const prev = prevState.documents.find((d: Document) => d.date === doc.date);
         if (!prev || doc.lastModified !== prev.lastModified) {
+          console.log('[diag][sub] enqueue documents push', { date: doc.date, len: doc.content?.length ?? 0, isNew: !prev });
           syncService.debouncedPush('documents', doc.date);
         }
       }
 
       for (const date of prevDates) {
         if (!currDates.has(date)) {
+          console.log('[diag][sub] enqueue documents delete', { date });
           syncService.pushDelete('documents', date);
         }
       }

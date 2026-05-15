@@ -23,8 +23,11 @@ export interface Macros {
 export interface FatSecretServing {
   servingId: string;
   description: string;
+  // Always grams when present. Edge function normalizes oz→g (×28.3495) and
+  // passes ml through 1:1. Old persisted entries from before this normalization
+  // may still contain raw oz/ml values; treat as g for new code paths.
   metricAmount?: number;
-  metricUnit?: 'g' | 'ml' | 'oz';
+  metricUnit?: 'g';
   macros: Macros;
   extendedNutrients?: Record<string, number>;
 }

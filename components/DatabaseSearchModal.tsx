@@ -11,6 +11,12 @@ import {
 import { mmkv } from "@/lib/mmkv";
 import { useAppStore } from "@/store/app-store";
 import {
+  formatQtyValue,
+  fromGrams,
+  QuantityUnit,
+  toGrams,
+} from "@/utils/quantityUnits";
+import {
   CommonPortion,
   CustomMeal,
   CustomMealItem,
@@ -85,6 +91,41 @@ const DISMISS_THRESHOLD = 150;
 const TEAL = "#1A6872";
 const DEBOUNCE_MS = 400;
 
+const UNIT_PILL_OPTIONS: QuantityUnit[] = ["g", "oz", "lbs"];
+
+function UnitPillRow({
+  selectedUnit,
+  onSelect,
+}: {
+  selectedUnit: QuantityUnit;
+  onSelect: (unit: QuantityUnit) => void;
+}) {
+  return (
+    <View style={styles.unitPillRow}>
+      {UNIT_PILL_OPTIONS.map((unit) => {
+        const isActive = selectedUnit === unit;
+        return (
+          <TouchableOpacity
+            key={unit}
+            style={[styles.unitPill, isActive && styles.unitPillSelected]}
+            onPress={() => onSelect(unit)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.unitPillText,
+                isActive && styles.unitPillTextSelected,
+              ]}
+            >
+              {unit}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 const MACRO_COLORS = {
   calories: { primary: "#FF6B35", secondary: "#FFE5D9" },
   protein: { primary: "#4A90D9", secondary: "#E3F2FD" },
@@ -153,7 +194,22 @@ export function DatabaseSearchModal({
   const insets = useSafeAreaInsets();
   const [state, setState] = useState<ModalState>({ type: "idle" });
   const [searchText, setSearchText] = useState("");
-  const [servingGrams, setServingGrams] = useState("");
+  // What the user sees and types in the stepper, in `selectedUnit`. The
+  // canonical `servingGrams` (always in grams) is derived from this below.
+  const [servingInputText, setServingInputText] = useState("");
+  const [selectedUnit, setSelectedUnit] = useState<QuantityUnit>("g");
+
+  // Always grams, derived from the user's input + selected unit. Existing code
+  // throughout this file reads `servingGrams` to scale macros, so keeping the
+  // name lets us add the unit selector with minimal blast radius.
+  const servingGrams = useMemo(() => {
+    if (servingInputText === "" || servingInputText === ".") return "";
+    const v = parseFloat(servingInputText);
+    if (isNaN(v) || v <= 0) return "";
+    if (selectedUnit === "g") return v.toString();
+    const g = toGrams(v, selectedUnit);
+    return g != null ? g.toString() : v.toString();
+  }, [servingInputText, selectedUnit]);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [commonResults, setCommonResults] = useState<DatabaseSearchResult[]>(
     [],
@@ -370,7 +426,8 @@ export function DatabaseSearchModal({
         } else {
           setSelectedFsServingId(null);
         }
-        setServingGrams(
+        setSelectedUnit("g");
+        setServingInputText(
           initialServingGrams
             ? Math.round(initialServingGrams).toString()
             : (result.defaultServingG ?? 100).toString(),
@@ -396,7 +453,8 @@ export function DatabaseSearchModal({
         }
       } else {
         setState({ type: "idle" });
-        setServingGrams("");
+        setServingInputText("");
+        setSelectedUnit("g");
         setSelectedFsServingId(null);
       }
     }
@@ -469,12 +527,13 @@ export function DatabaseSearchModal({
     setMacroOverrides({});
     setShowNutritionFacts(false);
     // Set default serving size + FS serving selection
+    setSelectedUnit("g");
     if (result.source === "FS" && result.fsServings?.length) {
       const defaultFs =
         result.fsServings.find((s) => s.metricUnit === "g") ??
         result.fsServings[0];
       setSelectedFsServingId(defaultFs.servingId);
-      setServingGrams(
+      setServingInputText(
         defaultFs.metricAmount
           ? Math.round(defaultFs.metricAmount).toString()
           : "100",
@@ -482,7 +541,7 @@ export function DatabaseSearchModal({
     } else {
       setSelectedFsServingId(null);
       const defaultServing = result.defaultServingG ?? 100;
-      setServingGrams(defaultServing.toString());
+      setServingInputText(defaultServing.toString());
     }
     setState({ type: "detail", result });
 
@@ -586,7 +645,8 @@ export function DatabaseSearchModal({
     } else {
       setState({ type: "idle" });
     }
-    setServingGrams("");
+    setServingInputText("");
+    setSelectedUnit("g");
     setSelectedPortionIndex(null);
     setSelectedFsServingId(null);
   }, [commonResults, brandedResults]);
@@ -644,7 +704,8 @@ export function DatabaseSearchModal({
       } else {
         setState({ type: "idle" });
       }
-      setServingGrams("");
+      setServingInputText("");
+      setSelectedUnit("g");
       setSelectedPortionIndex(null);
     } else if (selectedItems.length > 0) {
       // Multi-select mode: add to selection, go back to results
@@ -665,7 +726,8 @@ export function DatabaseSearchModal({
       } else {
         setState({ type: "idle" });
       }
-      setServingGrams("");
+      setServingInputText("");
+      setSelectedUnit("g");
       setSelectedPortionIndex(null);
     } else {
       // Single-item quick flow
@@ -714,7 +776,8 @@ export function DatabaseSearchModal({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Keyboard.dismiss();
     setEditingSelectedId(selected.id);
-    setServingGrams(selected.servingGrams.toString());
+    setSelectedUnit("g");
+    setServingInputText(selected.servingGrams.toString());
     setSelectedPortionIndex(null);
     setPortions(selected.portions);
     setPortionsLoading(false);
@@ -782,15 +845,49 @@ export function DatabaseSearchModal({
     [handleMealDelete],
   );
 
+  // Step deltas in the displayed unit's own scale.
+  const STEP_PER_UNIT: Record<string, number> = {
+    g: 10,
+    oz: 0.5,
+    lbs: 0.1,
+  };
+
   const handleServingStep = useCallback(
-    (delta: number) => {
-      const current = parseFloat(servingGrams) || 100;
-      const next = Math.max(1, current + delta);
-      setServingGrams(next.toString());
+    (direction: 1 | -1) => {
+      const stepInUnit = STEP_PER_UNIT[selectedUnit] ?? 10;
+      const fallback = selectedUnit === "g" ? 100 : 1;
+      const current = parseFloat(servingInputText) || fallback;
+      const minInUnit = selectedUnit === "g" ? 1 : 0.1;
+      const next = Math.max(minInUnit, current + stepInUnit * direction);
+      setServingInputText(
+        selectedUnit === "g" ? Math.round(next).toString() : formatQtyValue(next),
+      );
       setSelectedPortionIndex(null);
+      setSelectedFsServingId(null);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
-    [servingGrams],
+    [servingInputText, selectedUnit],
+  );
+
+  const handleUnitSelect = useCallback(
+    (newUnit: QuantityUnit) => {
+      if (newUnit === selectedUnit) return;
+      const currentGrams = parseFloat(servingGrams);
+      if (!isNaN(currentGrams) && currentGrams > 0) {
+        const valueInNewUnit =
+          newUnit === "g"
+            ? currentGrams
+            : (fromGrams(currentGrams, newUnit) ?? currentGrams);
+        setServingInputText(
+          newUnit === "g"
+            ? Math.round(valueInNewUnit).toString()
+            : formatQtyValue(valueInNewUnit),
+        );
+      }
+      setSelectedUnit(newUnit);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    },
+    [selectedUnit, servingGrams],
   );
 
   // Pan to dismiss
@@ -1831,7 +1928,8 @@ export function DatabaseSearchModal({
                                           serving.servingId,
                                         );
                                         if (serving.metricAmount) {
-                                          setServingGrams(
+                                          setSelectedUnit("g");
+                                          setServingInputText(
                                             Math.round(
                                               serving.metricAmount,
                                             ).toString(),
@@ -1872,7 +1970,7 @@ export function DatabaseSearchModal({
                             <View style={styles.stepperContainer}>
                               <TouchableOpacity
                                 style={styles.stepperButton}
-                                onPress={() => handleServingStep(-10)}
+                                onPress={() => handleServingStep(-1)}
                                 activeOpacity={0.6}
                               >
                                 <Ionicons
@@ -1885,26 +1983,34 @@ export function DatabaseSearchModal({
                                 <TextInput
                                   keyboardAppearance="light"
                                   style={styles.servingInput}
-                                  value={servingGrams}
+                                  value={servingInputText}
                                   onChangeText={(text) => {
-                                    setServingGrams(text);
+                                    setServingInputText(text);
                                     setSelectedFsServingId(null);
+                                    setSelectedPortionIndex(null);
                                   }}
-                                  keyboardType="numeric"
+                                  keyboardType="decimal-pad"
                                   selectTextOnFocus
                                   returnKeyType="done"
                                 />
-                                <Text style={styles.servingUnit}>g</Text>
+                                <Text style={styles.servingUnit}>
+                                  {selectedUnit}
+                                </Text>
                               </View>
                               <TouchableOpacity
                                 style={styles.stepperButton}
-                                onPress={() => handleServingStep(10)}
+                                onPress={() => handleServingStep(1)}
                                 activeOpacity={0.6}
                               >
                                 <Ionicons name="add" size={18} color="#999" />
                               </TouchableOpacity>
                             </View>
                           </View>
+
+                          <UnitPillRow
+                            selectedUnit={selectedUnit}
+                            onSelect={handleUnitSelect}
+                          />
                         </>
                       ) : (
                         <>
@@ -1944,7 +2050,8 @@ export function DatabaseSearchModal({
                                             Haptics.ImpactFeedbackStyle.Light,
                                           );
                                           setSelectedPortionIndex(i);
-                                          setServingGrams(
+                                          setSelectedUnit("g");
+                                          setServingInputText(
                                             portion.grams.toString(),
                                           );
                                         }}
@@ -1982,7 +2089,7 @@ export function DatabaseSearchModal({
                             <View style={styles.stepperContainer}>
                               <TouchableOpacity
                                 style={styles.stepperButton}
-                                onPress={() => handleServingStep(-10)}
+                                onPress={() => handleServingStep(-1)}
                                 activeOpacity={0.6}
                               >
                                 <Ionicons
@@ -1995,26 +2102,33 @@ export function DatabaseSearchModal({
                                 <TextInput
                                   keyboardAppearance="light"
                                   style={styles.servingInput}
-                                  value={servingGrams}
+                                  value={servingInputText}
                                   onChangeText={(text) => {
-                                    setServingGrams(text);
+                                    setServingInputText(text);
                                     setSelectedPortionIndex(null);
                                   }}
-                                  keyboardType="numeric"
+                                  keyboardType="decimal-pad"
                                   selectTextOnFocus
                                   returnKeyType="done"
                                 />
-                                <Text style={styles.servingUnit}>g</Text>
+                                <Text style={styles.servingUnit}>
+                                  {selectedUnit}
+                                </Text>
                               </View>
                               <TouchableOpacity
                                 style={styles.stepperButton}
-                                onPress={() => handleServingStep(10)}
+                                onPress={() => handleServingStep(1)}
                                 activeOpacity={0.6}
                               >
                                 <Ionicons name="add" size={18} color="#999" />
                               </TouchableOpacity>
                             </View>
                           </View>
+
+                          <UnitPillRow
+                            selectedUnit={selectedUnit}
+                            onSelect={handleUnitSelect}
+                          />
                         </>
                       )}
 
@@ -2686,6 +2800,31 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   portionPillGramsSelected: {
+    color: TEAL,
+  },
+  // Unit selector pills (g/oz/lbs) below the stepper
+  unitPillRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: 12,
+  },
+  unitPill: {
+    flex: 1,
+    backgroundColor: "#F5F5F5",
+    borderRadius: 100,
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  unitPillSelected: {
+    backgroundColor: Tokens.accentTint,
+  },
+  unitPillText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Tokens.textPrimary,
+    letterSpacing: -0.2,
+  },
+  unitPillTextSelected: {
     color: TEAL,
   },
   // Nutrition section: donut ring + macro list (matches BarcodeScannerModal)

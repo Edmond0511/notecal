@@ -163,7 +163,7 @@ async function checkRateLimit(
 function normalizeCacheKey(query: string): string {
   // Bump the version suffix to invalidate after changing the nutrient
   // extraction in _shared/fatsecret.ts.
-  return "fs:search:v2:" + query.toLowerCase().trim().replace(/\s+/g, " ");
+  return "fs:search:v3:" + query.toLowerCase().trim().replace(/\s+/g, " ");
 }
 
 function fsSearchResultToResult(food: any): DatabaseSearchResult | null {

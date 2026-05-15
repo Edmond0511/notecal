@@ -4,6 +4,14 @@ import { useAppStore } from "@/store/app-store";
 import { CommonPortion, Entry, FatSecretServing, Macros } from "@/types";
 import { formatWater } from "@/utils/formatNumber";
 import {
+  fromGrams,
+  normalizeUnit,
+  QuantityUnit,
+  toGrams,
+  WEIGHT_UNITS,
+  formatQtyValue,
+} from "@/utils/quantityUnits";
+import {
   isLiquidGlassSupported,
   LiquidGlassView,
 } from "@callstack/liquid-glass";
@@ -979,48 +987,6 @@ export function EditNutrientPopup({
       </GestureDetector>
     </Animated.View>
   );
-}
-
-// Unit conversion constants
-type QuantityUnit = "servings" | "g" | "oz" | "lbs" | "portion";
-
-const WEIGHT_UNITS: QuantityUnit[] = ["servings", "g", "oz", "lbs"];
-
-const GRAMS_PER: Record<string, number> = {
-  g: 1,
-  oz: 28.3495,
-  lbs: 453.592,
-};
-
-function normalizeUnit(unit: string): QuantityUnit | null {
-  const lower = unit.toLowerCase().trim();
-  if (lower === "g" || lower === "gram" || lower === "grams") return "g";
-  if (lower === "oz" || lower === "ounce" || lower === "ounces") return "oz";
-  if (
-    lower === "lb" ||
-    lower === "lbs" ||
-    lower === "pound" ||
-    lower === "pounds"
-  )
-    return "lbs";
-  return null;
-}
-
-function toGrams(value: number, unit: QuantityUnit): number | null {
-  if (unit === "servings") return null;
-  return value * (GRAMS_PER[unit] ?? 1);
-}
-
-function fromGrams(grams: number, unit: QuantityUnit): number | null {
-  if (unit === "servings") return null;
-  return grams / (GRAMS_PER[unit] ?? 1);
-}
-
-function formatQtyValue(val: number): string {
-  if (Number.isInteger(val)) return val.toString();
-  if (val >= 100) return val.toFixed(0);
-  if (val >= 10) return val.toFixed(1);
-  return val.toFixed(2);
 }
 
 // Edit Quantity Popup component

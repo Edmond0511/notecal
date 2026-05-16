@@ -3,6 +3,8 @@
 <p align="center">A nutrition tracker that feels like a notes app.<br />
 Type a line of food. Get the calories, macros, and progress toward your goal.</p>
 
+<p align="center"><a href="https://notecal.app">notecal.app</a></p>
+
 <p align="center">
   <img src="website/assets/screen-1-notes.png" alt="Notes" width="200" />
   <img src="website/assets/screen-2-nutrition.png" alt="Nutrition" width="200" />

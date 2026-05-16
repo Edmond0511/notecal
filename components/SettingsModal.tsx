@@ -13,6 +13,7 @@ import {
   LiquidGlassView,
 } from "@callstack/liquid-glass";
 import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
@@ -777,7 +778,9 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                           style={{ marginRight: 12 }}
                         />
                         <Text style={styles.menuItemText}>Version</Text>
-                        <Text style={styles.menuItemValue}>1.0.0</Text>
+                        <Text style={styles.menuItemValue}>
+                          {Constants.expoConfig?.version ?? "—"}
+                        </Text>
                       </View>
                     </View>
                   </View>

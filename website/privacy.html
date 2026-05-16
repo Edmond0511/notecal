@@ -44,133 +44,438 @@
     <main class="legal">
       <div class="shell shell--narrow">
         <h1 class="legal__title">Privacy</h1>
-        <p class="legal__meta">Effective May 1, 2026</p>
+        <p class="legal__meta">Effective May 15, 2026</p>
 
         <p>
-          NoteCal ("we", "our", or "the app") is built around a simple idea:
-          tracking food should be fast, and your data should stay yours. This
-          policy explains what we collect, how we store it, and the choices you
-          have. We do not sell your data, and we do not use it for advertising.
+          NoteCal ("NoteCal", "we", "our", or "the app") is operated by
+          Edmond Yang, an individual based in Canada (the "operator"). This
+          policy explains what information the app collects, how it is stored
+          and shared, the choices you have, and how to contact us. We do not
+          sell your personal information, we do not share it for advertising,
+          and we do not use it to train third-party AI models beyond what is
+          required to return a result for your own request.
         </p>
 
+        <div class="legal__callout">
+          <strong>The short version.</strong> Use NoteCal without an account
+          and nothing leaves your device except food text sent to Google
+          Gemini for nutrition lookup. Sign in and your entries, weight
+          history, custom meals, and weight-tracking photos sync to our
+          hosted database (Supabase) so you can use them on another device.
+          On iOS, if you turn on Apple Health sync, NoteCal also writes
+          nutrition and weight data to Apple Health on your phone. You can
+          delete your account from inside the app at any time.
+        </div>
+
         <h2>1. Information we collect</h2>
-        <p>We only collect what's needed to make the app work:</p>
+        <p>We only collect what is needed to make the app work:</p>
         <ul>
           <li>
-            <strong>Account information.</strong> If you choose to sign in, we
-            receive your email address and a unique account identifier from
-            Google or Apple via OAuth. We do not receive your password.
+            <strong>Account information.</strong> If you choose to sign in,
+            we receive your email address and a unique account identifier
+            from Google or Apple via OAuth. We do not receive your password.
           </li>
           <li>
-            <strong>Food entries.</strong> The text you enter (e.g.
-            "chicken breast, 150g") and the nutrition information our system
-            resolves for it.
+            <strong>Food and nutrition entries.</strong> The text you type
+            (for example "chicken breast, 150g"), the nutrition information
+            our system resolves for it, any custom meals you build, and any
+            entries you save for re-use.
           </li>
           <li>
-            <strong>Personal health metrics.</strong> If you choose to set up
+            <strong>Personal health metrics.</strong> If you set up
             personalized goals, the wizard collects your sex, age, height,
             weight, activity level, and goal type to compute your daily
-            calorie and macro targets. Body fat percentage is optional.
+            calorie and macronutrient targets. Body fat percentage is
+            optional.
           </li>
           <li>
             <strong>Weight tracking entries.</strong> Weight values, optional
-            notes, and the date of each entry.
+            notes, the date of each entry, and any photos you attach.
+          </li>
+          <li>
+            <strong>Subscription information.</strong> If you purchase a
+            subscription or lifetime upgrade, we receive a purchase token and
+            entitlement status from Apple via RevenueCat (our subscription
+            infrastructure provider). We do not receive your payment card or
+            Apple ID password.
+          </li>
+          <li>
+            <strong>Limited diagnostic information.</strong> Server-side
+            request logs (timestamp, user identifier, request type, success
+            or error) are retained for a short period to monitor service
+            health and prevent abuse. We do not run third-party analytics,
+            advertising, or behavioral tracking SDKs in the app.
           </li>
         </ul>
 
-        <h2>2. How your data is stored</h2>
+        <h2>2. How and where your data is stored</h2>
         <p>
           NoteCal is <strong>local-first</strong>. Your entries, goals, and
           history are saved directly on your device using encrypted local
           storage. The app works fully offline.
         </p>
         <p>
-          If you sign in, your data is synced to our hosted database
-          (Supabase, a managed Postgres provider) so it stays consistent across
-          your devices. Sync is bidirectional and uses
-          <strong>row-level security</strong>, so only you can read or write
-          your own records.
+          If you sign in, your data is synced to our hosted backend on
+          Supabase (a managed PostgreSQL provider that runs on Amazon Web
+          Services). Sync is bidirectional and uses
+          <strong>row-level security</strong>, so each row is readable and
+          writable only by the account that owns it. Supabase regions and
+          AWS data center locations may be in the United States or other
+          jurisdictions; see Section 11 below on international transfers.
         </p>
 
-        <h2>3. AI processing</h2>
+        <h2>3. AI nutrition processing</h2>
         <p>
-          To resolve nutrition values, the text of your food entries is sent to
-          Google Gemini through our serverless edge function. Frequently
-          requested entries are cached for up to 7 days on our server to reduce
-          repeat AI calls. The cache stores food text and resolved nutrition
-          only, and does not associate cached results with a specific user.
+          To resolve nutrition values, the text or photo of your food entry
+          is sent to Google's Gemini API through our serverless edge
+          function. Google processes the request to generate the response and
+          may retain inputs in accordance with its own
+          <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">Gemini API terms</a>
+          and
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">privacy policy</a>.
+          We do not send your account email, name, or any other directly
+          identifying information to Google with these requests.
+        </p>
+        <p>
+          NoteCal stores resolved nutrition results in an on-device cache for
+          up to 7 days so repeat entries do not need to be re-processed. This
+          cache lives only on your device; we do not maintain a server-side
+          nutrition cache.
+        </p>
+        <p>
+          Nutrition values returned by Gemini are estimates. The app does not
+          make any decision about you that produces legal or similarly
+          significant effects on the basis of these estimates.
         </p>
 
-        <h2>4. Authentication</h2>
+        <h2>4. Apple HealthKit (iOS only)</h2>
         <p>
-          We use Supabase Auth with Google Sign-In and Apple Sign-In. You can
-          use the app without an account; signing in is required only for
-          cross-device sync.
+          On iOS, you can choose to connect NoteCal to Apple Health. When
+          this setting is on, NoteCal writes the following data to Apple
+          Health: dietary energy, protein, fat, carbohydrates, fiber, sugar,
+          sodium, potassium, water, and weight. NoteCal also reads weight
+          samples back from Apple Health so weight you log in another app
+          appears in your NoteCal weight history.
+        </p>
+        <p>
+          Data NoteCal accesses through Apple HealthKit is
+          <strong>only</strong> used to provide nutrition and weight tracking
+          features inside NoteCal. We do not use HealthKit data for
+          advertising, marketing, or data mining, and we do not share or
+          sell HealthKit data to any third party. HealthKit data is read and
+          written on your device by the Apple-provided HealthKit framework;
+          it does not pass through our servers, even if your other NoteCal
+          data is syncing.
+        </p>
+        <p>
+          You can disable HealthKit sync at any time from the in-app
+          settings, and you can revoke specific HealthKit permissions at any
+          time in the iOS Settings app under Privacy &amp; Security &gt;
+          Health &gt; NoteCal.
         </p>
 
         <h2>5. Photos</h2>
         <p>
-          Photos you attach to weight-tracking entries are stored
-          <strong>only on your device</strong>. They are not uploaded to our
-          servers and they do not sync across devices.
+          You can attach photos to weight-tracking entries (for example,
+          progress photos). If you are signed in, these photos are uploaded
+          to a private storage bucket on Supabase so they remain available
+          across your devices. Each photo is stored under a path scoped to
+          your account and is protected by row-level security; only your
+          account can read or delete it. Photos are also cached on your
+          device after upload so the app does not need to re-download them.
+        </p>
+        <p>
+          If you are not signed in, photos remain only on your device and are
+          never uploaded.
+        </p>
+        <p>
+          Photos are deleted from our storage when you delete the
+          corresponding weight entry, when you delete all photos from an
+          entry, or when you delete your account. We do not view, scan,
+          analyze, or use these photos for any purpose other than displaying
+          them back to you.
         </p>
 
-        <h2>6. Data sharing</h2>
+        <h2>6. Subscriptions and payments</h2>
+        <p>
+          NoteCal offers a paid subscription ("Pro") through Apple's App
+          Store. Payments are processed by Apple; we do not receive or store
+          your payment card information.
+        </p>
+        <p>
+          We use RevenueCat to manage subscription state and to verify
+          purchase receipts. When you sign in or make a purchase, RevenueCat
+          receives a pseudonymous user identifier (the same identifier we use
+          for your NoteCal account), the device platform, and purchase
+          metadata such as product identifier, purchase and expiration dates,
+          and trial eligibility. RevenueCat sends purchase events back to our
+          server via webhook so we can grant or revoke access to Pro
+          features. See the
+          <a href="https://www.revenuecat.com/privacy" target="_blank" rel="noopener">RevenueCat privacy policy</a>
+          for details.
+        </p>
+
+        <h2>7. Authentication</h2>
+        <p>
+          We use Supabase Auth with Google Sign-In and Apple Sign-In. You
+          can use the app without an account; signing in is required only
+          for cross-device sync, photo sync, and Pro features. Sign-in
+          tokens and your refresh token are stored in your device's secure
+          OS keystore.
+        </p>
+
+        <h2>8. Device permissions</h2>
+        <p>
+          NoteCal requests the following device permissions, each only when
+          you choose to use the related feature:
+        </p>
+        <ul>
+          <li>
+            <strong>Camera.</strong> Used for the barcode scanner and the AI
+            food photo feature. Photos taken in the food photo feature are
+            sent to Google Gemini for nutrition recognition and are not
+            saved to our servers; barcode frames are not retained.
+          </li>
+          <li>
+            <strong>Photo library.</strong> Used so you can attach existing
+            photos to weight-tracking entries.
+          </li>
+          <li>
+            <strong>Notifications.</strong> Used only to deliver meal
+            reminders that you schedule yourself in the app. We do not send
+            marketing notifications.
+          </li>
+          <li>
+            <strong>Apple HealthKit (iOS).</strong> See Section 4.
+          </li>
+        </ul>
+        <p>
+          You can revoke any of these permissions at any time from your
+          device's system settings.
+        </p>
+
+        <h2>9. Service providers we share data with</h2>
         <p>
           We do not sell, rent, or share your personal information with
-          advertisers, brokers, or analytics platforms. The only third parties
-          that process your data are the infrastructure providers required to
-          operate the service:
+          advertisers, data brokers, or behavioral-advertising platforms. We
+          do not share your personal information for cross-context
+          behavioral advertising. The only third parties that process your
+          data are the infrastructure providers required to operate the
+          service:
         </p>
         <ul>
-          <li><strong>Supabase</strong>: hosted database, authentication, and edge functions.</li>
-          <li><strong>Google Gemini</strong>: AI nutrition resolution.</li>
-          <li><strong>Apple / Google</strong>: only if you sign in with their identity providers.</li>
+          <li><strong>Supabase</strong> — hosted database, authentication, file storage, and edge functions.</li>
+          <li><strong>Amazon Web Services</strong> — Supabase's underlying cloud infrastructure provider.</li>
+          <li><strong>Google (Gemini API)</strong> — AI nutrition resolution from text and photos.</li>
+          <li><strong>RevenueCat</strong> — subscription state and receipt verification.</li>
+          <li><strong>Apple</strong> — App Store payment processing, Apple Sign-In, HealthKit (iOS), and push notification delivery (APNs).</li>
+          <li><strong>Google</strong> — Google Sign-In if you choose to use it.</li>
+          <li><strong>FatSecret Platform API</strong> — branded food and barcode lookups. The food name or barcode you query is sent to FatSecret; we do not send your account identifier with the query.</li>
         </ul>
+        <p>
+          We may also disclose information when required to comply with a
+          valid legal request, to protect our rights and the rights and
+          safety of others, or in connection with a corporate transaction
+          such as a sale of the operator's business assets (in which case we
+          will give you advance notice and you will retain the rights
+          described in this policy).
+        </p>
 
-        <h2>7. Your rights</h2>
-        <p>You can:</p>
+        <h2>10. International data transfers</h2>
+        <p>
+          NoteCal is operated from Canada and uses service providers (notably
+          Supabase, AWS, Google, RevenueCat, and Apple) that may store and
+          process data in the United States or other countries. By using
+          NoteCal you understand that your information may be transferred to,
+          stored, and processed in a country other than the one in which you
+          live, and that those countries may have different data protection
+          laws. Where we transfer personal data of EEA, UK, or Swiss
+          residents, we rely on the European Commission's Standard
+          Contractual Clauses (or the equivalent UK or Swiss mechanism)
+          provided by these vendors.
+        </p>
+
+        <h2>11. Data retention</h2>
+        <p>
+          We retain personal information only for as long as necessary for
+          the purposes described in this policy:
+        </p>
         <ul>
-          <li><strong>Access and edit</strong> any entry directly in the app.</li>
           <li>
-            <strong>Delete your account</strong> from the in-app settings. This
-            removes all of your records from our servers. Data stored locally on
-            your device is also cleared.
+            <strong>Account, food entries, weight history, custom meals, and
+            saved entries:</strong> kept for the life of your account, and
+            deleted within 30 days of account deletion.
           </li>
           <li>
-            <strong>Use the app without signing in</strong>, in which case no
-            data ever leaves your device.
+            <strong>Weight-tracking photos:</strong> kept until you delete
+            them in the app or delete your account, then deleted from
+            storage within 30 days.
+          </li>
+          <li>
+            <strong>Subscription records:</strong> kept for as long as
+            needed to honor an active entitlement and, after the
+            subscription ends, for up to 7 years to satisfy tax,
+            accounting, and consumer-protection record-keeping
+            requirements.
+          </li>
+          <li>
+            <strong>Diagnostic logs and rate-limit records:</strong> kept
+            for up to 90 days for service-health and abuse-prevention
+            purposes.
           </li>
         </ul>
 
-        <h2>8. Children's privacy</h2>
+        <h2>12. Account deletion</h2>
         <p>
-          NoteCal is intended for users 13 and older. The goals wizard requires
-          confirmation that you are at least 13. We do not knowingly collect
-          information from children under 13. If you believe a child under 13
-          has provided us with personal information, please contact us and we
-          will delete it.
+          You can delete your account from the in-app Settings screen. On
+          deletion we permanently remove your account record, food entries,
+          weight history, custom meals, saved entries, goals, and photos
+          from our hosted database and storage within 30 days. Local data on
+          your device is also cleared. We may retain limited records (for
+          example, a record that an account with your prior identifier was
+          deleted, basic subscription history for tax and accounting
+          purposes, or anonymized cache entries that are no longer
+          associated with you) as described in Section 11.
         </p>
 
-        <h2>9. Security</h2>
+        <h2>13. Sensitive and health information</h2>
         <p>
-          Data in transit is encrypted using TLS. Local storage on your device
-          is protected by the operating system's app sandbox. While no system
-          can be guaranteed perfectly secure, we follow industry-standard
-          practices to protect your information.
+          Some of the information NoteCal collects (height, weight, body
+          fat, calorie intake, macronutrient intake, weight-tracking photos)
+          may be considered sensitive personal information or "consumer
+          health data" under laws such as the California Consumer Privacy
+          Act ("CPRA"), Washington's My Health My Data Act ("MHMDA"), and
+          Nevada's SB 370. We process this information only with your
+          consent, only for the purposes of providing the NoteCal service to
+          you, and we do not sell it, share it for cross-context behavioral
+          advertising, or use it for advertising or profiling.
         </p>
 
-        <h2>10. Changes to this policy</h2>
+        <h2>14. Your rights</h2>
         <p>
-          If we make material changes to this policy, we will update the
-          effective date above and notify you in the app before the changes
-          take effect.
+          Wherever you live, you can do the following directly from inside
+          the app:
+        </p>
+        <ul>
+          <li><strong>Access and edit</strong> any entry, goal, weight, or photo.</li>
+          <li><strong>Export</strong> by requesting a copy of your data — email us using the address in Section 19 and we will provide it in a portable format within 30 days.</li>
+          <li><strong>Delete your account</strong> from the in-app Settings, which removes the records described in Section 12.</li>
+          <li><strong>Use the app without signing in</strong>, in which case no personal data ever leaves your device.</li>
+          <li><strong>Withdraw consent</strong> for optional processing (HealthKit sync, notifications, photo upload by deleting photos, etc.) at any time.</li>
+        </ul>
+
+        <p><strong>EEA, United Kingdom, and Switzerland.</strong> If you are
+          in these regions, our legal bases for processing under the GDPR
+          and UK GDPR are: (a) <em>performance of a contract</em> with you
+          for account-related processing, sync, subscription management, and
+          AI nutrition resolution at your request; (b) your <em>explicit
+          consent</em> for HealthKit sync, weight-tracking photos, and
+          processing of health-related data; and (c) our <em>legitimate
+          interests</em> in keeping the service running, preventing abuse,
+          and operating our business, balanced against your rights and
+          freedoms. In addition to the rights above, you have the right to
+          access, rectify, erase, restrict, port, and object to processing
+          of your personal data, the right to withdraw consent at any time
+          (without affecting the lawfulness of prior processing), and the
+          right to lodge a complaint with your local data protection
+          supervisory authority. We do not engage in solely automated
+          decision-making that produces legal or similarly significant
+          effects on you.
         </p>
 
-        <h2>11. Contact</h2>
+        <p><strong>California.</strong> Under the CCPA and CPRA you have the
+          right to know what categories and specific pieces of personal
+          information we have collected about you, the right to delete it,
+          the right to correct inaccurate information, the right to opt out
+          of any sale or sharing for cross-context behavioral advertising
+          (NoteCal does not sell or share your personal information for
+          these purposes), and the right to limit the use and disclosure of
+          sensitive personal information. We will not discriminate against
+          you for exercising any of these rights. The categories of personal
+          information we have collected in the last 12 months map to the
+          statutory categories of: identifiers (account identifier, email),
+          internet or other electronic activity (request logs), geolocation
+          (only inferred coarsely from IP at the network layer by our
+          hosting providers, not by us), sensory information (photos you
+          upload), professional or employment information (none), and
+          health-related information you choose to enter (weight, body
+          metrics, food intake).
+        </p>
+
+        <p><strong>Washington and Nevada.</strong> Under the My Health My
+          Data Act (Washington) and SB 370 (Nevada), you have the right to
+          know, delete, and withdraw consent regarding consumer health data
+          we process about you. We do not sell consumer health data. To
+          exercise these rights, contact us using the address in Section 19.
+        </p>
+
+        <p><strong>Quebec and the rest of Canada.</strong> Under Quebec's
+          Law 25 and Canada's PIPEDA you have the right to access and
+          correct your personal information, to withdraw consent (which may
+          limit our ability to provide the service), and to file a complaint
+          with the Office of the Privacy Commissioner of Canada or the
+          Commission d'accès à l'information du Québec.
+        </p>
+
         <p>
-          Questions, requests, or concerns? Email
+          To exercise any of these rights, email us using the address in
+          Section 19. We will respond within the time frame required by
+          applicable law (typically 30 days, with a possible extension where
+          permitted).
+        </p>
+
+        <h2>15. Children's privacy</h2>
+        <p>
+          NoteCal is intended for users 13 and older. The goals wizard
+          requires confirmation that you are at least 13. We do not
+          knowingly collect personal information from children under 13.
+          If you are a parent or guardian and you believe a child under 13
+          has provided us with personal information, please contact us at
+          the address in Section 19 and we will delete the account and the
+          associated information promptly. If you are between the ages of 13
+          and the digital-consent age in your country (16 in some EEA
+          member states), you should use NoteCal only with your parent's or
+          guardian's permission.
+        </p>
+
+        <h2>16. Security</h2>
+        <p>
+          Data in transit between the app and our servers is encrypted using
+          TLS. Local storage on your device is encrypted by the operating
+          system's app sandbox. Database access is governed by row-level
+          security so each user can only read or write their own records.
+          Sign-in tokens are stored in your device's secure keystore. While
+          no system can be guaranteed perfectly secure, we follow
+          industry-standard practices to protect your information.
+        </p>
+
+        <h2>17. Data breach notification</h2>
+        <p>
+          If we become aware of a security incident that affects your
+          personal information, we will notify you without undue delay
+          through the app, by email to the address associated with your
+          account, or by another reasonable means, and we will notify
+          applicable supervisory authorities to the extent required by
+          applicable law.
+        </p>
+
+        <h2>18. Changes to this policy</h2>
+        <p>
+          If we make changes to this policy, we will update the effective
+          date above. For changes that materially expand the categories of
+          personal information we collect or the ways we use or share it,
+          we will provide reasonable notice in the app before those changes
+          take effect, where practicable. Non-material changes (typos,
+          clarifications, and updates that correct or improve disclosures
+          in your favor) take effect when posted.
+        </p>
+
+        <h2>19. Contact</h2>
+        <p>
+          For privacy questions, data subject requests, or to exercise any
+          of the rights described above, email
           <a href="mailto:edmondyang11@gmail.com">edmondyang11@gmail.com</a>.
+          A postal mailing address is available on request.
         </p>
       </div>
     </main>

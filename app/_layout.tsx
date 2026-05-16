@@ -19,7 +19,13 @@ import { useEffect, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import 'react-native-reanimated';
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 function RootLayoutNav() {
   const { isLoading, isAuthenticated } = useAuth();
@@ -109,9 +115,27 @@ function RootLayoutNav() {
     };
   }, [isLoading, isAuthenticated]);
 
-  // Show loading screen while checking auth — mirrors the native SplashScreen
-  // (200×200 NoteCal glyph on white) so reload doesn't flash a gray spinner.
-  if (isLoading || !fontsLoaded) {
+  const [splashVisible, setSplashVisible] = useState(true);
+  const splashOpacity = useSharedValue(1);
+
+  useEffect(() => {
+    if (isLoading || !fontsLoaded || !splashVisible) return;
+    splashOpacity.value = withTiming(
+      0,
+      { duration: 400, easing: Easing.bezier(0.2, 0.7, 0.2, 1) },
+      (finished) => {
+        if (finished) runOnJS(setSplashVisible)(false);
+      },
+    );
+  }, [isLoading, fontsLoaded, splashVisible, splashOpacity]);
+
+  const splashAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: splashOpacity.value,
+  }));
+
+  // Until fonts load, render only the static splash mirror so route text never
+  // flashes in the system font before swapping to IBM Plex Sans.
+  if (!fontsLoaded) {
     return (
       <View style={styles.loadingContainer}>
         <Image
@@ -134,6 +158,18 @@ function RootLayoutNav() {
         <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
+      {splashVisible && (
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.loadingContainer, StyleSheet.absoluteFillObject, splashAnimatedStyle]}
+        >
+          <Image
+            source={require('@/assets/images/splash-icon.png')}
+            style={styles.loadingLogo}
+            resizeMode="contain"
+          />
+        </Animated.View>
+      )}
       <StatusBar style="dark" />
     </ThemeProvider>
   );

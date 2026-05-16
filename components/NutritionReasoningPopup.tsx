@@ -254,7 +254,7 @@ function shortenDomain(domain: string): string {
   if (domain.includes("mcdonalds.com")) return "McDonald's";
   if (domain.includes("starbucks.com")) return "Starbucks";
   if (domain.includes("openfoodfacts.org")) return "Open Food Facts";
-  if (domain.includes("fatsecret.com")) return "Powered by FatSecret Platform API";
+  if (domain.includes("fatsecret.com")) return "Powered by fatsecret Platform API";
   if (domain.includes("food-guide.canada.ca")) return "CNF";
   // Default: use first meaningful part of domain
   const parts = domain.split(".");

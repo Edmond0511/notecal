@@ -1853,7 +1853,7 @@ export function DatabaseSearchModal({
                           Linking.openURL("https://platform.fatsecret.com")
                         }
                       >
-                        Powered by FatSecret Platform API
+                        Powered by fatsecret Platform API
                       </Text>
                     )}
                   </KeyboardAwareScrollView>

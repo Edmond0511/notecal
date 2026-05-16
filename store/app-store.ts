@@ -718,7 +718,7 @@ export const useAppStore = create<AppState>()(
         reasoning: {
           interpretation: `• Nutrition data from FatSecret database\n• Serving: ${defaultServing.description}`,
           assumptions: [],
-          dataSource: '[Powered by FatSecret Platform API](https://platform.fatsecret.com)',
+          dataSource: '[Powered by fatsecret Platform API](https://platform.fatsecret.com)',
         },
         fsServings: result.fsServings,
         fsSelectedServingId: defaultServing.servingId,
@@ -980,7 +980,7 @@ export const useAppStore = create<AppState>()(
             : [{ provider: 'Open Food Facts', url: `https://world.openfoodfacts.org/product/${item.sourceId}` }];
 
         const dataSource = isFatSecret
-          ? '[Powered by FatSecret Platform API](https://platform.fatsecret.com)'
+          ? '[Powered by fatsecret Platform API](https://platform.fatsecret.com)'
           : item.source === 'FDC'
             ? 'USDA FoodData Central (FDC)'
             : 'Open Food Facts (OFF)';

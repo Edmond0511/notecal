@@ -316,10 +316,11 @@ export interface AppState {
   // home redirect.
   pendingPaywallAfterAuth: boolean;
   // Actions
-  addEntry: (rawText: string) => void;
+  addEntry: (rawText: string, date?: string) => void;
   updateEntry: (id: string, rawText: string) => Promise<void>;
   deleteEntry: (id: string) => void;
   deleteEntries: (ids: string[]) => void;
+  logWater: (amountMl: number, date?: string) => void;
   setCurrentDate: (date: string) => void;
   navigateToDate: (newDate: string, oldDate: string, docContent: string) => void;
   getEntriesForDate: (date: string) => Entry[];

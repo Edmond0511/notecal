@@ -16,6 +16,7 @@ interface AddActionMenuProps {
   onLogWeightPress: () => void;
   onSnapFoodPress: () => void;
   onSearchDatabasePress: () => void;
+  onLogWaterPress: () => void;
 }
 
 export function AddActionMenu({
@@ -26,6 +27,7 @@ export function AddActionMenu({
   onLogWeightPress,
   onSnapFoodPress,
   onSearchDatabasePress,
+  onLogWaterPress,
 }: AddActionMenuProps) {
   React.useEffect(() => {
     if (visible) Keyboard.dismiss();
@@ -52,53 +54,61 @@ export function AddActionMenu({
         exiting={FadeOutDown.duration(150)}
         style={styles.menuWrapper}
       >
-          <View style={styles.menuRow}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              activeOpacity={0.7}
-              onPress={onScanBarcodePress}
-            >
-              <Ionicons name="barcode-outline" size={28} color="#1a1a1a" />
-              <Text style={styles.menuLabel}>Scan Barcode</Text>
-            </TouchableOpacity>
+        <View style={styles.menuGrid}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={onScanBarcodePress}
+          >
+            <Ionicons name="barcode-outline" size={28} color="#1a1a1a" />
+            <Text style={styles.menuLabel}>Scan Barcode</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.menuItem}
-              activeOpacity={0.7}
-              onPress={onSavedEntriesPress}
-            >
-              <Ionicons name="bookmark-outline" size={28} color="#1a1a1a" />
-              <Text style={styles.menuLabel}>Saved Entries</Text>
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={onSnapFoodPress}
+          >
+            <Ionicons name="camera-outline" size={28} color="#1a1a1a" />
+            <Text style={styles.menuLabel}>Snap Food</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.menuItem}
-              activeOpacity={0.7}
-              onPress={onLogWeightPress}
-            >
-              <Ionicons name="scale-outline" size={28} color="#1a1a1a" />
-              <Text style={styles.menuLabel}>Log Weight</Text>
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={onSearchDatabasePress}
+          >
+            <Ionicons name="search-outline" size={28} color="#1a1a1a" />
+            <Text style={styles.menuLabel}>Search Foods</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.menuItem}
-              activeOpacity={0.7}
-              onPress={onSnapFoodPress}
-            >
-              <Ionicons name="camera-outline" size={28} color="#1a1a1a" />
-              <Text style={styles.menuLabel}>Snap Food</Text>
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={onLogWaterPress}
+          >
+            <Ionicons name="water-outline" size={28} color="#1a1a1a" />
+            <Text style={styles.menuLabel}>Log Water</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.menuItem}
-              activeOpacity={0.7}
-              onPress={onSearchDatabasePress}
-            >
-              <Ionicons name="search-outline" size={28} color="#1a1a1a" />
-              <Text style={styles.menuLabel}>Search Foods</Text>
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={onLogWeightPress}
+          >
+            <Ionicons name="scale-outline" size={28} color="#1a1a1a" />
+            <Text style={styles.menuLabel}>Log Weight</Text>
+          </TouchableOpacity>
 
-          </View>
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={onSavedEntriesPress}
+          >
+            <Ionicons name="bookmark-outline" size={28} color="#1a1a1a" />
+            <Text style={styles.menuLabel}>Saved Entries</Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
     </View>
   );
@@ -125,7 +135,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     alignSelf: "stretch",
   },
-  menuRow: {
+  menuGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 12,

@@ -30,7 +30,6 @@ export const DatePage = React.memo(function DatePage({
     deleteEntry,
     deleteEntries,
     saveDocument,
-    waterTrackingEnabled,
     pendingInsertion,
     clearPendingInsertion,
   } = useAppStore(
@@ -40,7 +39,6 @@ export const DatePage = React.memo(function DatePage({
       deleteEntry: s.deleteEntry,
       deleteEntries: s.deleteEntries,
       saveDocument: s.saveDocument,
-      waterTrackingEnabled: s.goals?.manualTargets?.water !== undefined,
       pendingInsertion:
         s.pendingInsertion?.date === dateString ? s.pendingInsertion : null,
       clearPendingInsertion: s.clearPendingInsertion,
@@ -115,7 +113,6 @@ export const DatePage = React.memo(function DatePage({
         onDeleteEntries={deleteEntries}
         currentDate={dateString}
         isOnline={isOnline}
-        waterTrackingEnabled={waterTrackingEnabled}
         autoFocus={false}
         contentTopInset={contentTopInset}
         isPagerSettledRef={isPagerSettledRef}

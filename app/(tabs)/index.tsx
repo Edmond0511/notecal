@@ -16,6 +16,7 @@ import {
 import { SavedEntriesPopup } from "@/components/SavedEntriesPopup";
 import { SettingsModal } from "@/components/SettingsModal";
 import { TotalsBar } from "@/components/TotalsBar";
+import { WaterTrackingModal } from "@/components/WaterTrackingModal";
 import { WeightTrackingModal } from "@/components/WeightTrackingModal";
 import { SystemFont, Tokens } from "@/constants/theme";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -123,6 +124,7 @@ export default function HomeScreen() {
   }, [pendingPaywallAfterAuth, isPro, setPendingPaywallAfterAuth]);
   const [showSavedEntriesPopup, setShowSavedEntriesPopup] = useState(false);
   const [showWeightModal, setShowWeightModal] = useState(false);
+  const [showWaterModal, setShowWaterModal] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [showFoodPhoto, setShowFoodPhoto] = useState(false);
   const [showDatabaseSearch, setShowDatabaseSearch] = useState(false);
@@ -234,6 +236,11 @@ export default function HomeScreen() {
   const handleMenuLogWeight = useCallback(() => {
     setShowAddMenu(false);
     setShowWeightModal(true);
+  }, []);
+
+  const handleMenuLogWater = useCallback(() => {
+    setShowAddMenu(false);
+    setShowWaterModal(true);
   }, []);
 
   const handleMenuScanBarcode = useCallback(() => {
@@ -576,6 +583,7 @@ export default function HomeScreen() {
         onLogWeightPress={handleMenuLogWeight}
         onSnapFoodPress={handleMenuSnapFood}
         onSearchDatabasePress={handleMenuSearchDatabase}
+        onLogWaterPress={handleMenuLogWater}
       />
 
       {/* Paywall — gates the + add button for non-Pro users */}
@@ -632,6 +640,12 @@ export default function HomeScreen() {
         visible={showWeightModal}
         onClose={() => setShowWeightModal(false)}
         openToLog
+      />
+
+      {/* Water Tracking Modal */}
+      <WaterTrackingModal
+        visible={showWaterModal}
+        onClose={() => setShowWaterModal(false)}
       />
     </SafeAreaView>
   );

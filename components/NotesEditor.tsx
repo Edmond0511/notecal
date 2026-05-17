@@ -610,10 +610,9 @@ const IndicatorRow = React.memo<{
   yPosition: number;
   opacity: number;
   isOnline: boolean;
-  waterTrackingEnabled: boolean;
   onTap: (entry: Entry) => void;
 }>(
-  ({ entry, yPosition, opacity, isOnline, waterTrackingEnabled, onTap }) => {
+  ({ entry, yPosition, opacity, isOnline, onTap }) => {
     const handlePress = useCallback(() => onTap(entry), [entry, onTap]);
     // displayedStatus controls which content is rendered, lagging behind
     // entry.status during fade-out so the old content stays visible
@@ -632,7 +631,7 @@ const IndicatorRow = React.memo<{
     }, [entry.items]);
 
     const hasCalories = entry.inlineKcal != null;
-    const hasWater = waterTrackingEnabled && waterAmountMl > 0;
+    const hasWater = waterAmountMl > 0;
     const isWaterOnly = hasWater && !entry.inlineKcal;
 
     useEffect(() => {
@@ -698,8 +697,7 @@ const IndicatorRow = React.memo<{
     prev.entry.items === next.entry.items &&
     prev.yPosition === next.yPosition &&
     prev.opacity === next.opacity &&
-    prev.isOnline === next.isOnline &&
-    prev.waterTrackingEnabled === next.waterTrackingEnabled,
+    prev.isOnline === next.isOnline,
 );
 IndicatorRow.displayName = "IndicatorRow";
 
@@ -713,7 +711,6 @@ interface NotesEditorProps {
   onDeleteEntries?: (ids: string[]) => void;
   currentDate?: string;
   isOnline?: boolean;
-  waterTrackingEnabled?: boolean;
   autoFocus?: boolean;
   contentTopInset?: number;
   isPagerSettledRef?: React.RefObject<boolean>;
@@ -730,7 +727,6 @@ export function NotesEditor({
   onDeleteEntries,
   currentDate,
   isOnline = true,
-  waterTrackingEnabled = false,
   autoFocus = true,
   contentTopInset = 0,
   isPagerSettledRef,
@@ -1364,7 +1360,6 @@ export function NotesEditor({
                 yPosition={item.yPosition}
                 opacity={hasFreshMeasurements ? 1 : 0}
                 isOnline={isOnline}
-                waterTrackingEnabled={waterTrackingEnabled}
                 onTap={handleIndicatorTap}
               />
             ))}

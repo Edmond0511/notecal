@@ -12,6 +12,7 @@ import { nutritionQueue } from '@/services/nutritionQueue';
 import { photoSyncService } from '@/services/photoSyncService';
 import { supabase } from '@/lib/supabase';
 import NetInfo from '@react-native-community/netinfo';
+import { normalizeWaterUnit, toMl } from '@/utils/waterUnits';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 const USE_AI_API = true; // Use AI-powered nutrition API
@@ -24,28 +25,21 @@ const WATER_FIRST_REGEX = /^((?:sparkling|mineral|soda|fizzy|still)\s+)?(water|a
 // Pattern 2: "500ml water" or "1l sparkling water" (quantity first)
 const QTY_FIRST_REGEX = /^(\d+(?:\.\d+)?)\s*(ml|l|oz)?\s*(?:of\s+)?((?:sparkling|mineral|soda|fizzy|still)\s+)?(water|agua|h2o)$/i;
 
-// Conversions to milliliters (canonical storage unit for water)
-const WATER_CONVERSIONS_TO_ML: Record<string, number> = {
-  ml: 1,
-  l: 1000,
-  oz: 29.5735,
-};
-
 function parseWaterEntry(text: string): { isWater: boolean; amountMl: number } {
   // Try water-first pattern: "water 500ml", "sparkling water 1l"
   let match = text.match(WATER_FIRST_REGEX);
   if (match) {
     const amount = parseFloat(match[3]);
-    const unit = (match[4] || 'ml').toLowerCase();
-    return { isWater: true, amountMl: Math.round(amount * (WATER_CONVERSIONS_TO_ML[unit] || 1)) };
+    const unit = normalizeWaterUnit(match[4] || 'ml') ?? 'ml';
+    return { isWater: true, amountMl: toMl(amount, unit) };
   }
 
   // Try quantity-first pattern: "500ml water", "1l sparkling water"
   match = text.match(QTY_FIRST_REGEX);
   if (match) {
     const amount = parseFloat(match[1]);
-    const unit = (match[2] || 'ml').toLowerCase();
-    return { isWater: true, amountMl: Math.round(amount * (WATER_CONVERSIONS_TO_ML[unit] || 1)) };
+    const unit = normalizeWaterUnit(match[2] || 'ml') ?? 'ml';
+    return { isWater: true, amountMl: toMl(amount, unit) };
   }
 
   return { isWater: false, amountMl: 0 };
@@ -110,10 +104,11 @@ export const useAppStore = create<AppState>()(
       return;
     }
 
-    // Check if this is a water entry - handle locally without API call when water tracking is enabled
-    const waterTrackingEnabled = get().goals?.manualTargets?.water !== undefined;
+    // Check if this is a water entry - always handle locally without API call.
+    // The goals toggle now only controls the visual water ring in GoalsPopup,
+    // not whether water gets parsed/counted.
     const waterResult = parseWaterEntry(textLine);
-    if (waterTrackingEnabled && waterResult.isWater) {
+    if (waterResult.isWater) {
       const entryId = Date.now().toString();
       const waterEntry: Entry = {
         id: entryId,
@@ -253,6 +248,38 @@ export const useAppStore = create<AppState>()(
         });
       });
     });
+  },
+
+  logWater: (amountMl: number, date?: string) => {
+    const rounded = Math.max(0, Math.round(amountMl));
+    if (rounded === 0) return;
+    const entryDate = date ?? get().currentDate;
+    const entryId = Date.now().toString();
+    const waterEntry: Entry = {
+      id: entryId,
+      date: entryDate,
+      rawText: `- ${rounded}ml water`,
+      inlineKcal: 0, // Water has no calories
+      status: 'ok',
+      items: [{
+        id: `${entryId}-water`,
+        entryId,
+        label: 'Water',
+        qty: rounded,
+        unit: 'mL',
+        source: 'local',
+        sourceId: 'water',
+        macros: { kcal: 0, protein: 0, fat: 0, carbs: 0, water: rounded },
+        confidence: 1.0,
+        citations: [],
+      }],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    set((state) => ({
+      entries: [...state.entries, waterEntry],
+    }));
   },
 
   updateEntry: async (id: string, rawText: string) => {

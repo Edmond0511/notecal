@@ -3097,11 +3097,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Tokens.accent,
+    backgroundColor: Tokens.textPrimary,
     height: 50,
+    shadowColor: Tokens.textPrimary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   somethingOffSubmitButtonDisabled: {
-    backgroundColor: "#A8D5DA",
+    backgroundColor: Tokens.border,
+    shadowOpacity: 0,
   },
   somethingOffSubmitText: {
     fontSize: 16,

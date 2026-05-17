@@ -43,8 +43,9 @@ WebBrowser.maybeCompleteAuthSession();
 const SLIDES: ImageSourcePropType[] = [
   require('@/assets/onboarding/screen-1-notes.png'),
   require('@/assets/onboarding/screen-2-nutrition.png'),
-  require('@/assets/onboarding/screen-3-progress.png'),
-  require('@/assets/onboarding/screen-4-add.png'),
+  require('@/assets/onboarding/screen-3-search.png'),
+  require('@/assets/onboarding/screen-4-meal.png'),
+  require('@/assets/onboarding/screen-5-progress.png'),
 ];
 
 const INTERVAL_MS = 3500;

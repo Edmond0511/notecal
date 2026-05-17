@@ -38,12 +38,16 @@ const SLIDES: Slide[] = [
     headline: "Every meal,\n**broken down**.",
   },
   {
-    src: require("@/assets/onboarding/screen-3-progress.png"),
-    headline: "See your day\nin **one glance**.",
+    src: require("@/assets/onboarding/screen-3-search.png"),
+    headline: "Search any\n**branded** meal.",
   },
   {
-    src: require("@/assets/onboarding/screen-4-add.png"),
-    headline: "Snap, scan, or\n**just type it**.",
+    src: require("@/assets/onboarding/screen-4-meal.png"),
+    headline: "Save your meals.\nLog it in **seconds**.",
+  },
+  {
+    src: require("@/assets/onboarding/screen-5-progress.png"),
+    headline: "See your day\nin **one glance**.",
   },
 ];
 

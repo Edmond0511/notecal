@@ -8,8 +8,9 @@ Type a line of food. Get the calories, macros, and progress toward your goal.</p
 <p align="center">
   <img src="website/assets/screen-1-notes.png" alt="Notes" width="200" />
   <img src="website/assets/screen-2-nutrition.png" alt="Nutrition" width="200" />
-  <img src="website/assets/screen-3-progress.png" alt="Progress" width="200" />
-  <img src="website/assets/screen-4-add.png" alt="Add" width="200" />
+  <img src="website/assets/screen-3-search.png" alt="Search" width="200" />
+  <img src="website/assets/screen-4-meal.png" alt="Meal Builder" width="200" />
+  <img src="website/assets/screen-5-progress.png" alt="Progress" width="200" />
 </p>
 
 ## The idea

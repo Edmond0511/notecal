@@ -1,6 +1,7 @@
 import { AnimatedDigits } from "@/components/AnimatedDigits";
 import { MealNutritionFactsModal } from "@/components/MealNutritionFactsModal";
 import { EditNutrientPopup } from "@/components/NutritionReasoningPopup";
+import { PrimaryButton } from "@/components/onboarding/PrimaryButton";
 import { SystemFont, Tokens } from "@/constants/theme";
 import {
   BarcodeLookupError,
@@ -487,7 +488,7 @@ export function BarcodeScannerModal({
               <View style={styles.permissionContainer}>
                 <View style={styles.permissionContent}>
                   <View style={styles.permissionIconCircle}>
-                    <Ionicons name="camera-outline" size={48} color={TEAL} />
+                    <Ionicons name="camera-outline" size={48} color="#000" />
                   </View>
                   <Text style={styles.permissionTitle}>Camera Access</Text>
                   <Text style={styles.permissionDescription}>
@@ -495,19 +496,16 @@ export function BarcodeScannerModal({
                       ? "NoteCal needs camera access to scan barcodes on food products"
                       : "Camera access is disabled. Enable it in Settings to scan barcodes."}
                   </Text>
-                  <TouchableOpacity
-                    style={styles.permissionButton}
-                    onPress={
-                      permission.canAskAgain
-                        ? requestPermission
-                        : () => Linking.openSettings()
-                    }
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.permissionButtonText}>
-                      {permission.canAskAgain ? "Continue" : "Open Settings"}
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={styles.permissionButtonWrap}>
+                    <PrimaryButton
+                      label={permission.canAskAgain ? "Continue" : "Open Settings"}
+                      onPress={
+                        permission.canAskAgain
+                          ? requestPermission
+                          : () => Linking.openSettings()
+                      }
+                    />
+                  </View>
                   <TouchableOpacity
                     style={styles.permissionCancelButton}
                     onPress={handleClose}
@@ -1232,13 +1230,13 @@ const styles = StyleSheet.create({
   },
   permissionContent: {
     alignItems: "center",
-    paddingHorizontal: 40,
+    paddingHorizontal: 24,
+    width: "100%",
   },
   permissionIconCircle: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: "#E0F2F1",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 24,
@@ -1260,18 +1258,9 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 32,
   },
-  permissionButton: {
-    backgroundColor: TEAL,
-    paddingVertical: 14,
-    paddingHorizontal: 36,
-    borderRadius: 999,
+  permissionButtonWrap: {
+    width: "100%",
     marginBottom: 12,
-  },
-  permissionButtonText: {
-    fontSize: 17,
-    fontFamily: SystemFont,
-    fontWeight: "400",
-    color: "#fff",
   },
   permissionCancelButton: {
     paddingVertical: 12,

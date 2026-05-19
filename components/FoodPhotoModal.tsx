@@ -1,3 +1,4 @@
+import { PrimaryButton } from "@/components/onboarding/PrimaryButton";
 import { SystemFont } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -236,19 +237,16 @@ export function FoodPhotoModal({
                       ? "NoteCal needs camera access to photograph food and calculate nutrition"
                       : "Camera access is disabled. Enable it in Settings to photograph food."}
                   </Text>
-                  <TouchableOpacity
-                    style={styles.permissionButton}
-                    onPress={
-                      permission.canAskAgain
-                        ? requestPermission
-                        : () => Linking.openSettings()
-                    }
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.permissionButtonText}>
-                      {permission.canAskAgain ? "Continue" : "Open Settings"}
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={styles.permissionButtonWrap}>
+                    <PrimaryButton
+                      label={permission.canAskAgain ? "Continue" : "Open Settings"}
+                      onPress={
+                        permission.canAskAgain
+                          ? requestPermission
+                          : () => Linking.openSettings()
+                      }
+                    />
+                  </View>
                   <TouchableOpacity
                     style={styles.permissionCancelButton}
                     onPress={handleClose}
@@ -418,7 +416,8 @@ const styles = StyleSheet.create({
   },
   permissionContent: {
     alignItems: "center",
-    paddingHorizontal: 40,
+    paddingHorizontal: 24,
+    width: "100%",
   },
   permissionIconCircle: {
     width: 96,
@@ -445,18 +444,9 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 32,
   },
-  permissionButton: {
-    backgroundColor: TEAL,
-    paddingVertical: 14,
-    paddingHorizontal: 36,
-    borderRadius: 999,
+  permissionButtonWrap: {
+    width: "100%",
     marginBottom: 12,
-  },
-  permissionButtonText: {
-    fontSize: 17,
-    fontFamily: SystemFont,
-    fontWeight: "400",
-    color: "#fff",
   },
   permissionCancelButton: {
     paddingVertical: 12,

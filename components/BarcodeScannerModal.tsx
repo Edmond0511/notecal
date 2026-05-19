@@ -505,7 +505,7 @@ export function BarcodeScannerModal({
                     activeOpacity={0.8}
                   >
                     <Text style={styles.permissionButtonText}>
-                      {permission.canAskAgain ? "Allow Camera" : "Open Settings"}
+                      {permission.canAskAgain ? "Continue" : "Open Settings"}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity

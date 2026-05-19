@@ -817,7 +817,13 @@ class SyncService {
       // have been pushed yet. Use the `since` snapshot captured by the caller
       // so a concurrent sync's setLastPull write can't flip this decision
       // mid-pull (which would corrupt local goals on race-y first sign-ins).
+      // Also bail if local goals are dirty: the row hasn't been pushed yet
+      // (e.g. sign-out within the 2s debounce window, app killed mid-push, or
+      // a transient failure that didn't reach markDirty), so the empty server
+      // response reflects unsynced local state, not authoritative server intent.
       if (since) {
+        const dirty = loadDirty();
+        if (dirty.user_goals.includes('current')) return;
         const state = useAppStore.getState();
         if (state.goals) {
           useAppStore.setState({ goals: null });

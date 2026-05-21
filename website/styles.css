@@ -188,6 +188,32 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.5;
 }
 
+.hero__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: clamp(24px, 2.8vw, 32px);
+  padding: 18px 36px;
+  background: var(--ink);
+  color: var(--bg);
+  font-family: var(--sans);
+  font-size: clamp(17px, 1.4vw, 19px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  border-radius: 999px;
+  transition: transform 160ms ease, background-color 160ms ease, opacity 160ms ease;
+}
+
+.hero__cta:hover {
+  background: #1f1f23;
+  transform: translateY(-1px);
+}
+
+.hero__cta:active {
+  transform: translateY(0);
+  opacity: 0.92;
+}
+
 /* ── Carousel (single-phone cross-fade) ────────────────────── */
 
 .hero__device {
@@ -253,15 +279,14 @@ a { color: inherit; text-decoration: none; }
 
 .section {
   padding-block: clamp(72px, 10vw, 144px);
-  border-top: 1px solid var(--rule);
 }
 
 .section__head {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: clamp(24px, 5vw, 64px);
-  align-items: baseline;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   margin-bottom: clamp(40px, 6vw, 72px);
+  max-width: 720px;
 }
 
 .section__kicker {
@@ -279,14 +304,7 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.1;
   letter-spacing: -0.025em;
   margin: 0;
-  max-width: 24ch;
-}
-
-@media (max-width: 720px) {
-  .section__head {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
+  max-width: 18ch;
 }
 
 /* ── Steps ─────────────────────────────────────────────────── */
@@ -386,6 +404,24 @@ a { color: inherit; text-decoration: none; }
   align-items: start;
 }
 
+.reliability__col {
+  display: flex;
+  flex-direction: column;
+}
+
+.reliability__head {
+  margin-bottom: clamp(32px, 4.5vw, 56px);
+}
+
+.reliability__head .section__kicker {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.reliability__title {
+  max-width: 18ch;
+}
+
 .reliability__pillars {
   display: grid;
   gap: 0;
@@ -428,7 +464,26 @@ a { color: inherit; text-decoration: none; }
   font-weight: 500;
 }
 
-/* Trace card: an artifact, like a receipt from the app */
+/* Trace screenshot: actual NutritionReasoningPopup mockup */
+
+.trace-shot {
+  position: sticky;
+  top: calc(var(--nav-h) + 24px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.trace-shot img {
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  display: block;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/* Legacy trace card styles — retained for fallback only */
 
 .trace {
   background: #FFFFFF;
@@ -654,8 +709,12 @@ a { color: inherit; text-decoration: none; }
     grid-template-columns: 1fr;
     gap: 40px;
   }
-  .trace {
+  .trace,
+  .trace-shot {
     position: static;
+  }
+  .trace-shot img {
+    max-width: 300px;
   }
 }
 
@@ -665,7 +724,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ── Footer ────────────────────────────────────────────────── */
 
-.foot { border-top: 1px solid var(--rule); }
+.foot { }
 
 .foot__inner {
   display: flex;

@@ -1,6 +1,7 @@
 import { SystemFont, Tokens } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { mmkv, purgeAllLocalData } from "@/lib/mmkv";
 import { logOutPurchases } from "@/lib/revenuecat";
 import { supabase } from "@/lib/supabase";
@@ -20,7 +21,6 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Image,
   Linking,
   Modal,
@@ -55,7 +55,6 @@ import { PersonalInfoModal } from "./PersonalInfoModal";
 import { PreferencesModal } from "./PreferencesModal";
 import { WeightTrackingModal } from "./WeightTrackingModal";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
 const LEGAL_URLS = {
@@ -86,6 +85,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const insets = useSafeAreaInsets();
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
   const [showNutritionGoals, setShowNutritionGoals] = useState(false);
@@ -137,7 +137,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -157,7 +157,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -372,6 +372,11 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
               style={[
                 styles.container,
                 { marginTop: insets.top },
+                isRegular && {
+                  width: sheetMaxWidth,
+                  maxWidth: sheetMaxWidth,
+                  alignSelf: "center",
+                },
                 animatedStyle,
               ]}
             >
@@ -970,6 +975,7 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

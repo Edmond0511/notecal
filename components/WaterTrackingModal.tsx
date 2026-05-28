@@ -1,4 +1,5 @@
 import { Tokens } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { useAppStore } from "@/store/app-store";
 import { formatWater } from "@/utils/formatNumber";
 import {
@@ -17,7 +18,6 @@ import * as Haptics from "expo-haptics";
 import React, { useEffect } from "react";
 import {
   ActionSheetIOS,
-  Dimensions,
   Modal,
   Platform,
   StatusBar,
@@ -48,7 +48,6 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Circle, Defs, LinearGradient, Stop, Svg } from "react-native-svg";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
 const RING_SIZE = 200;
@@ -153,6 +152,7 @@ export function WaterTrackingModal({
   onClose,
   nested,
 }: WaterTrackingModalProps) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
 
@@ -226,7 +226,7 @@ export function WaterTrackingModal({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -243,7 +243,7 @@ export function WaterTrackingModal({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -271,6 +271,11 @@ export function WaterTrackingModal({
             style={[
               styles.container,
               { marginTop: insets.top + (nested ? 16 : 0) },
+              isRegular && {
+                width: sheetMaxWidth,
+                maxWidth: sheetMaxWidth,
+                alignSelf: "center",
+              },
               animatedStyle,
             ]}
           >
@@ -425,7 +430,7 @@ export function WaterTrackingModal({
 }
 
 const styles = StyleSheet.create({
-  gestureRoot: { flex: 1, justifyContent: "flex-end" },
+  gestureRoot: { flex: 1, justifyContent: "flex-end", alignItems: "center" },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.3)",

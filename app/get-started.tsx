@@ -1,5 +1,6 @@
 import { SignInModal } from "@/components/SignInModal";
 import { Tokens } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { IBMPlexSans_700Bold, useFonts } from "@expo-google-fonts/ibm-plex-sans";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -127,6 +128,7 @@ function Dot({ isActive, onPress }: { isActive: boolean; onPress: () => void }) 
 
 export default function GetStartedScreen() {
   const router = useRouter();
+  const { contentMaxWidth, isRegular } = useResponsiveLayout();
   const [fontsLoaded] = useFonts({ IBMPlexSans_700Bold });
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -188,10 +190,15 @@ export default function GetStartedScreen() {
 
   const fontFamily = fontsLoaded ? "IBMPlexSans_700Bold" : null;
 
+  const innerStyle = isRegular
+    ? { width: contentMaxWidth, maxWidth: contentMaxWidth, alignSelf: "center" as const }
+    : undefined;
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <StatusBar barStyle="dark-content" backgroundColor={Tokens.background} />
 
+      <View style={[styles.inner, innerStyle]}>
       {/* Headline */}
       <View style={styles.headlineContainer}>
         <Animated.View key={idx} entering={FadeInDown.duration(480)}>
@@ -240,6 +247,8 @@ export default function GetStartedScreen() {
         </Text>
       </View>
 
+      </View>
+
       <SignInModal visible={signInVisible} onClose={() => setSignInVisible(false)} />
     </SafeAreaView>
   );
@@ -249,7 +258,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Tokens.background,
+  },
+  inner: {
+    flex: 1,
     paddingHorizontal: 28,
+    width: "100%",
   },
   headlineContainer: {
     paddingTop: 76,

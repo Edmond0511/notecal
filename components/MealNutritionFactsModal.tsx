@@ -1,4 +1,5 @@
 import { SystemFont, Tokens } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { CustomMealItem } from "@/types";
 import {
   isLiquidGlassSupported,
@@ -8,7 +9,6 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useMemo } from "react";
 import {
-  Dimensions,
   Modal,
   ScrollView,
   StatusBar,
@@ -32,7 +32,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
 interface Totals {
@@ -112,6 +111,7 @@ interface Props {
 }
 
 export function MealNutritionFactsModal({ visible, items, onClose }: Props) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
 
@@ -131,7 +131,7 @@ export function MealNutritionFactsModal({ visible, items, onClose }: Props) {
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -148,7 +148,7 @@ export function MealNutritionFactsModal({ visible, items, onClose }: Props) {
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -179,7 +179,12 @@ export function MealNutritionFactsModal({ visible, items, onClose }: Props) {
           <Animated.View
             style={[
               styles.container,
-              { paddingBottom: insets.bottom + 16 },
+              { maxHeight: screenHeight * 0.88, paddingBottom: insets.bottom + 16 },
+              isRegular && {
+                width: sheetMaxWidth,
+                maxWidth: sheetMaxWidth,
+                alignSelf: "center",
+              },
               animatedStyle,
             ]}
           >
@@ -266,6 +271,7 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -276,7 +282,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: "hidden",
-    maxHeight: SCREEN_HEIGHT * 0.88,
   },
   dragIndicatorContainer: {
     alignItems: "center",

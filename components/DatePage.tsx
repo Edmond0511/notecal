@@ -1,4 +1,6 @@
 import { NotesEditor } from '@/components/NotesEditor';
+import { Tokens } from '@/constants/theme';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { useAppStore } from '@/store/app-store';
 import { useEntriesForDate } from '@/store/selectors';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -101,8 +103,16 @@ export const DatePage = React.memo(function DatePage({
     [dateString, saveDocument],
   );
 
+  const { contentMaxWidth, isRegular } = useResponsiveLayout();
+
   return (
-    <View style={styles.container} pointerEvents={isActive ? 'auto' : 'none'}>
+    <View style={styles.outer} pointerEvents={isActive ? 'auto' : 'none'}>
+      <View
+        style={[
+          styles.container,
+          isRegular && { width: contentMaxWidth, maxWidth: contentMaxWidth, alignSelf: 'center' },
+        ]}
+      >
       <NotesEditor
         entries={entries}
         initialDocumentText={documentText}
@@ -118,13 +128,19 @@ export const DatePage = React.memo(function DatePage({
         isPagerSettledRef={isPagerSettledRef}
         isActive={isActive}
       />
+      </View>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
+  outer: {
+    flex: 1,
+    backgroundColor: Tokens.background,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    width: '100%',
+    backgroundColor: Tokens.background,
   },
 });

@@ -2,6 +2,7 @@ import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { DatabaseSearchModal } from "@/components/DatabaseSearchModal";
 import { MealNutritionFactsModal } from "@/components/MealNutritionFactsModal";
 import { SystemFont, Tokens } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { useAppStore } from "@/store/app-store";
 import { BarcodeProduct, CustomMeal, CustomMealItem, DatabaseSearchResult, ExtendedNutrients, Macros } from "@/types";
 import {
@@ -22,7 +23,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MenuView } from "@react-native-menu/menu";
 import {
   Alert,
-  Dimensions,
   Keyboard,
   Modal,
   ScrollView,
@@ -51,7 +51,6 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
 const MACRO_COLORS = {
@@ -152,6 +151,7 @@ export function MealBuilderModal({
   editingMeal,
   nested,
 }: MealBuilderModalProps) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const addCustomMeal = useAppStore((s) => s.addCustomMeal);
   const updateCustomMeal = useAppStore((s) => s.updateCustomMeal);
@@ -406,7 +406,7 @@ export function MealBuilderModal({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -423,7 +423,7 @@ export function MealBuilderModal({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -450,6 +450,11 @@ export function MealBuilderModal({
               style={[
                 styles.container,
                 { marginTop: insets.top + (nested ? 16 : 0) },
+                isRegular && {
+                  width: sheetMaxWidth,
+                  maxWidth: sheetMaxWidth,
+                  alignSelf: "center",
+                },
                 animatedStyle,
               ]}
             >
@@ -806,6 +811,7 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

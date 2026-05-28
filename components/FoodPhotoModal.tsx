@@ -1,10 +1,10 @@
 import { PrimaryButton } from "@/components/onboarding/PrimaryButton";
 import { SystemFont } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Dimensions,
   Linking,
   Modal,
   StatusBar,
@@ -45,7 +45,6 @@ try {
   cameraAvailable = false;
 }
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 const TEAL = "#1A6872";
 
@@ -66,6 +65,7 @@ export function FoodPhotoModal({
   onPhotoCaptured,
 }: FoodPhotoModalProps) {
   const insets = useSafeAreaInsets();
+  const { height: screenHeight } = useResponsiveLayout();
   const usePerms = cameraAvailable ? useCameraPermissions : useStubPermissions;
   const [permission, requestPermission] = usePerms();
   const [torchEnabled, setTorchEnabled] = useState(false);
@@ -149,7 +149,7 @@ export function FoodPhotoModal({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -166,7 +166,7 @@ export function FoodPhotoModal({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),

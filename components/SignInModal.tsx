@@ -1,5 +1,6 @@
 import { GoogleG } from "@/components/onboarding";
 import { Tokens } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { supabase } from "@/lib/supabase";
 import {
   IBMPlexSans_700Bold,
@@ -19,7 +20,6 @@ import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   Modal,
   Platform,
   StyleSheet,
@@ -47,7 +47,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 WebBrowser.maybeCompleteAuthSession();
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
 interface Props {
@@ -57,13 +56,14 @@ interface Props {
 
 export function SignInModal({ visible, onClose }: Props) {
   const router = useRouter();
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const [fontsLoaded] = useFonts({ IBMPlexSans_700Bold });
   const [isLoading, setIsLoading] = useState<"google" | "apple" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
 
-  const translateY = useSharedValue(SCREEN_HEIGHT);
+  const translateY = useSharedValue(screenHeight);
 
   useEffect(() => {
     if (Platform.OS === "ios") {
@@ -74,7 +74,7 @@ export function SignInModal({ visible, onClose }: Props) {
   useEffect(() => {
     if (visible) {
       setError(null);
-      translateY.value = SCREEN_HEIGHT;
+      translateY.value = screenHeight;
       translateY.value = withTiming(0, {
         duration: 280,
         easing: Easing.out(Easing.cubic),
@@ -95,7 +95,7 @@ export function SignInModal({ visible, onClose }: Props) {
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -115,7 +115,7 @@ export function SignInModal({ visible, onClose }: Props) {
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -228,6 +228,11 @@ export function SignInModal({ visible, onClose }: Props) {
             style={[
               styles.sheet,
               { paddingBottom: insets.bottom + 16 },
+              isRegular && {
+                width: sheetMaxWidth,
+                maxWidth: sheetMaxWidth,
+                alignSelf: "center",
+              },
               sheetStyle,
             ]}
           >
@@ -383,6 +388,7 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

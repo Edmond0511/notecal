@@ -2,6 +2,7 @@ import { AnimatedDigits } from "@/components/AnimatedDigits";
 import { MealNutritionFactsModal } from "@/components/MealNutritionFactsModal";
 import { EditNutrientPopup } from "@/components/NutritionReasoningPopup";
 import { SystemFont, Tokens } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 // barcodeService imports removed — FS items use native servings
 import {
   fetchFoodDetail,
@@ -48,7 +49,6 @@ import React, {
 } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   Keyboard,
   LayoutAnimation,
   Linking,
@@ -86,7 +86,6 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 const TEAL = "#1A6872";
 const DEBOUNCE_MS = 400;
@@ -191,6 +190,7 @@ export function DatabaseSearchModal({
   onRemoveEntry,
   children,
 }: DatabaseSearchModalProps) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const [state, setState] = useState<ModalState>({ type: "idle" });
   const [searchText, setSearchText] = useState("");
@@ -900,7 +900,7 @@ export function DatabaseSearchModal({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -917,7 +917,7 @@ export function DatabaseSearchModal({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -1242,6 +1242,11 @@ export function DatabaseSearchModal({
               style={[
                 styles.container,
                 { marginTop: insets.top + (nested ? 16 : 0) },
+                isRegular && {
+                  width: sheetMaxWidth,
+                  maxWidth: sheetMaxWidth,
+                  alignSelf: "center",
+                },
                 animatedStyle,
               ]}
             >
@@ -2421,6 +2426,7 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

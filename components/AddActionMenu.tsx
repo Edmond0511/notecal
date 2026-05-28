@@ -1,3 +1,4 @@
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Keyboard, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -29,11 +30,18 @@ export function AddActionMenu({
   onSearchDatabasePress,
   onLogWaterPress,
 }: AddActionMenuProps) {
+  const { contentMaxWidth, isRegular, actionGridColumns } = useResponsiveLayout();
+
   React.useEffect(() => {
     if (visible) Keyboard.dismiss();
   }, [visible]);
 
   if (!visible) return null;
+
+  // Width % per tile so we hit `actionGridColumns` per row with the 12px gap.
+  // 47% (2 cols on iPhone) / 31% (3 cols on iPad) — both leave room for gap.
+  const tileWidthPercent =
+    actionGridColumns === 3 ? "31%" : "47%";
 
   return (
     <View style={styles.overlay}>
@@ -52,58 +60,78 @@ export function AddActionMenu({
       <Animated.View
         entering={FadeInDown.duration(200)}
         exiting={FadeOutDown.duration(150)}
-        style={styles.menuWrapper}
+        style={[
+          styles.menuWrapper,
+          isRegular && {
+            maxWidth: contentMaxWidth,
+            width: contentMaxWidth,
+            alignSelf: "center",
+            marginHorizontal: 0,
+          },
+        ]}
       >
         <View style={styles.menuGrid}>
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, { width: tileWidthPercent }]}
             activeOpacity={0.7}
             onPress={onScanBarcodePress}
+            accessibilityRole="button"
+            accessibilityLabel="Scan barcode"
           >
             <Ionicons name="barcode-outline" size={28} color="#1a1a1a" />
             <Text style={styles.menuLabel}>Scan Barcode</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, { width: tileWidthPercent }]}
             activeOpacity={0.7}
             onPress={onSnapFoodPress}
+            accessibilityRole="button"
+            accessibilityLabel="Snap a photo of food"
           >
             <Ionicons name="camera-outline" size={28} color="#1a1a1a" />
             <Text style={styles.menuLabel}>Snap Food</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, { width: tileWidthPercent }]}
             activeOpacity={0.7}
             onPress={onSearchDatabasePress}
+            accessibilityRole="button"
+            accessibilityLabel="Search food database"
           >
             <Ionicons name="search-outline" size={28} color="#1a1a1a" />
             <Text style={styles.menuLabel}>Search Foods</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, { width: tileWidthPercent }]}
             activeOpacity={0.7}
             onPress={onLogWaterPress}
+            accessibilityRole="button"
+            accessibilityLabel="Log water"
           >
             <Ionicons name="water-outline" size={28} color="#1a1a1a" />
             <Text style={styles.menuLabel}>Log Water</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, { width: tileWidthPercent }]}
             activeOpacity={0.7}
             onPress={onLogWeightPress}
+            accessibilityRole="button"
+            accessibilityLabel="Log weight"
           >
             <Ionicons name="scale-outline" size={28} color="#1a1a1a" />
             <Text style={styles.menuLabel}>Log Weight</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, { width: tileWidthPercent }]}
             activeOpacity={0.7}
             onPress={onSavedEntriesPress}
+            accessibilityRole="button"
+            accessibilityLabel="Open saved entries"
           >
             <Ionicons name="bookmark-outline" size={28} color="#1a1a1a" />
             <Text style={styles.menuLabel}>Saved Entries</Text>
@@ -141,9 +169,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   menuItem: {
-    width: "47%",
     flexGrow: 1,
+    minHeight: 88,
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
     paddingVertical: 20,
     paddingHorizontal: 8,

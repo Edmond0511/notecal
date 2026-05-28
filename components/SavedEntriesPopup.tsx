@@ -1,5 +1,6 @@
 import { useAppStore } from "@/store/app-store";
 import { SystemFont, Tokens } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { SavedEntry } from "@/types";
 import {
   isLiquidGlassSupported,
@@ -17,7 +18,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Dimensions,
   Keyboard,
   Modal,
   ScrollView,
@@ -51,7 +51,6 @@ import {
 } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
 // Color palette matching NutritionReasoningPopup
@@ -96,6 +95,7 @@ export function SavedEntriesPopup({
   onSelectEntry,
   onSelectEntries,
 }: SavedEntriesPopupProps) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const scrollOffset = useSharedValue(0);
@@ -200,7 +200,7 @@ export function SavedEntriesPopup({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -220,7 +220,7 @@ export function SavedEntriesPopup({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP
     ),
@@ -604,6 +604,11 @@ export function SavedEntriesPopup({
             style={[
               styles.container,
               { marginTop: insets.top },
+              isRegular && {
+                width: sheetMaxWidth,
+                maxWidth: sheetMaxWidth,
+                alignSelf: "center",
+              },
               animatedStyle,
             ]}
           >
@@ -620,6 +625,7 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

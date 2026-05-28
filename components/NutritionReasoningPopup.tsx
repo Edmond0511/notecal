@@ -1,5 +1,6 @@
 import { SystemFont, Tokens } from "@/constants/theme";
 import { PrimaryButton } from "@/components/onboarding/PrimaryButton";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { useAppStore } from "@/store/app-store";
 import { CommonPortion, Entry, FatSecretServing, Macros } from "@/types";
 import { formatWater } from "@/utils/formatNumber";
@@ -33,7 +34,6 @@ import * as Haptics from "expo-haptics";
 import React, { useCallback, useRef, useState } from "react";
 import {
   Alert,
-  Dimensions,
   Image,
   Keyboard,
   LayoutAnimation,
@@ -124,7 +124,6 @@ const MICRO_ICONS = {
   water: faGlassWater as IconProp,
 };
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
 // Identifies an item that should only contribute to the daily water tally
@@ -539,6 +538,7 @@ function SomethingOffPopup({
   isLoading: boolean;
   nested?: boolean;
 }) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const [feedback, setFeedback] = useState("");
   const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
@@ -565,7 +565,7 @@ function SomethingOffPopup({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -587,7 +587,7 @@ function SomethingOffPopup({
   const backdropStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     );
@@ -616,6 +616,11 @@ function SomethingOffPopup({
           style={[
             styles.somethingOffContainer,
             { marginTop: insets.top + (nested ? 16 : 0) },
+            isRegular && {
+              width: sheetMaxWidth,
+              maxWidth: sheetMaxWidth,
+              alignSelf: "center",
+            },
             animatedStyle,
           ]}
         >
@@ -787,6 +792,7 @@ export function EditNutrientPopup({
     : MICRO_ICONS[nutrientKey as MicroKey];
   const label = NUTRIENT_LABELS[nutrientKey];
   const unit = NUTRIENT_UNITS[nutrientKey];
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
@@ -819,7 +825,7 @@ export function EditNutrientPopup({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -841,7 +847,7 @@ export function EditNutrientPopup({
   const backdropStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     );
@@ -870,6 +876,11 @@ export function EditNutrientPopup({
           style={[
             styles.editNutrientContainer,
             { marginTop: insets.top + (nested ? 16 : 0) },
+            isRegular && {
+              width: sheetMaxWidth,
+              maxWidth: sheetMaxWidth,
+              alignSelf: "center",
+            },
             animatedStyle,
           ]}
         >
@@ -1023,6 +1034,7 @@ function EditQuantityPopup({
   // Merge FS portions with any existing commonPortions
   const effectivePortions = fsPortions ?? commonPortions;
 
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
@@ -1135,7 +1147,7 @@ function EditQuantityPopup({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -1155,7 +1167,7 @@ function EditQuantityPopup({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -1179,6 +1191,11 @@ function EditQuantityPopup({
           style={[
             styles.editQuantityContainer,
             { marginTop: insets.top + (nested ? 16 : 0) },
+            isRegular && {
+              width: sheetMaxWidth,
+              maxWidth: sheetMaxWidth,
+              alignSelf: "center",
+            },
             animatedStyle,
           ]}
         >
@@ -1316,6 +1333,7 @@ export function NutritionReasoningPopup({
   onClose,
   entry,
 }: NutritionReasoningPopupProps) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const scrollOffset = useSharedValue(0);
@@ -1451,7 +1469,7 @@ export function NutritionReasoningPopup({
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
         // Dismiss the modal
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -1474,7 +1492,7 @@ export function NutritionReasoningPopup({
   const backdropStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     );
@@ -1661,7 +1679,16 @@ export function NutritionReasoningPopup({
         </Animated.View>
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[styles.container, { marginTop: insets.top }, animatedStyle]}
+            style={[
+              styles.container,
+              { marginTop: insets.top },
+              isRegular && {
+                width: sheetMaxWidth,
+                maxWidth: sheetMaxWidth,
+                alignSelf: "center",
+              },
+              animatedStyle,
+            ]}
           >
             {/* Drag Indicator */}
             <View style={styles.dragIndicatorContainer}>
@@ -2426,6 +2453,7 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -2843,6 +2871,7 @@ const styles = StyleSheet.create({
   editNutrientRoot: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
+    alignItems: "center",
     zIndex: 9999,
     elevation: 20,
   },
@@ -2993,6 +3022,7 @@ const styles = StyleSheet.create({
   somethingOffRoot: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
+    alignItems: "center",
     zIndex: 9999,
     elevation: 20,
   },
@@ -3130,6 +3160,7 @@ const styles = StyleSheet.create({
   editQuantityRoot: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
+    alignItems: "center",
     zIndex: 9999,
     elevation: 20,
   },

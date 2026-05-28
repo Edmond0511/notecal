@@ -31,6 +31,7 @@ import { useAppStore } from "@/store/app-store";
 import { useEntriesForDate } from "@/store/selectors";
 import { BarcodeProduct, CustomMeal, DatabaseSearchResult, Macros, SavedEntry } from "@/types";
 import { dateToIndex, formatDateDisplay, indexToDate } from "@/utils/dateUtils";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import {
   isLiquidGlassSupported,
   LiquidGlassView,
@@ -69,6 +70,7 @@ const PAGER_ANIMATION_CONFIG = {
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const { contentMaxWidth, isRegular } = useResponsiveLayout();
   const currentDate = useAppStore((state) => state.currentDate);
   const setCurrentDate = useAppStore((state) => state.setCurrentDate);
   const goals = useAppStore((state) => state.goals);
@@ -451,8 +453,17 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* Floating header overlay */}
-      <View style={[styles.header, { top: insets.top }]}>
+      {/* Floating header overlay — centered & capped to iPhone-ish width on iPad */}
+      <View
+        style={[styles.headerCentering, { top: insets.top }]}
+        pointerEvents="box-none"
+      >
+        <View
+          style={[
+            styles.header,
+            isRegular && { width: contentMaxWidth, maxWidth: contentMaxWidth },
+          ]}
+        >
         <LiquidGlassView
           style={[
             styles.dateNavigationContainer,
@@ -517,16 +528,25 @@ export default function HomeScreen() {
             <Ionicons name="settings-outline" size={20} color="#000" />
           </LiquidGlassView>
         </TouchableOpacity>
+        </View>
       </View>
 
       {/* TotalsBar: sticks above keyboard during interactive dismiss */}
       <KeyboardStickyView offset={{ closed: 0, opened: 25 }}>
-        <View style={styles.bottomBarContainer}>
-          <TotalsBar
-            isOnline={isOnline}
-            onAddSavedPress={handleAddSavedPress}
-            onTotalsPress={handleTotalsPress}
-          />
+        <View style={styles.bottomBarContainer} pointerEvents="box-none">
+          <View
+            style={
+              isRegular
+                ? { width: contentMaxWidth, maxWidth: contentMaxWidth }
+                : { width: "100%" }
+            }
+          >
+            <TotalsBar
+              isOnline={isOnline}
+              onAddSavedPress={handleAddSavedPress}
+              onTotalsPress={handleTotalsPress}
+            />
+          </View>
         </View>
       </KeyboardStickyView>
 
@@ -656,11 +676,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Tokens.background,
   },
-  header: {
+  headerCentering: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
+    alignItems: "center",
+    zIndex: 10,
+  },
+  header: {
+    width: "100%",
     backgroundColor: "transparent",
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -668,7 +693,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: 60,
-    zIndex: 10,
   },
   settingsButton: {
     position: "absolute",
@@ -731,5 +755,6 @@ const styles = StyleSheet.create({
     paddingBottom: 34,
     backgroundColor: "transparent",
     zIndex: 10,
+    alignItems: "center",
   },
 });

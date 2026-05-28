@@ -1,4 +1,5 @@
 import { Tokens } from '@/constants/theme';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { UserGoals } from '@/types';
 import {
   isLiquidGlassSupported,
@@ -8,7 +9,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect } from 'react';
 import {
-  Dimensions,
   Image,
   Modal,
   StyleSheet,
@@ -32,7 +32,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { ProgressRings } from './goals/ProgressRings';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DISMISS_THRESHOLD = 150;
 
 interface GoalsPopupProps {
@@ -62,6 +61,7 @@ export function GoalsPopup({
   goals,
   consumed,
 }: GoalsPopupProps) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const showGlass = isLiquidGlassSupported;
   const translateY = useSharedValue(0);
 
@@ -97,7 +97,7 @@ export function GoalsPopup({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -117,7 +117,7 @@ export function GoalsPopup({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.3],
+      [0, screenHeight * 0.3],
       [1, 0],
       Extrapolation.CLAMP
     ),
@@ -144,7 +144,15 @@ export function GoalsPopup({
         {/* Popup Content */}
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[styles.popupContainer, animatedStyle]}
+            style={[
+              styles.popupContainer,
+              isRegular && {
+                width: sheetMaxWidth,
+                maxWidth: sheetMaxWidth,
+                alignSelf: 'center',
+              },
+              animatedStyle,
+            ]}
           >
             {/* Drag Indicator */}
             <View style={styles.dragIndicatorContainer}>
@@ -240,6 +248,7 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: 'flex-end',
+    alignItems: 'center',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

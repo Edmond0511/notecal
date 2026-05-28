@@ -3,6 +3,7 @@ import { MealNutritionFactsModal } from "@/components/MealNutritionFactsModal";
 import { EditNutrientPopup } from "@/components/NutritionReasoningPopup";
 import { PrimaryButton } from "@/components/onboarding/PrimaryButton";
 import { SystemFont, Tokens } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import {
   BarcodeLookupError,
   BarcodeNotFoundError,
@@ -28,7 +29,6 @@ import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   Keyboard,
   LayoutAnimation,
   Linking,
@@ -73,10 +73,10 @@ try {
   cameraAvailable = false;
 }
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const VIEWFINDER_WIDTH = SCREEN_WIDTH * 0.78;
-const VIEWFINDER_HEIGHT = SCREEN_WIDTH * 0.44;
 const VIEWFINDER_RADIUS = 20;
+// Cap viewfinder width on tablets so the barcode aim box stays a comfortable
+// size — 78% of a 1366pt iPad is far too wide for a code label.
+const VIEWFINDER_MAX_WIDTH = 360;
 
 const DISMISS_THRESHOLD = 150;
 const TEAL = "#1A6872";
@@ -125,6 +125,12 @@ export function BarcodeScannerModal({
   nested,
 }: BarcodeScannerModalProps) {
   const insets = useSafeAreaInsets();
+  const { width: screenWidth, height: screenHeight } = useResponsiveLayout();
+  // Viewfinder scales with screen width but caps so it doesn't span an iPad.
+  const viewfinderWidth = Math.min(screenWidth * 0.78, VIEWFINDER_MAX_WIDTH);
+  const viewfinderHeight = viewfinderWidth * (0.44 / 0.78);
+  const viewfinderLeft = (screenWidth - viewfinderWidth) / 2;
+  const viewfinderTop = screenHeight * 0.23;
   const usePerms = cameraAvailable ? useCameraPermissions : useStubPermissions;
   const [permission, requestPermission] = usePerms();
   const [state, setState] = useState<ScannerState>({ type: "scanning" });
@@ -317,7 +323,7 @@ export function BarcodeScannerModal({
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
         translateY.value = withSpring(
-          SCREEN_HEIGHT,
+          screenHeight,
           { damping: 20, stiffness: 200 },
           () => {
             runOnJS(handleDragDismiss)();
@@ -352,7 +358,7 @@ export function BarcodeScannerModal({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -537,19 +543,19 @@ export function BarcodeScannerModal({
 
                 {/* Dark overlay with rounded viewfinder cutout */}
                 <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                  <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT}>
+                  <Svg width={screenWidth} height={screenHeight}>
                     <Defs>
                       <Mask id="hole">
                         <Rect
-                          width={SCREEN_WIDTH}
-                          height={SCREEN_HEIGHT}
+                          width={screenWidth}
+                          height={screenHeight}
                           fill="white"
                         />
                         <Rect
-                          x={(SCREEN_WIDTH - VIEWFINDER_WIDTH) / 2}
-                          y={SCREEN_HEIGHT * 0.23}
-                          width={VIEWFINDER_WIDTH}
-                          height={VIEWFINDER_HEIGHT}
+                          x={viewfinderLeft}
+                          y={viewfinderTop}
+                          width={viewfinderWidth}
+                          height={viewfinderHeight}
                           rx={VIEWFINDER_RADIUS}
                           ry={VIEWFINDER_RADIUS}
                           fill="black"
@@ -557,8 +563,8 @@ export function BarcodeScannerModal({
                       </Mask>
                     </Defs>
                     <Rect
-                      width={SCREEN_WIDTH}
-                      height={SCREEN_HEIGHT}
+                      width={screenWidth}
+                      height={screenHeight}
                       fill="rgba(0,0,0,0.55)"
                       mask="url(#hole)"
                     />
@@ -567,7 +573,12 @@ export function BarcodeScannerModal({
                   <View
                     style={[
                       styles.viewfinderFrame,
-                      { top: SCREEN_HEIGHT * 0.23 },
+                      {
+                        top: viewfinderTop,
+                        left: viewfinderLeft,
+                        width: viewfinderWidth,
+                        height: viewfinderHeight,
+                      },
                     ]}
                   >
                     <View style={[styles.corner, styles.cornerTL]} />
@@ -616,7 +627,7 @@ export function BarcodeScannerModal({
                 {state.type === "scanning" && (
                   <Animated.View
                     entering={FadeIn.duration(300)}
-                    style={styles.hintContainer}
+                    style={[styles.hintContainer, { top: viewfinderTop - 52 }]}
                   >
                     <View style={styles.hintPill}>
                       <Ionicons
@@ -1272,12 +1283,9 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: "#666",
   },
-  // Viewfinder frame (positioned over the SVG cutout)
+  // Viewfinder frame (positioned over the SVG cutout) — dimensions applied inline
   viewfinderFrame: {
     position: "absolute",
-    left: (SCREEN_WIDTH - VIEWFINDER_WIDTH) / 2,
-    width: VIEWFINDER_WIDTH,
-    height: VIEWFINDER_HEIGHT,
   },
   corner: {
     position: "absolute",
@@ -1359,10 +1367,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  // Hint pill
+  // Hint pill — `top` set inline because it depends on screenHeight
   hintContainer: {
     position: "absolute",
-    top: SCREEN_HEIGHT * 0.23 - 52,
     left: 0,
     right: 0,
     alignItems: "center",

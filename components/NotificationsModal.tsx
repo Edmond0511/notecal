@@ -1,4 +1,5 @@
 import { SystemFont, Tokens } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import {
   cancelAllReminders,
   requestPermissions,
@@ -16,7 +17,6 @@ import * as Haptics from "expo-haptics";
 import React, { useCallback, useState } from "react";
 import {
   Alert,
-  Dimensions,
   Modal,
   ScrollView,
   StatusBar,
@@ -47,7 +47,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 const SWIPE_ACTION_WIDTH = 72;
 
@@ -261,6 +260,7 @@ function AddReminderPopup({
   onTimeChange,
   onConfirm,
 }: AddReminderPopupProps) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const showGlass = isLiquidGlassSupported;
@@ -283,7 +283,7 @@ function AddReminderPopup({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -303,7 +303,7 @@ function AddReminderPopup({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.3],
+      [0, screenHeight * 0.3],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -333,6 +333,11 @@ function AddReminderPopup({
             style={[
               styles.popupContainer,
               { marginTop: insets.top + 16 },
+              isRegular && {
+                width: sheetMaxWidth,
+                maxWidth: sheetMaxWidth,
+                alignSelf: "center",
+              },
               animatedStyle,
             ]}
           >
@@ -453,6 +458,7 @@ export function NotificationsModal({
   onClose,
   nested,
 }: NotificationsModalProps) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
@@ -486,7 +492,7 @@ export function NotificationsModal({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -506,7 +512,7 @@ export function NotificationsModal({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -613,6 +619,11 @@ export function NotificationsModal({
               style={[
                 styles.container,
                 { marginTop: insets.top + (nested ? 16 : 0) },
+                isRegular && {
+                  width: sheetMaxWidth,
+                  maxWidth: sheetMaxWidth,
+                  alignSelf: "center",
+                },
                 animatedStyle,
               ]}
             >
@@ -786,6 +797,7 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -970,6 +982,7 @@ const styles = StyleSheet.create({
   popupGestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
     backgroundColor: "#FCFCFB",
   },
   popupBackdrop: {

@@ -1,4 +1,5 @@
 import { Tokens } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import {
   isLiquidGlassSupported,
   LiquidGlassView,
@@ -7,7 +8,6 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useEffect } from "react";
 import {
-  Dimensions,
   Modal,
   StatusBar,
   StyleSheet,
@@ -31,7 +31,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
 interface CalendarLegendModalProps {
@@ -72,6 +71,7 @@ export function CalendarLegendModal({
   onClose,
   nested,
 }: CalendarLegendModalProps) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
@@ -96,7 +96,7 @@ export function CalendarLegendModal({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -116,7 +116,7 @@ export function CalendarLegendModal({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -145,7 +145,16 @@ export function CalendarLegendModal({
 
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[styles.container, { marginTop: insets.top + (nested ? 16 : 0) }, animatedStyle]}
+            style={[
+              styles.container,
+              { marginTop: insets.top + (nested ? 16 : 0) },
+              isRegular && {
+                width: sheetMaxWidth,
+                maxWidth: sheetMaxWidth,
+                alignSelf: "center",
+              },
+              animatedStyle,
+            ]}
           >
             <View style={styles.dragIndicatorContainer}>
               <View style={styles.dragIndicator} />
@@ -251,6 +260,7 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

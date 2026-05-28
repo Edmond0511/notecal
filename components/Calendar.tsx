@@ -3,7 +3,6 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  Dimensions,
   Modal,
   Pressable,
   StyleSheet,
@@ -23,11 +22,10 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppStore } from "@/store/app-store";
 import { Tokens } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 const CALENDAR_PADDING = 16;
-const DAY_WIDTH = Math.floor((SCREEN_WIDTH - CALENDAR_PADDING * 2) / 7);
 const DAY_HEIGHT = 44;
 const WEEKDAY_ROW_HEIGHT = 20;
 const CONTENT_HEIGHT = WEEKDAY_ROW_HEIGHT + 6 * DAY_HEIGHT; // fixed to 6-row max
@@ -115,6 +113,12 @@ export function Calendar({
   onSelectDate,
 }: CalendarProps) {
   const insets = useSafeAreaInsets();
+  const { height: screenHeight, sheetMaxWidth, isRegular } =
+    useResponsiveLayout();
+  // Sheet content width — phone width on iPhone, capped on iPad so day cells
+  // don't blow up to a fist-sized tap target.
+  const sheetInnerWidth = sheetMaxWidth - CALENDAR_PADDING * 2;
+  const dayWidth = Math.floor(sheetInnerWidth / 7);
   const initialDate = parseDate(selectedDate);
   const [viewMonth, setViewMonth] = useState(initialDate.getMonth());
   const [viewYear, setViewYear] = useState(initialDate.getFullYear());
@@ -248,7 +252,7 @@ export function Calendar({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, { damping: 20, stiffness: 200 });
+        translateY.value = withSpring(screenHeight, { damping: 20, stiffness: 200 });
         runOnJS(handleClose)();
       } else {
         translateY.value = withSpring(0, { damping: 20, stiffness: 400 });
@@ -279,7 +283,7 @@ export function Calendar({
   const backdropAnimatedStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -317,10 +321,21 @@ export function Calendar({
           <Pressable style={styles.backdropPressable} onPress={handleClose} />
         </Animated.View>
 
-        {/* Calendar Sheet */}
+        {/* Calendar Sheet — full-width bottom sheet on iPhone; centered floating
+            card on iPad (HIG "form sheet" feel). */}
         <GestureDetector gesture={composedGesture}>
         <Animated.View
-          style={[styles.sheet, { paddingBottom: insets.bottom + 8 }, sheetAnimatedStyle]}
+          style={[
+            styles.sheet,
+            {
+              width: sheetMaxWidth,
+              paddingHorizontal: CALENDAR_PADDING,
+              paddingBottom: insets.bottom + (isRegular ? 16 : 8),
+            },
+            isRegular && styles.sheetRegular,
+            isRegular && { marginBottom: insets.bottom + 24 },
+            sheetAnimatedStyle,
+          ]}
         >
           {/* Drag handle */}
           <View style={styles.handleContainer}>
@@ -328,7 +343,12 @@ export function Calendar({
           </View>
 
           {/* Header — "March 2026 >"   "< >" */}
-          <View style={styles.navBar}>
+          <View
+            style={[
+              styles.navBar,
+              { paddingLeft: Math.floor(dayWidth / 2) - 10 },
+            ]}
+          >
             <TouchableOpacity
               onPress={toggleWheelMode}
               activeOpacity={0.7}
@@ -395,7 +415,7 @@ export function Calendar({
                 }}
                 themeVariant="light"
                 textColor={Tokens.textPrimary}
-                style={styles.wheelPicker}
+                style={[styles.wheelPicker, { width: sheetInnerWidth }]}
               />
               <TouchableOpacity
                 onPress={handleWheelConfirm}
@@ -412,7 +432,7 @@ export function Calendar({
               {/* Weekday headers */}
               <View style={styles.weekdayRow}>
                 {WEEKDAYS.map((day, index) => (
-                  <View key={index} style={styles.weekdayCell}>
+                  <View key={index} style={[styles.weekdayCell, { width: dayWidth }]}>
                     <Text style={styles.weekdayText}>{day}</Text>
                   </View>
                 ))}
@@ -436,7 +456,7 @@ export function Calendar({
                   return (
                     <TouchableOpacity
                       key={index}
-                      style={styles.dayCell}
+                      style={[styles.dayCell, { width: dayWidth }]}
                       onPress={() => handleSelectDate(item.date)}
                       activeOpacity={0.5}
                       accessibilityRole="button"
@@ -485,6 +505,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -497,7 +518,12 @@ const styles = StyleSheet.create({
     backgroundColor: Tokens.surfaceRaised,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    paddingHorizontal: CALENDAR_PADDING,
+    alignSelf: "center",
+  },
+  sheetRegular: {
+    // iPad: floating card, fully rounded so it doesn't read as a bottom sheet.
+    borderRadius: 20,
+    ...Tokens.shadowMedium,
   },
   handleContainer: {
     alignItems: "center",
@@ -515,7 +541,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 8,
-    paddingLeft: Math.floor(DAY_WIDTH / 2) - 10,
   },
   monthButton: {
     flexDirection: "row",
@@ -558,7 +583,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   weekdayCell: {
-    width: DAY_WIDTH,
     alignItems: "center",
   },
   weekdayText: {
@@ -572,7 +596,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   dayCell: {
-    width: DAY_WIDTH,
     height: DAY_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
@@ -614,7 +637,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   wheelPicker: {
-    width: SCREEN_WIDTH - CALENDAR_PADDING * 2,
     height: 200,
   },
   wheelGoButton: {

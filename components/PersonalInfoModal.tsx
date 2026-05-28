@@ -1,4 +1,5 @@
 import { Tokens } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { useAppStore } from "@/store/app-store";
 import { Sex } from "@/types";
 import {
@@ -17,7 +18,6 @@ import * as Haptics from "expo-haptics";
 import { KeyboardAwareScrollView, KeyboardProvider } from "react-native-keyboard-controller";
 import React, { useEffect, useState } from "react";
 import {
-  Dimensions,
   Keyboard,
   Modal,
   StatusBar,
@@ -44,7 +44,6 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BmiNumberLine } from "./BmiNumberLine";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
 type EditingField =
@@ -67,6 +66,7 @@ export function PersonalInfoModal({
   onClose,
   nested,
 }: PersonalInfoModalProps) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
@@ -126,7 +126,7 @@ export function PersonalInfoModal({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -146,7 +146,7 @@ export function PersonalInfoModal({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -668,7 +668,16 @@ export function PersonalInfoModal({
 
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[styles.container, { marginTop: insets.top + (nested ? 16 : 0) }, animatedStyle]}
+            style={[
+              styles.container,
+              { marginTop: insets.top + (nested ? 16 : 0) },
+              isRegular && {
+                width: sheetMaxWidth,
+                maxWidth: sheetMaxWidth,
+                alignSelf: "center",
+              },
+              animatedStyle,
+            ]}
           >
             <View style={styles.dragIndicatorContainer}>
               <View style={styles.dragIndicator} />
@@ -789,6 +798,7 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

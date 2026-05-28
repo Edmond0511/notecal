@@ -1,4 +1,5 @@
 import { Tokens } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { photoSyncService } from "@/services/photoSyncService";
 import { useAppStore } from "@/store/app-store";
 import { WeightEntry } from "@/types";
@@ -51,7 +52,7 @@ import { Calendar } from "./Calendar";
 import { SyncedImage } from "./SyncedImage";
 import { WeightChart } from "./weight/WeightChart";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
 // Helper to get all photos from a weight entry (handles legacy single photoUri)
@@ -76,6 +77,7 @@ export function WeightTrackingModal({
   openToLog,
   nested,
 }: WeightTrackingModalProps) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
@@ -141,7 +143,7 @@ export function WeightTrackingModal({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -158,7 +160,7 @@ export function WeightTrackingModal({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -187,7 +189,7 @@ export function WeightTrackingModal({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        logPopupTranslateY.value = withSpring(SCREEN_HEIGHT, {
+        logPopupTranslateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -207,7 +209,7 @@ export function WeightTrackingModal({
   const logPopupBackdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       logPopupTranslateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -228,7 +230,7 @@ export function WeightTrackingModal({
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        editPopupTranslateY.value = withSpring(SCREEN_HEIGHT, {
+        editPopupTranslateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -248,7 +250,7 @@ export function WeightTrackingModal({
   const editPopupBackdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       editPopupTranslateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -655,7 +657,16 @@ export function WeightTrackingModal({
 
         <GestureDetector gesture={panGesture}>
           <Animated.View
-            style={[styles.container, { marginTop: insets.top + (nested ? 16 : 0) }, animatedStyle]}
+            style={[
+              styles.container,
+              { marginTop: insets.top + (nested ? 16 : 0) },
+              isRegular && {
+                width: sheetMaxWidth,
+                maxWidth: sheetMaxWidth,
+                alignSelf: "center",
+              },
+              animatedStyle,
+            ]}
           >
             <View style={styles.dragIndicatorContainer}>
               <View style={styles.dragIndicator} />
@@ -923,6 +934,11 @@ export function WeightTrackingModal({
                 style={[
                   styles.popupOverlayContainer,
                   { marginTop: insets.top + 16 },
+                  isRegular && {
+                    width: sheetMaxWidth,
+                    maxWidth: sheetMaxWidth,
+                    alignSelf: "center",
+                  },
                   logPopupAnimatedStyle,
                 ]}
               >
@@ -997,6 +1013,11 @@ export function WeightTrackingModal({
                 style={[
                   styles.popupOverlayContainer,
                   { marginTop: insets.top + 16 },
+                  isRegular && {
+                    width: sheetMaxWidth,
+                    maxWidth: sheetMaxWidth,
+                    alignSelf: "center",
+                  },
                   editPopupAnimatedStyle,
                 ]}
               >
@@ -1115,6 +1136,7 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -1320,6 +1342,7 @@ const styles = StyleSheet.create({
   popupOverlayRoot: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
+    alignItems: "center",
     zIndex: 9999,
     elevation: 20,
   },

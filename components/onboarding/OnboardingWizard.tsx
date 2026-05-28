@@ -2,6 +2,7 @@ import { PaywallTrigger } from "@/components/PaywallTrigger";
 import { Tokens } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { useAppStore } from "@/store/app-store";
 import { UserGoals } from "@/types";
 import { calculateBMR, calculateTDEE } from "@/utils/goalsCalculator";
@@ -145,6 +146,7 @@ export function OnboardingWizard() {
     (s) => s.setPendingPaywallAfterAuth,
   );
   const reducedMotion = useReducedMotion();
+  const { contentMaxWidth, isRegular } = useResponsiveLayout();
   const [paywallVisible, setPaywallVisible] = useState(false);
   const [fontsLoaded] = useFonts({
     IBMPlexSans_400Regular,
@@ -463,10 +465,15 @@ export function OnboardingWizard() {
     ? { fontFamily: "IBMPlexSans_400Regular" as const }
     : null;
 
+  // iPad: cap wizard content to phone-comfortable width and center.
+  const innerStyle = isRegular
+    ? { width: contentMaxWidth, maxWidth: contentMaxWidth, alignSelf: "center" as const }
+    : undefined;
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <StatusBar barStyle="dark-content" backgroundColor={Tokens.background} />
-      <View style={styles.headerWrap}>
+      <View style={[styles.headerWrap, innerStyle]}>
         <StepHeader
           step={visibleStep}
           total={visibleTotal}
@@ -484,7 +491,7 @@ export function OnboardingWizard() {
           key={step}
           entering={enteringAnim}
           exiting={exitingAnim}
-          style={styles.slideTrack}
+          style={[styles.slideTrack, innerStyle]}
         >
           {step !== GENERATING_STEP && step !== READY_STEP && (
             <View style={styles.heroBlock}>
@@ -500,7 +507,11 @@ export function OnboardingWizard() {
         </Animated.View>
       </KeyboardAwareScrollView>
       <View
-        style={[styles.footer, step === GENERATING_STEP && styles.footerHidden]}
+        style={[
+          styles.footer,
+          innerStyle,
+          step === GENERATING_STEP && styles.footerHidden,
+        ]}
         pointerEvents={step === GENERATING_STEP ? "none" : "auto"}
       >
         <PrimaryButton

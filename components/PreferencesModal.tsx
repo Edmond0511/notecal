@@ -1,4 +1,5 @@
 import { SystemFont, Tokens } from "@/constants/theme";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { useAppStore } from "@/store/app-store";
 import {
   isLiquidGlassSupported,
@@ -8,7 +9,6 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useEffect } from "react";
 import {
-  Dimensions,
   Modal,
   StatusBar,
   StyleSheet,
@@ -32,7 +32,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 150;
 
 interface PreferencesModalProps {
@@ -42,6 +41,7 @@ interface PreferencesModalProps {
 }
 
 export function PreferencesModal({ visible, onClose, nested }: PreferencesModalProps) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
@@ -68,7 +68,7 @@ export function PreferencesModal({ visible, onClose, nested }: PreferencesModalP
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -88,7 +88,7 @@ export function PreferencesModal({ visible, onClose, nested }: PreferencesModalP
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -115,6 +115,11 @@ export function PreferencesModal({ visible, onClose, nested }: PreferencesModalP
             style={[
               styles.container,
               { marginTop: insets.top + (nested ? 16 : 0) },
+              isRegular && {
+                width: sheetMaxWidth,
+                maxWidth: sheetMaxWidth,
+                alignSelf: "center",
+              },
               animatedStyle,
             ]}
           >
@@ -243,6 +248,7 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

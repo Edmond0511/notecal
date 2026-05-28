@@ -21,7 +21,6 @@ import {
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Dimensions,
   Modal,
   StatusBar,
   StyleSheet,
@@ -55,8 +54,8 @@ import { Step3Goal } from './WizardSteps/Step3Goal';
 import { Step4Macros } from './WizardSteps/Step4Macros';
 import { StepWeightTarget } from './WizardSteps/StepWeightTarget';
 import { Step5Review } from './WizardSteps/Step5Review';
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DISMISS_THRESHOLD = 150;
 
 interface GoalsWizardProps {
@@ -107,6 +106,7 @@ const initialFormData: WizardFormData = {
 };
 
 export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWizardProps) {
+  const { height: screenHeight, sheetMaxWidth, isRegular } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
   const isScrolledToTop = useSharedValue(true);
@@ -376,7 +376,7 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
     })
     .onEnd((event) => {
       if (event.translationY > DISMISS_THRESHOLD) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
+        translateY.value = withSpring(screenHeight, {
           damping: 20,
           stiffness: 200,
         });
@@ -396,7 +396,7 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateY.value,
-      [0, SCREEN_HEIGHT * 0.5],
+      [0, screenHeight * 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     ),
@@ -533,6 +533,11 @@ export function GoalsWizard({ visible, onClose, existingGoals, nested }: GoalsWi
             style={[
               styles.modalContainer,
               { marginTop: insets.top + (nested ? 16 : 0) },
+              isRegular && {
+                width: sheetMaxWidth,
+                maxWidth: sheetMaxWidth,
+                alignSelf: "center",
+              },
               animatedStyle,
             ]}
           >
@@ -612,6 +617,7 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: 'flex-end',
+    alignItems: 'center',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

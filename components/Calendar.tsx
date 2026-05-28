@@ -505,7 +505,6 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     justifyContent: "flex-end",
-    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

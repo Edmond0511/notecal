@@ -2426,7 +2426,6 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
-    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

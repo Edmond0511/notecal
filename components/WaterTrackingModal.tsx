@@ -430,7 +430,7 @@ export function WaterTrackingModal({
 }
 
 const styles = StyleSheet.create({
-  gestureRoot: { flex: 1, justifyContent: "flex-end", alignItems: "center" },
+  gestureRoot: { flex: 1, justifyContent: "flex-end" },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.3)",

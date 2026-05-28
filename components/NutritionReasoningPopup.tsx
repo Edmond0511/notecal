@@ -2453,7 +2453,6 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
-    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -2871,7 +2870,6 @@ const styles = StyleSheet.create({
   editNutrientRoot: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
-    alignItems: "center",
     zIndex: 9999,
     elevation: 20,
   },
@@ -3022,7 +3020,6 @@ const styles = StyleSheet.create({
   somethingOffRoot: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
-    alignItems: "center",
     zIndex: 9999,
     elevation: 20,
   },
@@ -3160,7 +3157,6 @@ const styles = StyleSheet.create({
   editQuantityRoot: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
-    alignItems: "center",
     zIndex: 9999,
     elevation: 20,
   },

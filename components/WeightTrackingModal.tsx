@@ -1136,7 +1136,6 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
-    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -1342,7 +1341,6 @@ const styles = StyleSheet.create({
   popupOverlayRoot: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
-    alignItems: "center",
     zIndex: 9999,
     elevation: 20,
   },

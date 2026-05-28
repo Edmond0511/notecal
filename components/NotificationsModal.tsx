@@ -797,7 +797,6 @@ const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
-    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -982,7 +981,6 @@ const styles = StyleSheet.create({
   popupGestureRoot: {
     flex: 1,
     justifyContent: "flex-end",
-    alignItems: "center",
     backgroundColor: "#FCFCFB",
   },
   popupBackdrop: {

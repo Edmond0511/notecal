@@ -1934,65 +1934,75 @@ export function NutritionReasoningPopup({
                     />
                   </View>
 
-                  {/* Micronutrients - always shown, treat undefined as 0 */}
-                  <View style={styles.microsRow}>
-                    <MicroItem
-                      label="fiber"
-                      value={item.macros.fiber ?? 0}
-                      unit="g"
-                      type="fiber"
-                      onPress={() =>
-                        handleNutrientPress(
-                          item.id,
-                          "fiber",
-                          item.macros.fiber ?? 0,
-                          item.originalMacros?.fiber,
-                        )
-                      }
-                    />
-                    <MicroItem
-                      label="sugar"
-                      value={item.macros.sugar ?? 0}
-                      unit="g"
-                      type="sugar"
-                      onPress={() =>
-                        handleNutrientPress(
-                          item.id,
-                          "sugar",
-                          item.macros.sugar ?? 0,
-                          item.originalMacros?.sugar,
-                        )
-                      }
-                    />
-                    <MicroItem
-                      label="sodium"
-                      value={item.macros.sodium ?? 0}
-                      unit="mg"
-                      type="sodium"
-                      onPress={() =>
-                        handleNutrientPress(
-                          item.id,
-                          "sodium",
-                          item.macros.sodium ?? 0,
-                          item.originalMacros?.sodium,
-                        )
-                      }
-                    />
-                    <MicroItem
-                      label="potassium"
-                      value={item.macros.potassium ?? 0}
-                      unit="mg"
-                      type="potassium"
-                      onPress={() =>
-                        handleNutrientPress(
-                          item.id,
-                          "potassium",
-                          item.macros.potassium ?? 0,
-                          item.originalMacros?.potassium,
-                        )
-                      }
-                    />
-                  </View>
+                  {/* Micronutrients - only shown when enabled in goals */}
+                  {(enabledMicros.fiber || enabledMicros.sugar || enabledMicros.sodium || enabledMicros.potassium) && (
+                    <View style={styles.microsRow}>
+                      {enabledMicros.fiber && (
+                        <MicroItem
+                          label="fiber"
+                          value={item.macros.fiber ?? 0}
+                          unit="g"
+                          type="fiber"
+                          onPress={() =>
+                            handleNutrientPress(
+                              item.id,
+                              "fiber",
+                              item.macros.fiber ?? 0,
+                              item.originalMacros?.fiber,
+                            )
+                          }
+                        />
+                      )}
+                      {enabledMicros.sugar && (
+                        <MicroItem
+                          label="sugar"
+                          value={item.macros.sugar ?? 0}
+                          unit="g"
+                          type="sugar"
+                          onPress={() =>
+                            handleNutrientPress(
+                              item.id,
+                              "sugar",
+                              item.macros.sugar ?? 0,
+                              item.originalMacros?.sugar,
+                            )
+                          }
+                        />
+                      )}
+                      {enabledMicros.sodium && (
+                        <MicroItem
+                          label="sodium"
+                          value={item.macros.sodium ?? 0}
+                          unit="mg"
+                          type="sodium"
+                          onPress={() =>
+                            handleNutrientPress(
+                              item.id,
+                              "sodium",
+                              item.macros.sodium ?? 0,
+                              item.originalMacros?.sodium,
+                            )
+                          }
+                        />
+                      )}
+                      {enabledMicros.potassium && (
+                        <MicroItem
+                          label="potassium"
+                          value={item.macros.potassium ?? 0}
+                          unit="mg"
+                          type="potassium"
+                          onPress={() =>
+                            handleNutrientPress(
+                              item.id,
+                              "potassium",
+                              item.macros.potassium ?? 0,
+                              item.originalMacros?.potassium,
+                            )
+                          }
+                        />
+                      )}
+                    </View>
+                  )}
 
                   {/* Revert All - shows when any macro has been edited */}
                   {item.originalMacros && (() => {
@@ -2206,94 +2216,102 @@ export function NutritionReasoningPopup({
                         g
                       </Text>
                     </View>
-                    {/* Micronutrients — always shown, treat undefined as 0 */}
-                    <View style={styles.totalsNutrientRow}>
-                      <View style={styles.totalsNutrientLeft}>
-                        <FontAwesomeIcon
-                          icon={MICRO_ICONS.fiber}
-                          size={13}
-                          color={MICRO_COLORS.fiber.primary}
-                        />
-                        <Text style={styles.totalsNutrientLabel}>Fiber</Text>
-                      </View>
-                      <Text style={styles.totalsNutrientValue}>
-                        {Math.round(
-                          displayEntry.items.reduce(
-                            (sum, it) =>
-                              sum +
-                              (it.macros.fiber ?? 0) * (it.servings ?? 1),
-                            0,
-                          ),
-                        )}
-                        g
-                      </Text>
-                    </View>
-                    <View style={styles.totalsNutrientRow}>
-                      <View style={styles.totalsNutrientLeft}>
-                        <FontAwesomeIcon
-                          icon={MICRO_ICONS.sugar}
-                          size={13}
-                          color={MICRO_COLORS.sugar.primary}
-                        />
-                        <Text style={styles.totalsNutrientLabel}>Sugar</Text>
-                      </View>
-                      <Text style={styles.totalsNutrientValue}>
-                        {Math.round(
-                          displayEntry.items.reduce(
-                            (sum, it) =>
-                              sum +
-                              (it.macros.sugar ?? 0) * (it.servings ?? 1),
-                            0,
-                          ),
-                        )}
-                        g
-                      </Text>
-                    </View>
-                    <View style={styles.totalsNutrientRow}>
-                      <View style={styles.totalsNutrientLeft}>
-                        <FontAwesomeIcon
-                          icon={MICRO_ICONS.sodium}
-                          size={13}
-                          color={MICRO_COLORS.sodium.primary}
-                        />
-                        <Text style={styles.totalsNutrientLabel}>Sodium</Text>
-                      </View>
-                      <Text style={styles.totalsNutrientValue}>
-                        {Math.round(
-                          displayEntry.items.reduce(
-                            (sum, it) =>
-                              sum +
-                              (it.macros.sodium ?? 0) * (it.servings ?? 1),
-                            0,
-                          ),
-                        )}
-                        mg
-                      </Text>
-                    </View>
-                    <View style={styles.totalsNutrientRow}>
-                      <View style={styles.totalsNutrientLeft}>
-                        <FontAwesomeIcon
-                          icon={MICRO_ICONS.potassium}
-                          size={13}
-                          color={MICRO_COLORS.potassium.primary}
-                        />
-                        <Text style={styles.totalsNutrientLabel}>
-                          Potassium
+                    {/* Micronutrients — only shown when enabled in goals */}
+                    {enabledMicros.fiber && (
+                      <View style={styles.totalsNutrientRow}>
+                        <View style={styles.totalsNutrientLeft}>
+                          <FontAwesomeIcon
+                            icon={MICRO_ICONS.fiber}
+                            size={13}
+                            color={MICRO_COLORS.fiber.primary}
+                          />
+                          <Text style={styles.totalsNutrientLabel}>Fiber</Text>
+                        </View>
+                        <Text style={styles.totalsNutrientValue}>
+                          {Math.round(
+                            displayEntry.items.reduce(
+                              (sum, it) =>
+                                sum +
+                                (it.macros.fiber ?? 0) * (it.servings ?? 1),
+                              0,
+                            ),
+                          )}
+                          g
                         </Text>
                       </View>
-                      <Text style={styles.totalsNutrientValue}>
-                        {Math.round(
-                          displayEntry.items.reduce(
-                            (sum, it) =>
-                              sum +
-                              (it.macros.potassium ?? 0) *
-                                (it.servings ?? 1),
-                            0,
-                          ),
-                        )}
-                        mg
-                      </Text>
-                    </View>
+                    )}
+                    {enabledMicros.sugar && (
+                      <View style={styles.totalsNutrientRow}>
+                        <View style={styles.totalsNutrientLeft}>
+                          <FontAwesomeIcon
+                            icon={MICRO_ICONS.sugar}
+                            size={13}
+                            color={MICRO_COLORS.sugar.primary}
+                          />
+                          <Text style={styles.totalsNutrientLabel}>Sugar</Text>
+                        </View>
+                        <Text style={styles.totalsNutrientValue}>
+                          {Math.round(
+                            displayEntry.items.reduce(
+                              (sum, it) =>
+                                sum +
+                                (it.macros.sugar ?? 0) * (it.servings ?? 1),
+                              0,
+                            ),
+                          )}
+                          g
+                        </Text>
+                      </View>
+                    )}
+                    {enabledMicros.sodium && (
+                      <View style={styles.totalsNutrientRow}>
+                        <View style={styles.totalsNutrientLeft}>
+                          <FontAwesomeIcon
+                            icon={MICRO_ICONS.sodium}
+                            size={13}
+                            color={MICRO_COLORS.sodium.primary}
+                          />
+                          <Text style={styles.totalsNutrientLabel}>Sodium</Text>
+                        </View>
+                        <Text style={styles.totalsNutrientValue}>
+                          {Math.round(
+                            displayEntry.items.reduce(
+                              (sum, it) =>
+                                sum +
+                                (it.macros.sodium ?? 0) * (it.servings ?? 1),
+                              0,
+                            ),
+                          )}
+                          mg
+                        </Text>
+                      </View>
+                    )}
+                    {enabledMicros.potassium && (
+                      <View style={styles.totalsNutrientRow}>
+                        <View style={styles.totalsNutrientLeft}>
+                          <FontAwesomeIcon
+                            icon={MICRO_ICONS.potassium}
+                            size={13}
+                            color={MICRO_COLORS.potassium.primary}
+                          />
+                          <Text style={styles.totalsNutrientLabel}>
+                            Potassium
+                          </Text>
+                        </View>
+                        <Text style={styles.totalsNutrientValue}>
+                          {Math.round(
+                            displayEntry.items.reduce(
+                              (sum, it) =>
+                                sum +
+                                (it.macros.potassium ?? 0) *
+                                  (it.servings ?? 1),
+                              0,
+                            ),
+                          )}
+                          mg
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 )}
               </Animated.View>

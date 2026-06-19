@@ -395,94 +395,6 @@ a { color: inherit; text-decoration: none; }
   .what__row { grid-template-columns: 1fr; gap: 6px; }
 }
 
-/* ── Data reliability ──────────────────────────────────────── */
-
-.reliability__grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.1fr);
-  gap: clamp(40px, 6vw, 88px);
-  align-items: start;
-}
-
-.reliability__col {
-  display: flex;
-  flex-direction: column;
-}
-
-.reliability__head {
-  margin-bottom: clamp(32px, 4.5vw, 56px);
-}
-
-.reliability__head .section__kicker {
-  display: block;
-  margin-bottom: 16px;
-}
-
-.reliability__title {
-  max-width: 18ch;
-}
-
-.reliability__pillars {
-  display: grid;
-  gap: 0;
-}
-
-.pillar {
-  padding-block: clamp(22px, 3vw, 32px);
-  border-top: 1px solid var(--rule);
-}
-
-.pillar:first-child {
-  border-top: 0;
-  padding-top: 0;
-}
-
-.pillar:last-child {
-  padding-bottom: 0;
-}
-
-.pillar__label {
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink);
-  margin-bottom: 12px;
-}
-
-.pillar__desc {
-  margin: 0;
-  font-size: 15px;
-  color: var(--ink-2);
-  line-height: 1.6;
-  max-width: 46ch;
-}
-
-.pillar__desc strong {
-  color: var(--ink);
-  font-weight: 500;
-}
-
-/* Trace screenshot: actual NutritionReasoningPopup mockup */
-
-.trace-shot {
-  position: sticky;
-  top: calc(var(--nav-h) + 24px);
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-}
-
-.trace-shot img {
-  width: 100%;
-  max-width: 360px;
-  height: auto;
-  display: block;
-  -webkit-user-drag: none;
-  user-select: none;
-}
-
 /* Legacy trace card styles — retained for fallback only */
 
 .trace {
@@ -705,16 +617,8 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (max-width: 860px) {
-  .reliability__grid {
-    grid-template-columns: 1fr;
-    gap: 40px;
-  }
-  .trace,
-  .trace-shot {
+  .trace {
     position: static;
-  }
-  .trace-shot img {
-    max-width: 300px;
   }
 }
 
